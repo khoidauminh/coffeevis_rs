@@ -13,7 +13,7 @@ Run `cargo install --path <path to coffeevis_rs>`
 
 Cargo should take care of the dependencies. 
 
-This program has been run and tested OK on Linux Mint 20.2 64bit.
+This program has been run and tested OK on Linux Mint 20.2.
 
 ### How to use
 |  Key | Descripttion |
