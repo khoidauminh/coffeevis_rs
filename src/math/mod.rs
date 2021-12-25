@@ -43,6 +43,7 @@ pub fn cooley_turky_fft_recursive(a : Vec<(f32, f32)>) -> Vec<(f32, f32)> {
 const B : f32 = 4.0/std::f32::consts::PI;
 const C : f32 = -4.0/(std::f32::consts::PI*std::f32::consts::PI);
 pub fn fast_sin(rawx : f32) -> f32 {
+    // the input angle of the fft above should not exceed -2*pi, no wrapping is required
     let x = rawx; //% std::f32::consts::PI;
 
     let y = x*(B + C*x.abs());
@@ -131,7 +132,7 @@ pub fn lowpass(data : &mut Vec<(f32, f32)>, a : f32) {
         data[i].0 = data[i-1].0 + a*(data[i].0-data[i-1].0);
     }
 }
-
+// These aren't needed at the moment 
 pub fn lowpass_array(data : &mut [(f32, f32)], a : f32) {
     data[0] = complex_mul((a, 0.0), data[0]);
 
@@ -152,7 +153,7 @@ pub fn lowpass_bi_array(data : &mut [(f32, f32)], a : f32) {
         data[ri] = complex_add(data[ri+1], complex_mul((a, 0.0), complex_sub(data[ri], data[ri+1])));
     }
 }
-
+//
 
 pub fn hanning(data : &mut Vec<(f32, f32)>) {
     let l = data.len();
