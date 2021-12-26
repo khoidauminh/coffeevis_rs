@@ -27,7 +27,7 @@ This program has been run and tested OK on Linux Mint 20.2.
 | Space | iterate through visualizers |
 | Esc | exit | 
 | - / + | decrease/increase input volume |
-| \[ / \] | decrease/increase spectrum smoothing |
+| \[ / \] | decrease/increase spectrum roughness |
 | ; / ' | decrease/increase waveform coverage |
 | / | reset all settings | 
 
