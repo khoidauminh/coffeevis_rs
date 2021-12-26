@@ -203,8 +203,9 @@ pub mod interpolate {
 	}
 }
 
+// n having value of 0 is ignored
 pub fn log2i(n : usize) -> usize {
-	if (n == 1) {
+	if (n < 2) {
 		return 0;
 	} else {
 		return 1 + log2i(n >> 1);
