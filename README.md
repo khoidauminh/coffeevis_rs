@@ -24,10 +24,10 @@ This program has been run and tested OK on Linux Mint 20.2.
 ## How to use
 |  Key | Descripttion |
 | ------ | ------ |
-| Space | iterate through visualizers |
-| Esc | exit | 
-| - / + | decrease/increase input volume |
-| \[ / \] | decrease/increase spectrum roughness |
-| ; / ' | decrease/increase waveform coverage |
-| / | reset all settings | 
+| <kbd>Space</kbd> | iterate through visualizers |
+| <kbd>Esc</kbd> | exit | 
+| <kbd>-</kbd> / <kbd>+</kbd> | decrease/increase input volume |
+| <kbd>\[</kbd> / <kbd>\]</kbd> | decrease/increase spectrum roughness |
+| <kbd>;</kbd> / <kbd>'</kbd> | decrease/increase waveform coverage |
+| <kbd>/</kbd> | reset all settings | 
 
