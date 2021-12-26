@@ -17,7 +17,7 @@ pub unsafe fn prepare_index() {
 	for i in 0..WIN_W {
 		let idxf = (i*FFT_SIZE / WIN_W) as f32 * 0.0138888888;
 		let idx = idxf.floor() as usize;
-		let idx_next = (idx+1).min(FFT_SIZE);
+		let idx_next = idx+1;
 		let t = (idxf.fract()*255.9) as i32;
         let scaling = math::log2i(idx + 2) as i32;
 
@@ -64,8 +64,8 @@ pub unsafe fn draw_spectrum_pow2_std(buf : &mut Vec<u32>, stream : Vec<(f32, f32
 
 			let scaling = index_vec[i].4;
 
-            let bar_height1 =  ((math::interpolate::lineari(data_f1[idx].0, data_f1[idx_next].0, t)*scaling) as usize / 12).min(WIN_H);
-            let bar_height2 =  ((math::interpolate::lineari(data_f1[idx].1, data_f1[idx_next].1, t)*scaling) as usize / 12).min(WIN_H);
+            let bar_height1 =  ((math::interpolate::lineari(data_f1[idx].0, data_f1[idx_next].0, t)*scaling) as usize / 12);
+            let bar_height2 =  ((math::interpolate::lineari(data_f1[idx].1, data_f1[idx_next].1, t)*scaling) as usize / 12);
 
             // let bar_height1 = math::fast_isqrt(bar_height1.pow(2) + bar_height2.pow(2));
             // let bar_height2 = bar_height1;
@@ -76,7 +76,7 @@ pub unsafe fn draw_spectrum_pow2_std(buf : &mut Vec<u32>, stream : Vec<(f32, f32
             let color1 = graphical_fn::rgb_to_u32((255 - 255*i/WIN_W) as u8, (255*bar_height1.min(WIN_H)/WIN_H) as u8, 128);
             let color2 = graphical_fn::rgb_to_u32((255 - 255*i/WIN_W) as u8, (255*bar_height2.min(WIN_H)/WIN_H) as u8, 128);
 
-            graphical_fn::draw_rect(buf, i, (WIN_H - bar_height1).max(0) >> 1, 1, bar_height1 >> 1, color1);
+            graphical_fn::draw_rect(buf, i, (WIN_H - bar_height1.min(WIN_H)) >> 1, 1, bar_height1 >> 1, color1);
             graphical_fn::draw_rect(buf, i, winhh+1, 1, bar_height2 >> 1, color2);
 
             //graphical_fn::draw_rect(buf, i, winhh-1, 1, 2, color1);
