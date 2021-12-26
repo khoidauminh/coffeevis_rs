@@ -28,7 +28,7 @@ fn main() {
     let mut stream;
 
     unsafe {
-        stream = get_source(read_samples::<i16>);
+        stream = get_source(read_samples::<f32>);
         let status = stream.play();
 
         let mut win = match Window::new(
