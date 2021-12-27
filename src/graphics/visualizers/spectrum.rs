@@ -15,11 +15,11 @@ static mut index_vec : [(f32, usize, usize, i32, i32); WIN_W] = [(0.0, 0, 0, 0, 
 
 pub unsafe fn prepare_index() {
 	for i in 0..WIN_W {
-		let idxf = (i*FFT_SIZE / WIN_W) as f32 * 0.0138888888;
+		let idxf = (i*FFT_SIZE / WIN_W) as f32 * 0.0256;
 		let idx = idxf.floor() as usize;
 		let idx_next = idx+1;
 		let t = (idxf.fract()*255.9) as i32;
-        let scaling = math::log2i(idx + 2) as i32;
+        let scaling = (math::log2i(idx + 2) as i32)*3;
 
 		index_vec[i] = (idxf, idx, idx_next, t, scaling);
 	}
@@ -40,7 +40,7 @@ pub unsafe fn draw_spectrum_pow2_std(buf : &mut Vec<u32>, stream : Vec<(f32, f32
     if stream.len() > FFT_SIZE {
         let mut data_f = vec![(0.0f32, 0.0f32); FFT_SIZE];
         for i in 0..FFT_SIZE {
-            data_f[i] = stream[i.min(stream.len())];
+            data_f[i] = stream[(i+_i)%stream.len()];
         }
         //triangular(&mut data_f);
 
@@ -48,9 +48,10 @@ pub unsafe fn draw_spectrum_pow2_std(buf : &mut Vec<u32>, stream : Vec<(f32, f32
         data_f = math::cooley_turky_fft_recursive(data_f);
 
         for sample in 0..FFT_SIZE {
-            data_f1[sample].0 = math::interpolate::lineari(data_f1[sample].0, data_f[sample].0.abs() as i32, smoothi);
+           	data_f1[sample].0 = math::interpolate::lineari(data_f1[sample].0, data_f[sample].0.abs() as i32, smoothi);
             data_f1[sample].1 = math::interpolate::lineari(data_f1[sample].1, data_f[sample].1.abs() as i32, smoothi);
         }
+        
 
         //math::lowpass_bi_array(&mut data_f1, 0.9);
 
@@ -86,6 +87,6 @@ pub unsafe fn draw_spectrum_pow2_std(buf : &mut Vec<u32>, stream : Vec<(f32, f32
         }
     }
 
-    _i = (_i+INCREMENT) % 1024;
+    _i = (_i+INCREMENT) & 1023;
 }
 
