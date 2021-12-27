@@ -12,7 +12,7 @@ pub static mut WAV_WIN : usize = 30; // in percentage;
 pub const INCREMENT : usize  = 8;
 pub static mut VOL_SCL : f32 = 0.95; // in percentage
 
-pub const POWER : usize = 13;
+pub const POWER : usize = 12;
 pub const FFT_SIZE : usize = 1 << POWER;
 
 pub const WIN_W : usize = 144;
