@@ -19,7 +19,7 @@ pub unsafe fn prepare_index() {
 		let idx = idxf.floor() as usize;
 		let idx_next = idx+1;
 		let t = (idxf.fract()*255.9) as i32;
-        let scaling = (math::log2i(idx + 2) as i32) << 1;
+        let scaling = (math::log2i(idx + 2) as i32)*3;
 
 		index_vec[i] = (idxf, idx, idx_next, t, scaling);
 	}
