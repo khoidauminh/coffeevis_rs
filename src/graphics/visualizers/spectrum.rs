@@ -40,7 +40,7 @@ pub unsafe fn draw_spectrum_pow2_std(buf : &mut Vec<u32>, stream : Vec<(f32, f32
     if stream.len() > FFT_SIZE {
         let mut data_f = vec![(0.0f32, 0.0f32); FFT_SIZE];
         for i in 0..FFT_SIZE {
-            data_f[i] = stream[(i+_i)%stream.len()];
+            data_f[i] = math::complex_mul(stream[(i+_i)%stream.len()], (VOL_SCL, 0.0));
         }
         //triangular(&mut data_f);
 
