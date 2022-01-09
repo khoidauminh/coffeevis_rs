@@ -1,8 +1,9 @@
-use crate::constants::{PHASE_OFFSET, INCREMENT, VOL_SCL, WAV_WIN, console_clear, WIN_W, WIN_H};
+use crate::constants::{PHASE_OFFSET, INCREMENT, VOL_SCL, WAV_WIN, console_clear, WIN_W, WIN_H, SMOOTHING};
 
-use crate::graphics::graphical_fn::{rgb_to_u32, coord_to_1d, win_clear, win_clear_alpha, draw_line, P2, p2_add};
+use crate::graphics::graphical_fn::{rgb_to_u32, coord_to_1d, win_clear, win_clear_alpha, draw_line, P2, p2_add, draw_rect};
 
 static mut i : usize = 0;
+static mut _smooth_osc : [i32; WIN_W] = [0; WIN_W];
 
 #[allow(dead_code)]
 pub unsafe fn draw_oscilloscope(buf : &mut Vec<u32>, stream : Vec<(f32, f32)>) {
@@ -25,16 +26,32 @@ pub unsafe fn draw_oscilloscope(buf : &mut Vec<u32>, stream : Vec<(f32, f32)>) {
 
     while di < range {
         let x = (di * width as usize / range) as i32;
+        let xu = x as usize;
+        
         let y = height_top_h + (stream[i%stream.len()].0*WIN_H as f32 *VOL_SCL *0.5) as i32;
+        
+        
+        
         //let o = (y.abs()*4*PXL_OPC/width) as usize;
 
-        buf[coord_to_1d(x, y)] = rgb_to_u32(255, 255, 255);
+        _smooth_osc[xu] = crate::math::interpolate::lineari(_smooth_osc[xu], y, 64);
 
-        i = (i+INCREMENT+1) % stream.len();
+        //buf[coord_to_1d(x, y)] = rgb_to_u32(255, 255, 255);
+        
+        buf[coord_to_1d(x, _smooth_osc[xu])] = rgb_to_u32(255, 255, 255);
+
+        i = (i+INCREMENT+1);
         di = di+INCREMENT+1;
     }
+        
+    i %= stream.len();
+    
+    draw_rect(buf, i%WIN_W, 8, 1, WIN_H-16, 0x00_55_55_55);
+    
+    draw_rect(buf, 0, WIN_H/2, WIN_W, 1, 0x00_55_55_55);
 }
 
+static mut grid: bool = false;
 pub unsafe fn draw_vectorscope(buf : &mut Vec<u32>, stream : Vec<(f32, f32)>) {
 
     let range = stream.len()*WAV_WIN/100;
@@ -62,9 +79,17 @@ pub unsafe fn draw_vectorscope(buf : &mut Vec<u32>, stream : Vec<(f32, f32)>) {
 
         buf[coord_to_1d(x+width_top_h, y+height_top_h)] = rgb_to_u32((x.abs()*510/size as i32) as u8, 255, (y.abs()*510/size as i32) as u8);
 
-        i = (i+INCREMENT+1) % stream.len();
+        i = (i+INCREMENT+1);
         di = di+INCREMENT+1;
     }
+    
+    if {grid ^= true; grid} {
+        draw_rect(buf, WIN_W/2, 8, 1, WIN_H-16, 0x00_55_55_55);
+    } else {
+        draw_rect(buf, 8, WIN_H/2, WIN_W-16, 1, 0x00_55_55_55);
+    }
+    
+    i %= stream.len();
 }
 
 
