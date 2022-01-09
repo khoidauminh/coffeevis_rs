@@ -10,7 +10,7 @@ use audio_input::input_stream::get_source;
 mod math;
 
 mod graphics;
-use graphics::{graphical_fn, visualizers::{oscilloscope, spectrum, lazer, vol_sweeper, shaky_coffee}};
+use graphics::{graphical_fn, visualizers::{oscilloscope, spectrum, lazer, vol_sweeper, shaky_coffee, flower}};
 
 mod assets;
 
@@ -69,6 +69,7 @@ fn main() {
                 3 => spectrum::draw_spectrum_pow2_std(&mut pix_buf, buf.clone()),
                 4 => oscilloscope::draw_oscilloscope(&mut pix_buf, buf.clone()),
                 5 => lazer::draw_lazer(&mut pix_buf, buf.clone()),
+                6 => flower::draw_flower(&mut pix_buf, buf.clone()),
                 1 => shaky_coffee::draw_shaky(&mut pix_buf, buf.clone()),
                 _ => oscilloscope::draw_vectorscope(&mut pix_buf, buf.clone()),
             }
