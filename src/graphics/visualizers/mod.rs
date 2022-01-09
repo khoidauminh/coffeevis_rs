@@ -4,3 +4,4 @@ pub mod spectrum;
 pub mod lazer;
 pub mod shaky_coffee;
 pub mod vol_sweeper;
+pub mod flower;
