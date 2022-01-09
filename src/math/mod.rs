@@ -1,4 +1,4 @@
-use crate::constants::{FFT_SIZE, POWER};
+use crate::constants::{FFT_SIZE, POWER, pi2, pif32, pih};
 
 const minus_pi2 : f32 = -6.283185307179586f32;
 
@@ -40,19 +40,20 @@ pub fn cooley_turky_fft_recursive(a : Vec<(f32, f32)>) -> Vec<(f32, f32)> {
 }
 
 // Approximation of sine
-const B : f32 = 4.0/std::f32::consts::PI;
-const C : f32 = -4.0/(std::f32::consts::PI*std::f32::consts::PI);
 pub fn fast_sin(rawx : f32) -> f32 {
-    // the input angle of the fft above should not exceed -2*pi, no wrapping is required
-    let x = rawx; //% std::f32::consts::PI;
+    const B : f32 = 4.0/std::f32::consts::PI;
+    const C : f32 = -4.0/(std::f32::consts::PI*std::f32::consts::PI);
+    
+    let x = (rawx + pif32)%pi2 - pif32;
 
     let y = x*(B + C*x.abs());
 
     y //*(0.775 + 0.225*y.abs())*0.05
 }
 
-pub fn fast_cos(x : f32) -> f32 {
-    fast_sin(x + crate::constants::pih)
+// implemented from https://stackoverflow.com/a/28050328
+pub fn fast_cos(rawx : f32) -> f32 {
+    fast_sin(rawx + pih)
 }
 
 // const wrapper : f32 = 2048.0/crate::constants::pi2;
@@ -211,3 +212,14 @@ pub fn log2i(n : usize) -> usize {
 		return 1 + log2i(n >> 1);
 	}
 } 
+
+pub fn get_average_lr(data : &Vec<(f32, f32)>) -> (f32, f32) {
+    let l = data.len();
+    let mut suml = 0.0;
+    let mut sumr = 0.0;
+    for i in 0..(l/2) {
+        suml += data[i].0.abs();
+        sumr += data[i+l/2].0.abs();
+    }
+    (suml / l as f32, sumr / l as f32)
+}
