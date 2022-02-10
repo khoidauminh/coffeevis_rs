@@ -15,7 +15,7 @@ static mut index_vec : [(f32, usize, usize, i32, i32); WIN_W] = [(0.0, 0, 0, 0, 
 
 pub unsafe fn prepare_index() {
 	for i in 0..WIN_W {
-		let idxf = (i*FFT_SIZE / WIN_W) as f32 * 0.0128;
+		let idxf = (i*FFT_SIZE / WIN_W) as f32 * 0.0256;
 		let idx = idxf.floor() as usize;
 		let idx_next = idx+1;
 		let t = (idxf.fract()*255.9) as i32;
