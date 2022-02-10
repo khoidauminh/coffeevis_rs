@@ -10,7 +10,7 @@ use audio_input::input_stream::get_source;
 mod math;
 
 mod graphics;
-use graphics::{graphical_fn, visualizers::{oscilloscope, spectrum, lazer, vol_sweeper, shaky_coffee, flower}};
+use graphics::{graphical_fn, visualizers::{oscilloscope, spectrum, lazer, vol_sweeper, shaky_coffee, ring, bars}};
 
 mod assets;
 
@@ -55,6 +55,7 @@ fn main() {
 
         graphics::visualizers::shaky_coffee::prepare_img_default();
         spectrum::prepare_index();
+        bars::prepare_index_bar();
         //crate::constants::prepare_table();
 
         while win.is_open() && !win.is_key_down(Key::Escape) {
@@ -65,12 +66,13 @@ fn main() {
             }
 
             match VIS_IDX {
+                1 => shaky_coffee::draw_shaky(&mut pix_buf, buf.clone()),
                 2 => vol_sweeper::draw_vol_sweeper(&mut pix_buf, buf.clone()),
                 3 => spectrum::draw_spectrum_pow2_std(&mut pix_buf, buf.clone()),
                 4 => oscilloscope::draw_oscilloscope(&mut pix_buf, buf.clone()),
                 5 => lazer::draw_lazer(&mut pix_buf, buf.clone()),
-                6 => flower::draw_flower(&mut pix_buf, buf.clone()),
-                1 => shaky_coffee::draw_shaky(&mut pix_buf, buf.clone()),
+                6 => ring::draw_flower(&mut pix_buf, buf.clone()),
+                7 => bars::draw_bars(&mut pix_buf, buf.clone()),
                 _ => oscilloscope::draw_vectorscope(&mut pix_buf, buf.clone()),
             }
 
