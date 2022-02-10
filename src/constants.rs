@@ -22,7 +22,7 @@ pub static mut SMOOTHING : f32 = 0.5;
 
 pub static mut EXIT : bool = false;
 
-pub const VISES : usize = 6;
+pub const VISES : usize = 8;
 pub static mut VIS_IDX : usize = 0;
 pub static mut SWITCH : usize = 0;
 
