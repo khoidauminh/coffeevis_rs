@@ -29,5 +29,6 @@ This program has been run and tested OK on Linux Mint 20.2.
 | <kbd>-</kbd> / <kbd>+</kbd> | decrease/increase input volume |
 | <kbd>\[</kbd> / <kbd>\]</kbd> | decrease/increase spectrum roughness |
 | <kbd>;</kbd> / <kbd>'</kbd> | decrease/increase waveform coverage |
+| <kbd>\\</bkd> | toggles auto switching (default: ON, 8 seconds) |
 | <kbd>/</kbd> | reset all settings | 
 

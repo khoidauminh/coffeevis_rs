@@ -6,6 +6,10 @@ pub const FPS : u64 = 72;
 pub const FPS_ITVL : u64 = 1_000_000/FPS;
 pub const CTRL_ITVL : u64 = FPS << 2;
 
+// Visualizer will switch every N frames (default: 8 seconds);
+pub const AUTO_SWITCH_ITVL: u64 = FPS*8;
+pub static mut AUTO_SWITCH: bool = true;
+
 pub const PHASE_OFFSET : usize = 2000;
 pub static mut WAV_WIN : usize = 30; // in percentage;
 

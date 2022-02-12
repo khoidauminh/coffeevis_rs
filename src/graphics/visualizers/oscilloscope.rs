@@ -3,7 +3,7 @@ use crate::constants::{PHASE_OFFSET, INCREMENT, VOL_SCL, WAV_WIN, console_clear,
 use crate::graphics::graphical_fn::{rgb_to_u32, coord_to_1d, win_clear, win_clear_alpha, draw_line, P2, p2_add, draw_rect};
 
 static mut i : usize = 0;
-static mut _smooth_osc : [i32; WIN_W] = [0; WIN_W];
+static mut _smooth_osc : [f32; WIN_W] = [0.0f32; WIN_W];
 
 #[allow(dead_code)]
 pub unsafe fn draw_oscilloscope(buf : &mut Vec<u32>, stream : Vec<(f32, f32)>) {
@@ -28,17 +28,17 @@ pub unsafe fn draw_oscilloscope(buf : &mut Vec<u32>, stream : Vec<(f32, f32)>) {
         let x = (di * width as usize / range) as i32;
         let xu = x as usize;
         
-        let y = height_top_h + (stream[i%stream.len()].0*WIN_H as f32 *VOL_SCL *0.5) as i32;
+        let y = height_top_h as f32 + stream[i%stream.len()].0*WIN_H as f32 *VOL_SCL *0.5;
         
         
         
         //let o = (y.abs()*4*PXL_OPC/width) as usize;
 
-        _smooth_osc[xu] = crate::math::interpolate::lineari(_smooth_osc[xu], y, 64);
+        _smooth_osc[xu] = crate::math::interpolate::linearf(_smooth_osc[xu], y, 0.7);
 
         //buf[coord_to_1d(x, y)] = rgb_to_u32(255, 255, 255);
         
-        buf[coord_to_1d(x, _smooth_osc[xu])] = rgb_to_u32(255, 255, 255);
+        buf[coord_to_1d(x, _smooth_osc[xu] as i32)] = rgb_to_u32(255, 255, 255);
 
         i = (i+INCREMENT+1);
         di = di+INCREMENT+1;
@@ -51,7 +51,7 @@ pub unsafe fn draw_oscilloscope(buf : &mut Vec<u32>, stream : Vec<(f32, f32)>) {
     draw_rect(buf, 0, WIN_H/2, WIN_W, 1, 0x00_55_55_55);
 }
 
-static mut grid: bool = false;
+
 pub unsafe fn draw_vectorscope(buf : &mut Vec<u32>, stream : Vec<(f32, f32)>) {
 
     let range = stream.len()*WAV_WIN/100;
@@ -83,11 +83,7 @@ pub unsafe fn draw_vectorscope(buf : &mut Vec<u32>, stream : Vec<(f32, f32)>) {
         di = di+INCREMENT+1;
     }
     
-    if {grid ^= true; grid} {
-        draw_rect(buf, WIN_W/2, 8, 1, WIN_H-16, 0x00_55_55_55);
-    } else {
-        draw_rect(buf, 8, WIN_H/2, WIN_W-16, 1, 0x00_55_55_55);
-    }
+    crate::graphics::visualizers::cross::draw_cross(buf);
     
     i %= stream.len();
 }
