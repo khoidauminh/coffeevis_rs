@@ -1,3 +1,6 @@
+
+#![allow(non_upper_case_globals)]
+
 mod constants;
 use crate::constants::*;
 
@@ -21,6 +24,7 @@ static mut buf : Vec<(f32, f32)> = Vec::new();
 use std::env;
 
 static mut i : usize = 0;
+static mut switch_incremeter: u64 = 0;
 //static mut visualizer : (dyn Fn(Vec<u32>, Vec<(f32, f32)>)) = &oscilloscope::draw_vectorscope;
 
 fn main() {
@@ -60,6 +64,11 @@ fn main() {
 
         while win.is_open() && !win.is_key_down(Key::Escape) {
 
+            if switch_incremeter == AUTO_SWITCH_ITVL {
+                change_visualizer();
+                switch_incremeter = 0;
+            }
+
             if (VIS_IDX != SWITCH) {
                 pix_buf = vec![0u32; pix_buf.len()];
                 SWITCH = VIS_IDX;
@@ -81,6 +90,10 @@ fn main() {
             control_key_events(&win);
 
             usleep(FPS);
+            
+            if AUTO_SWITCH {
+                switch_incremeter += 1;
+            }
         }
         stream.pause();
     }
@@ -93,14 +106,14 @@ fn read_samples<T: cpal::Sample>(data : &[T], _ : &cpal::InputCallbackInfo) {
     }
 }
 
-fn change_visualizer() {
-
+unsafe fn change_visualizer() {
+    VIS_IDX = (VIS_IDX+1)%VISES;
 }
 
 unsafe fn control_key_events(win : &minifb::Window) {
 
     if win.is_key_pressed(Key::Space, KeyRepeat::Yes) {
-        VIS_IDX = (VIS_IDX+1)%VISES;
+        change_visualizer();
     }
 
     if win.is_key_pressed(Key::Minus, KeyRepeat::Yes) {
@@ -120,6 +133,10 @@ unsafe fn control_key_events(win : &minifb::Window) {
     } else if win.is_key_pressed(Key::Apostrophe, KeyRepeat::Yes) {
         WAV_WIN = (WAV_WIN+3).clamp(3, 50);
     }
+    
+    if win.is_key_pressed(Key::Backslash, KeyRepeat::No) {
+        AUTO_SWITCH ^= true;
+    } 
 
     if win.is_key_pressed(Key::Slash, KeyRepeat::Yes) {
         VOL_SCL = 0.8;
