@@ -13,14 +13,16 @@ static mut idx_table: [(f32, usize, f32, f32, f32); bar_num] = [(0.0f32, 0usize,
 pub unsafe fn prepare_index_bar() {
     
     for i in 0..bar_num {
-        let idxf = (i as f32 / bnf +1.0).log2()*bnf;
+        let i_ = i as f32 / bnf;
+
+        let idxf = i_*i_*bnf*3.0;
         let idx = idxf as usize;
         let t = idxf.fract();
         
         // this parameter makes the bass region in the spectrum animaton look more aggresive 
-        let d = math::interpolate::linearf(1.5, 0.5, (i as f32 / bnf).sqrt());
+        let d = math::interpolate::linearf(1.2, 0.5, (i as f32 / bnf).sqrt());
         
-        idx_table[i] = (idxf, idx, t, (idxf/bnf+ 1.414214).log2(), d);
+        idx_table[i] = (idxf, idx, t, (i_ + 1.414214).log2(), d);
     }
     
 }
@@ -30,7 +32,7 @@ static mut _i : usize = 0;
 static mut data_f1 : [f32; bar_num+1] = [0.0; bar_num+1];
 
 pub unsafe fn draw_bars(buf: &mut Vec<u32>, stream: Vec<(f32, f32)>) {
-    if stream.len() < FFT_SIZE { return; }
+    if stream.len() < FFT_SIZE { return (); }
     
     let scale = FFT_SIZE as f32 * WIN_H as f32 * 0.0625;
     let winhh = WIN_H >> 1;
