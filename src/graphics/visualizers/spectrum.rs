@@ -1,7 +1,7 @@
-use std::io::Write;
+//use std::io::Write;
 use cpal::Sample;
 
-use crate::audio_input::input_stream::{linear, shrink_stream_i16};
+//use crate::audio_input::input_stream::{linear, shrink_stream_i16};
 
 use crate::math;
 
@@ -15,7 +15,7 @@ static mut index_vec : [(f32, usize, usize, i32, i32); WIN_W] = [(0.0, 0, 0, 0, 
 
 pub unsafe fn prepare_index() {
 	for i in 0..WIN_W {
-		let idxf = (i*FFT_SIZE / WIN_W) as f32 * 0.0256;
+		let idxf = (i*FFT_SIZE / WIN_W) as f32 * 0.0192;
 		let idx = idxf.floor() as usize;
 		let idx_next = idx+1;
 		let t = (idxf.fract()*255.9) as i32;
@@ -27,7 +27,7 @@ pub unsafe fn prepare_index() {
 
 // Somewhere in this function and/or the fft one occasionally returns data_f with huge values which draws all over the screen, then comes back normal.
 // Is this a bug?
-pub unsafe fn draw_spectrum_pow2_std(buf : &mut Vec<u32>, stream : Vec<(f32, f32)>) {
+pub unsafe fn draw_spectrum_pow2_std(buf : &mut [u32], stream : &[(f32, f32)]) {
     if stream.len() < FFT_SIZE { return; } 
 
     let scale = FFT_SIZE as f32 * WIN_H as f32 * 0.0625;
