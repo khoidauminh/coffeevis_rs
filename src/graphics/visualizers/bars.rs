@@ -31,8 +31,8 @@ static mut _i : usize = 0;
 
 static mut data_f1 : [f32; bar_num+1] = [0.0; bar_num+1];
 
-pub unsafe fn draw_bars(buf: &mut Vec<u32>, stream: Vec<(f32, f32)>) {
-    if stream.len() < FFT_SIZE { return (); }
+pub unsafe fn draw_bars(buf: &mut [u32], stream: &[(f32, f32)]) {
+    //if stream.len() < FFT_SIZE { return (); }
     
     let scale = FFT_SIZE as f32 * WIN_H as f32 * 0.0625;
     let winhh = WIN_H >> 1;
