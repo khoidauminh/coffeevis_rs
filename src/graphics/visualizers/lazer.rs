@@ -7,7 +7,7 @@ static mut p2 : P2 = P2(72, 72);
 static mut index : usize = 0;
 static mut swap : bool = false;
 
-pub unsafe fn draw_lazer(buf : &mut Vec<u32>, stream : Vec<(f32, f32)>) {
+pub unsafe fn draw_lazer(buf : &mut [u32], stream : &[(f32, f32)]) {
 
     let w = WIN_W as i32;
     let h = WIN_H as i32;
