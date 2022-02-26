@@ -7,7 +7,7 @@ use crate::graphics::graphical_fn;
 static mut _i : usize = 0;
 const c : u32 = 16720064;
 
-pub unsafe fn draw_dash_line(buf : &mut Vec<u32>, stream : &Vec<(f32, f32)>, horizontal : bool, offset : usize, flip_side : bool) {
+pub unsafe fn draw_dash_line(buf : &mut [u32], stream : &[(f32, f32)], horizontal : bool, offset : usize, flip_side : bool) {
 
     if (horizontal) {
 
