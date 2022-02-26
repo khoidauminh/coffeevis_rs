@@ -1,4 +1,4 @@
-use crate::constants::{PHASE_OFFSET, INCREMENT, VOL_SCL, WAV_WIN, console_clear, WIN_W, WIN_H, SMOOTHING};
+use crate::constants::{SAMPLE_SIZE, PHASE_OFFSET, INCREMENT, VOL_SCL, WAV_WIN, console_clear, WIN_W, WIN_H, SMOOTHING};
 
 use crate::graphics::graphical_fn::{rgb_to_u32, coord_to_1d, win_clear, win_clear_alpha, draw_line, P2, p2_add, draw_rect};
 
@@ -6,10 +6,10 @@ static mut i : usize = 0;
 static mut _smooth_osc : [f32; WIN_W] = [0.0f32; WIN_W];
 
 #[allow(dead_code)]
-pub unsafe fn draw_oscilloscope(buf : &mut Vec<u32>, stream : Vec<(f32, f32)>) {
+pub unsafe fn draw_oscilloscope(buf : &mut [u32], stream : &[(f32, f32)]) {
     let range = stream.len()*WAV_WIN/100;
 
-    if range < WIN_H+WIN_W { return (); }
+    //if range < WIN_H+WIN_W { return (); }
 
     let width = WIN_W as i32;
     let height = WIN_H as i32;
@@ -27,17 +27,17 @@ pub unsafe fn draw_oscilloscope(buf : &mut Vec<u32>, stream : Vec<(f32, f32)>) {
     while di < range {
         let x = (di * width as usize / range) as i32;
         let xu = x as usize;
-        
+
         let y = height_top_h as f32 + stream[i%stream.len()].0*WIN_H as f32 *VOL_SCL *0.5;
-        
-        
-        
+
+
+
         //let o = (y.abs()*4*PXL_OPC/width) as usize;
 
         _smooth_osc[xu] = crate::math::interpolate::linearf(_smooth_osc[xu], y, 0.7);
 
         //buf[coord_to_1d(x, y)] = rgb_to_u32(255, 255, 255);
-        
+
         buf[coord_to_1d(x, _smooth_osc[xu] as i32)] = rgb_to_u32(255, 255, 255);
 
         i = (i+INCREMENT+1);
@@ -51,12 +51,11 @@ pub unsafe fn draw_oscilloscope(buf : &mut Vec<u32>, stream : Vec<(f32, f32)>) {
     draw_rect(buf, 0, WIN_H/2, WIN_W, 1, 0x00_55_55_55);
 }
 
-
-pub unsafe fn draw_vectorscope(buf : &mut Vec<u32>, stream : Vec<(f32, f32)>) {
+pub unsafe fn draw_vectorscope(buf : &mut [u32], stream : &[(f32, f32)]) {
 
     let range = stream.len()*WAV_WIN/100;
 
-    if range < WIN_H+WIN_W { return (); }
+    //if range < WIN_H+WIN_W { return (); }
 
     let size = if WIN_H > WIN_W {WIN_W as i32} else {WIN_H as i32};
 
@@ -82,12 +81,11 @@ pub unsafe fn draw_vectorscope(buf : &mut Vec<u32>, stream : Vec<(f32, f32)>) {
         i = (i+INCREMENT+1);
         di = di+INCREMENT+1;
     }
-    
+
     crate::graphics::visualizers::cross::draw_cross(buf);
-    
+
     i %= stream.len();
 }
-
 
 // Attempting to write the oscilloscope visualizer with the linear function.
 // Not finished
