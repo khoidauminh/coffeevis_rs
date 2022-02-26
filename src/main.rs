@@ -1,5 +1,7 @@
 
-#![allow(non_upper_case_globals)]
+//use core::time::Duration;
+#![allow(warnings)]
+
 
 mod constants;
 use crate::constants::*;
@@ -15,11 +17,11 @@ mod math;
 mod graphics;
 use graphics::{graphical_fn, visualizers::{oscilloscope, spectrum, lazer, vol_sweeper, shaky_coffee, ring, bars}};
 
-mod assets;
+//mod assets;
 
 use minifb::{WindowOptions, Window, Key, KeyRepeat};
 
-static mut buf : Vec<(f32, f32)> = Vec::new();
+static mut buf : [(f32, f32); SAMPLE_SIZE] = [(0.0f32, 0.0f32); SAMPLE_SIZE];
 
 use std::env;
 
@@ -28,6 +30,7 @@ static mut switch_incremeter: u64 = 0;
 //static mut visualizer : (dyn Fn(Vec<u32>, Vec<(f32, f32)>)) = &oscilloscope::draw_vectorscope;
 
 fn main() {
+	let coffee_pixart_file = include_bytes!("coffee_pixart_2x.ppm");
 
     let mut stream;
 
@@ -55,9 +58,9 @@ fn main() {
 
         win.limit_update_rate(Some(std::time::Duration::from_micros(FPS_ITVL)));
 
-        let mut pix_buf = vec![0u32 ; WIN_W*WIN_H];
+        let mut pix_buf: [u32; WIN_R] = [0u32 ; WIN_R];
 
-        graphics::visualizers::shaky_coffee::prepare_img_default();
+        graphics::visualizers::shaky_coffee::prepare_img(coffee_pixart_file);
         spectrum::prepare_index();
         bars::prepare_index_bar();
         //crate::constants::prepare_table();
@@ -70,27 +73,29 @@ fn main() {
             }
 
             if (VIS_IDX != SWITCH) {
-                pix_buf = vec![0u32; pix_buf.len()];
+                pix_buf = [0u32; WIN_R];
                 SWITCH = VIS_IDX;
             }
 
             match VIS_IDX {
-                1 => shaky_coffee::draw_shaky(&mut pix_buf, buf.clone()),
-                2 => vol_sweeper::draw_vol_sweeper(&mut pix_buf, buf.clone()),
-                3 => spectrum::draw_spectrum_pow2_std(&mut pix_buf, buf.clone()),
-                4 => oscilloscope::draw_oscilloscope(&mut pix_buf, buf.clone()),
-                5 => lazer::draw_lazer(&mut pix_buf, buf.clone()),
-                6 => ring::draw_flower(&mut pix_buf, buf.clone()),
-                7 => bars::draw_bars(&mut pix_buf, buf.clone()),
-                _ => oscilloscope::draw_vectorscope(&mut pix_buf, buf.clone()),
+                1 => shaky_coffee::draw_shaky(&mut pix_buf, &buf),
+                2 => vol_sweeper::draw_vol_sweeper(&mut pix_buf, &buf),
+                3 => spectrum::draw_spectrum_pow2_std(&mut pix_buf, &buf),
+                4 => oscilloscope::draw_oscilloscope(&mut pix_buf, &buf),
+                5 => lazer::draw_lazer(&mut pix_buf, &buf),
+                6 => ring::draw_ring(&mut pix_buf, &buf),
+                7 => bars::draw_bars(&mut pix_buf, &buf),
+                _ => oscilloscope::draw_vectorscope(&mut pix_buf, &buf),
             }
 
             win.update_with_buffer(&pix_buf, WIN_W, WIN_H);
 
+//			println!("{:?}", buf[0]);
+
             control_key_events(&win);
 
             usleep(FPS);
-            
+
             if AUTO_SWITCH {
                 switch_incremeter += 1;
             }
@@ -101,8 +106,12 @@ fn main() {
 
 fn read_samples<T: cpal::Sample>(data : &[T], _ : &cpal::InputCallbackInfo) {
     unsafe {
-        buf = data.iter().map(|x| (x.to_f32(), 0.0f32)).collect();
-        usleep(FPS_ITVL << 1);
+	//buf = data.iter().map(|x| (x.to_f32(), 0.0f32)).collect();
+		for sample in 0..SAMPLE_SIZE {
+			buf[sample].0 = data[sample%data.len()].to_f32();
+		}
+//		println!("{}", data.len());
+		usleep(FPS_ITVL);
     }
 }
 
