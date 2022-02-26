@@ -7,7 +7,7 @@ static mut _sweep : usize = 0;
 
 const c : u32 = 16720064;
 
-pub unsafe fn draw_vol_sweeper(buf : &mut Vec<u32>, stream : Vec<(f32, f32)>) {
+pub unsafe fn draw_vol_sweeper(buf : &mut [u32], stream : &[(f32, f32)]) {
 
     //let w = WIN_W*stream[_sweep].abs() as usize /32768;
     win_clear_alpha(buf, 0.99);
@@ -31,7 +31,7 @@ pub unsafe fn draw_vol_sweeper(buf : &mut Vec<u32>, stream : Vec<(f32, f32)>) {
     graphical_fn::draw_rect(buf, 2, _sweep, WIN_W, 1, 0);
     graphical_fn::draw_rect(buf, 2, _sweep, w, 1, color);
 
-    crate::graphics::visualizers::dash_line::draw_dash_line(buf, &stream, false, 0, false);
+    crate::graphics::visualizers::dash_line::draw_dash_line(buf, stream, false, 0, false);
 
     _sweep = (_sweep+1)%WIN_H;
 }
