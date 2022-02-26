@@ -1,4 +1,4 @@
-use crate::constants::{WIN_H, WIN_W, pi2, pih};
+use crate::constants::{SAMPLE_SIZE, WIN_H, WIN_W, pi2, pih};
 
 pub fn rgb_to_u32(r: u8, g: u8, b: u8) -> u32 {
     ((r as u32) << 16) | ((g as u32) << 8) | b as u32
@@ -48,8 +48,11 @@ pub mod color_blending {
     }
 }
 
-pub fn win_clear(buf: &mut Vec<u32>) {
-    *buf = vec![0u32; buf.len()];
+pub fn win_clear(buf: &mut [u32]) {
+    //buf = &mut [0u32; SAMPLE_SIZE];
+	for sample in 0..buf.len() {
+		buf[sample] = 0;
+	}
 }
 
 pub fn apply_alpha(color : u32, a : u8) -> u32 {
@@ -61,7 +64,7 @@ pub fn apply_alpha(color : u32, a : u8) -> u32 {
     )
 }
 
-pub fn win_clear_alpha(buf: &mut Vec<u32>, alpha : f32) {
+pub fn win_clear_alpha(buf: &mut [u32], alpha : f32) {
     for i in 0..buf.len() {
         let (r, g, b) = u32_to_rgb(buf[i]);
         buf[i] = rgb_to_u32(
@@ -72,11 +75,11 @@ pub fn win_clear_alpha(buf: &mut Vec<u32>, alpha : f32) {
     }
 }
 
-pub unsafe fn draw_point(buf : &mut Vec<u32>, p1 : P2, color : u32) {
+pub unsafe fn draw_point(buf : &mut [u32], p1 : P2, color : u32) {
     buf[coord_to_1d(p1.0, p1.1)] = color_blending::mix(buf[coord_to_1d(p1.0, p1.1)], color);
 }
 
-pub unsafe fn draw_line(buf : &mut Vec<u32>, p1 : P2, p2 : P2, color : u32, thickness : f32) {
+pub unsafe fn draw_line(buf : &mut [u32], p1 : P2, p2 : P2, color : u32, thickness : f32) {
     let (box0, box1) = get_bounding_box2(p1, p2);
 
     for i in box0.0..box1.0 {
@@ -88,7 +91,7 @@ pub unsafe fn draw_line(buf : &mut Vec<u32>, p1 : P2, p2 : P2, color : u32, thic
     }
 }
 
-pub unsafe fn draw_line_direct(buf : &mut Vec<u32>, p1 : P2, p2 : P2, color : u32) {
+pub unsafe fn draw_line_direct(buf : &mut [u32], p1 : P2, p2 : P2, color : u32) {
     let (box0, box1) = get_bounding_box2(p1, p2);
     let d = (box1.0 - box0.0 + box1.1 - box0.1) * 2;
     
@@ -102,7 +105,7 @@ pub unsafe fn draw_line_direct(buf : &mut Vec<u32>, p1 : P2, p2 : P2, color : u3
     }
 }
 
-pub unsafe fn draw_rect(buf: &mut Vec<u32>, x: usize, y: usize, w: usize, h: usize, color : u32) {
+pub unsafe fn draw_rect(buf: &mut [u32], x: usize, y: usize, w: usize, h: usize, color : u32) {
     let x1 = x.min(WIN_W);
     let y1 = y.min(WIN_H);
 
@@ -124,7 +127,7 @@ pub unsafe fn draw_rect(buf: &mut Vec<u32>, x: usize, y: usize, w: usize, h: usi
 //	b = z;
 //}
 //
-pub fn copy_buf(buf : Vec<u32>, new_buf : &mut Vec<u32>) {
+pub fn copy_buf(buf : &[u32], new_buf : &mut [u32]) {
     let l = buf.len().min(new_buf.len());
     for i in 0..l {
         new_buf[i] = buf[i];
@@ -146,7 +149,7 @@ fn p2_mul_num(p : P2, n : f32) -> P2 {
     P2((p.0 as f32 * n) as i32, (p.1 as f32 * n) as i32)
 }
 
-pub unsafe fn quad_bezier(buf: &mut Vec<u32>, p1 : P2, p2 : P2, p3 : P2, color : u32) {
+pub unsafe fn quad_bezier(buf: &mut [u32], p1 : P2, p2 : P2, p3 : P2, color : u32) {
     let (box0, box1) = get_bounding_box3(p1, p2, p3);
     let d = 2.0 * (box1.0 - box0.0 + box1.1 - box0.1).abs() as f32;
 
