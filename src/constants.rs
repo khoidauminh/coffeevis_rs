@@ -1,4 +1,4 @@
-pub const pif32 : f32 = std::f32::consts::PI;
+pub const pif32 : f32 = 3.1415926536f32;
 pub const pih : f32 = pif32/2.0;
 pub const pi2 : f32 = pif32*2.0;
 
@@ -18,9 +18,11 @@ pub static mut VOL_SCL : f32 = 0.95; // in percentage
 
 pub const POWER : usize = 12;
 pub const FFT_SIZE : usize = 1 << POWER;
+pub const SAMPLE_SIZE: usize = 3 << POWER;
 
 pub const WIN_W : usize = 144;
 pub const WIN_H : usize = 144;
+pub const WIN_R : usize = WIN_W*WIN_H;
 
 pub static mut SMOOTHING : f32 = 0.5;
 
