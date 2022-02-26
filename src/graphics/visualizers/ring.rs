@@ -5,7 +5,7 @@ use crate::math::{complex_add, complex_mul};
 static mut _i : usize = 0;
 static mut wrap_rate_incremeter : f32 = 0.0;
 
-pub unsafe fn draw_flower(buf : &mut Vec<u32>, stream : Vec<(f32, f32)>) {
+pub unsafe fn draw_ring(buf : &mut [u32], stream : &[(f32, f32)]) {
     
     let range = stream.len()*WAV_WIN/100;
 
