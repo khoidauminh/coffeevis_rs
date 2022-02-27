@@ -1,4 +1,3 @@
-
 //use core::time::Duration;
 #![allow(warnings)]
 
@@ -65,40 +64,33 @@ fn main() {
         bars::prepare_index_bar();
         //crate::constants::prepare_table();
 
+		let mut visualizer: unsafe fn(&mut [u32], &[(f32, f32)]) -> () = oscilloscope::draw_vectorscope;
+
         while win.is_open() && !win.is_key_down(Key::Escape) {
 
             if switch_incremeter == AUTO_SWITCH_ITVL {
-                change_visualizer();
+                change_visualizer(&mut pix_buf, &mut visualizer);
                 switch_incremeter = 0;
             }
 
-            if (VIS_IDX != SWITCH) {
-                pix_buf = [0u32; WIN_R];
-                SWITCH = VIS_IDX;
-            }
+//            if (VIS_IDX != SWITCH) {
+//
+//                SWITCH = VIS_IDX;
+//            }
 
-            match VIS_IDX {
-                1 => shaky_coffee::draw_shaky(&mut pix_buf, &buf),
-                2 => vol_sweeper::draw_vol_sweeper(&mut pix_buf, &buf),
-                3 => spectrum::draw_spectrum_pow2_std(&mut pix_buf, &buf),
-                4 => oscilloscope::draw_oscilloscope(&mut pix_buf, &buf),
-                5 => lazer::draw_lazer(&mut pix_buf, &buf),
-                6 => ring::draw_ring(&mut pix_buf, &buf),
-                7 => bars::draw_bars(&mut pix_buf, &buf),
-                _ => oscilloscope::draw_vectorscope(&mut pix_buf, &buf),
-            }
+			visualizer(&mut pix_buf, &buf);
 
             win.update_with_buffer(&pix_buf, WIN_W, WIN_H);
 
 //			println!("{:?}", buf[0]);
 
-            control_key_events(&win);
+            control_key_events(&win, &mut pix_buf, &mut visualizer);
 
             usleep(FPS);
 
-            if AUTO_SWITCH {
-                switch_incremeter += 1;
-            }
+			switch_incremeter += AUTO_SWITCH;
+
+
         }
         stream.pause();
     }
@@ -115,14 +107,26 @@ fn read_samples<T: cpal::Sample>(data : &[T], _ : &cpal::InputCallbackInfo) {
     }
 }
 
-unsafe fn change_visualizer() {
+unsafe fn change_visualizer(pix: &mut [u32; WIN_R], f: &mut unsafe fn(&mut [u32], &[(f32, f32)]) -> ()) {
     VIS_IDX = (VIS_IDX+1)%VISES;
+	*pix = [0u32; WIN_R];
+
+    match VIS_IDX {
+        1 => *f =  shaky_coffee::draw_shaky,
+        2 => *f =  vol_sweeper::draw_vol_sweeper,
+        3 => *f =  spectrum::draw_spectrum_pow2_std,
+        4 => *f =  oscilloscope::draw_oscilloscope,
+        5 => *f =  lazer::draw_lazer,
+        6 => *f =  ring::draw_ring,
+        7 => *f =  bars::draw_bars,
+        _ => *f =  oscilloscope::draw_vectorscope,
+    }
 }
 
-unsafe fn control_key_events(win : &minifb::Window) {
+unsafe fn control_key_events(win : &minifb::Window, pix: &mut [u32; WIN_R], f: &mut unsafe fn(&mut [u32], &[(f32, f32)]) -> ()) {
 
     if win.is_key_pressed(Key::Space, KeyRepeat::Yes) {
-        change_visualizer();
+        change_visualizer(pix, f);
     }
 
     if win.is_key_pressed(Key::Minus, KeyRepeat::Yes) {
@@ -144,11 +148,11 @@ unsafe fn control_key_events(win : &minifb::Window) {
     }
     
     if win.is_key_pressed(Key::Backslash, KeyRepeat::No) {
-        AUTO_SWITCH ^= true;
+        AUTO_SWITCH ^= 1;
     } 
 
     if win.is_key_pressed(Key::Slash, KeyRepeat::Yes) {
-        VOL_SCL = 0.8;
+        VOL_SCL = 0.85;
         SMOOTHING = 0.65;
         WAV_WIN = 30;
     }
