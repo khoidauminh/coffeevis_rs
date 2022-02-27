@@ -8,13 +8,13 @@ pub const CTRL_ITVL : u64 = FPS << 2;
 
 // Visualizer will switch every N frames (default: 8 seconds);
 pub const AUTO_SWITCH_ITVL: u64 = FPS*8;
-pub static mut AUTO_SWITCH: bool = true;
+pub static mut AUTO_SWITCH: u64 = 1;
 
 pub const PHASE_OFFSET : usize = 2000;
 pub static mut WAV_WIN : usize = 30; // in percentage;
 
 pub const INCREMENT : usize  = 8;
-pub static mut VOL_SCL : f32 = 0.95; // in percentage
+pub static mut VOL_SCL : f32 = 0.85; // in percentage
 
 pub const POWER : usize = 12;
 pub const FFT_SIZE : usize = 1 << POWER;
