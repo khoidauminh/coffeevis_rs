@@ -135,7 +135,7 @@ const wrapper : f32 = crate::constants::pi2*725.0;
 
 pub unsafe fn apply_coord3(stream : &[(f32, f32)]) {
 	
-    let mut data_f = vec![(0.0f32, 0.0f32); 1024];
+    let mut data_f = [(0.0f32, 0.0f32); 1024];
     let mut amplitude : f32 = 0.0;
     
     for i in 0..1024 {
@@ -143,7 +143,7 @@ pub unsafe fn apply_coord3(stream : &[(f32, f32)]) {
     }
     
     math::hanning(&mut data_f);
-    math::lowpass(&mut data_f, 0.005);
+    math::lowpass_array(&mut data_f, 0.005);
     
     for i in 0..1024 {
         amplitude += data_f[i].0.abs();
