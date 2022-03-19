@@ -14,7 +14,7 @@ use audio_input::input_stream::get_source;
 mod math;
 
 mod graphics;
-use graphics::{graphical_fn, visualizers::{oscilloscope, spectrum, lazer, vol_sweeper, shaky_coffee, ring, bars}};
+use graphics::{graphical_fn, visualizers::{oscilloscope, spectrum, lazer, vol_sweeper, shaky_coffee, ring, bars, experiment1}};
 
 //mod assets;
 
@@ -111,16 +111,17 @@ unsafe fn change_visualizer(pix: &mut [u32; WIN_R], f: &mut unsafe fn(&mut [u32]
     VIS_IDX = (VIS_IDX+1)%VISES;
 	*pix = [0u32; WIN_R];
 
-    match VIS_IDX {
-        1 => *f =  shaky_coffee::draw_shaky,
-        2 => *f =  vol_sweeper::draw_vol_sweeper,
-        3 => *f =  spectrum::draw_spectrum_pow2_std,
-        4 => *f =  oscilloscope::draw_oscilloscope,
-        5 => *f =  lazer::draw_lazer,
-        6 => *f =  ring::draw_ring,
-        7 => *f =  bars::draw_bars,
-        _ => *f =  oscilloscope::draw_vectorscope,
-    }
+    *f = match VIS_IDX {
+        1 => shaky_coffee::draw_shaky,
+        2 => vol_sweeper::draw_vol_sweeper,
+        3 => spectrum::draw_spectrum_pow2_std,
+        4 => oscilloscope::draw_oscilloscope,
+        5 => lazer::draw_lazer,
+        6 => ring::draw_ring,
+        7 => bars::draw_bars,
+        8 => experiment1::draw_exp1,
+        _ => oscilloscope::draw_vectorscope,
+    };
 }
 
 unsafe fn control_key_events(win : &minifb::Window, pix: &mut [u32; WIN_R], f: &mut unsafe fn(&mut [u32], &[(f32, f32)]) -> ()) {
