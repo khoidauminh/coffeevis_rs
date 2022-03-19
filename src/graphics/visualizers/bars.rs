@@ -30,6 +30,7 @@ pub unsafe fn prepare_index_bar() {
 static mut _i : usize = 0;
 
 static mut data_f1 : [f32; bar_num+1] = [0.0; bar_num+1];
+static mut data_f: [(f32, f32); this_fft_size] = [(0.0f32, 0.0f32); this_fft_size];
 
 pub unsafe fn draw_bars(buf: &mut [u32], stream: &[(f32, f32)]) {
     //if stream.len() < FFT_SIZE { return (); }
@@ -42,15 +43,21 @@ pub unsafe fn draw_bars(buf: &mut [u32], stream: &[(f32, f32)]) {
 
 	let smoothi = (SMOOTHING*255.9) as i32;
     
-    let mut data_f = vec![(0.0f32, 0.0f32); this_fft_size];
-    for i in 0..this_fft_size {
-        data_f[i] = math::complex_mul(stream[(i+_i)%stream.len()], (VOL_SCL, 0.0));
-    }
+    //~ let mut data_f = vec![(0.0f32, 0.0f32); this_fft_size];
+    //~ for i in 0..this_fft_size {
+        //~ data_f[i] = math::complex_mul(stream[(i+_i)%stream.len()], (VOL_SCL, 0.0));
+    //~ }
     
     //triangular(&mut data_f);
 
     //blackman_harris(&mut data_f);
-    data_f = math::cooley_turky_fft_recursive(data_f);
+    //math::cooley_turky_fft_recursive(&mut data_f);
+    
+    for i in 0..this_fft_size {
+        data_f[i] = math::complex_mul(stream[(i+_i)%stream.len()], (VOL_SCL, 0.0));
+    }
+
+    math::fft_array_inplace(&mut data_f);
 
     graphical_fn::win_clear(buf);
     
