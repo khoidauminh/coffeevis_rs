@@ -2,42 +2,74 @@ use crate::constants::{FFT_SIZE, POWER, pi2, pif32, pih};
 
 const minus_pi2 : f32 = -6.283185307179586f32;
 
-pub fn cooley_turky_fft_recursive(a : Vec<(f32, f32)>) -> Vec<(f32, f32)> {
+pub fn fft_array_inplace(a : &mut [(f32, f32)]) {
     let l = a.len();
 
     if l == 1 {
-        return a;
+        return ();
     }
 
-    let lf = (l as f32).recip();
-    let lh = l >> 1;
+    let lh = l/2;
 
-    let feven;
-    let fodd;
+    fft_split_odd_even(a);
 
-    {
-        let mut even = vec![(0f32, 0f32); lh];
-        let mut odd = vec![(0f32, 0f32); lh];
+	fft_array_inplace(&mut a[..lh]);
+	fft_array_inplace(&mut a[lh..]);
 
-        for i in 0..lh {
-            even[i] = a[2*i];
-            odd[i] = a[2*i+1];
-        }
+	let minus_pi2lf = minus_pi2 / l as f32;
 
-        feven = cooley_turky_fft_recursive(even);
-        fodd = cooley_turky_fft_recursive(odd);
-    }
-
-	let minus_pi2lf = minus_pi2 *lf;
-    let mut sum = vec![(0f32, 0f32); l];
     for i in 0..lh {
-        let q = euler(fodd[i], minus_pi2lf *i as f32);
-        sum[i] = complex_add(feven[i], q);
-        sum[i+lh] = complex_sub(feven[i], q);
+        let q = euler(a[i+lh], minus_pi2lf *i as f32);
+        let u = a[i];
+        a[i] = complex_add(u, q);
+        a[i+lh] = complex_sub(u, q);
     }
-
-    return sum;
 }
+
+fn fft_split_odd_even(a: &mut [(f32, f32)]) {
+
+	let l = a.len();
+	if l < 4 { return; }
+    let lh = l/2;
+
+	for i in 1..lh {
+		a.swap(i, 2*i);
+	}
+
+	fft_split_odd_even(&mut a[lh..]);
+    fft_split_odd_even(&mut a[lh..l-lh/2]);
+}
+
+// DCT attempt
+//~ fn fast_dct(a: &mut [(f32, f32)], k: usize) {
+    //~ let l = a.len();
+
+    //~ if l == 1 {
+        //~ return ();
+    //~ } 
+
+    //~ let lh = l/2;
+
+    //~ fft_split_odd_even(a);
+
+	//~ fast_dct(&mut a[..lh]);
+	//~ fast_dct(&mut a[lh..]);
+
+	//~ let minus_pi2lf = minus_pi2 / l as f32;
+
+    //~ for i in 0..lh {
+        //~ let q = euler(a[i+lh], std::f32::consts::PI / l as f32 * (i as f32 + 0.5)* k as f32));
+        //~ let u = a[i];
+        //~ a[i] = complex_add(u, q);
+        //~ a[i+lh] = complex_sub(u, q);
+    //~ }
+//~ }
+
+//~ pub fn image_fast_dct(a: &mut [(f32, f32)], width: usize) {
+    
+//~ }
+
+
 
 // Approximation of sine
 pub fn fast_sin(rawx : f32) -> f32 {
@@ -126,42 +158,52 @@ fn dft(a : &mut Vec<(f32, f32)>) -> Vec<(f32, f32)> {
     o
 }
 
-pub fn lowpass(data : &mut Vec<(f32, f32)>, a : f32) {
-    data[0].0 = a*data[0].0;
-
-    for i in 1..data.len() {
-        data[i].0 = data[i-1].0 + a*(data[i].0-data[i-1].0);
-    }
+#[inline]
+pub fn lowpass(s1: (f32, f32), s2: (f32, f32), a: f32) -> (f32,  f32) {
+    complex_add(s1, complex_mul((a, 0.0), complex_sub(s2, s1)))
 }
-// These aren't needed at the moment 
+
 pub fn lowpass_array(data : &mut [(f32, f32)], a : f32) {
     data[0] = complex_mul((a, 0.0), data[0]);
 
     for i in 1..data.len() {
-        data[i] = complex_add(data[i-1], complex_mul((a, 0.0), complex_sub(data[i], data[i-1])));
+       //data[i] = complex_add(data[i-1], complex_mul((a, 0.0), complex_sub(data[i], data[i-1])));
+       data[i] = lowpass(data[i-1], data[i], a);
     }
 }
 
-pub fn lowpass_bi_array(data : &mut [(f32, f32)], a : f32) {
-    let l = data.len()-1;
+#[inline]
+pub fn highpass(s1: (f32, f32), s2: (f32, f32), s3: (f32, f32), a: f32) -> (f32, f32) {
+    complex_mul((a, 0.0), complex_add(s1, complex_sub(s2, s3)))
+}
 
-    data[l] = complex_mul((a, 0.0), data[l]);
-    data[0] = complex_mul((a, 0.0), data[0]);
-
-    for i in 1..=l {
-    	let ri = l-i;
-    	data[i] = complex_add(data[i-1], complex_mul((a, 0.0), complex_sub(data[i], data[i-1])));
-        data[ri] = complex_add(data[ri+1], complex_mul((a, 0.0), complex_sub(data[ri], data[ri+1])));
+pub fn highpass_array(data : &mut [(f32, f32)], a : f32) {
+    let mut s1 = data[0];
+    let mut s2 = data[1];
+    for i in 1..data.len() {
+        let li = i-1;
+        s1 = data[i];
+        //data[i] = complex_mul((a, 0), complex_add(data[li], complex_sub(data[i], data[li])));
+        data[i] = highpass(data[i-1], data[i], s2, a);
+        s2 = s1;
     }
 }
-//
 
-pub fn hanning(data : &mut Vec<(f32, f32)>) {
+pub fn hanning(data : &mut [(f32, f32)]) {
     let l = data.len();
     let lf = ((l-1) as f32).recip();
 
     for i in 0..l {
         data[i] = complex_mul(data[i], ((3.141592 * i as f32 * lf).sin().powi(2), 0.0f32));
+    }
+}
+
+pub fn triangle(data: &mut [(f32, f32)]) {
+    let l = data.len();
+    for i in 0..l/2 {
+        let a = i as f32 / l as f32;
+        data[i]     = complex_mul((a, 0.0), data[i]);
+        data[l-i-1] = complex_mul((1.0-a, 0.0), data[i]);
     }
 }
 
@@ -180,16 +222,6 @@ pub fn blackman_harris(data : &mut Vec<(f32, f32)>) {
             ,
             0f32
         ));
-    }
-}
-
-pub fn triangular(data : &mut Vec<(f32, f32)>) {
-    let l = data.len();
-    let lf = l as f32;
-    let lfh = lf*0.5;
-
-    for i in 0..l {
-        data[i] = complex_mul(data[i], (1.0 -((i as f32 -lfh)/lfh).abs(), 0f32));
     }
 }
 
