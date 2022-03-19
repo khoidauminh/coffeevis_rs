@@ -8,7 +8,9 @@ use crate::math;
 use crate::constants::{VOL_SCL, FFT_SIZE, SMOOTHING, WIN_H, WIN_W, INCREMENT, pi2, pih};
 use crate::graphics::graphical_fn;
 
+static mut data_f: [(f32, f32); FFT_SIZE] = [(0.0f32, 0.0f32); FFT_SIZE];
 static mut data_f1 : [(i32, i32); FFT_SIZE+1] = [(0, 0); FFT_SIZE+1];
+
 static mut _i : usize = 0;
 
 static mut index_vec : [(f32, usize, usize, i32, i32); WIN_W] = [(0.0, 0, 0, 0, 0); WIN_W];
@@ -27,6 +29,7 @@ pub unsafe fn prepare_index() {
 
 // Somewhere in this function and/or the fft one occasionally returns data_f with huge values which draws all over the screen, then comes back normal.
 // Is this a bug?
+// Update: this bug no longer appears. I don't know what fixed this.
 pub unsafe fn draw_spectrum_pow2_std(buf : &mut [u32], stream : &[(f32, f32)]) {
     if stream.len() < FFT_SIZE { return; } 
 
@@ -38,14 +41,19 @@ pub unsafe fn draw_spectrum_pow2_std(buf : &mut [u32], stream : &[(f32, f32)]) {
 
 	let smoothi = (SMOOTHING*255.9) as i32;
 
-    let mut data_f = vec![(0.0f32, 0.0f32); FFT_SIZE];
+    //~ let mut data_f = vec![(0.0f32, 0.0f32); FFT_SIZE];
+    //~ for i in 0..FFT_SIZE {
+        //~ data_f[i] = math::complex_mul(stream[(i+_i)%stream.len()], (VOL_SCL, 0.0));
+    //~ }
+    
     for i in 0..FFT_SIZE {
         data_f[i] = math::complex_mul(stream[(i+_i)%stream.len()], (VOL_SCL, 0.0));
     }
     //triangular(&mut data_f);
 
     //blackman_harris(&mut data_f);
-    data_f = math::cooley_turky_fft_recursive(data_f);
+    //math::cooley_turky_fft_recursive(&mut data_f);
+    math::fft_array_inplace(&mut data_f);
 
     for sample in 0..FFT_SIZE {
         data_f1[sample].0 = math::interpolate::lineari(data_f1[sample].0, data_f[sample].0.abs() as i32, smoothi);
