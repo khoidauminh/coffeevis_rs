@@ -9,151 +9,178 @@ use crate::constants::*;
 mod audio_input;
 use cpal;
 use cpal::traits::{StreamTrait};
-use audio_input::input_stream::get_source;
+use audio_input::input_stream::{get_source, read_samples};
 
 mod math;
 
 mod graphics;
-use graphics::{graphical_fn, visualizers::{oscilloscope, spectrum, lazer, vol_sweeper, shaky_coffee, ring, bars}};
+use graphics::{graphical_fn, visualizers::{oscilloscope, spectrum, lazer, vol_sweeper, shaky_coffee, ring, bars, experiment1}};
 
 //mod assets;
-
 use minifb::{WindowOptions, Window, Key, KeyRepeat};
 
 static mut buf : [(f32, f32); SAMPLE_SIZE] = [(0.0f32, 0.0f32); SAMPLE_SIZE];
 
-use std::env;
-
-static mut i : usize = 0;
-static mut switch_incremeter: u64 = 0;
+//static mut i : usize = 0;
 //static mut visualizer : (dyn Fn(Vec<u32>, Vec<(f32, f32)>)) = &oscilloscope::draw_vectorscope;
 
 fn main() {
 	let coffee_pixart_file = include_bytes!("coffee_pixart_2x.ppm");
+	//~ let coffee_pixart_file = include_bytes!("/home/khoidauminh/Pictures/scared_Đức_.ppm");
+
+	 let mut para = Parameters {				
+		AUTO_SWITCH_ITVL: FPS as u16 *8,
+		SWITCH : 0,
+		AUTO_SWITCH: 0,
+		SWITCH_INCR: 0,
+		VIS_IDX: 0,
+					 
+		WAV_WIN : 30,
+		VOL_SCL : 0.8,
+		SMOOTHING : 0.5,
+					 
+		WIN_W : 144,
+		WIN_H : 144,
+		WIN_R : 144*144,
+		WIN_RL: 144*144-1,
+		
+		IMG: graphics::visualizers::shaky_coffee::prepare_img(coffee_pixart_file),
+		
+		_i: 0,
+		
+		cross: false,
+		
+		bars_smoothing_ft: vec![0.0f32; 37],
+		
+		bars_smoothing_ft_circle: vec![0.0f32; 144],
+		
+		shaky_coffee: (0.0, 0.0, 0.0, 0.0, 0, 0),
+		
+		vol_sweeper: (0, 0),
+		
+		lazer: (0, 0, 0, 0, false),
+		
+		spectrum_smoothing_ft: vec![(0.0, 0.0); FFT_SIZE+1]
+	};
 
     let mut stream;
 
     unsafe {
-        stream = get_source(read_samples::<f32>);
-        let status = stream.play();
+        stream = get_source(read_samples::<f32>, &mut para);
+	}
+	let status = stream.play();
 
-        let mut win = match Window::new(
-            "Coffee Visualizer",
-            WIN_W, WIN_H,
-            WindowOptions {
-                    scale : minifb::Scale::X1,
-                    resize : false,
-                    topmost : true,
-                    borderless : false,
-                    ..WindowOptions::default()
-            }
-        ) {
-            Ok(win) => win,
-            Err(err) => {
-                println!("Unable to create window {}", err);
-                return;
-            }
-        };
-
-        win.limit_update_rate(Some(std::time::Duration::from_micros(FPS_ITVL)));
-
-        let mut pix_buf: [u32; WIN_R] = [0u32 ; WIN_R];
-
-        graphics::visualizers::shaky_coffee::prepare_img(coffee_pixart_file);
-        spectrum::prepare_index();
-        bars::prepare_index_bar();
-        //crate::constants::prepare_table();
-
-		let mut visualizer: unsafe fn(&mut [u32], &[(f32, f32)]) -> () = oscilloscope::draw_vectorscope;
-
-        while win.is_open() && !win.is_key_down(Key::Escape) {
-
-            if switch_incremeter == AUTO_SWITCH_ITVL {
-                change_visualizer(&mut pix_buf, &mut visualizer);
-                switch_incremeter = 0;
-            }
-
-//            if (VIS_IDX != SWITCH) {
-//
-//                SWITCH = VIS_IDX;
-//            }
-
-			visualizer(&mut pix_buf, &buf);
-
-            win.update_with_buffer(&pix_buf, WIN_W, WIN_H);
-
-//			println!("{:?}", buf[0]);
-
-            control_key_events(&win, &mut pix_buf, &mut visualizer);
-
-            usleep(FPS);
-
-			switch_incremeter += AUTO_SWITCH;
-
-
-        }
-        stream.pause();
-    }
-}
-
-fn read_samples<T: cpal::Sample>(data : &[T], _ : &cpal::InputCallbackInfo) {
-    unsafe {
-	//buf = data.iter().map(|x| (x.to_f32(), 0.0f32)).collect();
-		for sample in 0..SAMPLE_SIZE {
-			buf[sample].0 = data[sample%data.len()].to_f32();
+	let mut win = match Window::new(
+		"Coffee Visualizer",
+		144, 144,
+		WindowOptions {
+				scale : minifb::Scale::X1,
+				resize : true,
+				topmost : true,
+				borderless : false,
+				..WindowOptions::default()
 		}
-//		println!("{}", data.len());
-		usleep(FPS_ITVL);
-    }
+	) {
+		Ok(win) => win,
+		Err(err) => {
+			println!("Unable to create window {}", err);
+			return;
+		}
+	};
+
+	win.limit_update_rate(Some(std::time::Duration::from_micros(FPS_ITVL)));
+	//spectrum::prepare_index();
+	//bars::prepare_index_bar();
+	//crate::constants::prepare_table();
+	//bars::data_f1.resize(bars::bar_num+1, 0.0);
+
+	let mut visualizer: fn(&mut [u32], &[(f32, f32)], para: &mut Parameters) -> () = oscilloscope::draw_vectorscope;
+	//~ let mut visualizer: fn(&mut [u32], &[(f32, f32)], para: &mut Parameters) -> () = bars::draw_bars_circle;
+	//change_visualizer(&mut pix_buf, &mut visualizer);
+
+	let mut pix_buf: Vec<u32> = vec![0u32 ; para.WIN_R];
+
+	while win.is_open() && !win.is_key_down(Key::Escape) {
+		
+		let s = win.get_size();
+		if s.0 != para.WIN_W || s.1 != para.WIN_H {
+			graphical_fn::update_size(s, &mut para);
+			pix_buf = vec![0u32 ; s.0*s.1];
+		}
+
+		if para.SWITCH_INCR == para.AUTO_SWITCH_ITVL {
+			change_visualizer(&mut pix_buf, &mut visualizer, &mut para);
+			para.SWITCH_INCR = 0;
+		}
+		
+		let stream_data = unsafe{buf};
+		visualizer(&mut pix_buf, &stream_data, &mut para);
+		win.update_with_buffer(&pix_buf, para.WIN_W, para.WIN_H);
+		
+		control_key_events(&win, &mut pix_buf, &mut visualizer, &mut para);
+		
+		usleep(FPS);
+		
+		para.SWITCH_INCR += para.AUTO_SWITCH;
+	}
+	stream.pause();
 }
 
-unsafe fn change_visualizer(pix: &mut [u32; WIN_R], f: &mut unsafe fn(&mut [u32], &[(f32, f32)]) -> ()) {
-    VIS_IDX = (VIS_IDX+1)%VISES;
-	*pix = [0u32; WIN_R];
+fn change_visualizer(pix: &mut Vec<u32>, f: &mut fn(&mut [u32], &[(f32, f32)], para: &mut Parameters) -> (), para: &mut Parameters) {
+    para.VIS_IDX = math::advance_with_limit(para.VIS_IDX, VISES);
+	*pix = vec![0u32; para.WIN_R];
 
-    match VIS_IDX {
-        1 => *f =  shaky_coffee::draw_shaky,
-        2 => *f =  vol_sweeper::draw_vol_sweeper,
-        3 => *f =  spectrum::draw_spectrum_pow2_std,
-        4 => *f =  oscilloscope::draw_oscilloscope,
-        5 => *f =  lazer::draw_lazer,
-        6 => *f =  ring::draw_ring,
-        7 => *f =  bars::draw_bars,
-        _ => *f =  oscilloscope::draw_vectorscope,
-    }
+    *f = match para.VIS_IDX {
+        1 => shaky_coffee::draw_shaky,
+        2 => vol_sweeper::draw_vol_sweeper,
+        3 => spectrum::draw_spectrum,
+        4 => oscilloscope::draw_oscilloscope,
+        5 => lazer::draw_lazer,
+        6 => ring::draw_ring,
+        7 => bars::draw_bars,
+        8 => experiment1::draw_exp1,
+        9 => bars::draw_bars_circle,
+        _ => oscilloscope::draw_vectorscope,
+    };
 }
 
-unsafe fn control_key_events(win : &minifb::Window, pix: &mut [u32; WIN_R], f: &mut unsafe fn(&mut [u32], &[(f32, f32)]) -> ()) {
+fn control_key_events(win : &minifb::Window, pix: &mut Vec<u32>, f: &mut fn(&mut [u32], &[(f32, f32)], para: &mut Parameters) -> (), para: &mut Parameters) {
 
     if win.is_key_pressed(Key::Space, KeyRepeat::Yes) {
-        change_visualizer(pix, f);
+        change_visualizer(pix, f, para);
     }
 
     if win.is_key_pressed(Key::Minus, KeyRepeat::Yes) {
-        VOL_SCL = (VOL_SCL/1.2).clamp(0.0, 10.0);
+        para.VOL_SCL = (para.VOL_SCL/1.2).clamp(0.0, 10.0);
     } else if win.is_key_pressed(Key::Equal, KeyRepeat::Yes) {
-        VOL_SCL = (VOL_SCL*1.2).clamp(0.0, 10.0);
+        para.VOL_SCL = (para.VOL_SCL*1.2).clamp(0.0, 10.0);
     }
 
     if win.is_key_pressed(Key::LeftBracket, KeyRepeat::Yes) {
-        SMOOTHING = (SMOOTHING-0.05).clamp(0.0, 0.95);
+        para.SMOOTHING = (para.SMOOTHING-0.05).clamp(0.0, 0.95);
     } else if win.is_key_pressed(Key::RightBracket, KeyRepeat::Yes) {
-        SMOOTHING = (SMOOTHING+0.05).clamp(0.0, 0.95);
+        para.SMOOTHING = (para.SMOOTHING+0.05).clamp(0.0, 0.95);
     }
 
     if win.is_key_pressed(Key::Semicolon, KeyRepeat::Yes) {
-        WAV_WIN = (WAV_WIN-3).clamp(3, 50);
+        para.WAV_WIN = (para.WAV_WIN-3).clamp(3, 50);
     } else if win.is_key_pressed(Key::Apostrophe, KeyRepeat::Yes) {
-        WAV_WIN = (WAV_WIN+3).clamp(3, 50);
+        para.WAV_WIN = (para.WAV_WIN+3).clamp(3, 50);
     }
     
     if win.is_key_pressed(Key::Backslash, KeyRepeat::No) {
-        AUTO_SWITCH ^= 1;
+        para.AUTO_SWITCH ^= 1;
     } 
 
     if win.is_key_pressed(Key::Slash, KeyRepeat::Yes) {
-        VOL_SCL = 0.85;
-        SMOOTHING = 0.65;
-        WAV_WIN = 30;
+        para.VOL_SCL = 0.85;
+        para.SMOOTHING = 0.65;
+        para.WAV_WIN = 30;
     }
+    
+    //~ if win.is_key_pressed(Key::Backspace, KeyRepeat::Yes) {
+		//~ unsafe {
+			//~ graphical_fn::update_size((144, 144), para);
+		//~ }
+	//~ }
 }
