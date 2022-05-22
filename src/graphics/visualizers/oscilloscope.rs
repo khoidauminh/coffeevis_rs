@@ -1,18 +1,18 @@
-use crate::constants::{SAMPLE_SIZE, PHASE_OFFSET, INCREMENT, VOL_SCL, WAV_WIN, console_clear, WIN_W, WIN_H, SMOOTHING};
+use crate::constants::{SAMPLE_SIZE, PHASE_OFFSET, INCREMENT};
+use crate::constants::Parameters;
 
 use crate::graphics::graphical_fn::{rgb_to_u32, coord_to_1d, win_clear, win_clear_alpha, draw_line, P2, p2_add, draw_rect};
 
-static mut i : usize = 0;
-static mut _smooth_osc : [f32; WIN_W] = [0.0f32; WIN_W];
+// static mut _smooth_osc : [f32; WIN_W] = [0.0f32; WIN_W];
 
 #[allow(dead_code)]
-pub unsafe fn draw_oscilloscope(buf : &mut [u32], stream : &[(f32, f32)]) {
-    let range = stream.len()*WAV_WIN/100;
+pub fn draw_oscilloscope(buf : &mut [u32], stream : &[(f32, f32)], para: &mut Parameters ) {
+    let range = stream.len()*para.WAV_WIN/100;
 
     //if range < WIN_H+WIN_W { return (); }
 
-    let width = WIN_W as i32;
-    let height = WIN_H as i32;
+    let width = para.WIN_W as i32;
+    let height = para.WIN_H as i32;
 
     let width_top_h = (width >> 1) + 1;
     let height_top_h = (height >> 1) + 1;
@@ -28,39 +28,39 @@ pub unsafe fn draw_oscilloscope(buf : &mut [u32], stream : &[(f32, f32)]) {
         let x = (di * width as usize / range) as i32;
         let xu = x as usize;
 
-        let y = height_top_h as f32 + stream[i%stream.len()].0*WIN_H as f32 *VOL_SCL *0.5;
+        let y = height_top_h as f32 + stream[para._i%stream.len()].0*para.WIN_H as f32 *para.VOL_SCL *0.5;
 
 
 
         //let o = (y.abs()*4*PXL_OPC/width) as usize;
 
-        _smooth_osc[xu] = crate::math::interpolate::linearf(_smooth_osc[xu], y, 0.7);
+        //_smooth_osc[xu] = crate::math::interpolate::linearf(_smooth_osc[xu], y, 0.7);
 
         //buf[coord_to_1d(x, y)] = rgb_to_u32(255, 255, 255);
 
-        buf[coord_to_1d(x, _smooth_osc[xu] as i32)] = rgb_to_u32(255, 255, 255);
+        buf[coord_to_1d(x, y as i32, para)] = rgb_to_u32(255, 255, 255);
 
-        i = (i+INCREMENT+1);
+        para._i = (para._i+INCREMENT+1);
         di = di+INCREMENT+1;
     }
         
-    i %= stream.len();
+    para._i %= stream.len();
     
-    draw_rect(buf, i%WIN_W, 8, 1, WIN_H-16, 0x00_55_55_55);
+    draw_rect(buf, para._i%para.WIN_W, 8, 1, para.WIN_H-16, 0x00_55_55_55, para);
     
-    draw_rect(buf, 0, WIN_H/2, WIN_W, 1, 0x00_55_55_55);
+    draw_rect(buf, 0, para.WIN_H/2, para.WIN_W, 1, 0x00_55_55_55, para);
 }
 
-pub unsafe fn draw_vectorscope(buf : &mut [u32], stream : &[(f32, f32)]) {
+pub fn draw_vectorscope(buf : &mut [u32], stream : &[(f32, f32)], para: &mut Parameters ) {
 
-    let range = stream.len()*WAV_WIN/100;
+    let range = stream.len()*para.WAV_WIN/100;
 
     //if range < WIN_H+WIN_W { return (); }
 
-    let size = if WIN_H > WIN_W {WIN_W as i32} else {WIN_H as i32};
+    let size = para.WIN_H.min(para.WIN_W) as i32;
 
-    let width = WIN_W as i32;
-    let height = WIN_H as i32;
+    let width = para.WIN_W as i32;
+    let height = para.WIN_H as i32;
 
     let width_top_h = width >> 1;
     let height_top_h = height >> 1;
@@ -71,20 +71,18 @@ pub unsafe fn draw_vectorscope(buf : &mut [u32], stream : &[(f32, f32)]) {
     win_clear(buf);
 
     while di < range {
-        let x =  (stream[i%stream.len()].0 *size as f32 *VOL_SCL * 0.5) as i32;
-        let y =  (stream[(i+PHASE_OFFSET)%stream.len()].0 *size as f32 *VOL_SCL * 0.5) as i32;
-        //let o = ((x.abs() + y.abs()*2)*PXL_OPC/width) as usize;
-        // Using this instead of the circle formula. Creates a diamond/rhombus shape.
+        let x =  (stream[para._i%stream.len()].0 *size as f32 *para.VOL_SCL * 0.5) as i32;
+        let y =  (stream[(para._i+PHASE_OFFSET)%stream.len()].1 *size as f32 *para.VOL_SCL * 0.5) as i32;
 
-        buf[coord_to_1d(x+width_top_h, y+height_top_h)] = rgb_to_u32((x.abs()*510/size as i32) as u8, 255, (y.abs()*510/size as i32) as u8);
+        buf[coord_to_1d(x+width_top_h, y+height_top_h, para)] = rgb_to_u32((x.abs()*510/size as i32) as u8, 255, (y.abs()*510/size as i32) as u8);
 
-        i = (i+INCREMENT+1);
+        para._i = (para._i+INCREMENT+1);
         di = di+INCREMENT+1;
     }
 
-    crate::graphics::visualizers::cross::draw_cross(buf);
+    crate::graphics::visualizers::cross::draw_cross(buf, para);
 
-    i %= stream.len();
+    para._i %= stream.len();
 }
 
 // Attempting to write the oscilloscope visualizer with the linear function.
