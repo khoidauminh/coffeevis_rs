@@ -1,4 +1,5 @@
-use crate::constants::{SAMPLE_SIZE, WIN_H, WIN_W, pi2, pih};
+use crate::constants::{SAMPLE_SIZE, pi2, pih};
+use crate::constants::Parameters;
 
 pub fn rgb_to_u32(r: u8, g: u8, b: u8) -> u32 {
     ((r as u32) << 16) | ((g as u32) << 8) | b as u32
@@ -16,8 +17,19 @@ pub fn u32_to_rgba(p : u32) -> (u8, u8, u8, u8) {
     ((p >> 16) as u8, (p >> 8) as u8, p as u8, (p >> 24) as u8)
 }
 
-pub unsafe fn coord_to_1d(x: i32, y: i32) -> usize {
-    ((x as usize).min(WIN_W) + (y as usize).min(WIN_H)*WIN_W).min(20735)
+pub fn coord_to_1d(x: i32, y: i32, para: &Parameters) -> usize {
+    ((x as usize).min(para.WIN_W) + (y as usize).min(para.WIN_H)*para.WIN_W).min(para.WIN_RL)
+}
+
+pub fn flatten(x: i32, y: i32, w: usize, h: usize) -> usize {
+	((y as usize).min(h)*w + (x as usize).min(w)).min(w*h-1)
+}
+
+pub fn update_size(s: (usize, usize), para: &mut crate::constants::Parameters) {
+	para.WIN_W = s.0;
+	para.WIN_H = s.1;
+	para.WIN_R = s.0*s.1;
+	para.WIN_RL = para.WIN_R-1;
 }
 
 pub mod color_blending {
@@ -75,23 +87,23 @@ pub fn win_clear_alpha(buf: &mut [u32], alpha : f32) {
     }
 }
 
-pub unsafe fn draw_point(buf : &mut [u32], p1 : P2, color : u32) {
-    buf[coord_to_1d(p1.0, p1.1)] = color_blending::mix(buf[coord_to_1d(p1.0, p1.1)], color);
+pub fn draw_point(buf : &mut [u32], p1 : P2, color : u32, para: &Parameters) {
+    buf[coord_to_1d(p1.0, p1.1, para)] = color_blending::mix(buf[coord_to_1d(p1.0, p1.1, para)], color);
 }
 
-pub unsafe fn draw_line(buf : &mut [u32], p1 : P2, p2 : P2, color : u32, thickness : f32) {
+pub fn draw_line(buf : &mut [u32], p1 : P2, p2 : P2, color : u32, thickness : f32, para: &Parameters) {
     let (box0, box1) = get_bounding_box2(p1, p2);
 
     for i in box0.0..box1.0 {
         for j in box0.1..box1.1 {
             if linear_func(p1, p2, P2(i, j), thickness) {
-                buf[coord_to_1d(i, j)] = color;
+                buf[coord_to_1d(i, j, para)] = color;
             }
         }
     }
 }
 
-pub unsafe fn draw_line_direct(buf : &mut [u32], p1 : P2, p2 : P2, color : u32) {
+pub fn draw_line_direct(buf : &mut [u32], p1 : P2, p2 : P2, color : u32, para: &Parameters) {
     let (box0, box1) = get_bounding_box2(p1, p2);
     let d = (box1.0 - box0.0 + box1.1 - box0.1) * 2;
     
@@ -101,20 +113,20 @@ pub unsafe fn draw_line_direct(buf : &mut [u32], p1 : P2, p2 : P2, color : u32) 
         let x = linear_interp(p1.0 as f32, p2.0 as f32, t);
         let y = linear_interp(p1.1 as f32, p2.1 as f32, t);
         
-        buf[coord_to_1d(x as i32, y as i32)] = color;
+        buf[coord_to_1d(x as i32, y as i32, para)] = color;
     }
 }
 
-pub unsafe fn draw_rect(buf: &mut [u32], x: usize, y: usize, w: usize, h: usize, color : u32) {
-    let x1 = x.min(WIN_W);
-    let y1 = y.min(WIN_H);
+pub fn draw_rect(buf: &mut [u32], x: usize, y: usize, w: usize, h: usize, color : u32, para: &Parameters) {
+    let x1 = x.min(para.WIN_W);
+    let y1 = y.min(para.WIN_H);
 
-    let x2 = (x1 + w).min(WIN_W);
-    let y2 = (y1 + h).min(WIN_H);
+    let x2 = (x1 + w).min(para.WIN_W);
+    let y2 = (y1 + h).min(para.WIN_H);
     
     for dx in x1..x2 {
         for dy in y1..y2 {
-            let di = dx + dy*WIN_W;
+            let di = dx + dy*para.WIN_W;
 
             buf[di] = color;
         }
@@ -149,18 +161,18 @@ fn p2_mul_num(p : P2, n : f32) -> P2 {
     P2((p.0 as f32 * n) as i32, (p.1 as f32 * n) as i32)
 }
 
-pub unsafe fn quad_bezier(buf: &mut [u32], p1 : P2, p2 : P2, p3 : P2, color : u32) {
-    let (box0, box1) = get_bounding_box3(p1, p2, p3);
-    let d = 2.0 * (box1.0 - box0.0 + box1.1 - box0.1).abs() as f32;
+//~ pub unsafe fn quad_bezier(buf: &mut [u32], p1 : P2, p2 : P2, p3 : P2, color : u32) {
+    //~ let (box0, box1) = get_bounding_box3(p1, p2, p3);
+    //~ let d = 2.0 * (box1.0 - box0.0 + box1.1 - box0.1).abs() as f32;
 
-    let mut i = 0.0;
-    while i < d {
-        let p = quad_interp(p1, p2, p3, i/d);
-        buf[coord_to_1d(p.0, p.1)] = color;
+    //~ let mut i = 0.0;
+    //~ while i < d {
+        //~ let p = quad_interp(p1, p2, p3, i/d);
+        //~ buf[coord_to_1d(p.0, p.1)] = color;
 
-        i += 1.0;
-    }
-}
+        //~ i += 1.0;
+    //~ }
+//~ }
 
 fn quad_interp_(p1: P2, p2: P2, p3: P2, t : f32) -> P2 {
     let a = p2_mul_num(p1, (1.0-t).powi(2));
