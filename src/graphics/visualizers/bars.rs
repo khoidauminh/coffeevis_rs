@@ -1,71 +1,136 @@
-use crate::constants::{VOL_SCL, FFT_SIZE, SMOOTHING, WIN_H, WIN_W, INCREMENT, pi2, pih};
-use crate::graphics::graphical_fn;
+use crate::constants::{FFT_SIZE, INCREMENT, pi2, pih, pif32};
+use crate::constants::Parameters;
+use crate::graphics::{graphical_fn, graphical_fn::P2};
 use crate::math;
 
 const color: [u32; 3] = [0x66ff66, 0xaaffff, 0xaaaaff];
-const this_fft_size: usize = FFT_SIZE<<2;
-const bar_num: usize = 48;
-const bnf: f32 = bar_num as f32;
+pub const this_fft_size: usize = FFT_SIZE<<2;
 
-// [(index float, index usize, slider t float, scaling float, dynamic smoothing float); bar_num]
-static mut idx_table: [(f32, usize, f32, f32, f32); bar_num] = [(0.0f32, 0usize, 0.0f32, 0.0f32, 0.0f32); bar_num];
+// [(index float, index usize, slider t float, scaling float, dynamic para.SMOOTHING float); bar_num]
+// static mut idx_table: [(f32, usize, f32, f32, f32); bar_num] = [(0.0f32, 0usize, 0.0f32, 0.0f32, 0.0f32); bar_num];
 
-pub unsafe fn prepare_index_bar() {
+//~ pub unsafe fn prepare_index_bar() {
     
+    //~ for i in 0..bar_num {
+        //~ let i_ = i as f32 / bnf;
+
+        //~ let idxf = i_.powf(1.414)*bnf*2.0;
+        //~ let idx = idxf as usize;
+        //~ let t = idxf.fract();
+        
+        //~ // this parameter makes the bass region in the spectrum animaton look more aggresive 
+        //~ let d = math::interpolate::linearf(1.2, 0.5, (i as f32 / bnf).sqrt());
+        
+        //~ idx_table[i] = (idxf, idx, t, (i_ + 1.189).log2()*para.VOL_SCL, d);
+    //~ }
+    
+//~ }
+
+//static mut _i : usize = 0;
+
+//pub static mut para.bars_smoothing_ft : Vec<f32> = Vec::new();
+
+pub fn draw_bars(buf: &mut [u32], stream: &[(f32, f32)], para: &mut Parameters ) {
+	
+	let bar_num = para.WIN_W >> 2;
+	let bnf = bar_num as f32;
+	let l = stream.len();
+	
+	if bar_num+1 != para.bars_smoothing_ft.len() {
+		para.bars_smoothing_ft.resize(bar_num+1, 0.0);
+	}  
+    
+    let mut data_f = vec![(0.0f32, 0.0f32); this_fft_size];
+    let mut _i = para._i;
+	for i in 0..l {
+		data_f[i] = stream[_i];
+		_i = math::advance_with_limit(_i, l);
+	}
+	
+    math::fft_inplace(&mut data_f);
+
+    graphical_fn::win_clear(buf);
+       
     for i in 0..bar_num {
         let i_ = i as f32 / bnf;
 
-        let idxf = i_*i_*bnf*3.0;
+        let idxf = i_.powf(1.414)*bnf*2.0;
         let idx = idxf as usize;
         let t = idxf.fract();
         
         // this parameter makes the bass region in the spectrum animaton look more aggresive 
-        let d = math::interpolate::linearf(1.2, 0.5, (i as f32 / bnf).sqrt());
+        let dynamic_smoothing = math::interpolate::linearf(1.2, 0.5, (i as f32 / bnf).sqrt());
         
-        idx_table[i] = (idxf, idx, t, (i_ + 1.414214).log2(), d);
+        let scaling = (i as f32 / bnf + 1.0).log2() as f32 * (para.WIN_R << 2) as f32;
+        
+        let val = (math::complex_mag(data_f[idx]) / this_fft_size as f32).powi(2)*scaling*para.VOL_SCL*2.0;
+        
+        para.bars_smoothing_ft[i] = math::interpolate::linearf(para.bars_smoothing_ft[i], val, dynamic_smoothing);
+        let bar = (math::interpolate::linearf(para.bars_smoothing_ft[i], para.bars_smoothing_ft[i+1], t) as usize).min(para.WIN_H);
+
+        graphical_fn::draw_rect(buf, 4*i, para.WIN_H-bar.min(para.WIN_H-1), 2, bar, (255 << 16) | (((bar*255/para.WIN_H) << 8) as u32), para);  
     }
     
+    para._i = (para._i+INCREMENT) & 1023;
 }
 
-static mut _i : usize = 0;
 
-static mut data_f1 : [f32; bar_num+1] = [0.0; bar_num+1];
-
-pub unsafe fn draw_bars(buf: &mut [u32], stream: &[(f32, f32)]) {
-    //if stream.len() < FFT_SIZE { return (); }
+pub fn draw_bars_circle(buf: &mut [u32], stream: &[(f32, f32)], para: &mut Parameters ) {
+	let size = para.WIN_H.min(para.WIN_W) as i32;
+	let sizef = size as f32;
+	
+	let bar_num = size as usize;
+	let bnf = bar_num as f32;
+	let l = stream.len();
+		
+	if bar_num+1 != para.bars_smoothing_ft.len() {
+		para.bars_smoothing_ft_circle.resize(bar_num+1, 0.0);
+	}  
     
-    let scale = FFT_SIZE as f32 * WIN_H as f32 * 0.0625;
-    let winhh = WIN_H >> 1;
-
-    let wf = WIN_W as f32;
-	let hf = WIN_H as f32;
-
-	let smoothi = (SMOOTHING*255.9) as i32;
+    let wh = para.WIN_W as i32 / 2;
+    let hh = para.WIN_H as i32 / 2;
     
     let mut data_f = vec![(0.0f32, 0.0f32); this_fft_size];
-    for i in 0..this_fft_size {
-        data_f[i] = math::complex_mul(stream[(i+_i)%stream.len()], (VOL_SCL, 0.0));
-    }
     
-    //triangular(&mut data_f);
-
-    //blackman_harris(&mut data_f);
-    data_f = math::cooley_turky_fft_recursive(data_f);
+    let mut _i = para._i;
+	for i in 0..l {
+		data_f[i] = stream[_i];
+		_i = math::advance_with_limit(_i, l);
+	}
+    
+    math::fft_inplace(&mut data_f);
 
     graphical_fn::win_clear(buf);
     
+    let base_angle = math::euler((1.0, 0.0), pi2 / bnf);
+    let mut angle = (1.0, 0.0); 
+       
     for i in 0..bar_num {
-        let idxf = idx_table[i].0;
-        let idx = idx_table[i].1;
-        let t = idx_table[i].2;
-        let scaling = idx_table[i].3;
-        let dynamic_smoothing = idx_table[i].4;
-        
-        data_f1[i] = math::interpolate::linearf(data_f1[i], (data_f[idx].0.powi(2) + data_f[idx].1.powi(2)).sqrt()*0.13*scaling, dynamic_smoothing);
-        let bar = math::interpolate::linearf(data_f1[i], data_f1[i+1], t) as usize;
+		
+        let i_ = i as f32 / bnf;
 
-        graphical_fn::draw_rect(buf, 4*i, WIN_H-bar.min(WIN_H-1), 2, bar, color[0]);  
+        let idxf = i_.powi(2)*(this_fft_size >> 6) as f32;
+        let idx = idxf as usize;
+        let t = idxf.fract();
+        
+        angle = math::complex_mul(angle, base_angle);
+        
+        // this parameter makes the bass region in the spectrum animaton look more aggresive 
+        let dynamic_smoothing = math::interpolate::linearf(1.2, 0.5, (i as f32 / bnf).sqrt());
+        
+        let scaling = 100.0*sizef * math::log2i(i + 1) as f32;
+        
+        let val = (math::complex_mag(data_f[idx]) / this_fft_size as f32).powi(2)*scaling *para.VOL_SCL;
+        
+        para.bars_smoothing_ft_circle[i] = math::interpolate::linearf(para.bars_smoothing_ft_circle[i], val, dynamic_smoothing);
+        let bar = (math::interpolate::linearf(para.bars_smoothing_ft_circle[i], para.bars_smoothing_ft_circle[i+1], t) as i32).min(size*7/10);
+
+		let p1 = P2(wh + (sizef*angle.0) as i32 / 2, hh + (sizef*angle.1) as i32 / 2);
+		let p2 = P2(wh + ((size-bar) as f32 *angle.0) as i32 / 2,  hh + ((size-bar) as f32*angle.1) as i32 / 2);
+
+        graphical_fn::draw_line_direct(buf, p1, p2, 0x000000FF | ((bar*255/size).min(255) << 8) as u32, para);  
     }
     
-    _i = (_i+INCREMENT) & 1023;
-} 
+    para._i = (para._i+INCREMENT) & 1023;
+}
+
