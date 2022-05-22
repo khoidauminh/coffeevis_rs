@@ -29,9 +29,8 @@ fn main() {
 	//~ let coffee_pixart_file = include_bytes!("/home/khoidauminh/Pictures/scared_Đức_.ppm");
 
 	 let mut para = Parameters {				
-		AUTO_SWITCH_ITVL: FPS as u16 *8,
 		SWITCH : 0,
-		AUTO_SWITCH: 0,
+		AUTO_SWITCH: 1,
 		SWITCH_INCR: 0,
 		VIS_IDX: 0,
 					 
@@ -108,7 +107,7 @@ fn main() {
 			pix_buf = vec![0u32 ; s.0*s.1];
 		}
 
-		if para.SWITCH_INCR == para.AUTO_SWITCH_ITVL {
+		if para.SWITCH_INCR == AUTO_SWITCH_ITVL {
 			change_visualizer(&mut pix_buf, &mut visualizer, &mut para);
 			para.SWITCH_INCR = 0;
 		}
