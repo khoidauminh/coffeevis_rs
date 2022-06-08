@@ -92,18 +92,39 @@ pub unsafe fn prepare_img_default() {
 pub fn draw_shaky(buf : &mut [u32], stream : &[(f32, f32)], para: &mut Parameters ) {
 
     apply_coord3(stream, para);
+    graphical_fn::win_clear(buf);
+    
+    let wc = para.WIN_W as i32;
+    let hc = para.WIN_H as i32;
+    let wi = para.IMG.w as i32;
+    let hi = para.IMG.h as i32;
+    
+    let size = wc.max(hc);
+    let centerI = (wi/2, hi/2); 
+    let centerC = (wc/2, hc/2);
 
-    let center = (para.WIN_W as i32 / 2 - para.IMG.w as i32 /2, para.WIN_H as i32 / 2 - para.IMG.h as i32 /2);
+    //let center = (para.WIN_W as i32 / 2 - para.IMG.w as i32 /2, para.WIN_H as i32 / 2 - para.IMG.h as i32 /2);
     
     let (x_soft_shake, y_soft_shake) = diamond_func(8.0, 1.0, para.shaky_coffee.0);
     
-	for cx in 0..para.WIN_W {
-		for cy in 0..para.WIN_H {
-			let ix = cx*para.IMG.w/para.WIN_W;
-			let iy = cy*para.IMG.h/para.WIN_H;
+	for cx in 0..wc {
+		for cy in 0..hc {
+			let ix = (cx-centerC.0)*wi / size;
+			let iy = (cy-centerC.1)*hi / size;
 			
-			let i = graphical_fn::flatten(ix as i32, iy as i32, para.IMG.w, para.IMG.h);
-			let c = graphical_fn::flatten(cx as i32 + x_soft_shake + para.shaky_coffee.4, cy as i32 + y_soft_shake + para.shaky_coffee.5, para.WIN_W, para.WIN_H);
+			let i = graphical_fn::flatten(
+				ix + centerI.0 + x_soft_shake + para.shaky_coffee.4, 
+				iy + centerI.1 + y_soft_shake + para.shaky_coffee.5, 
+				para.IMG.w, 
+				para.IMG.h
+			);
+			
+			let c = graphical_fn::flatten(
+				cx, 
+				cy, 
+				para.WIN_W, 
+				para.WIN_H
+			);
 			
 			let i3 = i*3;
 			
@@ -149,7 +170,7 @@ pub fn apply_coord3(stream : &[(f32, f32)], para: &mut Parameters) {
     }
     
     //smooth_amplitude = graphical_fn::linear_interp(smooth_amplitude, amplitude.min(1024.0), 0.5);
-    let smooth_amplitude = (amplitude.clamp(1.0, 1024.0).log2()/1.9).powi(2);
+    let smooth_amplitude = (amplitude.clamp(1.0, 1024.0).log2()/1.4).powi(2);
     //println!("{}", smooth_amplitude);
     
     *_j = (*_j + amplitude / 240.0) % wrapper;
@@ -157,8 +178,8 @@ pub fn apply_coord3(stream : &[(f32, f32)], para: &mut Parameters) {
     *xshake = (smooth_amplitude)*(*_j).cos();
     *yshake = (smooth_amplitude)*(*_j*0.725).sin();
     
-    *x_ = graphical_fn::linear_interp((*x_) as f32, (*xshake), 0.1) as i32;
-    *y_ = graphical_fn::linear_interp((*y_) as f32, (*yshake), 0.1) as i32;
+    *x_ = math::interpolate::linearf((*x_) as f32, (*xshake), 0.1) as i32;
+    *y_ = math::interpolate::linearf((*y_) as f32, (*yshake), 0.1) as i32;
     
     *_j += 0.01;
 }
