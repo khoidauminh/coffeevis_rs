@@ -9,8 +9,8 @@ use crate::graphics::graphical_fn;
 //static mut _i : usize = 0;
 
 pub fn draw_spectrum(buf : &mut [u32], stream : &[(f32, f32)], para: &mut Parameters ) {
-    if stream.len() < FFT_SIZE { return; } 
-    
+    if stream.len() < FFT_SIZE { return; }
+
     let l = stream.len();
 
     let scale = FFT_SIZE as f32 * para.WIN_H as f32 * 0.0625;
@@ -21,39 +21,39 @@ pub fn draw_spectrum(buf : &mut [u32], stream : &[(f32, f32)], para: &mut Parame
 
 	//let smoothi = (SMOOTHING*255.9) as i32;
 
-    let mut data_l = vec![(0.0f32, 0.0f32); FFT_SIZE];
-    let mut data_r = vec![(0.0f32, 0.0f32); FFT_SIZE];
-    
+    let mut data_l = [(0.0f32, 0.0f32); FFT_SIZE];
+    let mut data_r = [(0.0f32, 0.0f32); FFT_SIZE];
+
     let mut si = para._i;
-    
+
     for i in 0..FFT_SIZE {
         si = math::advance_with_limit(si, l);
-    
+
         let l = (stream[si].0*para.VOL_SCL, 0.0);
         let r = (stream[si].1*para.VOL_SCL, 0.0);
-    
+
         data_l[i] = l;
         data_r[i] = r;
     }
 
-    math::fft_inplace(&mut data_l);
-    math::fft_inplace(&mut data_r);
+    math::fft_inplace(&mut data_l, FFT_SIZE);
+    math::fft_inplace(&mut data_r, FFT_SIZE);
     //triangular(&mut data_f);
 
     //blackman_harris(&mut data_f);
-    
+
     for sample in 0..FFT_SIZE {
         para.spectrum_smoothing_ft[sample].0 = math::interpolate::linearf(
-            para.spectrum_smoothing_ft[sample].0, 
-            (data_l[sample].0.abs()+data_l[sample].1.abs()*0.2), 
+            para.spectrum_smoothing_ft[sample].0,
+            (data_l[sample].0.abs()+data_l[sample].1.abs()*0.2),
             para.SMOOTHING
         );
         para.spectrum_smoothing_ft[sample].1 = math::interpolate::linearf(
-            para.spectrum_smoothing_ft[sample].1, 
+            para.spectrum_smoothing_ft[sample].1,
             (data_r[sample].0.abs()*0.2+data_r[sample].1.abs()),
             para.SMOOTHING);
     }
-    
+
     //math::lowpass_bi_array(&mut para.spectrum_smoothing_ft, 0.9);
 
     graphical_fn::win_clear(buf);
