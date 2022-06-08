@@ -1,13 +1,15 @@
-use crate::constants::{SAMPLE_SIZE, PHASE_OFFSET, INCREMENT};
 use crate::constants::Parameters;
+use crate::constants::{INCREMENT, PHASE_OFFSET, SAMPLE_SIZE};
 
-use crate::graphics::graphical_fn::{rgb_to_u32, coord_to_1d, win_clear, win_clear_alpha, draw_line, P2, p2_add, draw_rect};
+use crate::graphics::graphical_fn::{
+    coord_to_1d, draw_line, draw_rect, flatten, p2_add, rgb_to_u32, win_clear, win_clear_alpha, P2,
+};
 
 // static mut _smooth_osc : [f32; WIN_W] = [0.0f32; WIN_W];
 
 #[allow(dead_code)]
-pub fn draw_oscilloscope(buf : &mut [u32], stream : &[(f32, f32)], para: &mut Parameters ) {
-    let range = stream.len()*para.WAV_WIN/100;
+pub fn draw_oscilloscope(buf: &mut [u32], stream: &[(f32, f32)], para: &mut Parameters) {
+    let range = stream.len() * para.WAV_WIN / 100;
 
     //if range < WIN_H+WIN_W { return (); }
 
@@ -17,43 +19,57 @@ pub fn draw_oscilloscope(buf : &mut [u32], stream : &[(f32, f32)], para: &mut Pa
     let width_top_h = (width >> 1) + 1;
     let height_top_h = (height >> 1) + 1;
 
-
     let mut di = 0;
 
     win_clear(buf);
 
     //i = i%range;
+    
+    para._i %= stream.len();
 
     while di < range {
         let x = (di * width as usize / range) as i32;
         let xu = x as usize;
 
-        let y = height_top_h as f32 + stream[para._i%stream.len()].0*para.WIN_H as f32 *para.VOL_SCL *0.5;
-
-
+        let y1 = height_top_h + (stream[para._i].0 * para.WIN_H as f32 * para.VOL_SCL) as i32 / 2;
+        let y2 = height_top_h + (stream[para._i].1 * para.WIN_H as f32 * para.VOL_SCL) as i32 / 2;
 
         //let o = (y.abs()*4*PXL_OPC/width) as usize;
 
         //_smooth_osc[xu] = crate::math::interpolate::linearf(_smooth_osc[xu], y, 0.7);
 
         //buf[coord_to_1d(x, y)] = rgb_to_u32(255, 255, 255);
+        /*
+        let brightness1 = y1 / height_top_h * 256;
+        let brightness2 = y1 / height_top_h * 256;
+       */
 
-        buf[coord_to_1d(x, y as i32, para)] = rgb_to_u32(255, 255, 255);
-
-        para._i = (para._i+INCREMENT+1);
-        di = di+INCREMENT+1;
-    }
+        buf[flatten(x, y1, para.WIN_W, para.WIN_H)] = 0x00_FF_55_55;
+        buf[flatten(x, y2, para.WIN_W, para.WIN_H)] = 0x00_55_55_FF;
         
+        
+
+        para._i = (para._i + INCREMENT + 1) % stream.len();
+        di = di + INCREMENT + 1;
+    }
+
     para._i %= stream.len();
-    
-    draw_rect(buf, para._i%para.WIN_W, 8, 1, para.WIN_H-16, 0x00_55_55_55, para);
-    
-    draw_rect(buf, 0, para.WIN_H/2, para.WIN_W, 1, 0x00_55_55_55, para);
+
+    draw_rect(
+        buf,
+        para._i % para.WIN_W,
+        8,
+        1,
+        para.WIN_H - 16,
+        0x00_77_77_77,
+        para,
+    );
+
+    draw_rect(buf, 0, para.WIN_H / 2, para.WIN_W, 1, 0x00_77_77_77, para);
 }
 
-pub fn draw_vectorscope(buf : &mut [u32], stream : &[(f32, f32)], para: &mut Parameters ) {
-
-    let range = stream.len()*para.WAV_WIN/100;
+pub fn draw_vectorscope(buf: &mut [u32], stream: &[(f32, f32)], para: &mut Parameters) {
+    let range = stream.len() * para.WAV_WIN / 100;
 
     //if range < WIN_H+WIN_W { return (); }
 
@@ -65,19 +81,24 @@ pub fn draw_vectorscope(buf : &mut [u32], stream : &[(f32, f32)], para: &mut Par
     let width_top_h = width >> 1;
     let height_top_h = height >> 1;
 
-
     let mut di = 0;
 
     win_clear(buf);
 
     while di < range {
-        let x =  (stream[para._i%stream.len()].0 *size as f32 *para.VOL_SCL * 0.5) as i32;
-        let y =  (stream[(para._i+PHASE_OFFSET)%stream.len()].1 *size as f32 *para.VOL_SCL * 0.5) as i32;
+        let x = (stream[para._i % stream.len()].0 * size as f32 * para.VOL_SCL * 0.5) as i32;
+        let y =
+            (stream[(para._i + PHASE_OFFSET) % stream.len()].1 * size as f32 * para.VOL_SCL * 0.5)
+                as i32;
 
-        buf[coord_to_1d(x+width_top_h, y+height_top_h, para)] = rgb_to_u32((x.abs()*510/size as i32) as u8, 255, (y.abs()*510/size as i32) as u8);
+        buf[flatten(x + width_top_h, y + height_top_h, para.WIN_W, para.WIN_H)] = rgb_to_u32(
+            (x.abs() * 510 / size as i32) as u8,
+            255,
+            (y.abs() * 510 / size as i32) as u8,
+        );
 
-        para._i = (para._i+INCREMENT+1);
-        di = di+INCREMENT+1;
+        para._i = (para._i + INCREMENT + 1);
+        di = di + INCREMENT + 1;
     }
 
     crate::graphics::visualizers::cross::draw_cross(buf, para);
