@@ -2,7 +2,7 @@
 name = "coffeevis"
 version = "0.2.0"
 edition = "2021"
-authors = ["khoidauminh <dauminhkhoi243@gmail.com>"]
+authors = ["khoidauminh <khoidauminh@tutanota.com>"]
 description = "A simple graphical audio visualizer mainly for Linux."
 license = "MIT"
 keywords = ["graphics", "audio", "music", "visualizer"]
