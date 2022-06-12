@@ -1,3 +1,5 @@
+pub type VisFunc = fn(&mut [u32], &[(f32, f32)], &mut crate::constants::Parameters) -> ();
+
 mod dash_line;
 mod cross;
 pub mod oscilloscope;
