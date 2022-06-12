@@ -1,7 +1,7 @@
 use crate::constants::{INCREMENT, pi2};
 use crate::constants::Parameters;
 use crate::graphics::graphical_fn::{rgb_to_u32, coord_to_1d, win_clear, win_clear_alpha, draw_line, P2, p2_add};
-use crate::math::{complex_add, complex_mul};
+use crate::math::{cplx_add, cplx_mul};
 
 //static mut para._i : usize = 0;
 //static mut wrap_rate.incremeter : f32 = 0.0;
@@ -29,7 +29,7 @@ pub fn draw_ring(buf : &mut [u32], stream : &[(f32, f32)], para: &mut Parameters
     
     while di < range {
         
-        let p = crate::math::euler_wrap(complex_add(complex_mul(stream[para._i % stream.len()], (para.VOL_SCL*0.35, 0.0)), (0.5, 0.0)), (di as f32 * rate)); 
+        let p = crate::math::euler_wrap(cplx_add(cplx_mul(stream[para._i % stream.len()], (para.VOL_SCL*0.35, 0.0)), (0.5, 0.0)), (di as f32 * rate)); 
         let x = (p.0*size as f32) as i32;
         let y = (p.1*size as f32) as i32;
         

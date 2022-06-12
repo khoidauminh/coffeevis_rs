@@ -7,7 +7,31 @@ use crate::constants::{FFT_SIZE, POWER, pi2, pif32, pih, minus_pi2};
 
 const size_of_usize: usize = std::mem::size_of::<usize>()*8;
 
-type Cplx = (f32, f32);
+pub type Cplx = (f32, f32);
+
+pub fn cplx_mul(a: Cplx, b: Cplx) -> Cplx {
+    (a.0*b.0 - a.1*b.1, a.0*b.1 + a.1*b.0)
+}
+
+pub fn cplx_add(a: Cplx, b: Cplx) -> Cplx {
+    (a.0 + b.0, a.1 + b.1)
+}
+
+pub fn cplx_sub(a: Cplx, b: Cplx) -> Cplx {
+    (a.0 - b.0, a.1 - b.1)
+}
+
+pub fn cplx_mag(a: Cplx) -> f32 {
+    fast_fsqrt(a.0.powi(2) + a.1.powi(2))
+}
+
+pub const fn cplx_0() -> Cplx {
+    (0f32, 0f32)
+}
+
+pub const fn cplx_1() -> Cplx {
+	(1f32, 0f32)
+}
 
 pub fn fft(a: &mut [Cplx]) {
     let l = a.len();
@@ -19,8 +43,8 @@ pub fn fft(a: &mut [Cplx]) {
 
     let lh = l/2;
 
-    let mut eve = vec![(0f32, 0f32); lh];
-    let mut odd = vec![(0f32, 0f32); lh];
+    let mut eve = vec![cplx_0(); lh];
+    let mut odd = vec![cplx_0(); lh];
 
     for i in 0..lh {
         eve[i] = a[2*i];
@@ -41,8 +65,8 @@ pub fn fft(a: &mut [Cplx]) {
     for i in 0..lh {
         let q = euler(odd[i], minus_pi2lf *i as f32);
         let u = eve[i];
-        a[i] = complex_add(u, q);
-        a[i+lh] = complex_sub(u, q);
+        a[i] = cplx_add(u, q);
+        a[i+lh] = cplx_sub(u, q);
     }
 }
 
@@ -66,10 +90,10 @@ fn transpose(a: &mut [Cplx], c: usize) {
     }
 }
 
-pub fn fft_inplace(a: &mut [Cplx], l: usize) {
+pub fn fft_inplace(a: &mut [Cplx], lg2: usize /* power of 2*/) {
+    let l: usize = 1 << lg2;
+    
     let lh = l >> 1;
-
-    let lg2 = log2i(l);
 
     for i in 0..l {
         let ni = (i.reverse_bits() >> (size_of_usize-lg2)); // bit reverse operation
@@ -85,18 +109,18 @@ pub fn fft_inplace(a: &mut [Cplx], l: usize) {
         let minus_pi2lf = minus_pi2 / m as f32;
         let mut k = 0;
 
-        let wm = euler((1.0, 0.0), minus_pi2lf);
+        let wm = euler(cplx_1(), minus_pi2lf);
 
         for k in (0..lh).step_by(m) { // the other half doesn't need to be calculated.
-			let mut w = (1.0, 0.0);
+			let mut w = cplx_1();
             for i in k..(mh+k) {
                 //let q = euler(a[i+mh], minus_pi2lf *(i-k) as f32);
-                let q = complex_mul(w, a[i+mh]);
+                let q = cplx_mul(w, a[i+mh]);
                 let u = a[i];
-                a[i] = complex_add(u, q);
-                a[i+mh] = complex_sub(u, q);
+                a[i] = cplx_add(u, q);
+                a[i+mh] = cplx_sub(u, q);
 
-                w = complex_mul(w, wm);
+                w = cplx_mul(w, wm);
             }
         }
         m *= 2;
@@ -136,11 +160,11 @@ pub fn fast_cos_wrap(rawx: f32) -> f32 {
 }
 
 pub fn euler(n: Cplx, a: f32) -> Cplx {
-    complex_mul(n, (fast_cos(a), fast_sin(a)))
+    cplx_mul(n, (fast_cos(a), fast_sin(a)))
 }
 
 pub fn euler_wrap(n: Cplx, a: f32) -> Cplx {
-    complex_mul(n, (fast_cos_wrap(a), fast_sin_wrap(a)))
+    cplx_mul(n, (fast_cos_wrap(a), fast_sin_wrap(a)))
 }
 
 const BIAS: u32 = 127 << 23;
@@ -191,22 +215,6 @@ fn bit_reverse_(mut k: usize, s: usize) -> usize {
     o
 }
 
-pub fn complex_mul(a: Cplx, b: Cplx) -> Cplx {
-    return (a.0*b.0 - a.1*b.1, a.0*b.1 + a.1*b.0);
-}
-
-pub fn complex_add(a: Cplx, b: Cplx) -> Cplx {
-    return (a.0 + b.0, a.1 + b.1);
-}
-
-pub fn complex_sub(a: Cplx, b: Cplx) -> Cplx {
-    return (a.0 - b.0, a.1 - b.1);
-}
-
-pub fn complex_mag(a: Cplx) -> f32 {
-    fast_fsqrt(a.0.powi(2) + a.1.powi(2))
-}
-
 // ------------------------------------------------------------------------- //
 
 pub fn dft(inp: &[Cplx], out: &mut [Cplx], freq_bound: f32) {
@@ -216,10 +224,10 @@ pub fn dft(inp: &[Cplx], out: &mut [Cplx], freq_bound: f32) {
     for bin in 0..lb {
         for samp in 0..l {
             let angle = minus_pi2 * bin as f32 * samp as f32 / l as f32;
-            out[bin] = complex_add(
+            out[bin] = cplx_add(
                 out[bin],
                 euler_wrap(
-                    complex_mul(inp[samp], (l.abs_diff(samp) as f32 / l as f32, 0.0)),
+                    cplx_mul(inp[samp], (l.abs_diff(samp) as f32 / l as f32, 0.0)),
                     angle
                 )
             );
@@ -228,24 +236,22 @@ pub fn dft(inp: &[Cplx], out: &mut [Cplx], freq_bound: f32) {
     }
 }
 
-#[inline(always)]
 pub fn lowpass(s1: Cplx, s2: Cplx, a: f32) -> (f32,  f32) {
-    complex_add(s1, complex_mul((a, 0.0), complex_sub(s2, s1)))
+    cplx_add(s1, cplx_mul((a, 0.0), cplx_sub(s2, s1)))
 }
 
 pub fn lowpass_array(data: &mut [Cplx], a: f32) {
-    data[0] = complex_mul((a, 0.0), data[0]);
+    data[0] = cplx_mul((a, 0.0), data[0]);
 
     for i in 1..data.len() {
-       //data[i] = complex_add(data[i-1], complex_mul((a, 0.0), complex_sub(data[i], data[i-1])));
+       //data[i] = cplx_add(data[i-1], cplx_mul((a, 0.0), cplx_sub(data[i], data[i-1])));
        data[i] = lowpass(data[i-1], data[i], a);
     }
 }
 
 // s1: output[i-1], s2: input[i], s2: input[i-1]
-#[inline(always)]
 pub fn highpass(s1: Cplx, s2: Cplx, s3: Cplx, a: f32) -> Cplx {
-    complex_mul((a, 0.0), complex_add(s1, complex_sub(s2, s3)))
+    cplx_mul((a, 0.0), cplx_add(s1, cplx_sub(s2, s3)))
 }
 
 pub fn highpass_array(data: &mut [Cplx], a: f32) {
@@ -253,7 +259,7 @@ pub fn highpass_array(data: &mut [Cplx], a: f32) {
     let mut s2 = data[0];
     for i in 1..data.len() {
         s1 = data[i];
-        //data[i] = complex_mul((a, 0), complex_add(data[li], complex_sub(data[i], data[li])));
+        //data[i] = cplx_mul((a, 0), cplx_add(data[li], cplx_sub(data[i], data[li])));
         data[i] = highpass(data[i-1], data[i], s2, a);
         s2 = s1;
     }
@@ -264,7 +270,7 @@ pub fn hanning(data: &mut [Cplx]) {
     let lf = ((l-1) as f32).recip();
 
     for i in 0..l {
-        data[i] = complex_mul(data[i], ((3.141592 * i as f32 * lf).sin().powi(2), 0.0f32));
+        data[i] = cplx_mul(data[i], ((3.141592 * i as f32 * lf).sin().powi(2), 0.0f32));
     }
 }
 
@@ -272,8 +278,8 @@ pub fn triangle(data: &mut [Cplx]) {
     let l = data.len();
     for i in 0..l/2 {
         let a = i as f32 / l as f32;
-        data[i]     = complex_mul((a, 0.0), data[i]);
-        data[l-i-1] = complex_mul((1.0-a, 0.0), data[i]);
+        data[i]     = cplx_mul((a, 0.0), data[i]);
+        data[l-i-1] = cplx_mul((1.0-a, 0.0), data[i]);
     }
 }
 
@@ -284,7 +290,7 @@ pub fn blackman_harris(data: &mut Vec<Cplx>) {
     let lf = (l as f32).recip();
 
     for i in 0..l {
-        data[i] = complex_mul(data[i],
+        data[i] = cplx_mul(data[i],
             (a_[0]
             - a_[1]*(3.141592*2.0*i as f32 *lf).cos()
             + a_[2]*(3.141592*4.0*i as f32 *lf).cos()

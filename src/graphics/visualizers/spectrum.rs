@@ -1,14 +1,15 @@
 use cpal::Sample;
 
 use crate::math;
+use math::{Cplx, cplx_0};
 
-use crate::constants::{FFT_SIZE, INCREMENT, pi2, pih};
+use crate::constants::{FFT_SIZE, INCREMENT, pi2, pih, POWER};
 use crate::constants::Parameters;
 use crate::graphics::graphical_fn;
 
 //static mut _i : usize = 0;
 
-pub fn draw_spectrum(buf : &mut [u32], stream : &[(f32, f32)], para: &mut Parameters ) {
+pub fn draw_spectrum(buf : &mut [u32], stream : &[Cplx], para: &mut Parameters ) {
     if stream.len() < FFT_SIZE { return; }
 
     let l = stream.len();
@@ -21,8 +22,8 @@ pub fn draw_spectrum(buf : &mut [u32], stream : &[(f32, f32)], para: &mut Parame
 
 	//let smoothi = (SMOOTHING*255.9) as i32;
 
-    let mut data_l = [(0.0f32, 0.0f32); FFT_SIZE];
-    let mut data_r = [(0.0f32, 0.0f32); FFT_SIZE];
+    let mut data_l = [cplx_0(); FFT_SIZE];
+    let mut data_r = [cplx_0(); FFT_SIZE];
 
     let mut si = para._i;
 
@@ -36,8 +37,8 @@ pub fn draw_spectrum(buf : &mut [u32], stream : &[(f32, f32)], para: &mut Parame
         data_r[i] = r;
     }
 
-    math::fft_inplace(&mut data_l, FFT_SIZE);
-    math::fft_inplace(&mut data_r, FFT_SIZE);
+    math::fft_inplace(&mut data_l, POWER);
+    math::fft_inplace(&mut data_r, POWER);
     //triangular(&mut data_f);
 
     //blackman_harris(&mut data_f);

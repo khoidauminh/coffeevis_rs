@@ -1,10 +1,12 @@
-use crate::constants::{FFT_SIZE, INCREMENT, pi2, pih, pif32};
+use crate::constants::{FFT_SIZE, INCREMENT, pi2, pih, pif32, POWER};
 use crate::constants::Parameters;
 use crate::graphics::{graphical_fn, graphical_fn::P2};
 use crate::math;
+use math::cplx_0;
 
 const color: [u32; 3] = [0x66ff66, 0xaaffff, 0xaaaaff];
-pub const this_fft_size: usize = FFT_SIZE<<2;
+pub const this_power: usize = POWER+2;
+pub const this_fft_size: usize = 1 << this_power;
 
 // [(index float, index usize, slider t float, scaling float, dynamic para.SMOOTHING float); bar_num]
 // static mut idx_table: [(f32, usize, f32, f32, f32); bar_num] = [(0.0f32, 0usize, 0.0f32, 0.0f32, 0.0f32); bar_num];
@@ -47,7 +49,7 @@ pub fn draw_bars(buf: &mut [u32], stream: &[(f32, f32)], para: &mut Parameters )
 		_i = math::advance_with_limit(_i, l);
 	}
 
-    math::fft_inplace(&mut data_f, this_fft_size);
+    math::fft_inplace(&mut data_f, this_power);
 
     graphical_fn::win_clear(buf);
 
@@ -63,7 +65,7 @@ pub fn draw_bars(buf: &mut [u32], stream: &[(f32, f32)], para: &mut Parameters )
 
         let scaling = math::fast_flog2(i as f32 / bnf + 1.0) as f32 * (para.WIN_R << 2) as f32;
 
-        let val = (math::complex_mag(data_f[idx]) / this_fft_size as f32).powi(2)*scaling*para.VOL_SCL*2.0;
+        let val = (math::cplx_mag(data_f[idx]) / this_fft_size as f32).powi(2)*scaling*para.VOL_SCL*2.0;
 
         para.bars_smoothing_ft[i] = math::interpolate::linearf(para.bars_smoothing_ft[i], val, dynamic_smoothing);
         let bar = (math::interpolate::linearf(para.bars_smoothing_ft[i], para.bars_smoothing_ft[i+1], t) as usize).min(para.WIN_H);
@@ -98,7 +100,7 @@ pub fn draw_bars_circle(buf: &mut [u32], stream: &[(f32, f32)], para: &mut Param
 		_i = math::advance_with_limit(_i, l);
 	}
 
-    math::fft_inplace(&mut data_f, this_fft_size);
+    math::fft_inplace(&mut data_f, this_power);
 
     graphical_fn::win_clear(buf);
 
@@ -113,14 +115,14 @@ pub fn draw_bars_circle(buf: &mut [u32], stream: &[(f32, f32)], para: &mut Param
         let idx = idxf as usize;
         let t = idxf.fract();
 
-        angle = math::complex_mul(angle, base_angle);
+        angle = math::cplx_mul(angle, base_angle);
 
         // this parameter makes the bass region in the spectrum animaton look more aggresive
         let dynamic_smoothing = math::interpolate::linearf(1.2, 0.5, math::fast_fsqrt(i as f32 / bnf));
 
         let scaling = sizef * this_fft_size as f32 * math::fast_flog2(i_ + 1.0);
 
-        let val = (math::complex_mag(data_f[idx]) / this_fft_size as f32).powi(2)*scaling *para.VOL_SCL;
+        let val = (math::cplx_mag(data_f[idx]) / this_fft_size as f32).powi(2)*scaling *para.VOL_SCL;
 
         para.bars_smoothing_ft_circle[i] = math::interpolate::linearf(para.bars_smoothing_ft_circle[i], val, dynamic_smoothing);
         let bar = (math::interpolate::linearf(para.bars_smoothing_ft_circle[i], para.bars_smoothing_ft_circle[i+1], t) as i32).min(size*7/10);
