@@ -1,48 +1,104 @@
-use crate::constants::{INCREMENT, pi2};
-use crate::constants::Parameters;
-use crate::graphics::graphical_fn::{rgb_to_u32, coord_to_1d, win_clear, win_clear_alpha, draw_line, P2, p2_add};
-use crate::math::{cplx_add, cplx_mul};
+//use crate::constants::{WIN_H, WIN_W};
+use crate::constants::{Parameters, INCREMENT};
+use crate::graphics::graphical_fn::{self, draw_rect, win_clear};
+use crate::math;
 
-//static mut para._i : usize = 0;
-//static mut wrap_rate.incremeter : f32 = 0.0;
-
-pub fn draw_ring(buf : &mut [u32], stream : &[(f32, f32)], para: &mut Parameters ) {
+//static mut _i: usize = 0;
+pub fn draw_exp1(pix: &mut [u32], stream: &[(f32, f32)], para: &mut Parameters) {
+    let l = stream.len();
+    // let pl = pix.len();
+    // let ll = l-1;
+    // let mut incr = para._i;
     
-    let range = stream.len()*para.WAV_WIN/100;
+    //let scale: usiez = 2;
 
-    if range < para.WIN_H+para.WIN_W { return (); }
+    for i in 0..pix.len() {
+        para._i = math::advance_with_limit(para._i, l);
+        let j = para._i >> 1; //incr * l / pix.len();
+	    let jj = math::advance_with_limit(j, l);
 
-    let size = para.WIN_H.min(para.WIN_W) as i32;
+        let sl = stream[j].0;
+        let sr = stream[j].1;
 
-    let width = para.WIN_W as i32;
-    let height = para.WIN_H as i32;
+	    let sa = sl-sr;
+	    let ss = sl+sr;
+	    let sd = ((stream[jj].0 + stream[jj].1) - ss)*128.0;
+	
+        let r = (ss.abs() * 255.0) as u32;
+        let b = (sd.abs() * 255.0) as u32;
+        //let g = (sa.abs() *2.0 * 255.0) as u32;
+	    let g = r.saturating_add(b) as u32 / 3;
 
-    let width_top_h = width >> 1;
-    let height_top_h = height >> 1;
-
-
-    let mut di = 0;
-    
-    win_clear(buf);
-    
-    let rate = 1.0 * pi2 /* (1.5 + crate::math::fast_sin(wrap_ratepara._incremeter)) */ / range as f32;
-    
-    while di < range {
-        
-        let p = crate::math::euler_wrap(cplx_add(cplx_mul(stream[para._i % stream.len()], (para.VOL_SCL*0.35, 0.0)), (0.5, 0.0)), (di as f32 * rate)); 
-        let x = (p.0*size as f32) as i32;
-        let y = (p.1*size as f32) as i32;
-        
-        buf[coord_to_1d(x/2+width_top_h, y/2+height_top_h, para)] = rgb_to_u32(128, (x.abs()*510/size as i32) as u8, (y.abs()*510/size as i32) as u8);
-
-        para._i = (para._i+INCREMENT+1) % stream.len();
-        di = di+INCREMENT+1;
+        pix[i] = (r << 16) | (g << 8) | b;
     }
-    
-    //~ wrap_ratepara._incremeter += 0.001;
-    //~ if (wrap_ratepara._incremeter > pi2) {
-        //~ wrap_ratepara._incremeter = 0.0;
-    //~ }
-    
-    //crate::graphics::visualizers::cross::draw_cross(buf);
+
+    // para._i = (para._i + 2023) % stream.len();
+}
+
+// This function literally visualizes the bit array of f32 samples.
+pub fn draw_f32(pix: &mut [u32], stream: &[(f32, f32)], para: &mut Parameters) {
+    const bits: usize = u32::BITS as usize;
+
+    let bar_width: usize = (para.WIN_W / u32::BITS as usize).max(1) as usize;
+
+    graphical_fn::win_clear(pix);
+
+    let samplef = math::cplx_mag(stream[para._i & 0xFF]);
+    let sample = samplef.to_bits();
+
+    for bit in 0..bits {
+        let bitsample = (sample >> (bits - bit)) & 1;
+        let x = bit * para.WIN_W / bits;
+
+        let red = ((samplef + 1.0) * 127.999) as u8;
+        let green = (bit * 255 / bits) as u8;
+        let blue = (255 - green) as u8;
+
+        if bitsample != 0 {
+            graphical_fn::draw_rect(
+                pix,
+                x,
+                0,
+                bar_width,
+                para.WIN_H,
+                graphical_fn::rgb_to_u32(red, green, blue),
+                para,
+            );
+        }
+    }
+
+    para._i = (para._i + INCREMENT) % stream.len();
+}
+// same of above but for u32
+pub fn draw_u16(pix: &mut [u32], stream: &[(f32, f32)], para: &mut Parameters) {
+    const bits: usize = u16::BITS as usize;
+
+    let bar_width: usize = (para.WIN_W / bits).max(1) as usize;
+
+    graphical_fn::win_clear(pix);
+
+    let sample = ((stream[para._i & 0xFF].0 + 1.0) * (1 << bits - 1) as f32) as u16;
+
+    for bit in 0..bits {
+        let bitsample = (sample >> (bits - bit)) & 1;
+        let x = bit * para.WIN_W / bits;
+
+        let red = (sample >> 8) as u8;
+        let green = (bit * 255 / bits) as u8;
+        let blue = (255 - green) as u8;
+
+        if bitsample != 0 {
+            graphical_fn::draw_rect(
+                pix,
+                x,
+                0,
+                bar_width,
+                para.WIN_H,
+                graphical_fn::rgb_to_u32(red, green, blue),
+                para,
+            );
+        }
+    }
+
+    para._i = (para._i + INCREMENT) % stream.len();
 }
