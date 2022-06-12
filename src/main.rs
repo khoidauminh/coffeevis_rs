@@ -1,32 +1,35 @@
 //use core::time::Duration;
 #![allow(warnings)]
 
-mod constants;
-use crate::constants::*;
-
-// Audio lib
-mod audio_input;
-use audio_input::input_stream::{get_source, read_samples};
 use cpal;
-use cpal::traits::StreamTrait;
-
-mod math;
+use minifb;
 
 mod graphics;
+mod audio_input;
+mod math;
+mod constants;
+
+use constants::*;
+
+// Audio lib
+use audio_input::{get_source, read_samples};
+use cpal::traits::StreamTrait;
+
 use graphics::{
     graphical_fn,
     visualizers::{
-        bars, experiment1, lazer, oscilloscope, ring, shaky_coffee, spectrum, vol_sweeper,
+        bars, experiment1, lazer, oscilloscope, ring, shaky_coffee, spectrum, vol_sweeper, VisFunc
     },
 };
 
 //mod assets;
 use minifb::{Key, KeyRepeat, Window, WindowOptions};
 
-static mut buf: [(f32, f32); SAMPLE_SIZE] = [(0.0f32, 0.0f32); SAMPLE_SIZE];
-
 //static mut i : usize = 0;
 //static mut visualizer : (dyn Fn(Vec<u32>, Vec<(f32, f32)>)) = &oscilloscope::draw_vectorscope;
+
+/// Global buffer used for audio input data storage.
+static mut buf: [(f32, f32); constants::SAMPLE_SIZE] = [(0.0f32, 0.0f32); constants::SAMPLE_SIZE];
 
 fn main() {
     let coffee_pixart_file = include_bytes!("coffee_pixart_2x.ppm");
@@ -98,8 +101,7 @@ fn main() {
     //crate::constants::prepare_table();
     //bars::data_f1.resize(bars::bar_num+1, 0.0);
 
-    let mut visualizer: fn(&mut [u32], &[(f32, f32)], para: &mut Parameters) -> () =
-        oscilloscope::draw_vectorscope;
+    let mut visualizer: VisFunc = oscilloscope::draw_vectorscope;
     //~ let mut visualizer: fn(&mut [u32], &[(f32, f32)], para: &mut Parameters) -> () = bars::draw_bars_circle;
     //change_visualizer(&mut pix_buf, &mut visualizer);
 
@@ -132,7 +134,7 @@ fn main() {
 
 fn change_visualizer(
     pix: &mut Vec<u32>,
-    f: &mut fn(&mut [u32], &[(f32, f32)], para: &mut Parameters) -> (),
+    f: &mut VisFunc,
     para: &mut Parameters,
 ) {
     para.VIS_IDX = math::advance_with_limit(para.VIS_IDX, VISES);
@@ -156,7 +158,7 @@ fn change_visualizer(
 fn control_key_events(
     win: &minifb::Window,
     pix: &mut Vec<u32>,
-    f: &mut fn(&mut [u32], &[(f32, f32)], para: &mut Parameters) -> (),
+    f: &mut VisFunc,
     para: &mut Parameters,
 ) {
     if win.is_key_pressed(Key::Space, KeyRepeat::Yes) {
