@@ -35,7 +35,7 @@ pub fn update_size(s: (usize, usize), para: &mut crate::constants::Parameters) {
 }
 
 pub mod color_blending {
-    use crate::graphical_fn::{rgba_to_u32, u32_to_rgba};
+    use super::{rgba_to_u32, u32_to_rgba};
 
     pub fn mix(c1: u32, c2: u32) -> u32 {
         let c_1 = u32_to_rgba(c1);
