@@ -17,7 +17,7 @@ OR
 
 Run `cargo install --path <path to coffeevis_rs>`
 
-Cargo should take care of the dependencies.   
+Make sure Minifb and Cpal's dependencies are met before compiling this package.
 
 ## How to use
 |  Key | Descripttion |
