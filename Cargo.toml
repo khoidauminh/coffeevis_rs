@@ -1,11 +1,13 @@
 [package]
 name = "coffeevis"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 authors = ["khoidauminh <khoidauminh@tutanota.com>"]
 description = "A simple graphical audio visualizer mainly for Linux."
 license = "MIT"
 keywords = ["graphics", "audio", "music", "visualizer"]
+repository = "https://github.com/khoidauminh/coffeevis_rs"
+readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
