@@ -35,81 +35,6 @@ pub fn draw_exp1(pix: &mut [u32], stream: &[(f32, f32)], para: &mut Parameters) 
     // para._i = (para._i + 2023) % stream.len();
 }
 
-const FT_SIZE: usize = 164;
-const FREQ_RANGE: (f32, f32) = (6.0, 1926.0);
-
-// this algorithm tries to approximate fft
-fn approx_ft(inp: &[(f32, f32)], out: &mut [(f32, f32)], scaling_factor: usize) {
-    let li = inp.len();
-    let lif = li as f32;
-    let lo = out.len();
-    let lof = lo as f32;
-
-    let ceiling_power_of_2 = math::log2i(li) + 1;
-    let ln = scaling_factor << ceiling_power_of_2;
-
-    for i in 0..ln {}
-}
-
-fn approx_ft2(
-    inp: &[(f32, f32)],
-    out: &mut [(f32, f32)],
-    freq_start: f32,
-    freq_end: f32,
-    sample_rate: f32,
-) {
-    const LOWPAD_DEPTH: usize = 2;
-    const LOWPAD_DEPTHL: usize = LOWPAD_DEPTH - 1;
-
-    let l = inp.len();
-    let lh = l / 2;
-    let lf = l as f32;
-    let lo = out.len();
-    let lof = lo as f32;
-    let lflof = lf / lof;
-
-    let mut old_smp = (0.0f32, 0.0f32);
-    let rc = (crate::constants::pi2 * sample_rate * 0.5 / lof).recip();
-    let dt = sample_rate.recip();
-    let a = dt / (rc + dt);
-
-    let sr_nth = crate::constants::pi2 / sample_rate;
-
-    let mut lowpad_array: [(f32, f32); LOWPAD_DEPTH] = [(0.0, 0.0); LOWPAD_DEPTH];
-    let mut lowpad_old = (0.0f32, 0.0f32);
-
-    let mut bin = 0;
-
-    for smp in 0..l {
-        let ang = math::interpolate::linearf(freq_start, freq_end, bin as f32 / lof) * sr_nth;
-
-        lowpad_old = lowpad_array[LOWPAD_DEPTHL];
-
-        for i in 0..LOWPAD_DEPTH.min(l - smp) {
-            lowpad_array[i] = inp[smp + i];
-        }
-        lowpad_array[0] = math::lowpass(lowpad_old, lowpad_array[0], a.powi(LOWPAD_DEPTH as i32));
-        for _ in 0..LOWPAD_DEPTH {
-            for i in 1..LOWPAD_DEPTH {
-                lowpad_array[i] = math::lowpass(lowpad_array[i - 1], lowpad_array[i], a);
-            }
-        }
-
-        out[bin] = math::complex_add(
-            out[bin],
-            math::euler_wrap(lowpad_array[LOWPAD_DEPTHL], ang * smp as f32),
-        );
-
-        bin += 1;
-        bin *= (bin < lo) as usize;
-    }
-
-    out.iter_mut().for_each(|mut bin| {
-        bin.0 /= lflof;
-        bin.1 /= lflof
-    });
-}
-
 // This function literally visualizes the bit array of f32 samples.
 pub fn draw_f32(pix: &mut [u32], stream: &[(f32, f32)], para: &mut Parameters) {
     const bits: usize = u32::BITS as usize;
@@ -118,7 +43,7 @@ pub fn draw_f32(pix: &mut [u32], stream: &[(f32, f32)], para: &mut Parameters) {
 
     graphical_fn::win_clear(pix);
 
-    let samplef = math::complex_mag(stream[para._i & 0xFF]);
+    let samplef = math::cplx_mag(stream[para._i & 0xFF]);
     let sample = samplef.to_bits();
 
     for bit in 0..bits {
@@ -177,4 +102,3 @@ pub fn draw_u16(pix: &mut [u32], stream: &[(f32, f32)], para: &mut Parameters) {
 
     para._i = (para._i + INCREMENT) % stream.len();
 }
-
