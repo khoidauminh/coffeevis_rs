@@ -1,5 +1,5 @@
-use crate::constants::Parameters;
-use crate::constants::{pi2, pih, SAMPLE_SIZE};
+use crate::config::Parameters;
+use crate::config::{pi2, pih, SAMPLE_SIZE};
 use crate::math;
 
 pub fn rgb_to_u32(r: u8, g: u8, b: u8) -> u32 {
@@ -27,11 +27,11 @@ pub fn flatten(x: i32, y: i32, w: usize, h: usize) -> usize {
     (y as usize).min(h - 1) * w + (x as usize).min(w - 1)
 }
 
-pub fn update_size(s: (usize, usize), para: &mut crate::constants::Parameters) {
+pub fn update_size(s: (usize, usize), para: &mut crate::config::Parameters) {
     para.WIN_W = s.0;
     para.WIN_H = s.1;
     para.WIN_R = s.0 * s.1;
-    para.WIN_RL = para.WIN_R - 1;
+    para.WIN_RL = para.WIN_R.saturating_sub(1);
 }
 
 pub mod color_blending {
@@ -64,9 +64,10 @@ pub mod color_blending {
 
 pub fn win_clear(buf: &mut [u32]) {
     //buf = &mut [0u32; SAMPLE_SIZE];
-    for sample in buf.iter_mut() {
+    /*for sample in buf.iter_mut() {
         *sample = 0;
-    }
+    }*/
+    buf.fill(0);
 }
 
 pub fn apply_alpha(color: u32, a: u8) -> u32 {
@@ -143,12 +144,15 @@ pub fn draw_rect(
         }
     }*/
 
-    let l = buf.len();
+    //let l = buf.len();
+
+    let m = w.min(para.WIN_W.saturating_sub(x)); // draw from x position to w or WIN_W if exceeds canvas.
 
     let mut start_index = x + y * para.WIN_W;
     for _ in 0..h.min(para.WIN_H.saturating_sub(y)) {
-        for i in 0..w.min(l - start_index - 1) {
-            buf[start_index + i] = color;
+
+        for i in start_index..(start_index+m).min(para.WIN_RL) {
+            buf[i] = color;
         }
 
         start_index += para.WIN_W;
