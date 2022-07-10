@@ -11,9 +11,9 @@ cpal = "0.13.5"
 
 minifb = "0.23.0"
 
-crossterm = "*"
+crossterm = "0.24.0"
 
-drawille = "*"
+drawille = "0.3.0"
 
 ## Platform support
 Coffeevis currently runs well on Debian 11 i3 and is expected to run on other Linux distributions.
