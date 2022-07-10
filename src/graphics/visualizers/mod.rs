@@ -1,4 +1,4 @@
-pub type VisFunc = fn(&mut [u32], &[(f32, f32)], &mut crate::constants::Parameters) -> ();
+pub type VisFunc = fn(&mut [u32], &[(f32, f32)], &mut crate::config::Parameters) -> ();
 
 mod dash_line;
 mod cross;
@@ -10,3 +10,5 @@ pub mod vol_sweeper;
 pub mod ring;
 pub mod bars;
 pub mod experiment1;
+pub mod wave;
+//pub mod proc;

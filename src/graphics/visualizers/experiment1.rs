@@ -1,5 +1,5 @@
-//use crate::constants::{WIN_H, WIN_W};
-use crate::constants::{Parameters, INCREMENT};
+//use crate::config::{WIN_H, WIN_W};
+use crate::config::{Parameters, INCREMENT};
 use crate::graphics::graphical_fn::{self, draw_rect, win_clear};
 use crate::math;
 

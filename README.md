@@ -1,32 +1,58 @@
 # Coffee Music Visualizer
-A small music visualizer written in Rust using Cpal and Minifb.
+A small GUI + TUI music visualizer written in Rust.
 
-Example of built-in visualizers (some have changed over updates): 
+## Examples:
 
-![vectorscope](https://media2.giphy.com/media/LU7E8uu9g8zv6oBtdL/giphy.gif?cid=790b76115b652f5ae6329eb78eef396c970ed45a240a00bc&rid=giphy.gif&ct=g)
-![shaky coffee](https://i.giphy.com/media/T99UxYb9ZbW0SR6OBD/giphy.webp)
-![vol sweeper](https://media.giphy.com/media/Tuy6v2OgRl6e9DeYmc/giphy.gif)
-![spectrum](https://media.giphy.com/media/QlrsTRVBv2kBscsTQC/giphy.gif)
-![oscilloscope](https://media.giphy.com/media/WSnsugN74Qk3WJuoX3/giphy.gif)
-![lazer](https://media.giphy.com/media/V1toUVISK2PQBqMbBs/giphy.gif)
+![console mode](https://media.giphy.com/media/EjtGZZXlqdKeZ5ctBW/giphy.gif)
+![windowed mode](https://media.giphy.com/media/ahIRySAELqiI7kIUI2/giphy.gif)
 
-## Installation 
-In the source directory, run `cargo run --release` 
+## Dependencies
+cpal = "0.13.5"
 
-OR 
+minifb = "0.23.0"
 
-Run `cargo install --path <path to coffeevis_rs>`
+crossterm = "*"
 
-Make sure Minifb and Cpal's dependencies are met before compiling this package.
+drawille = "*"
 
-## How to use
+## Platform support
+Coffeevis currently runs well on Debian 11 i3 and is expected to run on other Linux distributions.
+
+Windows, MacOS and BSD support is not tested.
+
+## Installation
+Run `cargo install coffeevis`
+
+## Usage
+Run in windowed mode: `coffeevis`
+
+Run in console mode: `coffeevis --con`
+
+## Notes
+Coffeevis prints text directly to stdout, rendering may be heavy depending on your terminal.
+
+A terminal with GPU-accelerated support is recommended (i.e Alacritty, Kitty, Wezterm, ...)
+
+A maximum resolution is built into the console mode (default: 50x50). Coffeevis will render in the center of the screen if terminal dimensions are larger than the limit.
+
+## Keyboard shortcuts
+
+### Global
 |  Key | Descripttion |
 | ------ | ------ |
-| <kbd>Space</kbd> | iterate through visualizers |
-| <kbd>Esc</kbd> | exit | 
-| <kbd>-</kbd> / <kbd>+</kbd> | decrease/increase input volume |
-| <kbd>\[</kbd> / <kbd>\]</kbd> | decrease/increase spectrum roughness |
-| <kbd>;</kbd> / <kbd>'</kbd> | decrease/increase waveform coverage |
+| <kbd>Space</kbd> | iterates through visualizers |
+| <kbd>q</kbd> | exits |
+| <kbd>/</kbd> | resets all settings (fps is unaffected by this)|
+| <kbd>-</kbd> / <kbd>+</kbd> | decreases/increases input volume |
+| <kbd>\[</kbd> / <kbd>\]</kbd> | decreases/increases spectrum roughness |
+| <kbd>;</kbd> / <kbd>'</kbd> | decreases/increases amount of samples into input (works for wave-based visualizers only) |
 | <kbd>\\</bkd> | toggles auto switching (default: ON, 8 seconds) |
-| <kbd>/</kbd> | reset all settings | 
+| <kbd>7</kbd> / <kbd>8</kbd> | decreases/increases fps by 5 (default: 60) |
+| <kbd>1</kbd> ... <kbd>6</kbd> | changes fps to 10 ... 60 respectively |
 
+### Console mode
+|  Key | Descripttion |
+| ------ | ------ |
+| <kbd>.</kbd> | toggles between text rendering and braille rendering |
+| <kbd>,</kbd> | in text rendering, toggles between ascii character set and block character set |
+| <kbd>9</kbd> / <kbd>0</kbd> | decreases/increases maximum resolution |

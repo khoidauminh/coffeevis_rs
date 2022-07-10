@@ -1,9 +1,9 @@
 use cpal::{Data, Sample, SampleFormat};
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use crate::{buf, constants::{Parameters, SAMPLE_SIZE}};
+use crate::{buf, config::{Parameters, SAMPLE_SIZE, SAMPLE_RATE}};
 //use rustfft::num_complex::Complex;
 
-pub fn get_source<T, D>(f: D, para: &mut Parameters) -> cpal::Stream
+pub fn get_source<T, D>(f: D) -> cpal::Stream
 where
     T : Sample,
     D : FnMut(&[T], &cpal::InputCallbackInfo) + Send + 'static,
@@ -23,6 +23,7 @@ where
 
     let supported_config = supported_configs_range.next()
         .expect("no supported config?!")
+        // .with_sample_rate(cpal::SampleRate(SAMPLE_RATE));
         .with_max_sample_rate();
 
     let sample_format = supported_config.sample_format();
@@ -31,7 +32,7 @@ where
     let mut config: cpal::StreamConfig = supported_config.into();
     config.channels = 2;
 
-    //unsafe{crate::constants::SAMPLE_RATE = config.sample_rate.0 as u32}
+    //unsafe{crate::config::SAMPLE_RATE = config.sample_rate.0 as u32}
 
     //println!("Sample rate: {:?}", config.sample_rate);
 

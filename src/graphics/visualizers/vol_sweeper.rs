@@ -1,5 +1,5 @@
-use crate::constants::{PHASE_OFFSET, INCREMENT};
-use crate::constants::Parameters;
+use crate::config::{PHASE_OFFSET, INCREMENT};
+use crate::config::Parameters;
 use crate::graphics::graphical_fn::{rgb_to_u32, coord_to_1d, win_clear, win_clear_alpha, draw_line, P2, p2_add};
 use crate::graphics::graphical_fn;
 use crate::math;

@@ -3,8 +3,8 @@ use cpal::Sample;
 use crate::math;
 use math::{Cplx, cplx_0};
 
-use crate::constants::{FFT_SIZE, INCREMENT, pi2, pih, POWER};
-use crate::constants::Parameters;
+use crate::config::{FFT_SIZE, INCREMENT, pi2, pih, POWER};
+use crate::config::Parameters;
 use crate::graphics::graphical_fn;
 
 //static mut _i : usize = 0;
@@ -59,15 +59,17 @@ pub fn draw_spectrum(buf : &mut [u32], stream : &[Cplx], para: &mut Parameters )
 
     graphical_fn::win_clear(buf);
 
-    for i in 0..para.WIN_W {
-        let idxf = (i as f32 / para.WIN_W as f32)* FFT_SIZE as f32 / math::log2i(para.WIN_W) as f32 * 0.1;
-		let idx = idxf.floor() as usize;
-		let idx_next = idx+1;
-		let t = idxf.fract();
-        let scaling = (math::log2i((idx + 2)*para.WIN_H)) as f32;
+    let winlog = wf.log2();
 
-        let bar_height1 =  ((math::interpolate::linearf(para.spectrum_smoothing_ft[idx].0, para.spectrum_smoothing_ft[idx_next].0, t)*scaling) as usize / 12);
-        let bar_height2 =  ((math::interpolate::linearf(para.spectrum_smoothing_ft[idx].1, para.spectrum_smoothing_ft[idx_next].1, t)*scaling) as usize / 12);
+    for i in 0..para.WIN_W {
+        let idxf = (i as f32 / wf)* winlog *8.0;
+		let idx = idxf.floor() as usize;
+		let idx_next = idxf.ceil() as usize;
+		let t = idxf.fract();
+        let scaling = math::fast_flog2(idxf + 2.0) *hf * 0.02;
+
+        let bar_height1 =  ((math::interpolate::bezierf(para.spectrum_smoothing_ft[idx].0, para.spectrum_smoothing_ft[idx_next].0, t)*scaling) as usize / 12);
+        let bar_height2 =  ((math::interpolate::bezierf(para.spectrum_smoothing_ft[idx].1, para.spectrum_smoothing_ft[idx_next].1, t)*scaling) as usize / 12);
 
         // let bar_height1 = math::fast_isqrt(bar_height1.pow(2) + bar_height2.pow(2));
         // let bar_height2 = bar_height1;
