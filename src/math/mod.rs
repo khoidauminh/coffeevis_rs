@@ -3,7 +3,7 @@
 
 // Many functions in this module are unusued.
 
-use crate::constants::{FFT_SIZE, POWER, pi2, pif32, pih, minus_pi2};
+use crate::config::{FFT_SIZE, POWER, pi2, pif32, pih, minus_pi2};
 
 const size_of_usize: usize = std::mem::size_of::<usize>()*8;
 
@@ -90,18 +90,25 @@ fn transpose(a: &mut [Cplx], c: usize) {
     }
 }
 
-pub fn fft_inplace(a: &mut [Cplx], lg2: usize /* power of 2*/) {
-    let l: usize = 1 << lg2;
-    
-    let lh = l >> 1;
+pub fn bit_reverse(x: usize, lg2: usize) -> usize {
+	 (x.reverse_bits() >> (size_of_usize-lg2))
+}
 
-    for i in 0..l {
-        let ni = (i.reverse_bits() >> (size_of_usize-lg2)); // bit reverse operation
-        // implementation aquired from: https://stackoverflow.com/q/932079
+pub fn bit_reverse_order(a: &mut[Cplx], lg2: usize) {
+    for i in 0..a.len() {
+        let ni = bit_reverse(i, lg2); // bit reverse operation
         if i < ni {
 			a.swap(i, ni);
 		}
     }
+}
+
+pub fn fft_inplace(a: &mut [Cplx], lg2: usize /* power of 2*/) {
+    let l: usize = 1 << lg2;
+
+    let lh = l >> 1;
+
+    bit_reverse_order(a, lg2);
 
     let mut m = 2;
     while m < l {
@@ -111,7 +118,7 @@ pub fn fft_inplace(a: &mut [Cplx], lg2: usize /* power of 2*/) {
 
         let wm = euler(cplx_1(), minus_pi2lf);
 
-        for k in (0..lh).step_by(m) { // the other half doesn't need to be calculated.
+        for k in (0..l).step_by(m) {
 			let mut w = cplx_1();
             for i in k..(mh+k) {
                 //let q = euler(a[i+mh], minus_pi2lf *(i-k) as f32);
@@ -307,7 +314,11 @@ pub mod interpolate {
 	}
 
 	pub fn cosf(a: f32, b: f32, t: f32) -> f32 {
-		a + (b-a)*(0.5-0.5*super::fast_cos(t*crate::constants::pif32))
+		a + (b-a)*(0.5-0.5*super::fast_cos_wrap(t*crate::config::pif32))
+	}
+
+	pub fn bezierf(a: f32, b: f32, t: f32) -> f32 {
+	    a + (b-a)*(t*t*(3.0-2.0*t))
 	}
 
 	// perbyte = 1/256 (equivalent to percent = 1/100)
@@ -327,8 +338,7 @@ pub fn get_average_lr(data: &Vec<Cplx>) -> Cplx {
     (suml / l as f32, sumr / l as f32)
 }
 
-#[inline]
 pub fn advance_with_limit(a: usize, limit: usize) -> usize {
 	let b = a+1;
-	b * (b < limit) as usize
+	b * (b < limit) as usize // eliminates if condition and modulo operator
 }
