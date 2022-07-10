@@ -1,9 +1,15 @@
-use crate::constants::Parameters;
-use crate::constants::{INCREMENT, PHASE_OFFSET, SAMPLE_SIZE};
+use crate::config::Parameters;
+use crate::config::{INCREMENT, PHASE_OFFSET, SAMPLE_SIZE};
 
-use crate::graphics::graphical_fn::{
-    coord_to_1d, draw_line, draw_rect, flatten, p2_add, rgb_to_u32, win_clear, win_clear_alpha, P2,
+use crate::graphics::{
+    visualizers::cross::CROSS_COL,
+    graphical_fn::{
+        coord_to_1d, draw_line, draw_rect,
+        flatten, p2_add, rgb_to_u32, win_clear,
+        win_clear_alpha, P2,
+    }
 };
+
 
 // static mut _smooth_osc : [f32; WIN_W] = [0.0f32; WIN_W];
 
@@ -12,6 +18,8 @@ pub fn draw_oscilloscope(buf: &mut [u32], stream: &[(f32, f32)], para: &mut Para
     let range = stream.len() * para.WAV_WIN / 100;
 
     //if range < WIN_H+WIN_W { return (); }
+
+	// let incr = INCREMENT >> 2;
 
     let width = para.WIN_W as i32;
     let height = para.WIN_H as i32;
@@ -24,7 +32,7 @@ pub fn draw_oscilloscope(buf: &mut [u32], stream: &[(f32, f32)], para: &mut Para
     win_clear(buf);
 
     //i = i%range;
-    
+
     para._i %= stream.len();
 
     while di < range {
@@ -46,32 +54,34 @@ pub fn draw_oscilloscope(buf: &mut [u32], stream: &[(f32, f32)], para: &mut Para
 
         buf[flatten(x, y1, para.WIN_W, para.WIN_H)] = 0x00_FF_55_55;
         buf[flatten(x, y2, para.WIN_W, para.WIN_H)] = 0x00_55_55_FF;
-        
-        
+
+
 
         para._i = (para._i + INCREMENT + 1) % stream.len();
         di = di + INCREMENT + 1;
     }
 
-    para._i %= stream.len();
-
     draw_rect(
         buf,
         para._i % para.WIN_W,
-        8,
-        1,
-        para.WIN_H - 16,
-        0x00_77_77_77,
+        para.WIN_H / 10,
+        2,
+        para.WIN_H - para.WIN_H / 5,
+        CROSS_COL,
         para,
     );
 
-    draw_rect(buf, 0, para.WIN_H / 2, para.WIN_W, 1, 0x00_77_77_77, para);
+    para._i %= stream.len();
+
+    draw_rect(buf, 0, para.WIN_H / 2, para.WIN_W, 2, CROSS_COL, para);
 }
 
 pub fn draw_vectorscope(buf: &mut [u32], stream: &[(f32, f32)], para: &mut Parameters) {
     let range = stream.len() * para.WAV_WIN / 100;
 
     //if range < WIN_H+WIN_W { return (); }
+
+    // let incr = INCREMENT >> 2;
 
     let size = para.WIN_H.min(para.WIN_W) as i32;
 
@@ -97,8 +107,8 @@ pub fn draw_vectorscope(buf: &mut [u32], stream: &[(f32, f32)], para: &mut Param
             (y.abs() * 510 / size as i32) as u8,
         );
 
-        para._i = (para._i + INCREMENT + 1);
-        di = di + INCREMENT + 1;
+        para._i = (para._i + INCREMENT);
+        di = di + INCREMENT;
     }
 
     crate::graphics::visualizers::cross::draw_cross(buf, para);
