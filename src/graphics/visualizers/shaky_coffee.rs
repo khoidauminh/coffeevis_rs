@@ -1,4 +1,4 @@
-use crate::constants::{Parameters, Image};
+use crate::config::{Parameters, Image};
 use crate::graphics::{graphical_fn};
 use crate::math;
 
@@ -21,7 +21,7 @@ pub fn prepare_img(file: &[u8]) -> Image {
 	use std::io::Read;
 	use std::path::Path;
 	use std::io::{BufRead, BufReader};
-	
+
     let mut img = Image {
 		w: 0,
 		h: 0,
@@ -39,7 +39,7 @@ pub fn prepare_img(file: &[u8]) -> Image {
             let split :Vec<&str> = line.split(' ').collect();
             img.w = split[0].parse::<usize>().expect("failed to parse string.");
             img.h = split[1].parse::<usize>().expect("failed to parse string.");
-		
+
             continue;
         }
 
@@ -93,42 +93,42 @@ pub fn draw_shaky(buf : &mut [u32], stream : &[(f32, f32)], para: &mut Parameter
 
     apply_coord3(stream, para);
     graphical_fn::win_clear(buf);
-    
+
     let wc = para.WIN_W as i32;
     let hc = para.WIN_H as i32;
     let wi = para.IMG.w as i32;
     let hi = para.IMG.h as i32;
-    
+
     let size = wc.max(hc);
-    let centerI = (wi/2, hi/2); 
+    let centerI = (wi/2, hi/2);
     let centerC = (wc/2, hc/2);
 
     //let center = (para.WIN_W as i32 / 2 - para.IMG.w as i32 /2, para.WIN_H as i32 / 2 - para.IMG.h as i32 /2);
-    
+
     let (x_soft_shake, y_soft_shake) = diamond_func(8.0, 1.0, para.shaky_coffee.0);
-    
+
 	for cx in 0..wc {
 		for cy in 0..hc {
 			let ix = (cx-centerC.0)*wi / size;
 			let iy = (cy-centerC.1)*hi / size;
-			
+
 			let i = graphical_fn::flatten(
-				ix + centerI.0 + x_soft_shake + para.shaky_coffee.4, 
-				iy + centerI.1 + y_soft_shake + para.shaky_coffee.5, 
-				para.IMG.w, 
+				ix + centerI.0 + x_soft_shake + para.shaky_coffee.4,
+				iy + centerI.1 + y_soft_shake + para.shaky_coffee.5,
+				para.IMG.w,
 				para.IMG.h
 			);
-			
+
 			let c = graphical_fn::flatten(
-				cx, 
-				cy, 
-				para.WIN_W, 
+				cx,
+				cy,
+				para.WIN_W,
 				para.WIN_H
 			);
-			
+
 			let i3 = i*3;
-			
-			buf[c] = 
+
+			buf[c] =
 				graphical_fn::rgb_to_u32(
                 para.IMG.image_buffer[i3],
                 para.IMG.image_buffer[i3+1],
@@ -145,41 +145,41 @@ pub fn draw_shaky(buf : &mut [u32], stream : &[(f32, f32)], para: &mut Parameter
 
 //~ static mut _j : f32 = 0.0;
 
-const wrapper : f32 = crate::constants::pi2*725.0;
+const wrapper : f32 = crate::config::pi2*725.0;
 
 pub fn apply_coord3(stream : &[(f32, f32)], para: &mut Parameters) {
-	
+
 	let _j = &mut para.shaky_coffee.1;
 	let xshake = &mut para.shaky_coffee.2;
 	let yshake = &mut para.shaky_coffee.3;
 	let x_ = &mut para.shaky_coffee.4;
 	let y_ = &mut para.shaky_coffee.5;
-	
+
     let mut data_f = [(0.0f32, 0.0f32); 1024];
     let mut amplitude : f32 = 0.0;
-    
+
     for i in 0..1024 {
         data_f[i].0 = (stream[i.min(stream.len())].0*para.VOL_SCL);
     }
-    
+
     math::hanning(&mut data_f);
     math::lowpass_array(&mut data_f, 0.005);
-    
+
     for i in 0..1024 {
         amplitude += data_f[i].0.abs();
     }
-    
+
     //smooth_amplitude = graphical_fn::linear_interp(smooth_amplitude, amplitude.min(1024.0), 0.5);
     let smooth_amplitude = (amplitude.clamp(1.0, 1024.0).log2()/1.4).powi(2);
     //println!("{}", smooth_amplitude);
-    
+
     *_j = (*_j + amplitude / 240.0) % wrapper;
-    
+
     *xshake = (smooth_amplitude)*(*_j).cos();
     *yshake = (smooth_amplitude)*(*_j*0.725).sin();
-    
+
     *x_ = math::interpolate::linearf((*x_) as f32, (*xshake), 0.1) as i32;
     *y_ = math::interpolate::linearf((*y_) as f32, (*yshake), 0.1) as i32;
-    
+
     *_j += 0.01;
 }
