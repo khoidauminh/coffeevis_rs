@@ -1,6 +1,6 @@
 use crate::graphics::graphical_fn::{rgb_to_u32, coord_to_1d, win_clear, win_clear_alpha, draw_rect, P2, draw_line_direct};
-use crate::constants::{PHASE_OFFSET, INCREMENT};
-use crate::constants::Parameters;
+use crate::config::{PHASE_OFFSET, INCREMENT};
+use crate::config::Parameters;
 
 static mut pos : P2 = P2(72, 72);
 static mut p1 : P2 = P2(72, 72);
