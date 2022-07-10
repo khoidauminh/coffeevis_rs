@@ -1,6 +1,6 @@
 [package]
 name = "coffeevis"
-version = "0.2.1"
+version = "0.3.0"
 edition = "2021"
 authors = ["khoidauminh <khoidauminh@tutanota.com>"]
 description = "A simple graphical audio visualizer mainly for Linux."
@@ -14,3 +14,5 @@ readme = "README.md"
 [dependencies]
 cpal = "0.13.5"
 minifb = "0.23.0"
+crossterm = "*"
+drawille = "*"
