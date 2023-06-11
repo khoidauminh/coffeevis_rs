@@ -138,6 +138,7 @@ pub const VIS_CLASSIC: &[Visualizer] =
 	define_visualizer!(shaky::draw_shaky, "Shaky", false),
 	define_visualizer!(lazer::draw_lazer, "Lazer", true),
 	define_visualizer!(wave::draw_wave, "Wave", true),
+	define_visualizer!(vol_sweeper::draw_vol_sweeper, "Volume sweep", false),
 /*	[vol_sweeper::draw_vol_sweeper, "Vol sweeper"],
 	[// experiment1::draw_exp1,
 	[// experiment1::draw_f32,
