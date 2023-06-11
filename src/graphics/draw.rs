@@ -27,17 +27,13 @@ impl Canvas
 		let ye = (ys+h.saturating_sub(if p.y < 0 {-p.y as usize} else {0})).min(self.height);
 		// let ye = if p.y < 0 {ye.saturating_sub((-p.y) as usize)} else {ye};
 		let wi = w.min(
-		    if p.x < 0 {
-		        self.width.saturating_sub((-p.x) as usize)
-		    } else {
-		        self.width
-		    }
+		    self.width.saturating_sub(p.x.abs() as usize)
 	    );
 		
 		for y in ys..ye
 		{
 			let i = xs + y*self.width;
-			self.pix[i..i+wi].fill(c);
+			self.pix[i..(i+wi)].fill(c);
 		}
 	}
 	
