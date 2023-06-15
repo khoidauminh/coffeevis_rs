@@ -88,8 +88,8 @@ impl Program {
 			{
 				"--win" 	=> self.mode = Win,
 				
-//				#[cfg(feature = "winit")]
-//				"--winit" 	=> self.mode = Winit,
+				#[cfg(feature = "winit")]
+				"--winit" 	=> self.mode = Winit,
 				
 				"--braille" => (self.mode, self.flusher) = (ConBrail, Program::print_brail),
 				"--ascii" 	=> (self.mode, self.flusher) = (ConAlpha, Program::print_alpha),

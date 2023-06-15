@@ -127,4 +127,31 @@ impl Canvas {
 			*p = b(*p, c);
 		}
 	}
+	
+	pub fn scale_to(&self, dest: &mut [u32], scale: usize) {
+		let winw = self.width*scale;
+		let winh = self.height*scale;
+		
+		let jump = winw - scale;
+        let scale2 = scale.pow(2);
+        let jumprow = winw*scale2;
+		
+		for obase in (0..self.sizel()).step_by(self.width) {
+            let ibase = obase*scale2;
+            for ox in 0..self.width {
+                let pixel = self.pixel(obase+ox);
+                let ix = ox*scale;
+                let i = ibase+ix;
+                for j in i..i+scale {dest[j] = pixel}
+            }
+
+            let copy_range = ibase..ibase+winw;
+            let mut i = ibase+winw;
+            let bound = ibase+winw*scale;
+            while (i < bound) {
+                dest.copy_within(copy_range.clone(), i);
+                i += winw;
+            }
+        }
+	}
 }

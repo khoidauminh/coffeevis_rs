@@ -74,6 +74,8 @@ fn main() {
 	
 	// std::env::set_var("LC_CTYPE", "en_US.utf8");
 	
+	std::env::set_var("WINIT_UNIX_BACKEND", "x11");
+	
 	let mut prog = Program::new().eval_args(&mut args.iter());
 	match &prog.mode 
 	{

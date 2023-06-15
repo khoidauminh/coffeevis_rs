@@ -48,9 +48,6 @@ pub fn win_main(mut prog: Program) -> Result<(), minifb::Error> {
 
         controls::control_key_events_win(&mut win, &mut prog);
 
-        let winw = prog.pix.width*scale;
-        let winh = prog.pix.height*scale;
-
         prog.update_timer();
 
         prog.update_state();
@@ -68,6 +65,7 @@ pub fn win_main(mut prog: Program) -> Result<(), minifb::Error> {
             }
             _ => {},
         }*/
+        
 
         if !prog.render_trigger() {
             win.update();
@@ -77,6 +75,9 @@ pub fn win_main(mut prog: Program) -> Result<(), minifb::Error> {
         prog.force_render();
 
         prog.print_err_win();
+        
+        let winw = prog.pix.width*scale;
+        let winh = prog.pix.height*scale;
 
         if (scale == 1) {
 	        win.update_with_buffer(prog.pix.as_slice(), winw, winh);
@@ -98,9 +99,9 @@ pub fn win_main(mut prog: Program) -> Result<(), minifb::Error> {
 	        }
 	    }*/
 
-	    let jump = winw - scale;
+	    /*let jump = winw - scale;
         let scale2 = scale.pow(2);
-        let jumprow = winw*scale2;
+        let jumprow = winw*scale2;*/
 
 
         /*for yibase in (0..prog.pix.sizel()).step_by(prog.pix.width) {
@@ -119,23 +120,7 @@ pub fn win_main(mut prog: Program) -> Result<(), minifb::Error> {
             }
         }*/
 
-        for obase in (0..prog.pix.sizel()).step_by(prog.pix.width) {
-            let ibase = obase*scale2;
-            for ox in 0..prog.pix.width {
-                let pixel = prog.pix.pixel(obase+ox);
-                let ix = ox*scale;
-                let i = ibase+ix;
-                for j in i..i+scale {buffer[j] = pixel}
-            }
-
-            let copy_range = ibase..ibase+winw;
-            let mut i = ibase+winw;
-            let bound = ibase+winw*scale;
-            while (i < bound) {
-                buffer.copy_within(copy_range.clone(), i);
-                i += winw;
-            }
-        }
+        prog.pix.scale_to(&mut buffer, scale);
 
 	    win.update_with_buffer(&buffer, winw, winh);
         /*
@@ -167,6 +152,8 @@ pub mod winit_mode {
 		graphics,
 		visualizers::VisFunc
 	};
+	
+	use fps_clock;
 
 	use winit::{
 		event::{
@@ -182,8 +169,9 @@ pub mod winit_mode {
 		window::{Window, WindowBuilder},
 		dpi::{PhysicalSize, LogicalSize}
 	};
-	use pixels::{self, wgpu::{PowerPreference, RequestAdapterOptions}};
-
+	use std::time::Instant;
+	
+	use std::num::NonZeroU32;
 
 	pub fn win_main_winit(mut prog: Program) -> Result<(), &'static str> {
 
@@ -196,8 +184,11 @@ pub mod winit_mode {
 				p
 			}).flatten().collect::<Vec<u8>>()
 		}
-
-		let size = (prog.pix.width as u32, prog.pix.height as u32);
+		
+		let size = (
+			prog.pix.width as u32, //*prog.SCALE as u32, 
+			prog.pix.height as u32 //*prog.SCALE as u32
+		);
 
 		let mut icon = 
 		    winit::window::Icon::from_rgba(
@@ -213,7 +204,7 @@ pub mod winit_mode {
 			//~ .with_vsync(true)
 			.with_title("kvis")
 			.with_inner_size(LogicalSize::<u32>::new(size.0, size.1))
-			.with_always_on_top(true)
+			.with_window_level(winit::window::WindowLevel::AlwaysOnTop)
 			.with_transparent(false)
 			.with_resizable(false)
 			.with_window_icon(Some(icon))
@@ -221,6 +212,18 @@ pub mod winit_mode {
 			.expect("Failed to init window");
 
 		let inner_size = window.inner_size();
+		
+		let context = unsafe { softbuffer::Context::new(&window) }.unwrap();
+		let mut surface = unsafe { softbuffer::Surface::new(&context, &window) }.unwrap();
+		
+		surface
+		.resize(
+			NonZeroU32::new(inner_size.width).unwrap(),
+			NonZeroU32::new(inner_size.height).unwrap()
+		)
+		.unwrap();
+		
+		/*
 		let surface_texture = pixels::SurfaceTexture::new(inner_size.width, inner_size.height, &window);
 		let mut pixels_context = 
 			pixels::PixelsBuilder::new(
@@ -235,11 +238,13 @@ pub mod winit_mode {
 			})
 			.build()
 			.expect("Failed to create Pixels context");
+		*/
 
+		let mut clock = fps_clock::FpsClock::new(prog.FPS as u32);
+		
 		event_loop.run(move |event, _, control_flow| {
 
-
-			control_flow.set_poll();
+			*control_flow = ControlFlow::Poll;
 
 			prog.update_vis();
 
@@ -295,28 +300,24 @@ pub mod winit_mode {
 				},
 
 				Event::MainEventsCleared => {
-
-					prog.render();
-
-					if prog.render_trigger()
-					{
-						pixels_context
-						.get_frame_mut()
-						.copy_from_slice(
-							&to_u8_vec(prog.pix.as_slice())
-						);
-					}
-
-					if pixels_context.render().is_err() 
-					{
-						control_flow.set_exit();
-						return; 
-					}
-
-					// window.request_redraw();
+					window.request_redraw();
+					clock.tick();
 				},
 
 				Event::RedrawRequested(_) => {
+					prog.update_timer();
+
+					if prog.render_trigger() {
+					
+						let mut buffer = surface.buffer_mut().unwrap();
+						
+						prog.force_render();
+						
+						prog.pix.scale_to(&mut buffer, prog.SCALE as usize);
+
+						buffer.present().unwrap();
+					}
+					
 				},
 
 				_ => (),

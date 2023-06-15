@@ -22,14 +22,14 @@ pub const SAMPLE_SIZE: usize = (3 << POWER) - 1;
 pub const FFT_SIZE: usize = 1 << (FFT_POWER-1);
 
 pub const DEFAULT_FPS: u8 = 144;
-pub const DEFAULT_WAV_WIN: usize = { let t = (SAMPLE_RATE / 15000); if t > 5 {t} else {5} };
-pub const ROTATE_SIZE: usize = SAMPLE_SIZE * (DEFAULT_WAV_WIN) / 100; // 3539; 
+pub const DEFAULT_WAV_WIN: usize = { let t = (SAMPLE_RATE / 15000); if t > 4 {t} else {4} };
+pub const ROTATE_SIZE: usize = SAMPLE_SIZE * (DEFAULT_WAV_WIN) / 150; // 3539;
 pub const PHASE_OFFSET: usize = 2048 * SAMPLE_RATE / SAMPLE_RATE_MAX;
 pub const INCREMENT: usize = (DEFAULT_WAV_WIN / 12) | 1;
 pub const DEFAULT_VOL_SCL: f32   = 0.86;
 pub const DEFAULT_SMOOTHING: f32 = 0.65;
 
-/// How long silence has happened to trigger render slow down. 
+/// How long silence has happened to trigger render slow down.
 pub const SILENCE_LIMIT: u8 = 7;
 #[doc(hidden)]
 pub const IDLE_REFRESH_RATE: Duration = Duration::from_millis(1000/24);
@@ -250,7 +250,7 @@ impl Program {
 		
 		if
 			self.DISPLAY && 
-			self.mode != Mode::Win
+			self.mode.is_con()
 		{
 			crossterm::queue!(
 				std::io::stdout(),

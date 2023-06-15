@@ -5,8 +5,8 @@ pub mod windowed_mode;
 pub enum Mode {
 	Win,
 	
-//	#[cfg(feature = "winit")]
-//	Winit,
+	#[cfg(feature = "winit")]
+	Winit,
 	
 	ConAlpha,
 	ConBlock,
@@ -21,10 +21,20 @@ impl Mode {
 			Mode::ConBrail => Mode::ConAlpha,
 			Mode::Win 	   => Mode::Win,
 			
-//			#[cfg(feature = "winit")]
-//			Mode::Winit    => Mode::Winit,
+			#[cfg(feature = "winit")]
+			Mode::Winit    => Mode::Winit,
 		}
 	}
+	
+	pub fn is_con(&self) -> bool {
+		match self {
+			Mode::ConAlpha |
+			Mode::ConBlock |
+			Mode::ConBrail => true,
+			
+			_ => false,
+		}
+	} 
 }
 /*
 pub fn run(mut conf: &str) {
