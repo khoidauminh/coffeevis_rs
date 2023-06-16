@@ -16,27 +16,24 @@ type BufferArray = [Cplx<f32>; BUFFER_SIZE];
 // pub static EXPANDER: 
 
 /// This is a struct that acts like a regular buffer 
-/// but uses an offset index point to prevent moving 
-/// elements when rotating buffer.
+/// but uses an offset index.
 /// 
-/// By default, kvis displays at 144hz, but cpal can't
+/// By default, coffeevis displays at 144hz, but cpal can't
 /// send input data that quickly between each rendering.
-/// Besides that, the visualizers don't use all of the
+/// Moreover, the visualizers don't use all of the
 /// data sent in in one rendering. Therefore, one 
-/// solution was to use the first partial slice of the 
-/// buffer, then rotate it.
+/// solution was to use the a slice of the 
+/// buffer, then rotate it to get to the next one.
+///
+/// AudioBuffer used the mentioned the offset index to
+/// simulate rotating and bypass having to move elemenents.
 /// 
-/// But that will cost a lot of performance because each 
-/// rotation requires moves and possibly allocations.
 ///
-/// AudioBuffer is used to prevent unnecessary performance
-/// cost. 
-///
-/// Powers of 2 should be chosen for the buffer size
-/// size to allow for the fastest index wrapping methods.
+/// To index as performantly as possible, AudioBuffer only allows 
+/// powers of 2 lengths.
 pub struct AudioBuffer {
     buffer: BufferArray,
-    /// Tells where the "first index" should be.
+    /// Where offset [0] starts
     offset: usize,
     /// To prevent "audio tearing" when writing input,
     /// `write_point` tells where the last write happened.
@@ -46,11 +43,9 @@ pub struct AudioBuffer {
     
     /// Experimental feature.
     /// 
-    /// kvis is configured to run with music, which is loud. 
-    /// Sometimes regular audio might be too quiet.
-    /// `normalizer` analyzes the current write and tries to normalize 
-    /// the amplitude.
-    /// Amplitude must be below 0.5 for `normalizer` to start scaling up. 
+    /// Coffeevis normalizes the audio input when it's too quiet
+    /// so that the visualizers doesn't get boring. 
+    /// Triggers when amplitude < AMP_TRIGGER_THRESHOLD
     normalizer: f32,
     max: f32,
     average: f32
@@ -76,7 +71,7 @@ impl<'a> Iterator for AudioBufferIterator<'a> {
 impl std::ops::Index<usize> for AudioBuffer {
     type Output = Cplx<f32>;
     fn index(&self, index: usize) -> &Self::Output {
-        /// Unsafe allowed because this indexing cannot fail. 
+        /// Unsafe allowed because this cannot fail. 
         unsafe{self.buffer.get_unchecked(index.wrapping_add(self.offset)&SIZE_MASK)}
     }
 }
@@ -167,7 +162,6 @@ impl AudioBuffer {
         silence
     }*/
 
-    /// Writes to buffer from the write_point onwards instead of rotating the buffer.
     /// Returns boolean indicating silence.
     pub fn read_from_input<T: cpal::Sample<Float = f32>>(&mut self, data: &[T]) -> bool {
         let input_size = data.len();
@@ -240,7 +234,6 @@ impl AudioBuffer {
         
         silence
     }
-
 
     #[doc(hidden)]
     pub fn range(&self, index: Range<usize>) -> Vec<Cplx<f32>> {

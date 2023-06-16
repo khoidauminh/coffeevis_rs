@@ -6,10 +6,10 @@ use std::env;
 use cpal;
 use minifb;
 
+mod data;
 mod audio;
 mod math;
 mod graphics;
-mod data;
 mod modes;
 mod visualizers;
 mod controls;

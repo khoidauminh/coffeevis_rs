@@ -8,7 +8,7 @@ pub struct Visualizer {
 	request_auto_gain: bool,
 }
 
-macro_rules! define_visualizer {
+macro_rules! define_visualizer_struct {
 	($visfunc:expr, $name:literal, $request:expr) => {
 		Visualizer {
 			func: $visfunc,
@@ -17,6 +17,21 @@ macro_rules! define_visualizer {
 		}
 	}
 }
+
+#[macro_export]
+macro_rules! define_visualizer {
+	($func_name:ident, $func_body:block) => {
+		pub fn $func_name(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
+			$func_body
+		}
+	};
+}
+
+#[macro_export]
+macro_rules! vis_para {
+	() => { prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr };
+}
+
 
 impl Visualizer {
 	/*pub const fn new(f: VisFunc, name: &'static str, request: bool) -> Self {
@@ -128,17 +143,17 @@ pub const VIS_MENU: &[VisList] =
 pub const VIS_CLASSIC: &[Visualizer] = 
 &[
 	// scopes::draw_phase,
-	define_visualizer!(scopes::draw_vectorscope, "Vectorscope", true),
-	define_visualizer!(scopes::draw_oscilloscope, "Oscilloscope", true),
-	define_visualizer!(ring::draw_ring, "Ring", true),
-	define_visualizer!(spectrum::draw_spectrum, "Spectrum", true),
-	define_visualizer!(bars::draw_bars, "Bars", false),
-	define_visualizer!(bars::draw_bars_circle, "Bars (Circle)", false),
-	define_visualizer!(wavelet::draw_wavelet, "Wavelet", true),
-	define_visualizer!(shaky::draw_shaky, "Shaky", false),
-	define_visualizer!(lazer::draw_lazer, "Lazer", true),
-	define_visualizer!(wave::draw_wave, "Wave", true),
-	define_visualizer!(vol_sweeper::draw_vol_sweeper, "Volume sweep", false),
+	define_visualizer_struct!(scopes::draw_vectorscope, "Vectorscope", true),
+	define_visualizer_struct!(scopes::draw_oscilloscope, "Oscilloscope", true),
+	define_visualizer_struct!(ring::draw_ring, "Ring", true),
+	define_visualizer_struct!(spectrum::draw_spectrum, "Spectrum", true),
+	define_visualizer_struct!(bars::draw_bars, "Bars", false),
+	define_visualizer_struct!(bars::draw_bars_circle, "Bars (Circle)", false),
+	define_visualizer_struct!(wavelet::draw_wavelet, "Wavelet", true),
+	define_visualizer_struct!(shaky::draw_shaky, "Shaky", false),
+	define_visualizer_struct!(lazer::draw_lazer, "Lazer", true),
+	define_visualizer_struct!(wave::draw_wave, "Wave", true),
+	define_visualizer_struct!(vol_sweeper::draw_vol_sweeper, "Volume sweep", false),
 /*	[vol_sweeper::draw_vol_sweeper, "Vol sweeper"],
 	[// experiment1::draw_exp1,
 	[// experiment1::draw_f32,
@@ -147,5 +162,5 @@ pub const VIS_CLASSIC: &[Visualizer] =
 
 pub const VIS_MILK: &[Visualizer] = 
 &[
-	define_visualizer!(milk::rain::draw, "Rain", false)
+	define_visualizer_struct!(milk::rain::draw, "Rain", false)
 ];
