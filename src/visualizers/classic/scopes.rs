@@ -71,7 +71,7 @@ pub const draw_oscilloscope: crate::VisFunc = |prog, stream| {
 };
 
 
-pub fn draw_vectorscope: crate::VisFunc = |prog, stream| {
+pub const draw_vectorscope: crate::VisFunc = |prog, stream| {
     let range = stream.len() * prog.WAV_WIN / 100;
     let l = stream.len();
 
@@ -120,7 +120,7 @@ pub fn draw_vectorscope: crate::VisFunc = |prog, stream| {
     draw_cross(prog);
     
     stream.rotate_left(range);
-}
+};
 
 fn to_color(s: i32, size: i32) -> u8 {
     (s.abs() * 256 / size).min(255) as u8
