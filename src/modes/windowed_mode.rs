@@ -247,6 +247,22 @@ pub mod winit_mode {
 			*control_flow = ControlFlow::Poll;
 
 			prog.update_vis();
+			
+			let perform_draw = 
+				|
+					window: &mut winit::window::Window, 
+					prog: &mut Program, 
+					surface: &mut softbuffer::Surface
+				| 
+			{
+				let mut buffer = surface.buffer_mut().unwrap();
+						
+				prog.force_render();
+				
+				prog.pix.scale_to(&mut buffer, prog.SCALE as usize);
+
+				buffer.present().unwrap();
+			};
 
 			match event {
 				Event::WindowEvent {
@@ -254,16 +270,21 @@ pub mod winit_mode {
 					..
 				} => control_flow.set_exit(),
 
-				Event::DeviceEvent{ event: Key(KeyboardInput{virtual_keycode: Some(code), state: kstate, .. }), ..} => {
+				Event::DeviceEvent{ event: Key(KeyboardInput{virtual_keycode: Some(code), state: kstate, modifiers: modifier, .. }), ..} => {
 					//use VirtualKeyCode::*;
 					if kstate == Released {
 						//println!("{:?}", code.clone());
 
 						match code {
-							VirtualKeyCode::Q => control_flow.set_exit(),
+							VirtualKeyCode::Escape => control_flow.set_exit(),
 
 							VirtualKeyCode::Space => {
-								prog.change_visualizer(true);
+								if modifier.shift() 
+									{prog.change_visualizer(false)}
+								else 
+									{prog.change_visualizer(true)}
+								
+								perform_draw(&mut window, &mut prog, &mut surface);
 							},
 
 							//~ VirtualKeyCode::Key1 =>  change_fps(&mut prog, 10, true),
@@ -308,14 +329,7 @@ pub mod winit_mode {
 					prog.update_timer();
 
 					if prog.render_trigger() {
-					
-						let mut buffer = surface.buffer_mut().unwrap();
-						
-						prog.force_render();
-						
-						prog.pix.scale_to(&mut buffer, prog.SCALE as usize);
-
-						buffer.present().unwrap();
+						perform_draw(&mut window, &mut prog, &mut surface);
 					}
 					
 				},

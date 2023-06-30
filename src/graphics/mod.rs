@@ -83,6 +83,11 @@ impl Canvas {
 	pub fn update(&mut self) {
 		self.pix.resize(self.width*self.height, 0u32);
 	}
+	
+	pub fn is_in_bound(&self, p: P2) -> bool {
+		(p.x as usize) < self.width &&
+		(p.y as usize) < self.height
+	}
 
 	pub fn get_idx_fast(&self, p: P2) -> usize {
 		// if p.x < 0 || p.y < 0 {return usize::MAX}

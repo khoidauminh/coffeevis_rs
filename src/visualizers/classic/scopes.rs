@@ -94,9 +94,19 @@ pub const draw_vectorscope: crate::VisFunc = |prog, stream| {
 
     //let mut data = stream.iter().step_by(INCREMENT).map(|x| *x).collect::<Vec<_>>();
     //math::integrate_streamlace(&mut data, 10, true);
+    
+    let mut smoothed_sample = Cplx::<f32>::new(stream[0].x, stream[PHASE_OFFSET].y);
 
     while di < range {
         let sample = Cplx::<f32>::new(stream[di].x, stream[di+PHASE_OFFSET].y);
+        
+        let sample = math::interpolate::linearfc(smoothed_sample, sample, 0.35);
+        /*let sample = Cplx::<f32>::new(
+			math::interpolate::sqrt(smoothed_sample.x, sample.x, 0.1),
+			math::interpolate::sqrt(smoothed_sample.y, sample.y, 0.1)
+        );*/
+		
+		smoothed_sample = sample;
 
         // smooth = crate::math::interpolate::linearfc(smooth, sample, smooth_factor);
 

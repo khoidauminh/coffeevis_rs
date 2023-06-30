@@ -48,7 +48,8 @@ pub struct AudioBuffer {
     /// Triggers when amplitude < AMP_TRIGGER_THRESHOLD
     normalizer: f32,
     max: f32,
-    average: f32
+    average: f32,
+    derivative_max: f32
 }
 
 pub struct AudioBufferIterator<'a> {
@@ -98,6 +99,7 @@ impl AudioBuffer {
             normalizer: 1.0,
             max: 0.0,
             average: 0.0,
+            derivative_max: 0.0
         }
     }
 
@@ -193,6 +195,8 @@ impl AudioBuffer {
         self.write_point = (self.write_point + input_size) & SIZE_MASK;
 
         let mut max = 0.0f32;
+        let mut derivative_max: f32 = 0.0;
+        let mut previous_sample = Cplx::<f32>::zero();
 
         let mut di = self.write_point;
         data
@@ -203,13 +207,21 @@ impl AudioBuffer {
             write_sample(smp, chunk);
             
             max = max.max(smp.x.abs()).max(smp.y.abs());
+            /*derivative_max = derivative_max.max(
+				(smp.x - previous_sample.x).abs().max(
+					(smp.x - previous_sample.x).abs()
+				)
+            );*/
+            
+            previous_sample = *smp;
             
             silence_index += ((smp.x > SILENCE_LIMIT) || (smp.y > SILENCE_LIMIT)) as u32;
             di = crate::math::increment_index(di, BUFFER_SIZE);
         });
         
-        let silence = silence_index < SILENCE_INDEX;
+        self.derivative_max = derivative_max;
         
+        let silence = silence_index < SILENCE_INDEX;
 
         if silence {
             return silence;

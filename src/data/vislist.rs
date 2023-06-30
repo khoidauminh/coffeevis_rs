@@ -131,6 +131,22 @@ impl VisNavigator {
 		self.index_list = increment_index(self.index_list, size);
 		self.index_vis = 0;
 	}
+	/*
+	pub fn point_to_vis(&mut self, name: &str) {
+		let current_name = self.current_vis_name();
+		
+		if current_vis_name == current_name {return}
+		self.next_vis();
+		
+		while {
+			let current = self.current_vis_name();
+			
+			return current != current_name && current != name
+		}
+		{
+			self.next_vis()
+		}
+	}*/
 }
 
 pub const VIS_MENU: &[VisList] = 

@@ -4,6 +4,8 @@ pub trait Blend
 	fn add(self, other: u32) -> u32;
 	fn or(self, other: u32) -> u32;
 	fn fade(self, alpha: u8) -> u32;
+	fn decompose(self) -> [u8; 4];
+	fn compose(array: [u8; 4]) -> Self;
 	// fn mul(&mut self, other: u32) -> u32;
 	// fn mul_alpha(&mut self, other: u32) -> u32;
 }
@@ -64,5 +66,15 @@ impl Blend for u32
 	fn fade(self, alpha: u8) -> u32 
 	{
 		u32_fade(self, alpha)
+	}
+	
+	fn decompose(self) -> [u8; 4] 
+	{
+		self.to_be_bytes()
+	}
+	
+	fn compose(array: [u8; 4]) -> u32 
+	{
+		u32::from_be_bytes(array)
 	}
 }

@@ -8,10 +8,10 @@ use crate::graphics::{P2, blend};
 
 // const COPY_SIZE: usize = FFT_SIZE / 2;
 
-const RANGE: usize = 42;
+const RANGE: usize = 54;
 const RANGEF: f32   = RANGE as f32;
 const FFT_SIZEF: f32 = FFT_SIZE as f32;
-const FFT_SIZEF_RECIP: f32 = 1.25 / FFT_SIZEF;
+const FFT_SIZEF_RECIP: f32 = 1.0 / FFT_SIZEF;
 
 static DATA: RwLock<[Cplx<f32>; RANGE+1]> = RwLock::new([Cplx::<f32>::zero(); RANGE+1]);
 static MAX: RwLock<f32> = RwLock::new(1.0);
@@ -27,7 +27,7 @@ fn index_scale(x: f32) -> f32 {
 }
 
 fn volume_scale(x: f32) -> f32 {
-    2.0*x
+    2.0*x//crate::math::fast::fsqrt(x)
     //let x1 = x*0.25 + 0.25;
     //(x - 2.5).max(0.0)*3.0
     //(x*3.0).powi(2)
@@ -45,8 +45,6 @@ pub const draw_spectrum: crate::VisFunc = |prog, stream| {
 
     let wf = w as f32;
 	let hf = h as f32;
-	
-	let rangef = 48.0;
 
     let mut data_l = [Cplx::<f32>::zero(); FFT_SIZE];
     let mut data_r = [Cplx::<f32>::zero(); FFT_SIZE];
@@ -62,10 +60,15 @@ pub const draw_spectrum: crate::VisFunc = |prog, stream| {
 
     math::fft(&mut data_l);
     math::fft(&mut data_r);
+    
+    math::highpass_inplace(&mut data_l);
+    math::highpass_inplace(&mut data_r);
 
     let mut LOCAL = DATA.write().unwrap();
 
-    let fall_factor = (prog.SMOOTHING.powi(2) - 0.25).max(0.0);
+    let fall_factor = (prog.SMOOTHING.powi(2) - 0.275).max(0.0);
+    
+    // let pre_scale = 0.6*(0.5 + stream.amplitude()*0.5);
 
     LOCAL
     .iter_mut()
@@ -80,9 +83,12 @@ pub const draw_spectrum: crate::VisFunc = |prog, stream| {
 //			smp.x = linearf(smp.x, smp_in_l.l1_norm(), prog.SMOOTHING);
 //			smp.y = linearf(smp.y, smp_in_r.l1_norm(), prog.SMOOTHING);
             let scalef = math::log2i::<usize>(i+1) as f32 * FFT_SIZEF_RECIP;
+            let i_ = (i+1) as f32 / RANGEF;
+            let scalef =   0.4*(i+3) as f32 * (1.1 - i_) * FFT_SIZEF_RECIP;
+            //let scalef =  2.4*FFT_SIZEF_RECIP;
 
-    	    smp.x = multiplicative_fall(smp.x, volume_scale(smp_in_l.l1_norm()*scalef), 0.0, fall_factor);
-			smp.y = multiplicative_fall(smp.y, volume_scale(smp_in_r.l1_norm()*scalef), 0.0, fall_factor);
+    	    smp.x = multiplicative_fall(smp.x, smp_in_l.l1_norm()*scalef, 0.0, fall_factor);
+			smp.y = multiplicative_fall(smp.y, smp_in_r.l1_norm()*scalef, 0.0, fall_factor);
 
 		}
 	);
@@ -142,7 +148,7 @@ pub const draw_spectrum: crate::VisFunc = |prog, stream| {
         prog.pix.draw_rect_xy(rect_l, middle, color1);
         prog.pix.draw_rect_xy(middle, rect_r, color2);
 
-		let alpha = (128.0 + stream[i as usize *2/3].x*32768.0) as u8;
+		let alpha = (128.0 + stream[i as usize / 2].x*32768.0) as u8;
         prog.pix.draw_rect_wh(P2::new(winwh -1, i), 2, 1, blend::u32_fade(color, alpha));
 
         if32 += INTERVAL;

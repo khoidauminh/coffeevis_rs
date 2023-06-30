@@ -288,9 +288,20 @@ pub mod interpolate {
 
         new
 	}
+	
+	pub fn sqrt(a: f32, b: f32, factor: f32) -> f32 {
+		let offset = b-a;
+		a + super::fast::fsqrt(0.1*offset + 1.0) - 1.0
+	}
 }
 /*
 pub fn fps_slowdown(no_sample: u8) -> u8 {
     use crate::data::SILENCE_LIMIT;
     if no_sample < 
 }*/
+
+pub fn highpass_inplace<T>(a: &mut [T]) 
+where T: std::ops::Sub<Output = T> + Copy 
+{
+	for i in 1..a.len() {a[i-1] = a[i] - a[i-1]}
+} 

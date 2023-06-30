@@ -1,5 +1,5 @@
 use crate::{
-    graphics::{self, Canvas},
+    graphics::{self, Canvas, P2, blend::{self, Blend}},
     math::{self, rng::Rng}
 };
 
@@ -14,6 +14,39 @@ pub const draw: crate::VisFunc = |prog, stream| {
     });
 };
 
-fn draw_rain_drop(canvas: &mut Canvas, x: i32, y: i32, length: usize, intensity: u8, color: u32) {
+fn draw_rain_drop(
+	canvas: &mut Canvas, 
+	mut p: P2,
+	length: usize, 
+	intensity: u8, 
+	color: u32
+) {
+	let w = canvas.width;
+	let h = canvas.height;
 	
+	let mut current_length = length;
+	
+	let color = color.decompose();
+	
+	if !canvas.is_in_bound(p) {
+		return
+	}
+	
+	while current_length > 0 {
+		
+		let fade = current_length * 256 / length;
+		let fade = fade as u8;
+		
+		let mut color_ready = color;
+		color_ready[3] = blend::u8_mul(color_ready[3], fade);
+		
+		let color_ready = u32::compose(color_ready);
+		
+		canvas.set_pixel_by(p, color_ready, u32::mix);
+		
+		if p.y == 0 {break}
+		
+		p.y -= 1;
+		current_length -= 1;
+	}
 }

@@ -345,11 +345,11 @@ impl Program {
 
     pub fn update_timer(&mut self) {
         let sample = crate::audio::get_no_sample();
-        /*
+        
         if sample == 255 {
             self.render_trigger = 255;
             return;
-        }*/
+        }
 
         self.render_trigger =
 			crate::math::increment(
