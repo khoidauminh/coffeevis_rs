@@ -98,15 +98,15 @@ impl Program {
 				"--auto-switch" => 
 					self.AUTO_SWITCH = 
 						args.next()
-						.expect("Argument error: Expected boolean value for auto switch.")
+						.expect("Argument error: Expected boolean value for auto switch")
 						.parse::<bool>()
-						.expect("Argument error: Invalid value."),
+						.expect("Argument error: Invalid value"),
 				
 				"--size" => {
 					let s = args.next()
 					.expect("Argument error: Expected value for size.")
 					.split("x")
-					.map(|x| x.parse::<u16>().expect("Argument error: Invalid value."))
+					.map(|x| x.parse::<u16>().expect("Argument error: Invalid value"))
 					.collect::<Vec<_>>();
 					
 					size = (s[0], s[1]);
@@ -116,9 +116,9 @@ impl Program {
 				{
 				    self.SCALE = 
 						args.next()
-						.expect("Argument error: Expected u8 value for scale.")
+						.expect("Argument error: Expected u8 value for scale")
 						.parse::<u8>()
-						.expect("Argument error: Invalid value.");
+						.expect("Argument error: Invalid value");
 					
 					if self.SCALE == 0 {
 					    panic!("Argument error: scale is 0");
@@ -134,7 +134,7 @@ impl Program {
 				{
 				    let new_fps = 
 				        args.next()
-				        .expect("Argument error: Expected value for fps.")
+				        .expect("Argument error: Expected value for fps")
 				        .parse::<u64>()
 				        .expect("Argument error: Invalid value."); 
 				
@@ -152,15 +152,15 @@ impl Program {
 				
 				"--max-con-size" => {
 					let s = args.next()
-					.expect("Argument error: Expected value for size.")
+					.expect("Argument error: Expected value for size")
 					.split("x")
-					.map(|x| x.parse::<u16>().expect("Argument error: Invalid value."))
+					.map(|x| x.parse::<u16>().expect("Argument error: Invalid value"))
 					.collect::<Vec<_>>();
 					
 					(self.CON_MAX_W, self.CON_MAX_H) = (s[0], s[1]);
 				}
 				
-				&_ => self.msg = Err("Argument error: Unknown option.".to_string()),
+				&_ => self.msg = Err("Argument error: Unknown option".to_string()),
 			}
 		}
 		

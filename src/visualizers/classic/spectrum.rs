@@ -11,7 +11,7 @@ use crate::graphics::{P2, blend};
 const RANGE: usize = 54;
 const RANGEF: f32   = RANGE as f32;
 const FFT_SIZEF: f32 = FFT_SIZE as f32;
-const FFT_SIZEF_RECIP: f32 = 1.0 / FFT_SIZEF;
+const FFT_SIZEF_RECIP: f32 = 1.25 / FFT_SIZEF;
 
 static DATA: RwLock<[Cplx<f32>; RANGE+1]> = RwLock::new([Cplx::<f32>::zero(); RANGE+1]);
 static MAX: RwLock<f32> = RwLock::new(1.0);
@@ -82,9 +82,8 @@ pub const draw_spectrum: crate::VisFunc = |prog, stream| {
 		|(i, (smp, (&smp_in_l, &smp_in_r)))| {
 //			smp.x = linearf(smp.x, smp_in_l.l1_norm(), prog.SMOOTHING);
 //			smp.y = linearf(smp.y, smp_in_r.l1_norm(), prog.SMOOTHING);
-            let scalef = math::log2i::<usize>(i+1) as f32 * FFT_SIZEF_RECIP;
-            let i_ = (i+1) as f32 / RANGEF;
-            let scalef =   0.4*(i+3) as f32 * (1.1 - i_) * FFT_SIZEF_RECIP;
+            //let scalef = math::log2i::<usize>(i+2) as f32 * FFT_SIZEF_RECIP;
+            let scalef = (((i + 3) * (RANGE+3 - i)) >> 7) as f32* FFT_SIZEF_RECIP;
             //let scalef =  2.4*FFT_SIZEF_RECIP;
 
     	    smp.x = multiplicative_fall(smp.x, smp_in_l.l1_norm()*scalef, 0.0, fall_factor);

@@ -27,13 +27,19 @@ pub const draw_ring: crate::VisFunc = |prog, stream| {
     //crate::math::highpass_array(&mut data, 0.995);
     
     let loop_range = size as usize * 2;
+    
+    //~ let start_smp = stream[0];
+    //~ let end_smp = stream[range-1];
 
     for i in 1..loop_range {
         let di = i * range / loop_range;
 
-		let smp = stream[di] - stream[di.saturating_sub(1)].scale(0.5); 
+		//~ let t = 1.0 * di as f32 / range as f32;
+		//~ let shift = crate::math::interpolate::linearfc(end_smp, start_smp, t);
+		
+		let smp = stream[di] - stream[di.saturating_sub(1)].scale(0.7);
 
-        let p = (smp * Cplx::<f32>::new(prog.VOL_SCL*0.5, 0.0) + Cplx::<f32>::new(0.4, 0.4)) *crate::math::cos_sin(di as f32 * rate);
+        let p = (smp * Cplx::<f32>::new(prog.VOL_SCL*0.65, 0.0) + Cplx::<f32>::new(0.4, 0.4)) *crate::math::cos_sin(di as f32 * rate);
         let x = (p.x*size as f32) as i32;
         let y = (p.y*size as f32) as i32;
 	

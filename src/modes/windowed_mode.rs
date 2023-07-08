@@ -253,12 +253,12 @@ pub mod winit_mode {
 					window: &mut winit::window::Window, 
 					prog: &mut Program, 
 					surface: &mut softbuffer::Surface
-				| 
+				|
 			{
 				let mut buffer = surface.buffer_mut().unwrap();
-						
+
 				prog.force_render();
-				
+
 				prog.pix.scale_to(&mut buffer, prog.SCALE as usize);
 
 				buffer.present().unwrap();
@@ -276,14 +276,14 @@ pub mod winit_mode {
 						//println!("{:?}", code.clone());
 
 						match code {
-							VirtualKeyCode::Escape => control_flow.set_exit(),
+							VirtualKeyCode::Q if modifier.shift() => control_flow.set_exit(),
 
 							VirtualKeyCode::Space => {
-								if modifier.shift() 
+								if modifier.shift()
 									{prog.change_visualizer(false)}
-								else 
+								else
 									{prog.change_visualizer(true)}
-								
+
 								perform_draw(&mut window, &mut prog, &mut surface);
 							},
 
