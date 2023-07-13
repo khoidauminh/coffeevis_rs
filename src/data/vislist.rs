@@ -41,15 +41,15 @@ impl Visualizer {
 			request_auto_gain: request,
 		}
 	}*/
-	
+
 	pub fn func(&self) -> VisFunc {
 		self.func
 	}
-	
+
 	pub fn name(&self) -> &'static str {
 		self.name
 	}
-	
+
 	pub fn request(&self) -> bool {
 		self.request_auto_gain
 	}
@@ -83,49 +83,49 @@ impl VisNavigator {
 			index_list: 0,
 		}
 	}
-	
+
 	pub fn current_vis(&self) -> Visualizer {
 		self.structure[self.index_list].list[self.index_vis]
 	}
-	
+
 	pub fn current_list_len(&self) -> usize {
 		self.structure[self.index_list].list.len()
 	}
-	
+
 	pub fn num_of_lists(&self) -> usize {
 		self.structure.len()
 	}
-	
+
 	pub fn current_list_name(&self) -> &'static str {
 		self.structure[self.index_list].name
 	}
-	
+
 	pub fn current_vis_name(&self) -> &'static str {
 		self.structure[self.index_list].list[self.index_vis].name
 	}
-	
+
 	pub fn next_vis(&mut self) -> Visualizer {
 		let list_size = self.current_list_len();
-		
+
 		self.index_vis = increment_index(self.index_vis, list_size);
-		
+
 		self.current_vis()
 	}
-	
+
 	pub fn prev_vis(&mut self) -> Visualizer {
 		let list_size = self.current_list_len();
-		
+
 		self.index_vis = decrement(self.index_vis, list_size);
-		
-		self.current_vis()	
+
+		self.current_vis()
 	}
-	
+
 	pub fn next_list(&mut self) {
 		let size = self.num_of_lists();
 		self.index_list = increment_index(self.index_list, size);
 		self.index_vis = 0;
 	}
-	
+
 	pub fn prev_list(&mut self) {
 		let size = self.num_of_lists();
 		self.index_list = increment_index(self.index_list, size);
@@ -134,13 +134,13 @@ impl VisNavigator {
 	/*
 	pub fn point_to_vis(&mut self, name: &str) {
 		let current_name = self.current_vis_name();
-		
+
 		if current_vis_name == current_name {return}
 		self.next_vis();
-		
+
 		while {
 			let current = self.current_vis_name();
-			
+
 			return current != current_name && current != name
 		}
 		{
@@ -149,14 +149,14 @@ impl VisNavigator {
 	}*/
 }
 
-pub const VIS_MENU: &[VisList] = 
+pub const VIS_MENU: &[VisList] =
 &[
 	VisList::new(VIS_CLASSIC, "Classic"),
 	VisList::new(VIS_MILK, "Milk"),
 ];
 
 
-pub const VIS_CLASSIC: &[Visualizer] = 
+pub const VIS_CLASSIC: &[Visualizer] =
 &[
 	// scopes::draw_phase,
 	define_visualizer_struct!(scopes::draw_vectorscope, "Vectorscope", true),
@@ -176,7 +176,7 @@ pub const VIS_CLASSIC: &[Visualizer] =
 	[wave::draw_wave,  */
 ];
 
-pub const VIS_MILK: &[Visualizer] = 
+pub const VIS_MILK: &[Visualizer] =
 &[
 	define_visualizer_struct!(milk::rain::draw, "Rain", false)
 ];

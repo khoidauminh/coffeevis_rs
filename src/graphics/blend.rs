@@ -1,4 +1,4 @@
-pub trait Blend 
+pub trait Blend
 {
 	fn mix(self, other: u32) -> u32;
 	fn add(self, other: u32) -> u32;
@@ -21,7 +21,7 @@ pub fn u32_fade(this: u32, other: u8) -> u32
 	u32::from_be_bytes([aa, r, g, b])
 }
 
-pub fn channel_mix(x: u8, y: u8, a: u8) -> u8 
+pub fn channel_mix(x: u8, y: u8, a: u8) -> u8
 {
 	if x > y {return y.saturating_add(u8_mul(x - y, a))}
 	x.saturating_add(u8_mul(y - x, a))
@@ -31,10 +31,10 @@ pub fn channel_add(x: u8, y: u8, a: u8) -> u8
 {
 	x.saturating_add(u8_mul(y, a))
 }
- 
+
 impl Blend for u32
 {
-	fn mix(self, other: u32) -> u32 
+	fn mix(self, other: u32) -> u32
 	{
 		let [aa, ar, ag, ab] = self.to_be_bytes();
 		let [ba, br, bg, bb] = other.to_be_bytes();
@@ -45,8 +45,8 @@ impl Blend for u32
 			channel_mix(ab, bb, ba)
 		])
 	}
-	
-	fn add(self, other: u32) -> u32 
+
+	fn add(self, other: u32) -> u32
 	{
 		let [aa, ar, ag, ab] = self.to_be_bytes();
 		let [ba, br, bg, bb] = other.to_be_bytes();
@@ -57,23 +57,23 @@ impl Blend for u32
 			ab.saturating_add(u8_mul(bb, ba))
 		])
 	}
-	
-	fn or(self, other: u32) -> u32 
+
+	fn or(self, other: u32) -> u32
 	{
 		self | other
 	}
-	
-	fn fade(self, alpha: u8) -> u32 
+
+	fn fade(self, alpha: u8) -> u32
 	{
 		u32_fade(self, alpha)
 	}
-	
-	fn decompose(self) -> [u8; 4] 
+
+	fn decompose(self) -> [u8; 4]
 	{
 		self.to_be_bytes()
 	}
-	
-	fn compose(array: [u8; 4]) -> u32 
+
+	fn compose(array: [u8; 4]) -> u32
 	{
 		u32::from_be_bytes(array)
 	}

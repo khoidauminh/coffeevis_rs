@@ -7,10 +7,10 @@ where T: std::ops::Mul<Output = T> + std::ops::Sub<Output = T> + std::smp::Parti
 {
     let dx = p.x - pc.x;
     let dy = p.y - pc.y;
-    
+
     let x = x*x;
     let y = y*y;
-    
+
     x + y <= r*r
 }
 

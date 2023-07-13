@@ -1,8 +1,8 @@
 use super::{Canvas, P2};
 use crate::math::Cplx;
-impl Canvas 
+impl Canvas
 {
-	pub fn draw_rect_xy(&mut self, ps: P2, pe: P2, c: u32) 
+	pub fn draw_rect_xy(&mut self, ps: P2, pe: P2, c: u32)
 	{
 		let [xs, ys] = [ps.x.max(0) as usize, ps.y.max(0) as usize];
 		let [xe, ye] = [
@@ -19,49 +19,49 @@ impl Canvas
 			self.pix[i..i+w].fill(c);
 		}
 	}
-	
-	pub fn draw_rect_wh(&mut self, p: P2, w: usize, h: usize, c: u32) 
+
+	pub fn draw_rect_wh(&mut self, p: P2, w: usize, h: usize, c: u32)
 	{
 		let [xs, ys] = [p.x.max(0) as usize, p.y.max(0) as usize];
-		
+
 		let ye = (ys+h.saturating_sub(if p.y < 0 {-p.y as usize} else {0})).min(self.height);
 		// let ye = if p.y < 0 {ye.saturating_sub((-p.y) as usize)} else {ye};
 		let wi = w.min(
 		    self.width.saturating_sub(p.x.abs() as usize)
 	    );
-		
+
 		for y in ys..ye
 		{
 			let i = xs + y*self.width;
 			self.pix[i..(i+wi)].fill(c);
 		}
 	}
-	
+
 	// Using Bresenham's line algorithm.
-	pub fn draw_line(&mut self, ps: P2, pe: P2, c: u32) 
+	pub fn draw_line(&mut self, ps: P2, pe: P2, c: u32)
 	{
 		let dx = (pe.x-ps.x).abs();
 		let sx = if ps.x < pe.x {1} else {-1};
 		let dy = -(pe.y-ps.y).abs();
 		let sy = if ps.y < pe.y {1} else {-1};
 		let mut error = dx + dy;
-		
+
 		let mut p = ps;
-		
-		loop 
+
+		loop
 		{
 			self.set_pixel(p, c);
 			if p.x == pe.x && p.y == pe.y {return}
 			let e2 = error*2;
-			
+
 			if e2 >= dy
 			{
 				if p.x == pe.x {return}
 				error += dy;
 				p.x += sx;
 			}
-			
-			if e2 <= dx 
+
+			if e2 <= dx
 			{
 				if p.y == pe.y {return}
 				error += dx;
@@ -69,20 +69,20 @@ impl Canvas
 			}
 		}
 	}
-	
-	pub fn draw_circle(&mut self, p: P2, r: i32) 
+
+	pub fn draw_circle(&mut self, p: P2, r: i32)
 	{
 	    todo!();
     }
-	
-	/*pub fn draw_image(&mut self, img: &super::Image, p: super::P2) 
+
+	/*pub fn draw_image(&mut self, img: &super::Image, p: super::P2)
 	{
 		let cw = self.width as i32;
 		let ch = self.height as i32;
-		
+
 		let iw = img.width as i32;
 		let ih = img.height as i32;
-        
+
 		let xstart = p.x.max(0).max(cw-1) as usize;
 		let xend   = (iw + p.x).max(0).max(cw) as usize;
 
@@ -92,7 +92,7 @@ impl Canvas
 		let img_slice  = img.as_slice();
 		let img_xstart = (-p.x).max(0).max(iw) as usize;
 		let img_xend   = (cw - p.x.max(0)).min(iw) as usize;
-        
+
 		for row in rstart..rend {
             let ibase  = row * self.width;
             let istart = ibase + xstart;
@@ -109,10 +109,10 @@ impl Canvas
 	pub fn draw_image(&mut self, img: &super::Image, p: super::P2) {
         let cw = self.width as i32;
 		let ch = self.height as i32;
-		
+
 		let iw = img.width as i32;
 		let ih = img.height as i32;
-	
+
         let canvas_x_start = p.x.clamp(0, cw) as usize;
 //        let canvas_x_end   = ((img.width as i32 + p.x).max(0) as usize).max(self.width);
         let canvas_y_start = p.y.clamp(0, ch) as usize;
@@ -121,14 +121,14 @@ impl Canvas
         let img_x_start = if p.x < 0 { (-p.x).max(iw) as usize } else { 0 };
         let img_y_start = if p.y < 0 { (-p.y).max(ih) as usize } else { 0 };
 
-        let copy_width = 
-            (if p.x < 0 { 
+        let copy_width =
+            (if p.x < 0 {
                 (iw + p.x).max(0)
-            } else { 
+            } else {
                 iw.min((cw - p.x).max(0))
             }).min(cw) as usize;
 
-        let copy_height = 
+        let copy_height =
             (if p.y < 0 {
                 (ih + p.y).max(0)
             } else {
@@ -148,7 +148,7 @@ impl Canvas
             let iend   = istart + copy_width;
 
             // if cend > self.sizel() || iend > img.sizel() {continue}
-            
+
             self.pix[cstart..cend]
             .copy_from_slice(
                 &img_slice[istart..iend]
@@ -164,24 +164,24 @@ impl Canvas
         let ih = img.height as i32;
 
         // image completely out of bounds
-        if 
-        p.x >= cw || 
+        if
+        p.x >= cw ||
         p.x + iw < cw ||
-        p.y >= ch || 
-        p.x + ih < ch 
+        p.y >= ch ||
+        p.x + ih < ch
         {return}
 
-        for (irow, line) in 
+        for (irow, line) in
             img.as_slice()
             .chunks_exact(img.width)
             .enumerate()
         {
-            let cy = irow as i32 + p.y; 
+            let cy = irow as i32 + p.y;
             if cy >= ch {return}
             if cy < 0 {continue}
             /*
             let xstart = p.x.clamp(0, cw) as usize;
-            let copy_width = 
+            let copy_width =
                 if p.x < 0 {
                     (iw + p.x).max(0).min(cw)
                 } else {
@@ -201,7 +201,7 @@ impl Canvas
             for (ix, pixel) in line.iter().enumerate() {
                 let cx = ix as i32 + p.x;
                 if cx < 0 {continue}
-                
+
                 if cx >= cw {break}
 
                 self.pix[cx as usize + cbase] = *pixel;
@@ -220,7 +220,7 @@ impl Canvas
 
         let i_center_x = wi / 2;
         let i_center_y = hi / 2;
-        
+
         let c_center_x = wc / 2;
         let c_center_y = hc / 2;
 
@@ -234,7 +234,7 @@ impl Canvas
 
             let cbase = cy as usize * self.width;
             let ibase = iy as usize * img.width;
-        
+
             for cx in 0..wc {
                 let ix = (cx - c_center_x)*wi/size * 100 / scale + i_center_x - p.x;
 

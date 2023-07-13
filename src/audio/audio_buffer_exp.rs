@@ -27,7 +27,7 @@ use std::ops::Range;
 /*
 impl std::ops::Index<Range<usize>> for AudioBuffer {
     type Output = Vec<Cplx<f32>>;
-  
+
 }
 */
 impl AudioBuffer {
@@ -54,7 +54,7 @@ impl AudioBuffer {
     pub fn rotate_right(&mut self, n: usize) {
         self.offset = (self.offset + BUFFER_SIZE - n) & SIZE_MASK;
     }
-    
+
     /*
     pub fn get(&mut self) -> BufferArray {
         self.buffer
@@ -65,16 +65,16 @@ impl AudioBuffer {
         .collect::<Vec<Cplx<f32>>>()
 
         self.perform_update();
-        
+
         self.to_be_exposed
     }
-    
+
     fn perform_update(&mut self) {
         if self.update {
             self.to_be_exposed = self.buffer;
             self.to_be_exposed.rotate_left(self.start);
         }
-        self.unset_update();        
+        self.unset_update();
     }
 
     pub fn get_ref<'a>(&'a mut self) -> &'a BufferArray {
@@ -104,15 +104,15 @@ impl AudioBuffer {
 //        let mut it = std::iter::repeat(self.buffer.iter());
 //        let _ = it.nth(if self.start == 0 {0} else {self.start-1});
 //        it.take(BUFFER_SIZE)
-//        
+//
 //    }
-    
+
     /*
     pub fn write_to_global_buffer(&self) {
         let global_buffer_result = super::BUFFER.write();
         if let Ok(mut gbuffer) = global_buffer_result {
             let size = gbuffer.len().min(self.buffer.len());
-            gbuffer[..size].copy_from_slice(&self.buffer[..size]); 
+            gbuffer[..size].copy_from_slice(&self.buffer[..size]);
         }
     }*/
 
@@ -167,5 +167,5 @@ impl AudioBuffer {
         .for_each(|(inp, out)| *out = *inp);
 
         o
-    }    
+    }
 }

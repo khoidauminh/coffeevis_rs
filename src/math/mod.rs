@@ -8,7 +8,7 @@ use std::ops;
 pub const PI: f32 = std::f32::consts::PI;
 pub const TAU: f32 = PI*2.0;
 pub const PIH: f32 = PI*0.5;
-pub const TAU_RECIP: f32 = 1.0 / TAU; 
+pub const TAU_RECIP: f32 = 1.0 / TAU;
 
 #[derive(Copy, Clone)]
 pub struct Cplx<T: Copy + Clone> {
@@ -19,7 +19,7 @@ pub struct Cplx<T: Copy + Clone> {
 pub fn fft(a: &mut [Cplx<f32>]) {
 	let l = a.len();
 	let power = log2i::<usize>(l);
-	
+
 	fft::butterfly2(a, power);
 	fft::compute_fft_recursive(a);
 	//fft::compute_fft_half(a);
@@ -33,7 +33,7 @@ pub const fn log2i<T>(n: usize) -> usize {
 pub fn increment<
 	T: ops::Add<Output = T>
 	+  ops::Mul<Output = T>
-	+  PartialOrd<T> 
+	+  PartialOrd<T>
 	+  From<bool>
 	+ std::marker::Copy
 	>(a: T, limit: T) -> T {
@@ -41,8 +41,8 @@ pub fn increment<
 	b * T::from(b < limit) // eliminates if condition and modulo operator
 }
 /*
-pub fn increment<T>(a: T, limit: T) -> T 
-where T: From<bool> + PartialOrd<T> + Copy + 
+pub fn increment<T>(a: T, limit: T) -> T
+where T: From<bool> + PartialOrd<T> + Copy +
 */
 
 // Premature optimization at its finest
@@ -67,21 +67,21 @@ pub fn squish(x: f32, scale: f32, limit: f32) -> f32 {
 pub fn inverse_factorial(i: usize) -> usize {
 	let mut o = 1;
 	let mut j = 1;
-	
+
 	if i < 2 {return 1}
-	
+
 	while j < i {
 		o += 1;
 		j *= o;
 	}
-	
+
 	o
 }
 /*
-pub fn derivative<T>(a: &mut [Cplx<T>], amount: f32) 
+pub fn derivative<T>(a: &mut [Cplx<T>], amount: f32)
 where T: std::marker::Copy + ops::Sub<Output = T>
 {
-	for i in 1..a.len() 
+	for i in 1..a.len()
 	{
 		a[i-1] = a[i] - a[i-1].scale(amount)
 	}
@@ -95,42 +95,42 @@ pub fn integrate_inplace(a: &mut [Cplx<f32>], factor: usize, norm: bool)
     let mut table = vec![Cplx::<f32>::zero(); factor];
     let mut fi = 0;
     let mut si = 0;
-    
+
     let l = a.len();
-    
+
     let first_iter = factor.min(l);
     while si < first_iter {
         table[fi] = a[si];
-        
+
         sum = sum + a[si];
         a[si] = sum;
-        
+
         fi += 1;
         si += 1;
     }
-    
+
     fi = 0;
-    
+
     let bound = l.saturating_sub(factor);
     while si < bound {
         sum = sum - table[fi];
         sum = sum + a[si];
         table[fi] = a[si];
-        
+
         a[si] = sum;
-        
+
         fi = increment_index(fi, factor);
         si += 1;
     }
-    
+
     while si < l {
         sum = sum - table[fi];
         a[si] = sum;
-        
+
         si += 1;
         fi = increment_index(fi, factor);
     }
-    
+
     if norm {
         let div = 1.0 / factor as f32;
         // a.iter_mut().for_each(|x| *x = *x * Cplx::new((factor as f32).recip(), 0.0));
@@ -147,37 +147,37 @@ pub fn normalize_max_cplx(a: &mut [Cplx<f32>], limit: f32, threshold: f32, prev_
         max = max.max(i.x.abs());
         max = max.max(i.y.abs());
     }
-    
+
     // if max >= threshold {return}
-    
+
     let max = f32::min(max, threshold);
-    
-    let max = interpolate::subtractive_fall(prev_max, max, limit, smooth_factor); 
-    
+
+    let max = interpolate::subtractive_fall(prev_max, max, limit, smooth_factor);
+
     let amp = threshold / max;
-    
+
     for i in a.iter_mut() {
         *i = i.scale(amp);
     }
-    
+
     max
 }
 
-pub fn normalize_max_f32(a: &mut [f32], limit: f32, threshold: f32, prev_max: f32, smooth_factor: f32) -> f32 
+pub fn normalize_max_f32(a: &mut [f32], limit: f32, threshold: f32, prev_max: f32, smooth_factor: f32) -> f32
 {
     let mut max = limit;
     for i in a.iter() {max = max.max(*i)}
-    
+
     // if max >= threshold {return}
-    
+
     let max = f32::min(max, threshold);
-    
-    let max = interpolate::subtractive_fall(prev_max, max, limit, smooth_factor); 
-    
+
+    let max = interpolate::subtractive_fall(prev_max, max, limit, smooth_factor);
+
     let amp = max.recip();
-    
+
     for i in a.iter_mut() {*i *= amp}
-    
+
     max
 }
 
@@ -187,20 +187,20 @@ pub fn normalize_average(a: &mut [Cplx<f32>], limit: f32, prev_ave: f32, smooth_
 		ave = (ave + i.x.abs());
 		ave = (ave + i.y.abs());
 	}
-	
+
 	let ave = interpolate::subtractive_fall(prev_ave, ave, limit, smooth_factor);
-	
+
 	let amp = ave.recip();
-    
+
     for i in a.iter_mut() {
         *i = i.scale(amp);
     }
-    
+
     ave
 }
 
 /*
-pub fn remove_offset<T>(a: &mut [T]) 
+pub fn remove_offset<T>(a: &mut [T])
 where T: ops::Sub<Output = T> + ops::Add<Output = T>
 {
     let l = a.len();
@@ -208,14 +208,14 @@ where T: ops::Sub<Output = T> + ops::Add<Output = T>
         let il = i-1;
         a[il] = a[i] - a[il];
     }
-    
+
     for i in 1..l {
         let il = i-1;
-        a[i] = a[i] + a[il]; 
+        a[i] = a[i] + a[il];
     }
 }
 */
-pub fn cos_sin(a: f32) -> Cplx<f32> 
+pub fn cos_sin(a: f32) -> Cplx<f32>
 {
 	Cplx::<f32>{x: fast::sin_norm(fast::wrap(a+0.25)), y: fast::sin_norm(fast::wrap(a))}
 }
@@ -226,22 +226,22 @@ pub mod interpolate {
 	{
 		a + (b-a).scale(t)
 	}
-	
-	pub fn linearf(a: f32, b: f32, t: f32) -> f32 
+
+	pub fn linearf(a: f32, b: f32, t: f32) -> f32
 	{
 		a + (b-a)*t
 	}
 
-	pub fn cosf(a: f32, b: f32, t: f32) -> f32 
+	pub fn cosf(a: f32, b: f32, t: f32) -> f32
 	{
 		a + (b-a)*(0.5-0.5*super::fast::cos_norm(t*0.5))
 	}
 
-	pub fn bezierf(a: f32, b: f32, t: f32) -> f32 
+	pub fn bezierf(a: f32, b: f32, t: f32) -> f32
 	{
 	    a + (b-a)*(t*t*(3.0-2.0*t))
 	}
-	
+
 	pub fn nearest<T>(a: T, b: T, t: f32) -> T
 	{
 		if t < 0.5 {return a}
@@ -249,7 +249,7 @@ pub mod interpolate {
 	}
 
 	// perbyte = 1/256 (equivalent to percent = 1/100)
-	pub const fn lineari(a: i32, b: i32, perbyte: i32) -> i32 
+	pub const fn lineari(a: i32, b: i32, perbyte: i32) -> i32
 	{
 		a + (((b-a)*perbyte) >> 8)
 	}
@@ -288,7 +288,7 @@ pub mod interpolate {
 
         new
 	}
-	
+
 	pub fn sqrt(a: f32, b: f32, factor: f32) -> f32 {
 		let offset = b-a;
 		a + super::fast::fsqrt(0.1*offset + 1.0) - 1.0
@@ -297,11 +297,11 @@ pub mod interpolate {
 /*
 pub fn fps_slowdown(no_sample: u8) -> u8 {
     use crate::data::SILENCE_LIMIT;
-    if no_sample < 
+    if no_sample <
 }*/
 
-pub fn highpass_inplace<T>(a: &mut [T]) 
-where T: std::ops::Sub<Output = T> + Copy 
+pub fn highpass_inplace<T>(a: &mut [T])
+where T: std::ops::Sub<Output = T> + Copy
 {
 	for i in 1..a.len() {a[i-1] = a[i] - a[i-1]}
-} 
+}

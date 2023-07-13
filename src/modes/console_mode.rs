@@ -43,12 +43,12 @@ const CHARSET_OPAC_EXP: &[u8] = b"`.-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ
 //pub const CHARSET_SIZEOPAC: &[u8] = &[' ', '-', '~', '+', 'o', 'i', 'w', 'G', 'W', '@', '$'].as_bytes();
 pub const CHARSET_SIZEOPAC: &[u8] = b" -~+oiwGW@$";
 
-impl Program 
+impl Program
 {
 	pub fn print_con(&mut self) {
 		(self.flusher)(self, &mut std::io::stdout());
 	}
-	
+
 	pub fn change_con_max(
 		&mut self,
 		amount: i16,
@@ -62,7 +62,7 @@ impl Program
 		self.CON_MAX_H = self.CON_MAX_W >> 1;
 		self.clear_con();
 	}
-	
+
 	pub fn switch_con_mode(&mut self) {
 		// self.mode.next_con();
 
@@ -80,11 +80,8 @@ impl Program
 				Mode::ConAlpha
 			},
 
-			#[cfg(feature = "winit")]
-			Mode::Winit    => Mode::Winit,
-
-
-			Mode::Win 	   => Mode::Win,
+			Mode::Win       => Mode::Win,
+			Mode::WinLegacy => Mode::WinLegacy,
 		};
 
 		self.refresh_con();
@@ -108,8 +105,8 @@ impl Program
 	pub fn clear_con(&mut self) {
 		queue!(std::io::stdout(), Clear(ClearType::All));
 	}
-	
-	fn get_center(&self, divider_x: u16, divider_y: u16) -> (u16, u16) 
+
+	fn get_center(&self, divider_x: u16, divider_y: u16) -> (u16, u16)
 	{
 		(
 			(self.CON_W /2).saturating_sub(self.pix.width as u16 /divider_x),
@@ -117,9 +114,9 @@ impl Program
 		)
 	}
 
-	fn print_ascii(stdout: &mut Stdout, ch: char, r: u8, g: u8, b: u8, bg: Option<(u8, u8, u8)>) 
+	fn print_ascii(stdout: &mut Stdout, ch: char, r: u8, g: u8, b: u8, bg: Option<(u8, u8, u8)>)
 	{
-		/*if ch != ' ' && ch != '⠀' /*empty braille*/ { 
+		/*if ch != ' ' && ch != '⠀' /*empty braille*/ {
 			queue!(
 				stdout,
 				Print(
@@ -133,7 +130,7 @@ impl Program
 			);
 		} else {
 			queue!(
-				stdout, 
+				stdout,
 				Print(' ')
 			);
 		}*/
@@ -151,17 +148,17 @@ impl Program
 		);
 	}
 
-	pub fn print_alpha(&self, stdout: &mut Stdout) 
+	pub fn print_alpha(&self, stdout: &mut Stdout)
 	{
 		let center = self.get_center(2, 4);
 
-		for y in (0..self.pix.height) 
+		for y in (0..self.pix.height)
 		{
 
 			let cy = center.1 + y as u16 / 2;
 			queue!(stdout, cursor::MoveTo(center.0, cy));
 
-			for x in (0..self.pix.width) 
+			for x in (0..self.pix.width)
 			{
 
 				let i = y*self.pix.width + x;
@@ -179,11 +176,11 @@ impl Program
 		}
 	}
 
-	pub fn print_block(&self, stdout: &mut Stdout) 
+	pub fn print_block(&self, stdout: &mut Stdout)
 	{
 		let center = self.get_center(2, 4);
 
-		for y_base in (0..self.pix.height).step_by(2) 
+		for y_base in (0..self.pix.height).step_by(2)
 		{
 			let cy = center.1 + y_base as u16 / 2;
 			queue!(stdout, cursor::MoveTo(center.0, cy));
@@ -196,7 +193,7 @@ impl Program
 
 				let mut bg: Option<(u8, u8, u8)> = None;
 
-				let bx = 
+				let bx =
 					(0..2).fold(0, |acc, i| {
 						let idx = idx_base + i*self.pix.width; // iterate horizontally, then jump to the nex row;
 						let [_, pr, pg, pb] = self.pix.pixel(idx).to_be_bytes();
@@ -209,10 +206,10 @@ impl Program
 
 						// let check = grayb(pr, pg, pb) > 36;
 
-						match grayb(pr, pg, pb) 
+						match grayb(pr, pg, pb)
 						{
 
-							48.. => 
+							48.. =>
 							{
 								r = r.max(pr);
 								g = g.max(pg);
@@ -221,11 +218,11 @@ impl Program
 								return acc | (1 << (1-i));
 							},
 
-							32..=47 => 
-							{	
-								bg = Some((pr, pg, pb)); 
+							32..=47 =>
+							{
+								bg = Some((pr, pg, pb));
 								// blocks that aren't drawn can still be displayed
-								// by addding background color 
+								// by addding background color
 							}
 
 							_ => {}
@@ -234,7 +231,7 @@ impl Program
 						return acc;
 					});
 
-				let block_char = 
+				let block_char =
 					([' ', '▄', '▀', '█'])
 					[bx as usize]
 				;
@@ -246,17 +243,17 @@ impl Program
 		}
 	}
 
-	pub fn print_brail(&self, stdout: &mut Stdout) 
+	pub fn print_brail(&self, stdout: &mut Stdout)
 	{
 		let center = self.get_center(4, 8);
 
-		for y_base in (0..self.pix.height).step_by(4) 
+		for y_base in (0..self.pix.height).step_by(4)
 		{
 			let cy = center.1 + y_base as u16 / 4;
 
 			queue!(stdout, cursor::MoveTo(center.0, cy));
 
-			for x_base in (0..self.pix.width).step_by(2) 
+			for x_base in (0..self.pix.width).step_by(2)
 			{
 
 				let idx_base = y_base*self.pix.width + x_base;
@@ -264,9 +261,9 @@ impl Program
 				let [_, mut r, mut g, mut b] = self.pix.pixel(idx_base).to_be_bytes();
 
 				let bx = '⠀' as u32 + // first char of braille
-					(0..8).fold(0u8, |acc, i| 
+					(0..8).fold(0u8, |acc, i|
 					{
-						let idx = idx_base + 
+						let idx = idx_base +
 							if i < 6 {
 								(i / 3) + (i % 3)*self.pix.width
 							} else {
@@ -280,8 +277,8 @@ impl Program
 						g = g.max(pg);
 						b = b.max(pb);
 
-						acc | (((grayb(pr, pg, pb) > 36) as u8) << i) 
-						// All braille patterns fit into a u8, so a bitwise or can 
+						acc | (((grayb(pr, pg, pb) > 36) as u8) << i)
+						// All braille patterns fit into a u8, so a bitwise or can
 						// be used to increase performance
 					}) as u32;
 
@@ -295,7 +292,7 @@ impl Program
 	pub fn print_sixel(&self, stdout: &mut Stdout) {
 	    let w = self.pix.width;
 	    let h = self.pix.height;
-	    let canvas = 
+	    let canvas =
 	        sixel_rs::encoder::QuickFrameBuilder::new()
 	        .width(w)
 	        .height(h)
@@ -306,18 +303,18 @@ impl Program
 	}*/
 }
 
-fn to_art<T>(table: &[u8], x: T) -> char 
-where usize: From<T> 
+fn to_art<T>(table: &[u8], x: T) -> char
+where usize: From<T>
 {
     *table.get(usize::from(x) * table.len() / 256).unwrap_or(&b' ') as char
 }
 
-fn rgb_to_ansi(r: u8, g: u8, b: u8) -> u8 
+fn rgb_to_ansi(r: u8, g: u8, b: u8) -> u8
 {
     (16 + (r as u16 *6/256)*36 + (g as u16 *6/256)*6 + (b as u16*6/256)) as u8
 }
 
-pub fn rescale(mut s: (u16, u16), prog: &Program) -> (u16, u16) 
+pub fn rescale(mut s: (u16, u16), prog: &Program) -> (u16, u16)
 {
     use super::Mode;
 
@@ -337,7 +334,7 @@ pub fn rescale(mut s: (u16, u16), prog: &Program) -> (u16, u16)
     s
 }
 
-pub fn con_main(mut prog: Program) -> Result<()> 
+pub fn con_main(mut prog: Program) -> Result<()>
 {
 	let mut stdout = stdout();
 
@@ -442,7 +439,7 @@ pub fn prepare_stdout_braille(prog: &mut Program, stdout: &mut Stdout) {
         let gray = (r as u16 + g as u16 + b as u16) / 144;
         let (x, y) = (
             (i % prog.pix.width),
-            (i / prog.pix.width) 
+            (i / prog.pix.width)
         );
 
 		if gray > 0 {
@@ -450,7 +447,7 @@ pub fn prepare_stdout_braille(prog: &mut Program, stdout: &mut Stdout) {
 	            ar = ((ar as u16 + r as u16) /2 ) as u8;
 	            ag = ((ar as u16 + g as u16) /2 ) as u8;
 	            ab = ((ar as u16 + b as u16) /2 ) as u8;
-	        } else {  
+	        } else {
 	            ar = r;
 	            ag = g;
 	            ab = b;
@@ -480,5 +477,5 @@ pub fn prepare_stdout_braille(prog: &mut Program, stdout: &mut Stdout) {
 
 
 pub fn console_draw_braille(prog: &mut Program, stdout: &mut Stdout) {
-	let mut 
+	let mut
 }*/

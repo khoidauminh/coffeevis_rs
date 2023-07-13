@@ -75,15 +75,15 @@ pub fn read_samples<T: cpal::Sample<Float = f32>>(data: &[T]) {
     let mut b = BUFFER.write().unwrap();
 
     let mut ns = get_no_sample().saturating_add(1);
-  
-    ns *= 
+
+    ns *=
 		if get_normalizer() {
 			b.read_from_input_with_normalizer(data) as u8
 		} else {
 			b.read_from_input(data) as u8
 		}
 	;
-	
+
     NO_SAMPLE.store(ns, Ordering::Relaxed);
 }
 

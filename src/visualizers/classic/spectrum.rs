@@ -8,10 +8,10 @@ use crate::graphics::{P2, blend};
 
 // const COPY_SIZE: usize = FFT_SIZE / 2;
 
-const RANGE: usize = 54;
+const RANGE: usize = 64;
 const RANGEF: f32   = RANGE as f32;
 const FFT_SIZEF: f32 = FFT_SIZE as f32;
-const FFT_SIZEF_RECIP: f32 = 1.25 / FFT_SIZEF;
+const FFT_SIZEF_RECIP: f32 = 1.0 / FFT_SIZEF;
 
 static DATA: RwLock<[Cplx<f32>; RANGE+1]> = RwLock::new([Cplx::<f32>::zero(); RANGE+1]);
 static MAX: RwLock<f32> = RwLock::new(1.0);

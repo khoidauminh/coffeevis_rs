@@ -94,11 +94,11 @@ pub fn control_key_events_win(
 ) {
 
     let mut fps_change = false;
-    
+
     prog.update_vis();
-    
-    
-    
+
+
+
     win.get_keys_pressed(KeyRepeat::No).iter().for_each(|key|
         match key {
             Key::Space => prog.change_visualizer(true),
@@ -143,16 +143,16 @@ pub fn control_key_events_win(
 pub fn control_key_events_con(
     prog: &mut Program,
     exit: &mut bool
-) -> crossterm::Result<()> {	
+) -> crossterm::Result<()> {
 	prog.update_vis();
-	
+
     if poll(prog.REFRESH_RATE)? {
         match read()? {
             Event::Key(event) => match event.code {
                 KeyCode::Char(' ') if event.modifiers == crossterm::event::KeyModifiers::CONTROL
                                    =>   prog.change_visualizer(false),
                 KeyCode::Char(' ') =>   prog.change_visualizer(true),
-                
+
                 KeyCode::Char('q') =>   *exit = true,
 
                 KeyCode::Char('1') =>   change_fps(prog, 10, true),

@@ -34,11 +34,11 @@ pub const SILENCE_LIMIT: u8 = 7;
 #[doc(hidden)]
 pub const IDLE_REFRESH_RATE: Duration = Duration::from_millis(1000/24);
 
-pub const DEFAULT_SIZE_WIN: u16 = 144;
+pub const DEFAULT_SIZE_WIN: u16 = 80;
 #[doc(hidden)]
 pub const ERR_MSG: &str = "Configration error at line";
 
-pub const WIN_SCALE: usize = 2;
+pub const DEFAULT_WIN_SCALE: u8 = 2;
 
 pub static IMAGE: &[u8; 1442] = include_bytes!("coffee_pixart_2x.png");
 
@@ -48,22 +48,22 @@ pub static IMAGE: &[u8; 1442] = include_bytes!("coffee_pixart_2x.png");
 #[derive(Copy, Clone)]
 pub enum State {
     /// Transitional stage, program just received audio infomation.
-    Waken = 0, 
-    Active = 1, 
+    Waken = 0,
+    Active = 1,
     /// Transitional stage, program prepares for slowdown.
-    Waiting = 2, 
+    Waiting = 2,
     /// Slowdown.
     Idle = 3,
 }
 
 /// Main program struct
-/// 
+///
 /// Notes:
 /// Windowed mode resolution will be stored in `WIN_W` and `WIN_H`.
-/// Console mode reolution are stored in `CON_W` and `CON_H`, 
+/// Console mode reolution are stored in `CON_W` and `CON_H`,
 /// with special fields: `CON_MAX_W` and `CON_MAX_H` for maximum
 /// console resolution allowed.
-pub struct Program 
+pub struct Program
 {
     /// for experimental purposes. Console mode only.
 	pub DISPLAY: bool,
@@ -84,8 +84,8 @@ pub struct Program
 
 	pub WIN_W: u16,
 	pub WIN_H: u16,
-	
-	pub CON_W: u16, 
+
+	pub CON_W: u16,
 	pub CON_H: u16,
 	pub CON_MAX_W: u16,
 	pub CON_MAX_H: u16,
@@ -106,19 +106,19 @@ pub struct Program
     /// Triggers render when is 0.
     ///
     /// When there is no new audio information, the program triggers
-    /// slowdown to reduce processor consumption. 
-    /// Over the `audio` module, there is an u8 global variable called 
+    /// slowdown to reduce processor consumption.
+    /// Over the `audio` module, there is an u8 global variable called
     /// `NO_SAMPLE`. Everytime audio input returns silence, `NO_SAMPLE`
-    /// is incremented, saturating at 255. When there's new audio, 
+    /// is incremented, saturating at 255. When there's new audio,
     /// it's immediately dropped back to 0.
     ///
-    /// `render_trigger` is incremented in every iteration of the main 
-    /// loop and wraps around if it exceeds NO_SAMPLE. On active state, 
-    /// NO_SAMPLE is 0 and therefore program renders at every loop 
+    /// `render_trigger` is incremented in every iteration of the main
+    /// loop and wraps around if it exceeds NO_SAMPLE. On active state,
+    /// NO_SAMPLE is 0 and therefore program renders at every loop
     /// iteration.
     ///
-    /// This is to reduce processor power when the program is idle, 
-    /// while keeping the main loop and input evaluation running at 
+    /// This is to reduce processor power when the program is idle,
+    /// while keeping the main loop and input evaluation running at
     /// low latency.
     render_trigger: u8,
     pub state: State,
@@ -131,15 +131,15 @@ impl Program {
 	pub fn new() -> Self {
 		let vislist_ = vislist::VisNavigator::new();
 		let vis = vislist_.current_vis();
-		
+
 		Self {
 			DISPLAY: true,
-			SCALE: 1,
+			SCALE: DEFAULT_WIN_SCALE,
 			RESIZE: false,
 
 			mode: Mode::Win,
 
-			pix: crate::graphics::Canvas::new(DEFAULT_SIZE_WIN as usize, DEFAULT_SIZE_WIN as usize), 
+			pix: crate::graphics::Canvas::new(DEFAULT_SIZE_WIN as usize, DEFAULT_SIZE_WIN as usize),
 
 	        FPS: DEFAULT_FPS as u64,
             REFRESH_RATE: std::time::Duration::from_micros(1_000_000 / DEFAULT_FPS as u64),
@@ -160,7 +160,7 @@ impl Program {
 			WIN_W: DEFAULT_SIZE_WIN,
 			WIN_H: DEFAULT_SIZE_WIN,
 			CON_W: 50,
-			CON_H: 25, 
+			CON_H: 25,
 		    CON_MAX_W: 50,
             CON_MAX_H: 25,
 
@@ -188,20 +188,19 @@ impl Program {
 		 self.set_con_mode(mode);
 		 self
 	}
-
+    /*
 	pub fn as_win(mut self) -> Self {
 		self.pix.width = DEFAULT_SIZE_WIN as usize;
 		self.pix.height = DEFAULT_SIZE_WIN as usize;
 		self.mode = Mode::Win;
 		self.refresh();
 		self
-	}
+	}*/
 
-	#[cfg(feature = "winit")]
-	pub fn as_winit(mut self) -> Self {
+	pub fn as_win(mut self) -> Self {
 		self.pix.width = DEFAULT_SIZE_WIN as usize;
 		self.pix.height = DEFAULT_SIZE_WIN as usize;
-		self.mode = Mode::Winit;
+		self.mode = Mode::Win;
 		self.refresh();
 		self
 	}
@@ -212,7 +211,7 @@ impl Program {
 
 	pub fn update_vis(&mut self) {
 		let elapsed = Instant::now();
-		if elapsed >= self.SWITCH && self.AUTO_SWITCH 
+		if elapsed >= self.SWITCH && self.AUTO_SWITCH
 		{
 			self.SWITCH = elapsed + self.AUTO_SWITCH_ITVL;
 
@@ -221,35 +220,35 @@ impl Program {
 	}
 
 	pub fn change_visualizer(&mut self, forward: bool) {
-		
-		let new_visualizer =  if forward { 
+
+		let new_visualizer =  if forward {
 		    self.VIS.next_vis()
 		} else {
 		    self.VIS.prev_vis()
 		};
-		
+
 		self.visualizer = new_visualizer.func();
-		
+
 		self.pix.clear();
 
 		self.reset_switch();
-		
+
 		crate::audio::set_normalizer(new_visualizer.request());
-		
+
 		let vis_name = self.VIS.current_vis_name();
 		let vis_list = self.VIS.current_list_name();
 
 		use std::io::Write;
-		use crossterm::{self, 
+		use crossterm::{self,
 			terminal::{
-				EnterAlternateScreen, 
+				EnterAlternateScreen,
 				LeaveAlternateScreen
-			}, 
+			},
 			style::Print
 		};
-		
+
 		if
-			self.DISPLAY && 
+			self.DISPLAY &&
 			self.mode.is_con()
 		{
 			crossterm::queue!(
@@ -265,13 +264,13 @@ impl Program {
 		//println!("Switching to {}\r", self.VIS[self.VIS_IDX].1);
 		//std::io::stdout().flush().unwrap();
 	}
-	
+
 	pub fn update_fps(&mut self, new_fps: u64) {
 	    self.FPS = new_fps;
 	    self.REFRESH_RATE = std::time::Duration::from_micros(1_000_000 / new_fps as u64);
 	}
 
-	pub fn update_size_win<T>(&mut self, s: (T, T)) 
+	pub fn update_size_win<T>(&mut self, s: (T, T))
 	where usize: From<T> {
 		let size = (usize::from(s.0), usize::from(s.1));
 		self.WIN_W = size.0 as u16;
@@ -284,26 +283,20 @@ impl Program {
 		let mut size = (u16::from(s.0), u16::from(s.1));
 
 		match &self.mode {
-			Mode::Win => (self.WIN_W, self.WIN_H) = size,
-
-			#[cfg(feature = "winit")]
-			Mode::Winit => (self.WIN_W, self.WIN_H) = size,
+			Mode::Win | Mode::WinLegacy => (self.WIN_W, self.WIN_H) = size,
 
 			_ => {
 				(self.CON_W, self.CON_H) = size;
 				size = crate::modes::console_mode::rescale(size, self);
 			}
 		}
-		
+
 		self.pix.resize(size.0 as usize, size.1 as usize);
 	}
 
 	pub fn refresh(&mut self) {
 		match &self.mode {
-			Mode::Win	=> self.pix.resize(self.WIN_W as usize, self.WIN_H as usize),
-
-			#[cfg(feature = "winit")]
-			Mode::Winit	=> self.pix.resize(self.WIN_W as usize, self.WIN_H as usize),
+			Mode::Win | Mode::WinLegacy => self.pix.resize(self.WIN_W as usize, self.WIN_H as usize),
 
 			_ 			=> self.pix.resize(self.CON_W as usize, self.CON_H as usize),
 		}
@@ -323,7 +316,7 @@ impl Program {
 
 	pub fn timed_clear(&mut self) {
 	    if self.exp == 0 { self.pix.clear() }
-	    else { self.pix.fade(216) } 
+	    else { self.pix.fade(216) }
 	    self.exp = crate::math::increment(self.exp, 4);
 	}
     /*
@@ -337,7 +330,7 @@ impl Program {
             self.force_render();
         }
 	}
-    
+
     pub fn render_trigger(&self) -> bool {
         // crate::audio::get_no_sample() >
         self.render_trigger == 0
@@ -345,7 +338,7 @@ impl Program {
 
     pub fn update_timer(&mut self) {
         let sample = crate::audio::get_no_sample();
-        
+
         if sample == 255 {
             self.render_trigger = 255;
             return;
@@ -375,16 +368,16 @@ impl Program {
         let silence = crate::audio::get_no_sample() > SILENCE_LIMIT;
         self.state = match (silence, &self.state) {
             (true, Active)   => Waiting,
-            
+
             (true, Waiting)  => Idle,
-            
-            (true, Waken) | (true, Idle) 
+
+            (true, Waken) | (true, Idle)
                              => Idle,
-                             
+
             (false, Waken)   => Waken,
-            
+
             (false,  Active) => self.state,
-            
+
             (false, Waiting) | (false, Idle)
                              => Waken,
         }

@@ -13,23 +13,23 @@ const SIZE_MASK: usize = BUFFER_SIZE - 1;
 
 type BufferArray = [Cplx<f32>; BUFFER_SIZE];
 
-// pub static EXPANDER: 
+// pub static EXPANDER:
 
-/// This is a struct that acts like a regular buffer 
+/// This is a struct that acts like a regular buffer
 /// but uses an offset index.
-/// 
+///
 /// By default, coffeevis displays at 144hz, but cpal can't
 /// send input data that quickly between each rendering.
 /// Moreover, the visualizers don't use all of the
-/// data sent in in one rendering. Therefore, one 
-/// solution was to use the a slice of the 
+/// data sent in in one rendering. Therefore, one
+/// solution was to use the a slice of the
 /// buffer, then rotate it to get to the next one.
 ///
 /// AudioBuffer used the mentioned the offset index to
 /// simulate rotating and bypass having to move elemenents.
-/// 
 ///
-/// To index as performantly as possible, AudioBuffer only allows 
+///
+/// To index as performantly as possible, AudioBuffer only allows
 /// powers of 2 lengths.
 pub struct AudioBuffer {
     buffer: BufferArray,
@@ -38,13 +38,13 @@ pub struct AudioBuffer {
     /// To prevent "audio tearing" when writing input,
     /// `write_point` tells where the last write happened.
     /// Ensures that new data is written right after where
-    /// the old one was. 
+    /// the old one was.
     write_point: usize,
-    
+
     /// Experimental feature.
-    /// 
+    ///
     /// Coffeevis normalizes the audio input when it's too quiet
-    /// so that the visualizers doesn't get boring. 
+    /// so that the visualizers doesn't get boring.
     /// Triggers when amplitude < AMP_TRIGGER_THRESHOLD
     normalizer: f32,
     max: f32,
@@ -72,7 +72,7 @@ impl<'a> Iterator for AudioBufferIterator<'a> {
 impl std::ops::Index<usize> for AudioBuffer {
     type Output = Cplx<f32>;
     fn index(&self, index: usize) -> &Self::Output {
-        /// Unsafe allowed because this cannot fail. 
+        /// Unsafe allowed because this cannot fail.
         unsafe{self.buffer.get_unchecked(index.wrapping_add(self.offset)&SIZE_MASK)}
     }
 }
@@ -80,7 +80,7 @@ impl std::ops::Index<usize> for AudioBuffer {
 impl std::ops::IndexMut<usize> for AudioBuffer {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         unsafe{self.buffer.get_unchecked_mut(index.wrapping_add(self.offset)&SIZE_MASK)}
-    } 
+    }
 }
 
 use std::ops::Range;
@@ -130,7 +130,7 @@ impl AudioBuffer {
     pub fn average_volume(&self) -> f32 {
         self.average
     }
-    
+
     pub fn to_vec(&mut self) -> Vec<Cplx<f32>> {
         let mut o = vec![Cplx::<f32>::zero(); BUFFER_SIZE];
         o
@@ -147,12 +147,12 @@ impl AudioBuffer {
 
 	/*
     /// Ignores `write_point`. Rotates the buffer and writes to the start.
-    /// Returns boolean indicating silence. 
+    /// Returns boolean indicating silence.
     pub fn read_from_input<T: cpal::Sample<Float = f32>>(&mut self, data: &[T]) -> bool {
         let input_size = data.len();
         let mut silence = true;
         self.buffer.rotate_right(input_size);
-                
+
         data
         .chunks_exact(2)
         .zip(self.buffer.iter_mut())
@@ -168,7 +168,7 @@ impl AudioBuffer {
     pub fn read_from_input<T: cpal::Sample<Float = f32>>(&mut self, data: &[T]) -> bool {
         let input_size = data.len();
         let mut silence_index: u32 = 0;
-        
+
         self.offset = self.write_point;
         self.write_point = (self.write_point + input_size) & SIZE_MASK;
 
@@ -182,7 +182,7 @@ impl AudioBuffer {
             silence_index += ((smp.x > SILENCE_LIMIT) || (smp.y > SILENCE_LIMIT)) as u32;
             di = crate::math::increment_index(di, BUFFER_SIZE);
         });
-        
+
         silence_index < SILENCE_INDEX
     }
 
@@ -190,7 +190,7 @@ impl AudioBuffer {
     pub fn read_from_input_with_normalizer<T: cpal::Sample<Float = f32>>(&mut self, data: &[T]) -> bool {
         let input_size = data.len();
         let mut silence_index: u32 = 0;
-        
+
         self.offset = self.write_point;
         self.write_point = (self.write_point + input_size) & SIZE_MASK;
 
@@ -205,29 +205,29 @@ impl AudioBuffer {
         .for_each(|(i, chunk)| {
             let mut smp = &mut self.buffer[di];
             write_sample(smp, chunk);
-            
+
             max = max.max(smp.x.abs()).max(smp.y.abs());
             /*derivative_max = derivative_max.max(
 				(smp.x - previous_sample.x).abs().max(
 					(smp.x - previous_sample.x).abs()
 				)
             );*/
-            
+
             previous_sample = *smp;
-            
+
             silence_index += ((smp.x > SILENCE_LIMIT) || (smp.y > SILENCE_LIMIT)) as u32;
             di = crate::math::increment_index(di, BUFFER_SIZE);
         });
-        
+
         self.derivative_max = derivative_max;
-        
+
         let silence = silence_index < SILENCE_INDEX;
 
         if silence {
             return silence;
         }
-        
-        self.max = 
+
+        self.max =
             crate::math::interpolate::subtractive_fall(
                 self.max,
                 max,
@@ -236,14 +236,14 @@ impl AudioBuffer {
             );
 
         self.normalizer = AMP_TRIGGER_THRESHOLD / self.max.min(AMP_TRIGGER_THRESHOLD);
-          
+
         di = self.write_point;
         for _ in 0..input_size/2 {
             let mut smp = &mut self.buffer[di];
             *smp = smp.scale(self.normalizer);
             di = crate::math::increment_index(di, BUFFER_SIZE);
         }
-        
+
         silence
     }
 
@@ -260,5 +260,5 @@ impl AudioBuffer {
         .for_each(|(inp, out)| *out = *inp);
 
         o
-    }    
+    }
 }

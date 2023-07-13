@@ -61,7 +61,7 @@ pub fn isqrt(x: usize) -> usize {
 
     while (low+1 < high) {
         let mid = (low+high) / 2;
-        
+
     }*/
 }
 
@@ -75,15 +75,15 @@ pub fn flog2(x: f32) -> f32 {
     let xi = f32::from_bits(xi);
 
     log2 + (-0.34484843*xi+2.02466578)*xi -0.67487759 */
-    
-    const mask: u32 = (1 << 23)-1; 
+
+    const mask: u32 = (1 << 23)-1;
     const ratio_recip: f32 = 1.0 / (mask+1) as f32;
 
     let xi = x.to_bits();
-    
+
 
     let exp = (xi >> 23) as f32 - 128.0;
     let fract = ((xi & mask) as f32)*ratio_recip;
-    
+
     exp + fract
 }

@@ -91,15 +91,15 @@ pub fn read_samples<T: cpal::Sample>(data: &[T]) {
     let left_right_sum = data[l-1].to_i16().abs() + data[l-2].to_i16().abs();
 
 	if left_right_sum < 256 {
-		NO_SAMPLE.store(ns.saturating_add(1), Ordering::Relaxed); 
+		NO_SAMPLE.store(ns.saturating_add(1), Ordering::Relaxed);
 	} else {
-		NO_SAMPLE.store(0, Ordering::Relaxed); 
+		NO_SAMPLE.store(0, Ordering::Relaxed);
 	}
-	
+
 	if ns > crate::data::SILENCE_LIMIT {
 		return;
 	}*/
-	
+
 	let l = data.len() /2;
 	let fadel = l /4;
 	let mut silence = true;
