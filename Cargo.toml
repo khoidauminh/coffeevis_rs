@@ -24,8 +24,7 @@ winit = "0.28.6"
 fps_clock = "2.0.0"
 
 [profile.release]
-strip = true
-opt-level = "z"
+#strip = true
 #lto = true
-codegen-units = 1
-cpu-native = true
+#codegen-units = 1
+#cpu-native = true

@@ -41,6 +41,8 @@ pub struct AudioBuffer {
     /// the old one was.
     write_point: usize,
 
+    input_size: usize,
+
     /// Experimental feature.
     ///
     /// Coffeevis normalizes the audio input when it's too quiet
@@ -96,6 +98,7 @@ impl AudioBuffer {
             buffer: [Cplx::<f32>::zero(); BUFFER_SIZE],
             offset: 0,
             write_point: 0,
+            input_size: 1000,
             normalizer: 1.0,
             max: 0.0,
             average: 0.0,
@@ -189,21 +192,27 @@ impl AudioBuffer {
     /// With `normalizer`
     pub fn read_from_input_with_normalizer<T: cpal::Sample<Float = f32>>(&mut self, data: &[T]) -> bool {
         let input_size = data.len();
+        self.input_size = input_size;
         let mut silence_index: u32 = 0;
 
-        self.offset = self.write_point;
-        self.write_point = (self.write_point + input_size) & SIZE_MASK;
-
         let mut max = 0.0f32;
-        let mut derivative_max: f32 = 0.0;
-        let mut previous_sample = Cplx::<f32>::zero();
+        //let mut derivative_max: f32 = 0.0;
+        //let mut previous_sample = Cplx::<f32>::zero();
 
+
+		self.offset = self.write_point;
+		self.write_point = (self.write_point + input_size)&SIZE_MASK;
+
+		if input_size > self.len() /2 {
+			self.offset = self.write_point;
+		}
+		
         let mut di = self.write_point;
         data
         .chunks_exact(2)
         .enumerate()
         .for_each(|(i, chunk)| {
-            let mut smp = &mut self.buffer[di];
+            let mut smp = &mut unsafe{self.buffer.get_unchecked_mut(di)};
             write_sample(smp, chunk);
 
             max = max.max(smp.x.abs()).max(smp.y.abs());
@@ -213,13 +222,13 @@ impl AudioBuffer {
 				)
             );*/
 
-            previous_sample = *smp;
+            //previous_sample = *smp;
 
             silence_index += ((smp.x > SILENCE_LIMIT) || (smp.y > SILENCE_LIMIT)) as u32;
-            di = crate::math::increment_index(di, BUFFER_SIZE);
+	        di = crate::math::increment(di, BUFFER_SIZE);
         });
 
-        self.derivative_max = derivative_max;
+        //self.derivative_max = derivative_max;
 
         let silence = silence_index < SILENCE_INDEX;
 

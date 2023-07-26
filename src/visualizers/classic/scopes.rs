@@ -27,8 +27,8 @@ pub const draw_oscilloscope: crate::VisFunc = |prog, stream| {
     const up_count: usize = 50;
     math::integrate_inplace(&mut stream_, up_count, true);
     
-    let mut zeroi = up_count*2;
-    let mut zero = 0;
+    let mut zeroi = up_count;
+    /*let mut zero = 0;
     'restart: while zeroi < l {
         if stream_[zeroi].x.abs() < 1e-2 {
             zero = zeroi;
@@ -39,6 +39,21 @@ pub const draw_oscilloscope: crate::VisFunc = |prog, stream| {
     
     if zeroi == l {
         zeroi = zero;
+    }*/
+
+    while zeroi < stream_.len() {
+
+		let mut smp1 = stream_[zeroi].x + stream_[zeroi].y;
+		let mut smp2 = stream_[zeroi-1].x + stream_[zeroi-1].y;
+
+		if smp1 < 0.0 && smp2 >= 0.0
+		{ break }
+
+    	zeroi += 1;
+    }
+
+    if zeroi == stream_.len() {
+    	zeroi = up_count;
     }
 
     for di in (0..range).step_by(INCREMENT +1) {
@@ -100,7 +115,7 @@ pub const draw_vectorscope: crate::VisFunc = |prog, stream| {
     while di < range {
         let sample = Cplx::<f32>::new(stream[di].x, stream[di+PHASE_OFFSET].y);
         
-        let sample = math::interpolate::linearfc(smoothed_sample, sample, 0.35);
+        //let sample = math::interpolate::linearfc(smoothed_sample, sample, 0.35);
         /*let sample = Cplx::<f32>::new(
 			math::interpolate::sqrt(smoothed_sample.x, sample.x, 0.1),
 			math::interpolate::sqrt(smoothed_sample.y, sample.y, 0.1)

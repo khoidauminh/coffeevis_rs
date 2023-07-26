@@ -27,7 +27,7 @@ pub const draw_vol_sweeper: crate::VisFunc = |para, stream| {
             .iter()
             .take(SAMPLE_SIZE / 2)
             .fold(0f32, |s, &x| s + x.mag());*/
-        let mut sum = 0.0;    
+        let mut sum = 0.0;
         for i in 0..SAMPLE_SIZE/2 {
             sum += stream[i].l1_norm();
         }
@@ -66,5 +66,5 @@ pub const draw_vol_sweeper: crate::VisFunc = |para, stream| {
         }
     }
     
-    stream.rotate_left(SAMPLE_SIZE / 8);
+    stream.rotate_left(SAMPLE_SIZE >> 5);
 };

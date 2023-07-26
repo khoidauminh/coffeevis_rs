@@ -55,7 +55,7 @@ pub const draw_spectrum: crate::VisFunc = |prog, stream| {
     .for_each(|(i, (smpl, smpr))| {
         let idx = i*2;
         smpl.x = stream[idx].x;
-        smpr.x = stream[idx+crate::PHASE_OFFSET].y;
+        smpr.x = stream[idx].y;
     });
 
     math::fft(&mut data_l);
@@ -66,7 +66,7 @@ pub const draw_spectrum: crate::VisFunc = |prog, stream| {
 
     let mut LOCAL = DATA.write().unwrap();
 
-    let fall_factor = (prog.SMOOTHING.powi(2) - 0.275).max(0.0);
+    let fall_factor = 0.25*prog.SMOOTHING.powi(2);
     
     // let pre_scale = 0.6*(0.5 + stream.amplitude()*0.5);
 
