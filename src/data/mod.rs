@@ -16,16 +16,16 @@ use vislist::VIS_MENU;
 pub const SAMPLE_RATE_MAX: usize = 384000;
 pub const SAMPLE_RATE: usize = 44100;
 
-pub const POWER: usize = 10;
-pub const FFT_POWER: usize = POWER;
-pub const SAMPLE_SIZE: usize = (3 << POWER) - 1;
+pub const POWER: usize = 13;
+pub const FFT_POWER: usize = 10;
+pub const SAMPLE_SIZE: usize = 1 << POWER;
 pub const FFT_SIZE: usize = 1 << (FFT_POWER-1);
 
+pub const INCREMENT: usize = 2;
 pub const DEFAULT_FPS: u8 = 144;
-pub const DEFAULT_WAV_WIN: usize = { let t = (SAMPLE_RATE / 15000); if t > 4 {t} else {4} };
-pub const ROTATE_SIZE: usize = SAMPLE_SIZE * (DEFAULT_WAV_WIN) / 150; // 3539;
-pub const PHASE_OFFSET: usize = 2048 * SAMPLE_RATE / SAMPLE_RATE_MAX;
-pub const INCREMENT: usize = (DEFAULT_WAV_WIN / 12) | 1;
+pub const DEFAULT_WAV_WIN: usize = 144 * INCREMENT;
+pub const ROTATE_SIZE: usize = 289; // 3539;
+pub const PHASE_OFFSET: usize = SAMPLE_RATE / 50 / 4;
 pub const DEFAULT_VOL_SCL: f32   = 0.86;
 pub const DEFAULT_SMOOTHING: f32 = 0.65;
 
@@ -101,7 +101,7 @@ pub struct Program
 
     pub IMG: Image,
 
-    pub exp: u8,
+    pub motion_blur_index: u8,
 
     /// Triggers render when is 0.
     ///
@@ -172,7 +172,7 @@ impl Program {
 			msg: Ok(()),
 			msg_timeout: 0,
 
-			exp: 0,
+			motion_blur_index: 0,
 		}
 	}
 
@@ -305,9 +305,16 @@ impl Program {
 	}
 
 	pub fn clear_pix(&mut self) {
-		self.pix.clear();
-        //self.pix.fade(96);
+		// self.pix.clear();
+        //self.pix.fade((256*self.FPS as usize / DEFAULT_FPS as usize) as u8);
 		//self.timed_clear();
+		if self.FPS <= (DEFAULT_FPS / 2) as u64  {
+			self.pix.clear();
+			return
+		}
+		
+		let subtract_amount = 255*self.FPS as usize / DEFAULT_FPS as usize;
+		self.pix.subtract_clear(subtract_amount as u8);
 	}
 
 	pub fn clear_pix_alpha(&mut self, alpha: u8) {
@@ -315,9 +322,13 @@ impl Program {
 	}
 
 	pub fn timed_clear(&mut self) {
-	    if self.exp == 0 { self.pix.clear() }
-	    else { self.pix.fade(216) }
-	    self.exp = crate::math::increment(self.exp, 4);
+	    if self.motion_blur_index == 0 { self.pix.clear() }
+	    else { self.pix.fade(192) }
+	    self.motion_blur_index = 
+			crate::math::increment(
+				self.motion_blur_index,
+				DEFAULT_FPS / self.FPS as u8
+			);
 	}
     /*
 	pub fn advance_timer(&mut self) {

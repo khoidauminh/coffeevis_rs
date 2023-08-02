@@ -80,9 +80,10 @@ where T: std::default::Default + std::marker::Copy + Mul<Output = T> + Add<Outpu
 		Cplx::<T> { x: self.x * a, y: self.y*a }
 	}
 
-	pub fn merge(&self) -> T {
+	pub fn mid(&self) -> T {
 		self.x + self.y
 	}
+
 }
 
 impl Cplx<f32>

@@ -55,7 +55,7 @@ pub const draw_spectrum: crate::VisFunc = |prog, stream| {
     .for_each(|(i, (smpl, smpr))| {
         let idx = i*2;
         smpl.x = stream[idx].x;
-        smpr.x = stream[idx].y;
+        smpr.x = stream[idx+crate::data::PHASE_OFFSET].y;
     });
 
     math::fft(&mut data_l);
@@ -83,7 +83,7 @@ pub const draw_spectrum: crate::VisFunc = |prog, stream| {
 //			smp.x = linearf(smp.x, smp_in_l.l1_norm(), prog.SMOOTHING);
 //			smp.y = linearf(smp.y, smp_in_r.l1_norm(), prog.SMOOTHING);
             //let scalef = math::log2i::<usize>(i+2) as f32 * FFT_SIZEF_RECIP;
-            let scalef = (((i + 3) * (RANGE+3 - i)) >> 7) as f32* FFT_SIZEF_RECIP;
+            let scalef = math::fft_scale_up(i, RANGE)* FFT_SIZEF_RECIP;
             //let scalef =  2.4*FFT_SIZEF_RECIP;
 
     	    smp.x = multiplicative_fall(smp.x, smp_in_l.l1_norm()*scalef, 0.0, fall_factor);
@@ -153,5 +153,5 @@ pub const draw_spectrum: crate::VisFunc = |prog, stream| {
         if32 += INTERVAL;
     }
 
-    stream.rotate_left(crate::data::ROTATE_SIZE);
+    stream.rotate_left(FFT_SIZE);
 };

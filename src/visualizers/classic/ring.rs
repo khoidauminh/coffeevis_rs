@@ -7,7 +7,7 @@ use crate::math::Cplx;
 
 pub const draw_ring: crate::VisFunc = |prog, stream| {
 
-    let range = stream.len()*prog.WAV_WIN/100;
+    let range = prog.WAV_WIN;
 
     // if range < prog.pix.height+prog.pix.width { return (); }
 

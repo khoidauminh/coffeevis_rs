@@ -5,7 +5,7 @@ use crate::math::{self, Cplx};
 
 // static offset: AtomicUsize = AtomicUsize::new(0);
 
-const PERBYTE: usize = 24; // like percent but ranges from 0..256
+const PERBYTE: usize = 20; // like percent but ranges from 0..256
 pub const draw_wave: crate::VisFunc = |para, stream| {
     let l = (stream.len() * PERBYTE) >> 8;
 	let mut random = 0usize; 

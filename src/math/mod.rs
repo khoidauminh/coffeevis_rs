@@ -262,6 +262,31 @@ pub mod interpolate {
         if new < now {return now}
         new
 	}
+	
+	pub fn subtractive_fall_hold(
+		prev: f32, 
+		now: f32, 
+		min: f32, 
+		amount: f32,
+		hold: usize,
+		hold_index: &mut usize
+	) -> f32 {
+		if now > prev {
+			*hold_index = 0;
+			return now
+		}
+		
+		if *hold_index < hold {
+			*hold_index += 1;
+			return prev
+		} else {
+			*hold_index = 0;
+			let new = prev - amount;
+			if new < min {return min}
+			if new < now {return now}
+			new
+		}
+	}
 
 	pub fn multiplicative_fall(prev: f32, now: f32, min: f32, factor: f32) -> f32 {
         if now > prev {return now}
@@ -293,6 +318,43 @@ pub mod interpolate {
 		let offset = b-a;
 		a + super::fast::fsqrt(0.1*offset + 1.0) - 1.0
 	}
+	
+	pub fn envelope(
+		prev: f32, 
+		now: f32, 
+		limit: f32, 
+		attack: f32, 
+		release: f32, 
+		hold: usize, 
+		hold_index: &mut usize
+	) -> f32 {
+		
+		let out = if prev < now {
+			
+			*hold_index = 0;
+			
+			/*let new = prev + attack;
+			new.min(now)*/
+			
+			now
+			
+		} else if prev >= now {
+			
+			if *hold_index < hold {
+				*hold_index += 1;
+				prev
+			} else {
+				
+				*hold_index = 0;
+				
+				let new = prev - release;
+				new.max(now)
+			}
+			
+		} else {now};
+		
+		out.max(limit)
+	} 
 }
 /*
 pub fn fps_slowdown(no_sample: u8) -> u8 {
@@ -304,4 +366,8 @@ pub fn highpass_inplace<T>(a: &mut [T])
 where T: std::ops::Sub<Output = T> + Copy
 {
 	for i in 1..a.len() {a[i-1] = a[i] - a[i-1]}
+}
+
+pub fn fft_scale_up(i: usize, bound: usize) -> f32 {
+	(((i + 3) * (bound+3 - i)) >> 7).max(1) as f32
 }

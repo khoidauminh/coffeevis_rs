@@ -321,6 +321,8 @@ pub fn win_main_winit(mut prog: Program) -> Result<(), &'static str> {
 					perform_draw(&mut window, &mut prog, &mut surface);
 				}
 
+				// println!("WINDOW_DRAW")
+
 			},
 
 			_ => (),

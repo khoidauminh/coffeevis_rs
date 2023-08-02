@@ -1,4 +1,7 @@
-use std::sync::atomic::{AtomicUsize, Ordering::Relaxed};
+use std::sync::{
+    atomic::{AtomicUsize, Ordering::Relaxed},
+    RwLock
+};
 
 use crate::data::{Program, INCREMENT, PHASE_OFFSET, SAMPLE_SIZE};
 use crate::graphics::P2;
@@ -7,26 +10,25 @@ use crate::visualizers::classic::cross::{draw_cross, CROSS_COL};
 use crate::math::{self, Cplx};
 
 static LOCALI: AtomicUsize = AtomicUsize::new(0);
-
+static WAVE_SCALE_FACTOR: RwLock<f32> = RwLock::new(1.0);
 
 pub const draw_oscilloscope: crate::VisFunc = |prog, stream| {
     let l = stream.len();
     let li = l as i32;
-    let range = li * prog.WAV_WIN as i32 / 100;
 
     let (width, height) = prog.pix.sizet();
 
     let width_top_h = width >> 1;
     let height_top_h = height >> 1;
 
-    let scale = prog.pix.height as f32 * prog.VOL_SCL * 0.85;
+    let scale = prog.pix.height as f32 * prog.VOL_SCL * 0.55;
 
     prog.clear_pix();
-    
+
     let mut stream_ = stream.to_vec();
-    const up_count: usize = 50;
+    const up_count: usize = 75;
     math::integrate_inplace(&mut stream_, up_count, true);
-    
+
     let mut zeroi = up_count;
     /*let mut zero = 0;
     'restart: while zeroi < l {
@@ -36,35 +38,78 @@ pub const draw_oscilloscope: crate::VisFunc = |prog, stream| {
         }
         zeroi += 1;
     }
-    
+
     if zeroi == l {
         zeroi = zero;
     }*/
 
+    let mut bass = 0.0;
+
     while zeroi < stream_.len() {
 
-		let mut smp1 = stream_[zeroi].x + stream_[zeroi].y;
-		let mut smp2 = stream_[zeroi-1].x + stream_[zeroi-1].y;
+		let mut smp1 = stream_[zeroi].x;
+		let mut smp2 = stream_[zeroi-2].x;
+
+        //bass += stream[zeroi].l1_norm();
 
 		if smp1 < 0.0 && smp2 >= 0.0
 		{ break }
 
     	zeroi += 1;
     }
+    
+    if zeroi == stream_.len() {
+    	zeroi = up_count;
+    	
+    	while zeroi < stream_.len() {
+			let mut smp1 = stream_[zeroi].y;
+			let mut smp2 = stream_[zeroi-2].y;
+
+			//bass += stream[zeroi].l1_norm();
+
+			if smp1 < 0.0 && smp2 >= 0.0
+			{ break }
+
+			zeroi += 1;
+		}
+    }
 
     if zeroi == stream_.len() {
     	zeroi = up_count;
+    } else {
+        for rest in zeroi+1..stream_.len() {
+            bass += stream_[rest].l1_norm();
+        }
     }
 
-    for di in (0..range).step_by(INCREMENT +1) {
-        let x = (di * width / range);
+    let wave_scale_factor = (bass / (stream_.len() as f32)) * 13.0 +2.0;
+
+	let wave_scale_factor_old = *WAVE_SCALE_FACTOR.read().unwrap();
+
+    let wave_scale_factor =
+        math::interpolate::subtractive_fall(
+        	wave_scale_factor_old,
+        	wave_scale_factor,
+        	1.0,
+        	0.5
+       	);
+
+
+    *WAVE_SCALE_FACTOR.write().unwrap() = wave_scale_factor;
+
+    let mut smoothed_smp = stream[zeroi];
+
+    for x in 0..prog.pix.width as i32 {
+        let di = x as usize*wave_scale_factor as usize + zeroi;
         // let xu = x as usize;
 
-        let i_ = (di + zeroi as i32).saturating_sub(width_top_h).rem_euclid(li); 
-        let i_ = i_ as usize;
+        //let i_ = (di + zeroi as i32).saturating_sub(width_top_h).rem_euclid(li);
+        //let i_ = i_ as usize;
 
-        let y1 = height_top_h + math::squish(stream[i_].x, 0.6, scale) as i32;
-        let y2 = height_top_h + math::squish(stream[i_].y, 0.6, scale) as i32;
+        smoothed_smp = crate::math::interpolate::linearfc(smoothed_smp, stream[di], 0.33);
+
+        let y1 = height_top_h + (smoothed_smp.x*scale) as i32;
+        let y2 = height_top_h + (smoothed_smp.y*scale) as i32;
 
         prog.pix.set_pixel_by(P2::new(x, y1), 0xFF_55_FF_55, |a, b| { a | b });
         prog.pix.set_pixel_by(P2::new(x, y2), 0xFF_55_55_FF, |a, b| { a | b });
@@ -81,13 +126,13 @@ pub const draw_oscilloscope: crate::VisFunc = |prog, stream| {
     
     prog.pix.draw_rect_wh(P2::new(li as i32, height / 2), prog.pix.width >> 3, 1, CROSS_COL);
     
-    stream.rotate_left(83);
+    stream.rotate_left(100);
     LOCALI.store(li, Relaxed);
 };
 
 
 pub const draw_vectorscope: crate::VisFunc = |prog, stream| {
-    let range = stream.len() * prog.WAV_WIN / 100;
+    let range = prog.WAV_WIN;
     let l = stream.len();
 
     let size = prog.pix.height.min(prog.pix.width) as i32;
@@ -144,7 +189,7 @@ pub const draw_vectorscope: crate::VisFunc = |prog, stream| {
 
     draw_cross(prog);
     
-    stream.rotate_left(range);
+    stream.rotate_left(crate::data::ROTATE_SIZE);
 };
 
 fn to_color(s: i32, size: i32) -> u8 {

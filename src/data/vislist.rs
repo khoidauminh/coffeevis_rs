@@ -5,7 +5,7 @@ use crate::math::{increment_index, decrement};
 pub struct Visualizer {
 	func: VisFunc,
 	name: &'static str,
-	request_auto_gain: bool,
+	request_normalizer: bool,
 }
 
 macro_rules! define_visualizer_struct {
@@ -13,7 +13,7 @@ macro_rules! define_visualizer_struct {
 		Visualizer {
 			func: $visfunc,
 			name: $name,
-			request_auto_gain: $request
+			request_normalizer: $request
 		}
 	}
 }
@@ -38,7 +38,7 @@ impl Visualizer {
 		Self {
 			func: f,
 			name: name,
-			request_auto_gain: request,
+			request_normalizer: request,
 		}
 	}*/
 
@@ -51,7 +51,7 @@ impl Visualizer {
 	}
 
 	pub fn request(&self) -> bool {
-		self.request_auto_gain
+		self.request_normalizer
 	}
 }
 
@@ -108,8 +108,12 @@ impl VisNavigator {
 		let list_size = self.current_list_len();
 
 		self.index_vis = increment_index(self.index_vis, list_size);
-
-		self.current_vis()
+		
+		let current = self.current_vis();
+		
+		*crate::audio::NORMALIZE.write().unwrap() = current.request();
+		
+		current
 	}
 
 	pub fn prev_vis(&mut self) -> Visualizer {
@@ -117,7 +121,11 @@ impl VisNavigator {
 
 		self.index_vis = decrement(self.index_vis, list_size);
 
-		self.current_vis()
+		let current = self.current_vis();
+		
+		*crate::audio::NORMALIZE.write().unwrap() = current.request();
+		
+		current
 	}
 
 	pub fn next_list(&mut self) {
@@ -163,8 +171,8 @@ pub const VIS_CLASSIC: &[Visualizer] =
 	define_visualizer_struct!(scopes::draw_oscilloscope, "Oscilloscope", true),
 	define_visualizer_struct!(ring::draw_ring, "Ring", true),
 	define_visualizer_struct!(spectrum::draw_spectrum, "Spectrum", true),
-	define_visualizer_struct!(bars::draw_bars, "Bars", false),
-	define_visualizer_struct!(bars::draw_bars_circle, "Bars (Circle)", false),
+	define_visualizer_struct!(bars::draw_bars, "Bars", true),
+	define_visualizer_struct!(bars::draw_bars_circle, "Bars (Circle)", true),
 	define_visualizer_struct!(wavelet::draw_wavelet, "Wavelet", true),
 	define_visualizer_struct!(shaky::draw_shaky, "Shaky", false),
 	define_visualizer_struct!(lazer::draw_lazer, "Lazer", true),

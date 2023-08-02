@@ -10,7 +10,7 @@ static DATA: RwLock<Vec<f32>> = RwLock::new(Vec::new());
 static MAX: RwLock<f32> = RwLock::new(0.0);
 
 const FFT_SIZE_RECIP: f32 = 1.0 / FFT_SIZE as f32;
-const normalize_factor: f32 = FFT_SIZE_RECIP * 2.1;
+const normalize_factor: f32 = FFT_SIZE_RECIP;
 const BARS: usize = 48;
 
 fn dynamic_smooth(t: f32, a: f32) -> f32 {
@@ -36,7 +36,7 @@ fn prepare(stream: &mut crate::audio::SampleArr, bar_num: usize, volume_scale: f
     .iter_mut()
     .enumerate()
     .for_each(|(i, smp)| 
-        *smp = stream[i*2].scale(normalize_factor)
+        *smp = stream[i*2].scale(FFT_SIZE_RECIP)
     );
     math::fft(&mut data_f);
     
@@ -47,11 +47,15 @@ fn prepare(stream: &mut crate::audio::SampleArr, bar_num: usize, volume_scale: f
     .take(bar_num)
     .enumerate()
     .for_each(|(i, smp)| {
-		let log = math::fast::fsqrt(i as f32);
+		let log = math::fast::flog2((i+2) as f32);
 		*smp = smp.scale(volume_scale * log as f32);
 	});
 	
-	*max = math::normalize_max_cplx(&mut data_f[..bar_num], 0.01, 0.7, *max, 0.0035);
+	//*max = math::normalize_max_cplx(&mut data_f, 0.01, 0.7, *max, 0.0035);
+	
+	crate::audio::limiter(&mut data_f, 0.35, 3, 10, 3);
+	
+	//let scale_factor = stream.normalize_factor_peak()*FFT_SIZE_RECIP*7.0;
     
     LOCAL
     .iter_mut()
@@ -102,6 +106,7 @@ pub const draw_bars: crate::VisFunc = |prog, stream| {
         //~ let scaling = (i_+ 1.0).log2() * (prog.PIX_R << 2) as f32;
         // let scaling = math::fast_flog2(iter) * prog.VOL_SCL * sizef.i.powi(2);
         // let scaling = (2f32).powf(math::fast_fsqrt(iter)-1.0) * prog.VOL_SCL * sizef.i * 13.0;
+        //let scalef = math::fft_scale_up(i, bar_num);
 
         let bar = math::fast::cubed_sqrt(math::interpolate::bezierf(LOCAL[idx], LOCAL[idx_next], t))*sizef.y;
         let bar = (bar as usize).clamp(1, prog.pix.height);
@@ -157,16 +162,26 @@ pub const draw_bars_circle: crate::VisFunc = |prog, stream|
         let i_next = if i+1 == bar_num {i} else {i+1};
 
         angle = angle*base_angle;
+        
+        // let scalef = math::fft_scale_up(i, bar_num);
 
         let bar = (math::fast::unit_exp2_0(math::interpolate::linearf(LOCAL[i], LOCAL[i_next], t))*sizef) as i32;
-        let bar = bar.min(size*7/10);
+        let bar = bar*7/10;
 
 		let p1 = P2::new(wh + (sizef*angle.x) as i32 / 2, hh + (sizef*angle.y) as i32 / 2);
 		let p2 = P2::new(wh + ((size-bar) as f32 *angle.x) as i32 / 2,  hh + ((size-bar) as f32*angle.y) as i32 / 2);
 		
-		let i2 = (i << 1) & 0xFF;
+		let i2 = i << 2;
+
+		let pulse = ((stream[i*3/2].x*32768.0) as u8);
+		let peak = (bar*255/size).min(255) as u8;
+
+		let r: u8 = 0;
+		let g: u8 = peak.saturating_add(pulse >> 1);
+		//let b: u8 = 
+		let b: u8 = 0xFF;
 		
-        let c = (0xFF << 24) | ((bar*255/size).min(255) << 8) as u32 | (((stream[i2].x+stream[i2].y)*64.0+192.0) as u32).min(255);
+        let c = u32::compose([0xFF, r, g, b]);
 
         prog.pix.draw_line(p1, p2, c);
     }

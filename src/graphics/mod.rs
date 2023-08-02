@@ -61,6 +61,12 @@ impl Canvas {
 	pub fn clear(&mut self) {
 		self.fill(COLOR_BLANK);
 	}
+	
+	pub fn subtract_clear(&mut self, amount: u8) {
+		self.pix.iter_mut().for_each(|pixel| {
+			*pixel = pixel.sub_by_alpha(amount);
+		});
+	}
 
 	pub fn as_slice<'a>(&'a self) -> &'a [u32] {
 		self.pix.as_slice()

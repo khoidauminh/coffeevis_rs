@@ -27,14 +27,14 @@ static BUFFER: GSA = RwLock::new(AudioBuffer::new());
 
 static NO_SAMPLE: AtomicU8 = AtomicU8::new(0);
 
-static NORMALIZE: AtomicBool = AtomicBool::new(true);
+pub static NORMALIZE: RwLock<bool> = RwLock::new(true);
 
 pub fn set_normalizer(b: bool) {
-	NORMALIZE.store(b, Ordering::Relaxed);
+	*NORMALIZE.write().unwrap() = b;
 }
 
 pub fn get_normalizer() -> bool {
-	NORMALIZE.load(Ordering::Relaxed)
+	*NORMALIZE.read().unwrap()
 }
 
 pub fn get_source() -> cpal::Stream {
@@ -76,13 +76,13 @@ pub fn read_samples<T: cpal::Sample<Float = f32>>(data: &[T]) {
 
     let mut ns = get_no_sample().saturating_add(1);
 
-    ns *=
-		if get_normalizer() {
-			b.read_from_input_with_normalizer(data) as u8
-		} else {
-			b.read_from_input(data) as u8
-		}
-	;
+    ns *= b.read_from_input(data) as u8;
+    
+    if get_normalizer() {
+		b.normalize();
+	}
+
+	// println!("SAMPLE_READ");
 
     NO_SAMPLE.store(ns, Ordering::Relaxed);
 }
@@ -93,4 +93,67 @@ pub fn get_buf() -> SampleArr {
 
 pub fn get_no_sample() -> u8 {
 	NO_SAMPLE.load(Ordering::Relaxed)
+}
+
+pub fn limiter(
+	a: &mut [Cplx<f32>],
+	limit: f32,
+	attack_samples: usize, 
+	release_samples: usize,
+	hold_samples: usize
+) {
+	use crate::math::interpolate::{envelope, subtractive_fall_hold};
+	
+	let mut index = 0usize;
+	let mut replay_gain = 1.0f32;
+	let mut hold_index = 0;
+	let mut amp = 0.0;
+	let mut l = a.len();
+	
+	let attack_amount = 1.0 / attack_samples as f32;
+	let release_amount = 1.0 / release_samples as f32; 
+	
+	let first_iter = attack_samples + (hold_samples | 1)/2;
+	while 
+		index < first_iter && 
+		index < l
+	{
+		replay_gain = replay_gain1(a[index], limit, &mut amp, attack_amount, release_amount, hold_samples, &mut hold_index);
+		
+		index += 1;
+	}
+	
+	while index < l {
+		let prev = &mut a[index-first_iter];
+		*prev = prev.scale(replay_gain);
+		
+		replay_gain = replay_gain1(a[index], limit, &mut amp, attack_amount, release_amount, hold_samples, &mut hold_index);
+	
+		index += 1;
+	}
+}
+
+fn replay_gain1(smp: Cplx<f32>, limit: f32, amp: &mut f32, attack: f32, release: f32, hold: usize, hold_index: &mut usize) -> f32 {
+	use crate::math::interpolate::linearf;
+	
+	let tmp_amp = smp.l1_norm().max(limit);
+	
+	if tmp_amp > *amp {
+		*amp = tmp_amp; //(*amp + tmp_amp*attack).min(tmp_amp);
+		*hold_index = 0;
+	} else if *hold_index >= hold {
+		*amp = crate::math::interpolate::linearf(*amp, tmp_amp, release);
+	} else {
+		*hold_index += 1;
+	}
+	
+	/*if tmp_amp > *amp || *hold_index >= hold {
+		*amp = tmp_amp;
+		*hold_index = 0;
+	} else {
+		*hold_index += 1;
+	}*/
+
+	
+	1.0 / *amp
 }

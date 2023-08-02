@@ -2,6 +2,10 @@ pub trait Blend
 {
 	fn mix(self, other: u32) -> u32;
 	fn add(self, other: u32) -> u32;
+	fn sub(self, other: u32) -> u32;
+	
+	fn sub_by_alpha(self, other: u8) -> u32;
+	
 	fn or(self, other: u32) -> u32;
 	fn fade(self, alpha: u8) -> u32;
 	fn decompose(self) -> [u8; 4];
@@ -55,6 +59,29 @@ impl Blend for u32
 			ar.saturating_add(u8_mul(br, ba)),
 			ag.saturating_add(u8_mul(bg, ba)),
 			ab.saturating_add(u8_mul(bb, ba))
+		])
+	}
+	
+	fn sub(self, other: u32) -> u32
+	{
+		let [aa, ar, ag, ab] = self.to_be_bytes();
+		let [ba, br, bg, bb] = other.to_be_bytes();
+		u32::from_be_bytes([
+			aa,
+			ar.saturating_sub(u8_mul(br, ba)),
+			ag.saturating_sub(u8_mul(bg, ba)),
+			ab.saturating_sub(u8_mul(bb, ba))
+		])
+	}
+	
+	fn sub_by_alpha(self, other: u8) -> u32
+	{
+		let [aa, ar, ag, ab] = self.to_be_bytes();
+		u32::from_be_bytes([
+			aa,
+			ar.saturating_sub(other),
+			ag.saturating_sub(other),
+			ab.saturating_sub(other)
 		])
 	}
 
