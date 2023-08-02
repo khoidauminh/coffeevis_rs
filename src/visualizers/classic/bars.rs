@@ -1,10 +1,12 @@
 use std::sync::RwLock;
 
-use crate::data::{POWER, FFT_SIZE, INCREMENT, Program};
+use crate::data::{FFT_SIZE, INCREMENT, Program};
 use crate::graphics::{P2, blend::Blend};
 use crate::math::{self, Cplx, PIH, TAU};
 
 const color: [u32; 3] = [0x66ff66, 0xaaffff, 0xaaaaff];
+
+const FFT_SIZE_HALF: usize = FFT_SIZE / 2;
 
 static DATA: RwLock<Vec<f32>> = RwLock::new(Vec::new());
 static MAX: RwLock<f32> = RwLock::new(0.0);
@@ -34,6 +36,7 @@ fn prepare(stream: &mut crate::audio::SampleArr, bar_num: usize, volume_scale: f
     let mut data_f = [Cplx::<f32>::zero(); FFT_SIZE];
     data_f
     .iter_mut()
+    .take(FFT_SIZE_HALF)
     .enumerate()
     .for_each(|(i, smp)| 
         *smp = stream[i*2].scale(FFT_SIZE_RECIP)
@@ -53,7 +56,7 @@ fn prepare(stream: &mut crate::audio::SampleArr, bar_num: usize, volume_scale: f
 	
 	//*max = math::normalize_max_cplx(&mut data_f, 0.01, 0.7, *max, 0.0035);
 	
-	crate::audio::limiter(&mut data_f, 0.35, 3, 10, 3);
+	crate::audio::limiter(&mut data_f[..FFT_SIZE_HALF], 0.25, 5, 10, 10);
 	
 	//let scale_factor = stream.normalize_factor_peak()*FFT_SIZE_RECIP*7.0;
     
@@ -69,11 +72,11 @@ fn prepare(stream: &mut crate::audio::SampleArr, bar_num: usize, volume_scale: f
 		//*w = math::interpolate::linearf(*w, r.l1_norm(), dynamic_smoothing);
 	});
 	
-	stream.rotate_left(FFT_SIZE / 2);
+	stream.rotate_left(FFT_SIZE_HALF/2);
 }
 
 pub const draw_bars: crate::VisFunc = |prog, stream| {
-    const divider: usize = 2;
+    const divider: usize = 1;
 
 	let bar_num = prog.pix.width / divider;
 	let bnf = bar_num as f32;

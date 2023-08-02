@@ -112,48 +112,110 @@ pub fn limiter(
 	
 	let attack_amount = 1.0 / attack_samples as f32;
 	let release_amount = 1.0 / release_samples as f32; 
-	
-	let first_iter = attack_samples + (hold_samples | 1)/2;
-	while 
-		index < first_iter && 
-		index < l
-	{
-		replay_gain = replay_gain1(a[index], limit, &mut amp, attack_amount, release_amount, hold_samples, &mut hold_index);
+
+	let mut peak_holder = 
+		PeakHolder::init(
+			limit, 
+			release_amount,
+			hold_samples
+		);
 		
-		index += 1;
-	}
+	let hold_samples_half = hold_samples/2;
+	
+	let full_delay = hold_samples + attack_samples;
+		
+	let mut delay = DelaySmooth::init(full_delay, limit);
 	
 	while index < l {
-		let prev = &mut a[index-first_iter];
-		*prev = prev.scale(replay_gain);
-		
-		replay_gain = replay_gain1(a[index], limit, &mut amp, attack_amount, release_amount, hold_samples, &mut hold_index);
+		replay_gain = delay.update(peak_holder.update(a[index].l1_norm())).recip();
+	
+		if let Some(smp) = a.get_mut(index.wrapping_sub(full_delay)) {
+			*smp = smp.scale(replay_gain);
+		}
 	
 		index += 1;
 	}
 }
 
-fn replay_gain1(smp: Cplx<f32>, limit: f32, amp: &mut f32, attack: f32, release: f32, hold: usize, hold_index: &mut usize) -> f32 {
-	use crate::math::interpolate::linearf;
-	
-	let tmp_amp = smp.l1_norm().max(limit);
-	
-	if tmp_amp > *amp {
-		*amp = tmp_amp; //(*amp + tmp_amp*attack).min(tmp_amp);
-		*hold_index = 0;
-	} else if *hold_index >= hold {
-		*amp = crate::math::interpolate::linearf(*amp, tmp_amp, release);
-	} else {
-		*hold_index += 1;
+struct PeakHolder {
+	amp: f32,
+	limit: f32,
+	release: f32, 
+	hold_for: usize,
+	hold: usize,
+}
+
+impl PeakHolder {
+	pub fn init(
+		limit: f32,
+		release: f32,
+		hold_for: usize
+	) -> Self {
+		Self {
+			amp: limit,
+			limit: limit,
+			release: release, 
+			hold_for: hold_for,
+			hold: 0
+		}
 	}
 	
-	/*if tmp_amp > *amp || *hold_index >= hold {
-		*amp = tmp_amp;
-		*hold_index = 0;
-	} else {
-		*hold_index += 1;
-	}*/
-
+	pub fn update(&mut self, new_amp: f32) -> f32 {
+		use crate::math::interpolate::linearf;
 	
-	1.0 / *amp
+		let new_amp = f32::max(new_amp, self.limit);
+		
+		if new_amp > self.amp {
+			self.amp = new_amp;
+			self.hold = 0;
+		} else if self.hold >= self.hold_for {
+			self.amp = linearf(self.amp, new_amp, self.release);
+		} else {
+			self.hold += 1;
+		}
+		
+		self.amp
+	}
+	
+	pub fn update_and_get_gain(&mut self, new_amp: f32) -> f32 {
+		1.0 / self.update(new_amp)
+	}
+}
+
+struct DelaySmooth {
+	delay_for: usize,
+	denominator: f32,
+	index: usize,
+	vec: Vec<f32>,
+	sum: f32,
+}
+
+impl DelaySmooth {
+	pub fn init(delay_for: usize, val: f32) -> Self {
+		let size = delay_for+1;
+		let denominator = 1.0 / size as f32; 
+		Self {
+			delay_for: size,
+			denominator: denominator,
+			index: 0,
+			vec: vec![val; size],
+			sum: size as f32 * val
+		}
+	}
+	
+	pub fn update(&mut self, val: f32) -> f32 {	
+		let out = self.sum * self.denominator;
+		
+		self.sum += val;
+		self.sum -= self.vec[self.index];
+		
+		self.vec[self.index] = val;
+		
+		self.index = 
+			crate::math::increment_index(
+				self.index, self.delay_for
+			);
+		
+		out
+	}
 }
