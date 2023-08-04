@@ -100,7 +100,8 @@ pub fn limiter(
 	limit: f32,
 	attack_samples: usize, 
 	release_samples: usize,
-	hold_samples: usize
+	hold_samples: usize,
+	gain: f32
 ) {
 	use crate::math::interpolate::{envelope, subtractive_fall_hold};
 	
@@ -125,14 +126,34 @@ pub fn limiter(
 	let full_delay = hold_samples + attack_samples;
 		
 	let mut delay = DelaySmooth::init(full_delay, limit);
+
+	let bound = l + full_delay;
+	
+	let mut getrg = |smp| {
+		gain / delay.update(peak_holder.update(smp))
+	};
+
+	while index < full_delay {
+		replay_gain = getrg(a[index].l1_norm());
+		index += 1;
+	}
 	
 	while index < l {
-		replay_gain = delay.update(peak_holder.update(a[index].l1_norm())).recip();
+		replay_gain = getrg(a[index].l1_norm());
+		
+		let smp = &mut a[index-full_delay];			
+		
+		*smp = smp.scale(replay_gain);
+		
+		index += 1;
+	}
 	
-		if let Some(smp) = a.get_mut(index.wrapping_sub(full_delay)) {
-			*smp = smp.scale(replay_gain);
-		}
-	
+	while index < bound {
+		replay_gain = getrg(limit);
+		
+		let smp = &mut a[index-full_delay];
+		*smp = smp.scale(replay_gain);
+		
 		index += 1;
 	}
 }

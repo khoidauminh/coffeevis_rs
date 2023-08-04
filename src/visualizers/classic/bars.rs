@@ -24,6 +24,8 @@ fn dynamic_smooth2(t: f32, b: f32) -> f32 {
 }
 
 fn prepare(stream: &mut crate::audio::SampleArr, bar_num: usize, volume_scale: f32) {
+	let bar_num = bar_num +1;
+	
 	let bnf = bar_num as f32;
 	let l = stream.len();
 	
@@ -56,13 +58,14 @@ fn prepare(stream: &mut crate::audio::SampleArr, bar_num: usize, volume_scale: f
 	
 	//*max = math::normalize_max_cplx(&mut data_f, 0.01, 0.7, *max, 0.0035);
 	
-	crate::audio::limiter(&mut data_f[..FFT_SIZE_HALF], 0.25, 5, 10, 10);
+	crate::audio::limiter(&mut data_f[..bar_num+5+10], 0.25, 5, 10, 10, 0.94);
 	
 	//let scale_factor = stream.normalize_factor_peak()*FFT_SIZE_RECIP*7.0;
     
     LOCAL
     .iter_mut()
     .zip(data_f.iter())
+    .take(bar_num)
     .enumerate()
     .for_each(|(i, (w, r))| {
 		let i_ = i as f32 / bnf;
@@ -76,9 +79,9 @@ fn prepare(stream: &mut crate::audio::SampleArr, bar_num: usize, volume_scale: f
 }
 
 pub const draw_bars: crate::VisFunc = |prog, stream| {
-    const divider: usize = 1;
-
-	let bar_num = prog.pix.width / divider;
+	use crate::math::{interpolate::bezierf, fast::cubed_sqrt, increment_index};
+	
+	let bar_num = prog.pix.width / 2;
 	let bnf = bar_num as f32;
 	let l = stream.len();
 	
@@ -87,48 +90,55 @@ pub const draw_bars: crate::VisFunc = |prog, stream| {
 	let mut LOCAL = DATA.write().unwrap();
 
     prog.clear_pix();
-
-    let mut iter: f32 = 0.4;
-
     let sizef = Cplx::<f32>::new(prog.pix.width as f32, prog.pix.height as f32);
 
     let bnfh = bnf * 0.5;
 
-    while iter < bnf {
-        let i = iter as usize;
+	let mut iter: f32 = 0.4;
+	
+	let mut prev_index = 0;
+	let mut smoothed_smp = 0f32;
 
+    loop {
         let i_ = iter / bnf;
-
-        let idxf = i_*bnf;
+        let idxf = iter;
+        
+        iter += i_;
+        
         let idx = idxf as usize;
+        
         let t = idxf.fract();
-        let idx_next = if idx+1 == bar_num {idx} else {idx+1};
+        
+        smoothed_smp = smoothed_smp.max({
+			cubed_sqrt(bezierf(LOCAL[idx], LOCAL[(idx+1).min(bar_num)], t))
+		});
+		
+		if prev_index == idx {continue}
+		
+		prev_index = idx;
+		
+		let idx = idx-1;
 
-        // this progmeter makes the bass region in the spectrum animaton look more aggresive
-
-        //~ let scaling = (i_+ 1.0).log2() * (prog.PIX_R << 2) as f32;
-        // let scaling = math::fast_flog2(iter) * prog.VOL_SCL * sizef.i.powi(2);
-        // let scaling = (2f32).powf(math::fast_fsqrt(iter)-1.0) * prog.VOL_SCL * sizef.i * 13.0;
-        //let scalef = math::fft_scale_up(i, bar_num);
-
-        let bar = math::fast::cubed_sqrt(math::interpolate::bezierf(LOCAL[idx], LOCAL[idx_next], t))*sizef.y;
+        let bar = smoothed_smp*sizef.y;
         let bar = (bar as usize).clamp(1, prog.pix.height);
         
-        let fade = (128.0 + stream[i*3/2].x*32768.0) as u8;
+        let fade = (128.0 + stream[idx*3/2].x*32768.0) as u8;
         let peak = (bar*255/prog.pix.height) as u8;
         let red = (fade/2).saturating_add(128).max(peak);
 
         prog.pix.draw_rect_wh(
 			P2::new(
-				(divider*i) as i32, 
+				(prog.pix.width*idx/bar_num) as i32, 
 				(prog.pix.height-bar.min(prog.pix.height-1)) as i32
 			), 
 			2, 
 			bar, 
 			u32::from_be_bytes([0xFF, 0xFF, (fade /4 *3).max(peak), 0])
 		);
-
-        iter += i_;
+		
+		smoothed_smp = 0.0;
+		
+		if idx+1 == bar_num {break}
     }
 };
 
@@ -162,7 +172,7 @@ pub const draw_bars_circle: crate::VisFunc = |prog, stream|
         let idxf = i_*fft_window;
         let idx = idxf as usize;
         let t = idxf.fract();
-        let i_next = if i+1 == bar_num {i} else {i+1};
+        let i_next = i+1;
 
         angle = angle*base_angle;
         
