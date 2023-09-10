@@ -190,16 +190,18 @@ impl Program {
 	}
     /*
 	pub fn as_win(mut self) -> Self {
-		self.pix.width = DEFAULT_SIZE_WIN as usize;
-		self.pix.height = DEFAULT_SIZE_WIN as usize;
+		self.pix.width() = DEFAULT_SIZE_WIN as usize;
+		self.pix.height() = DEFAULT_SIZE_WIN as usize;
 		self.mode = Mode::Win;
 		self.refresh();
 		self
 	}*/
 
 	pub fn as_win(mut self) -> Self {
-		self.pix.width = DEFAULT_SIZE_WIN as usize;
-		self.pix.height = DEFAULT_SIZE_WIN as usize;
+		self.pix.resize(
+			DEFAULT_SIZE_WIN as usize,
+			DEFAULT_SIZE_WIN as usize
+		);
 		self.mode = Mode::Win;
 		self.refresh();
 		self

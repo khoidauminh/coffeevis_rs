@@ -14,8 +14,8 @@ pub type P2 = Cplx<i32>;
 
 pub struct Canvas {
 	pix: Vec<u32>,
-	pub width: usize,
-	pub height: usize,
+	width: usize,
+	height: usize,
 }
 
 pub type Image = Canvas;
@@ -40,6 +40,14 @@ impl Canvas {
 			width: w,
 			height: h,
 		}
+	}
+	
+	pub fn width(&self) -> usize {
+	    self.width
+	}
+	
+	pub fn height(&self) -> usize {
+	    self.height
 	}
 
 	pub fn size(&self) -> P2 {
@@ -100,11 +108,11 @@ impl Canvas {
 		let x = p.x as usize;
 		let y = p.y as usize;
 
-		let out_of_bounds = (!(
+		/*let out_of_bounds = (!(
 		    x >= self.width
-	    ) as usize).wrapping_sub(1);
+	    ) as usize).wrapping_sub(1);*/
 
-		x.wrapping_add(y.wrapping_mul(self.width)) | out_of_bounds
+		x.wrapping_add(y.wrapping_mul(self.width))
 	}
 
 	pub fn pixel(&self, i: usize) -> u32 {

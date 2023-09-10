@@ -20,35 +20,41 @@ pub fn fft(a: &mut [Cplx<f32>]) {
 	let l = a.len();
 	let power = log2i::<usize>(l);
 
-	fft::butterfly2(a, power);
-	fft::compute_fft_recursive(a);
-	//fft::compute_fft_half(a);
+	fft::butterfly(a, power);
+	fft::compute_fft_iterative(a);
+}
+
+pub fn fft_half(a: &mut [Cplx<f32>]) {
+	let l = a.len();
+	let power = log2i::<usize>(l);
+
+	fft::butterfly_half(a, power);
+	fft::compute_fft_half(a);
 }
 
 pub const fn log2i<T>(n: usize) -> usize {
-	usize::BITS.saturating_sub(n.leading_zeros()).saturating_sub(1) as usize
+	usize::BITS.saturating_sub(n.leading_zeros()).wrapping_sub(1) as usize
 }
 
-
 pub fn increment<
-	T: ops::Add<Output = T>
+	T: num_traits::WrappingAdd<Output = T>
 	+  ops::Mul<Output = T>
 	+  PartialOrd<T>
 	+  From<bool>
 	+ std::marker::Copy
 	>(a: T, limit: T) -> T {
-	let b = a + T::from(true);
-	b * T::from(b < limit) // eliminates if condition and modulo operator
+	
+	let b = a.wrapping_add(&T::from(true));
+	if b >= limit 
+        {return T::from(false)} 
+    else
+        {return b}
 }
-/*
-pub fn increment<T>(a: T, limit: T) -> T
-where T: From<bool> + PartialOrd<T> + Copy +
-*/
 
-// Premature optimization at its finest
-pub fn increment_index(mut a: usize, limit: usize) -> usize {
-    a += 1;
-    a & ((a >= limit) as usize).wrapping_sub(1)
+pub fn increment_index(a: usize, limit: usize) -> usize {
+    let b = a.wrapping_add(1);
+    let mask = ((b >= limit) as usize).wrapping_sub(1);
+    b & mask
 }
 
 pub fn decrement<T>(a: T, limit: T) -> T
@@ -217,40 +223,34 @@ where T: ops::Sub<Output = T> + ops::Add<Output = T>
 */
 pub fn cos_sin(a: f32) -> Cplx<f32>
 {
-	Cplx::<f32>{x: fast::sin_norm(fast::wrap(a+0.25)), y: fast::sin_norm(fast::wrap(a))}
+	fft::twiddle_norm(a)
 }
 
 pub mod interpolate {
 	use super::Cplx;
-	pub fn linearfc(a: Cplx<f32>, b: Cplx<f32>, t: f32) -> Cplx<f32>
-	{
+	pub fn linearfc(a: Cplx<f32>, b: Cplx<f32>, t: f32) -> Cplx<f32> {
 		a + (b-a).scale(t)
 	}
 
-	pub fn linearf(a: f32, b: f32, t: f32) -> f32
-	{
+	pub fn linearf(a: f32, b: f32, t: f32) -> f32 {
 		a + (b-a)*t
 	}
 
-	pub fn cosf(a: f32, b: f32, t: f32) -> f32
-	{
+	pub fn cosf(a: f32, b: f32, t: f32) -> f32 {
 		a + (b-a)*(0.5-0.5*super::fast::cos_norm(t*0.5))
 	}
 
-	pub fn bezierf(a: f32, b: f32, t: f32) -> f32
-	{
+	pub fn bezierf(a: f32, b: f32, t: f32) -> f32 {
 	    a + (b-a)*(t*t*(3.0-2.0*t))
 	}
 
-	pub fn nearest<T>(a: T, b: T, t: f32) -> T
-	{
+	pub fn nearest<T>(a: T, b: T, t: f32) -> T {
 		if t < 0.5 {return a}
 		return b
 	}
 
 	// perbyte = 1/256 (equivalent to percent = 1/100)
-	pub const fn lineari(a: i32, b: i32, perbyte: i32) -> i32
-	{
+	pub const fn lineari(a: i32, b: i32, perbyte: i32) -> i32 {
 		a + (((b-a)*perbyte) >> 8)
 	}
 

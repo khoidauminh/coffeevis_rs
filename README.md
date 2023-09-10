@@ -15,9 +15,10 @@ Run `cargo install coffeevis`
 
 ## Usage
 Coffeevis supports temporary options at launch
+
 | Option | Value (example) | Description |
 | ------ | ------ | ------ |
-| --win |  | opens as a window |
+| --win-legacy |  | opens window with minifb (coffeevis now runs with winit by default) |
 | --ascii<br />--block<br />--braille | | runs in the terminal |
 | --auto-switch | true<br />false | toggles auto visualizer switching |
 | --size | 80x80 | sets resolution in window mode |
@@ -38,7 +39,7 @@ A maximum resolution is built into the console mode (default: 50x50). Coffeevis 
 ## Keyboard shortcuts
 
 ### Global
-|  Key | Descripttion |
+|  Key | Description |
 | ------ | ------ |
 | <kbd>Space</kbd> | iterates through visualizers |
 | <kbd>q</kbd> | exits |
@@ -49,7 +50,7 @@ A maximum resolution is built into the console mode (default: 50x50). Coffeevis 
 | <kbd>\\</bkd> | toggles auto switching (default: ON, 8 seconds) |
 
 ### Terminal mode
-|  Key | Descripttion |
+|  Key | Description |
 | ------ | ------ |
 | <kbd>.</kbd> | toggles between ascii rendering, block rendering and braille rendering |
 | <kbd>9</kbd> / <kbd>0</kbd> | decreases/increases maximum resolution |

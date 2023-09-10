@@ -1,8 +1,9 @@
 use std::sync::{
     atomic::{AtomicUsize, Ordering::Relaxed},
-    RwLock
+    RwLock,
 };
 
+use crate::audio::MovingAverage;
 use crate::data::{Program, INCREMENT, PHASE_OFFSET, SAMPLE_SIZE};
 use crate::graphics::P2;
 use crate::visualizers::classic::cross::{draw_cross, CROSS_COL};
@@ -21,7 +22,7 @@ pub const draw_oscilloscope: crate::VisFunc = |prog, stream| {
     let width_top_h = width >> 1;
     let height_top_h = height >> 1;
 
-    let scale = prog.pix.height as f32 * prog.VOL_SCL * 0.55;
+    let scale = prog.pix.height() as f32 * prog.VOL_SCL * 0.45;
 
     prog.clear_pix();
 
@@ -97,9 +98,20 @@ pub const draw_oscilloscope: crate::VisFunc = |prog, stream| {
 
     *WAVE_SCALE_FACTOR.write().unwrap() = wave_scale_factor;
 
-    let mut smoothed_smp = stream[zeroi];
 
-    for x in 0..prog.pix.width as i32 {
+    let mut smoothed_smp = stream[zeroi];
+    /*let mut smoothed_smp = Cplx::<f32>::new(0.0, 0.0);
+    for i in (0..3).rev() {
+        let di = zeroi.saturating_sub(i as usize*wave_scale_factor as usize);
+        smoothed_smp = crate::math::interpolate::linearfc(smoothed_smp, stream[di], 0.33);
+    }*/
+    
+    for x in 0..4 {
+        let di = x as usize*wave_scale_factor as usize + zeroi;
+        smoothed_smp = crate::math::interpolate::linearfc(smoothed_smp, stream[di], 0.33);
+    }
+
+    for x in 4..prog.pix.width() as i32 +4 {
         let di = x as usize*wave_scale_factor as usize + zeroi;
         // let xu = x as usize;
 
@@ -111,22 +123,23 @@ pub const draw_oscilloscope: crate::VisFunc = |prog, stream| {
         let y1 = height_top_h + (smoothed_smp.x*scale) as i32;
         let y2 = height_top_h + (smoothed_smp.y*scale) as i32;
 
+        let x = x - 4;
         prog.pix.set_pixel_by(P2::new(x, y1), 0xFF_55_FF_55, |a, b| { a | b });
         prog.pix.set_pixel_by(P2::new(x, y2), 0xFF_55_55_FF, |a, b| { a | b });
     }
 
-    let li = (LOCALI.load(Relaxed) + prog.pix.width*3 / 2 + 1) % prog.pix.width;
+    let li = (LOCALI.load(Relaxed) + prog.pix.width()*3 / 2 + 1) % prog.pix.width();
 
     prog.pix.draw_rect_wh(
 		P2::new(li as i32, height / 10),
         1,
-        prog.pix.height - prog.pix.height / 5,
+        prog.pix.height() - prog.pix.height() / 4,
         CROSS_COL,
     );
     
-    prog.pix.draw_rect_wh(P2::new(li as i32, height / 2), prog.pix.width >> 3, 1, CROSS_COL);
+    prog.pix.draw_rect_wh(P2::new(li as i32, height / 2), prog.pix.width() >> 3, 1, CROSS_COL);
     
-    stream.rotate_left(100);
+    stream.rotate_left(200);
     LOCALI.store(li, Relaxed);
 };
 
@@ -135,7 +148,7 @@ pub const draw_vectorscope: crate::VisFunc = |prog, stream| {
     let range = prog.WAV_WIN;
     let l = stream.len();
 
-    let size = prog.pix.height.min(prog.pix.width) as i32;
+    let size = prog.pix.height().min(prog.pix.width()) as i32;
     let sizei = size as i32;
     let scale = size as f32 * prog.VOL_SCL * 0.5;
 
@@ -155,18 +168,33 @@ pub const draw_vectorscope: crate::VisFunc = |prog, stream| {
     //let mut data = stream.iter().step_by(INCREMENT).map(|x| *x).collect::<Vec<_>>();
     //math::integrate_streamlace(&mut data, 10, true);
     
-    let mut smoothed_sample = Cplx::<f32>::new(stream[0].x, stream[PHASE_OFFSET].y);
+    const SMOOTH_SIZE: usize = 8; 
+    
+    let mut smoothed_sample = 
+        MovingAverage::init(
+            Cplx::<f32>::zero(),
+            SMOOTH_SIZE
+         );
+        
+    
+    for _ in 0..SMOOTH_SIZE { 
+        let sample = Cplx::<f32>::new(stream[di].x, stream[di+PHASE_OFFSET].y);
+        _ = smoothed_sample.update(sample);
+        di += INCREMENT;
+    }
 
     while di < range {
         let sample = Cplx::<f32>::new(stream[di].x, stream[di+PHASE_OFFSET].y);
         
-        //let sample = math::interpolate::linearfc(smoothed_sample, sample, 0.35);
+        let sample = smoothed_sample.update(sample);
+        
+        //let sample = math::interpolate::linearfc(smoothed_sample, sample, 0.3);
         /*let sample = Cplx::<f32>::new(
 			math::interpolate::sqrt(smoothed_sample.x, sample.x, 0.1),
 			math::interpolate::sqrt(smoothed_sample.y, sample.y, 0.1)
         );*/
-		
-		smoothed_sample = sample;
+        
+        // smoothed_sample = sample;
 
         // smooth = crate::math::interpolate::linearfc(smooth, sample, smooth_factor);
 

@@ -37,7 +37,7 @@ pub const draw_shaky: crate::VisFunc = |prog, stream| {
 
     let mut data_f = [Cplx::<f32>::zero(); 512];
 
-    let sizef = prog.pix.width.min(prog.pix.height) as f32;
+    let sizef = prog.pix.width().min(prog.pix.height()) as f32;
 
     data_f
     .iter_mut()

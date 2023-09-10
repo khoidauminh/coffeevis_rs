@@ -9,12 +9,12 @@ pub const draw_ring: crate::VisFunc = |prog, stream| {
 
     let range = prog.WAV_WIN;
 
-    // if range < prog.pix.height+prog.pix.width { return (); }
+    // if range < prog.pix.height()+prog.pix.width() { return (); }
 
-    let size = prog.pix.height.min(prog.pix.width) as i32;
+    let size = prog.pix.height().min(prog.pix.width()) as i32;
 
-    let width = prog.pix.width as i32;
-    let height = prog.pix.height as i32;
+    let width = prog.pix.width() as i32;
+    let height = prog.pix.height() as i32;
 
     let width_top_h = width >> 1;
     let height_top_h = height >> 1;

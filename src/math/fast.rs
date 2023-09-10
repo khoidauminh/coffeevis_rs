@@ -11,12 +11,11 @@ pub fn radian_wrap(x: f32) -> f32 {
 }
 
 pub fn sin_norm(x: f32) -> f32 {
-	let y = x*(8.0-16.0*x.abs());
-    y*(0.7703 + 0.229703*y.abs())
+    (x*TAU).sin()
 }
 
 pub fn cos_norm(x: f32) -> f32 {
-	sin_norm(x + 0.25)
+    (x*TAU).cos()
 }
 
 pub fn bit_reverse(n: usize, power: usize) -> usize {
@@ -25,7 +24,7 @@ pub fn bit_reverse(n: usize, power: usize) -> usize {
 
 pub fn fsqrt(x: f32) -> f32 {
 	const BIAS: u32 = 127 << 23;
-    let mut xi = x.to_bits() & 0x7F_FF_FF_FF; // discarding the sign, allowing x to be negative
+    let mut xi = x.to_bits();
     xi = (xi+BIAS) >> 1;
     f32::from_bits(xi)
 }
@@ -43,47 +42,34 @@ pub fn unit_exp2(x: f32) -> f32 {
     unit_exp2_0(x) + 1.0
 }
 
-pub fn isqrt(x: usize) -> usize {
-    if (x < 2) {
-        return x;
-    }
+pub fn isqrt(val: usize) -> usize {
+    if val < 2 {return val}
 
-    let small_cand = isqrt(x >> 2) << 1;
-    let large_cand = small_cand + 1;
-    if large_cand.pow(2) > x {
-        return small_cand;
-    }
-    return large_cand
+    let mut a = 2;
+    let mut b;
 
-    /*
-    let low = 1;
-    let high = x >> 1;
-
-    while (low+1 < high) {
-        let mid = (low+high) / 2;
-
-    }*/
+    let mut z = a*a;
+    while z < val {a = z; z *= a} // Blow up the low bound by tetration,
+    
+    while a*a < val {a *= 2} // then get a closer value by doubling.
+    a /= 2;
+    
+    b = val / a; a = (a+b) /2; // I forgot what this does, it looks like 
+    b = val / a; a = (a+b) /2; // a binary search.
+    // b = val / a; a = (a+b) /2; // For extra accuracy, which is not needed
+    
+    return a;
 }
 
 pub fn flog2(x: f32) -> f32 {
-   /* let mut xi = x.to_bits() & 0x7F_FF_FF_FF;
-    let log2 = ((xi >> 23) as i64 - 128) as f32;
-
-    xi &= !(255 << 23);
-    xi += BIAS;
-
-    let xi = f32::from_bits(xi);
-
-    log2 + (-0.34484843*xi+2.02466578)*xi -0.67487759 */
-
+    const error: f32 = 0.086071014*0.5;
     const mask: u32 = (1 << 23)-1;
     const ratio_recip: f32 = 1.0 / (mask+1) as f32;
 
     let xi = x.to_bits();
 
-
     let exp = (xi >> 23) as f32 - 128.0;
     let fract = ((xi & mask) as f32)*ratio_recip;
 
-    exp + fract
+    exp + fract + error
 }

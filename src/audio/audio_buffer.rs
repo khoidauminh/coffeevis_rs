@@ -12,7 +12,7 @@ const BUFFER_SIZE_POWER: usize = crate::data::POWER;
 const BUFFER_SIZE: usize = 1 << BUFFER_SIZE_POWER;
 const SIZE_MASK: usize = BUFFER_SIZE - 1;
 
-const ATTACK_SPEED: f32 = 0.03;
+const REACT_SPEED: f32 = 0.025;
 
 type BufferArray = [Cplx<f32>; BUFFER_SIZE];
 
@@ -133,11 +133,11 @@ impl AudioBuffer {
 	}
 
     pub fn rotate_left(&mut self, n: usize) {
-        self.offset = self.offset.wrapping_add(n) & SIZE_MASK;
+        self.offset = self.index_add(self.offset, n);
     }
 
     pub fn rotate_right(&mut self, n: usize) {
-        self.offset = self.offset.wrapping_add(BUFFER_SIZE).wrapping_sub(n) & SIZE_MASK;
+        self.offset = self.index_sub(self.offset, n);
     }
 
     pub fn peak(&self) -> f32 {
@@ -149,9 +149,15 @@ impl AudioBuffer {
     }
     
     pub fn normalize_factor_peak(&self) -> f32 {
-		AMP_TRIGGER_THRESHOLD / 
-			self.max
-			.min(AMP_TRIGGER_THRESHOLD)
+        const MAX_FACTOR: f32 = AMP_TRIGGER_THRESHOLD / AMP_PERSIST_LIMIT;
+    
+		if self.max > AMP_TRIGGER_THRESHOLD {
+		    1.0   
+		} else if self.max < AMP_PERSIST_LIMIT {
+		    MAX_FACTOR
+		} else {
+		    AMP_TRIGGER_THRESHOLD / self.max
+		}
 	}
 	
 	pub fn normalize_factor_average(&self) -> f32 {
@@ -173,6 +179,10 @@ impl AudioBuffer {
     #[doc(hidden)]
     pub fn reset_offset(&mut self) {
         self.offset = 0;
+    }
+    
+    pub fn set_to_writepoint(&mut self) {
+        self.offset = self.write_point;
     }
 
 	/*
@@ -198,23 +208,36 @@ impl AudioBuffer {
     /// Doesn't compute max and average.
     pub fn read_from_input_quiet<T: cpal::Sample<Float = f32>>(&mut self, data: &[T]) -> bool {
         let input_size = data.len();
+        self.input_size = input_size /2;
         let mut silence_index: u32 = 0;
-
-        self.offset = self.write_point;
-        self.write_point = (self.write_point + input_size) & SIZE_MASK;
 
         let mut di = self.write_point;
         data
         .chunks_exact(2)
         .enumerate()
         .for_each(|(i, chunk)| {
-            let mut smp = &mut self.buffer[di];
+            let mut smp = &mut unsafe{self.buffer.get_unchecked_mut(di)};
             write_sample(smp, chunk);
-            silence_index += ((smp.x > SILENCE_LIMIT) || (smp.y > SILENCE_LIMIT)) as u32;
-            di = increment_index(di, BUFFER_SIZE);
-        });
 
-        silence_index < SILENCE_INDEX
+			let left  = smp.x.abs();
+			let right = smp.y.abs();
+			
+            silence_index += ((left > SILENCE_LIMIT) || (right > SILENCE_LIMIT)) as u32;
+	        di = self.index_add(di, 1);
+        });
+        
+        self.write_point = di;
+
+
+        if input_size >= BUFFER_SIZE {
+            self.offset = self.write_point;
+        } else {
+            self.offset = self.index_sub(self.write_point, input_size);
+        }
+
+        self.silent = silence_index < SILENCE_INDEX;
+
+        self.silent
     }
 
     /// With `normalizer`
@@ -223,9 +246,12 @@ impl AudioBuffer {
         self.input_size = input_size /2;
         let mut silence_index: u32 = 0;
 
-        let mut max = 0.0f32;
-        let mut sum = 0.0f32;
-		
+        let mut max_l = 0.0f32;
+        let mut max_r = 0.0f32;
+        
+        let mut sum_l = 0.0f32;
+        let mut sum_r = 0.0f32;
+
         let mut di = self.write_point;
         data
         .chunks_exact(2)
@@ -233,55 +259,69 @@ impl AudioBuffer {
         .for_each(|(i, chunk)| {
             let mut smp = &mut unsafe{self.buffer.get_unchecked_mut(di)};
             write_sample(smp, chunk);
-			
+
 			let left  = smp.x.abs();
 			let right = smp.y.abs();
-            max = max.max(left).max(right);
-            sum += left + right;
+			
+            max_l = max_l.max(left);
+            max_r = max_r.max(right);
             
+            sum_l += left;
+            sum_r += right;
+
             silence_index += ((left > SILENCE_LIMIT) || (right > SILENCE_LIMIT)) as u32;
-	        di = increment_index(di, BUFFER_SIZE);
+	        di = self.index_add(di, 1);
         });
+        
+        let max = max_r.max(max_l);
+        let sum = sum_l + sum_r;
 
         self.write_point = di;
-        self.offset = self.write_point;
 
-        self.rotate_right(3*input_size/2);
+        //let new_offset = self.index_add(self.write_point, BUFFER_SIZE/2);
+        //let new_offset = (new_offset+BUFFER_SIZE).max(self.write_point+BUFFER_SIZE)-BUFFER_SIZE;
 
-		self.average = 
-			crate::math::interpolate::subtractive_fall(
+        if input_size >= BUFFER_SIZE {
+            self.offset = self.write_point;
+        } else {
+            self.offset = self.index_sub(self.write_point, input_size);
+        }
+		self.average =
+			crate::math::interpolate::multiplicative_fall(
                 self.average,
-                sum / input_size as f32,
+                sum / self.input_size as f32,
                 AMP_PERSIST_LIMIT,
-                ATTACK_SPEED
+                REACT_SPEED
             );
 
         self.max =
-            crate::math::interpolate::subtractive_fall(
+            crate::math::interpolate::multiplicative_fall(
                 self.max,
                 max,
                 AMP_PERSIST_LIMIT,
-                ATTACK_SPEED
+                REACT_SPEED
             );
 
         self.silent = silence_index < SILENCE_INDEX;
-        
+
         self.silent
     }
-    
+
     pub fn normalize(&mut self) {
 		let scale_up_factor = self.normalize_factor_peak();
-		
-		if self.silent || scale_up_factor <= 1.00001 {return}
-		
+
+		// println!("{}, {}", self.max, scale_up_factor);
+
+		if self.silent || scale_up_factor <= 1.0 {return}
+
 		let mut write_point = self.index_sub(self.write_point, self.input_size);
 
         for _ in 0..self.input_size {
             let mut smp = unsafe {self.buffer.get_unchecked_mut(write_point)};
             *smp = smp.scale(scale_up_factor);
-            write_point = increment_index(write_point, BUFFER_SIZE);
+            write_point = self.index_add(write_point, 1);
         }
-        
+
         // self.scale_up_factor = 0.0;
 	}
 

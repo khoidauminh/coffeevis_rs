@@ -94,12 +94,8 @@ impl Program {
 				"--ascii" 	=> (self.mode, self.flusher) = (ConAlpha, Program::print_alpha),
 				"--block" 	=> (self.mode, self.flusher) = (ConBlock, Program::print_block),
 
-				"--auto-switch" =>
-					self.AUTO_SWITCH =
-						args.next()
-						.expect("Argument error: Expected boolean value for auto switch")
-						.parse::<bool>()
-						.expect("Argument error: Invalid value"),
+				"--no-auto-switch" =>
+					self.AUTO_SWITCH = false,
 
 				"--size" => {
 					let s = args.next()

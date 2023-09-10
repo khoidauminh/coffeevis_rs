@@ -15,12 +15,12 @@ pub fn draw_dash_line(
 ) {
     if (horizontal) {
         let o = if flip_side {
-            para.pix.height - offset - 1
+            para.pix.height() - offset - 1
         } else {
             offset
         };
 
-        for i in 0..para.pix.width {
+        for i in 0..para.pix.width() {
             let index = (i / 10 + i) % stream.len();
             para.pix.draw_rect_wh(
                 P2::new(i as i32, o as i32),
@@ -31,12 +31,12 @@ pub fn draw_dash_line(
         }
     } else {
         let o = if flip_side {
-            para.pix.width - offset - 1
+            para.pix.width() - offset - 1
         } else {
             offset
         };
 
-        for i in 0..para.pix.height {
+        for i in 0..para.pix.height() {
             let index = (i / 10 + i) % stream.len();
             para.pix.draw_rect_wh(
                 P2::new(o as i32, i as i32),

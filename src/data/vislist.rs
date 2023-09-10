@@ -166,7 +166,8 @@ pub const VIS_MENU: &[VisList] =
 
 pub const VIS_CLASSIC: &[Visualizer] =
 &[
-	// scopes::draw_phase,
+    // define_visualizer_struct!(tests::test2, "Test", false),
+
 	define_visualizer_struct!(scopes::draw_vectorscope, "Vectorscope", true),
 	define_visualizer_struct!(scopes::draw_oscilloscope, "Oscilloscope", true),
 	define_visualizer_struct!(ring::draw_ring, "Ring", true),
@@ -178,6 +179,8 @@ pub const VIS_CLASSIC: &[Visualizer] =
 	define_visualizer_struct!(lazer::draw_lazer, "Lazer", true),
 	define_visualizer_struct!(wave::draw_wave, "Wave", true),
 	define_visualizer_struct!(vol_sweeper::draw_vol_sweeper, "Volume sweep", false),
+	
+	// define_visualizer_struct!(tests::test, "Test", true),
 /*	[vol_sweeper::draw_vol_sweeper, "Vol sweeper"],
 	[// experiment1::draw_exp1,
 	[// experiment1::draw_f32,

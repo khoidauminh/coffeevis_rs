@@ -1,9 +1,7 @@
 use super::{Canvas, P2};
 use crate::math::Cplx;
-impl Canvas
-{
-	pub fn draw_rect_xy(&mut self, ps: P2, pe: P2, c: u32)
-	{
+impl Canvas {
+	pub fn draw_rect_xy(&mut self, ps: P2, pe: P2, c: u32) {
 		let [xs, ys] = [ps.x.max(0) as usize, ps.y.max(0) as usize];
 		let [xe, ye] = [
 			(pe.x as usize).min(self.width),
@@ -11,17 +9,18 @@ impl Canvas
 		];
 
 		let w = xe.saturating_sub(xs);
+		
 		let l = self.pix.len();
 
-		for y in ys..=ye
-		{
+		for y in ys..=ye {
 			let i = xs + y*self.width;
-			self.pix[i..i+w].fill(c);
+			if let Some(chunk) = self.pix.get_mut(i..i+w) {
+			    chunk.fill(c)
+			}
 		}
 	}
 
-	pub fn draw_rect_wh(&mut self, p: P2, w: usize, h: usize, c: u32)
-	{
+	pub fn draw_rect_wh(&mut self, p: P2, w: usize, h: usize, c: u32) {
 		let [xs, ys] = [p.x.max(0) as usize, p.y.max(0) as usize];
 
 		let ye = (ys+h.saturating_sub(if p.y < 0 {-p.y as usize} else {0})).min(self.height);
@@ -30,16 +29,14 @@ impl Canvas
 		    self.width.saturating_sub(p.x.abs() as usize)
 	    );
 
-		for y in ys..ye
-		{
+		for y in ys..ye {
 			let i = xs + y*self.width;
 			self.pix[i..(i+wi)].fill(c);
 		}
 	}
 
 	// Using Bresenham's line algorithm.
-	pub fn draw_line(&mut self, ps: P2, pe: P2, c: u32)
-	{
+	pub fn draw_line(&mut self, ps: P2, pe: P2, c: u32) {
 		let dx = (pe.x-ps.x).abs();
 		let sx = if ps.x < pe.x {1} else {-1};
 		let dy = -(pe.y-ps.y).abs();
@@ -48,21 +45,18 @@ impl Canvas
 
 		let mut p = ps;
 
-		loop
-		{
+		loop {
 			self.set_pixel(p, c);
 			if p.x == pe.x && p.y == pe.y {return}
 			let e2 = error*2;
 
-			if e2 >= dy
-			{
+			if e2 >= dy {
 				if p.x == pe.x {return}
 				error += dy;
 				p.x += sx;
 			}
 
-			if e2 <= dx
-			{
+			if e2 <= dx {
 				if p.y == pe.y {return}
 				error += dx;
 				p.y += sy;
@@ -70,8 +64,7 @@ impl Canvas
 		}
 	}
 
-	pub fn draw_circle(&mut self, p: P2, r: i32)
-	{
+	pub fn draw_circle(&mut self, p: P2, r: i32) {
 	    todo!();
     }
 

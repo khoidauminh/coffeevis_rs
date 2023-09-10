@@ -21,8 +21,8 @@ fn draw_rain_drop(
 	intensity: u8, 
 	color: u32
 ) {
-	let w = canvas.width;
-	let h = canvas.height;
+	let w = canvas.width();
+	let h = canvas.height();
 	
 	let mut current_length = length;
 	

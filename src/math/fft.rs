@@ -1,15 +1,32 @@
 use super::{Cplx, fast};
 
-pub fn butterfly2<T: std::marker::Copy>(a: &mut [Cplx<T>], power: usize) {
-	for i in 0..a.len() {
+pub fn butterfly<T: std::marker::Copy>(a: &mut [Cplx<T>], power: usize) {
+	for i in 1..a.len()-1 { // first and last element stays in place
+		let ni = super::fast::bit_reverse(i, power);
+		if i < ni {a.swap(ni, i)}
+	}
+}
+
+pub fn butterfly_half<T: std::marker::Copy>(a: &mut [Cplx<T>], power: usize) {
+	let power = power;
+	let l = a.len()/2;
+	
+	/*for i in 1..l {
+	    a[i] = a[i*2];
+	}*/
+	
+	for i in 1..l-1 {
 		let ni = super::fast::bit_reverse(i, power);
 		if i < ni {a.swap(ni, i)}
 	}
 }
 
 pub fn twiddle_norm(x: f32) -> Cplx<f32> {
-	Cplx::<f32>::new(fast::cos_norm(x), fast::sin_norm(x))
+	//const z: f32 = std::f32::consts::PI;
+	let y = (x * crate::math::TAU).sin_cos(); Cplx::<f32>::new(y.1, y.0)
+	//Cplx::<f32>::new(fast::cos_norm(x), fast::sin_norm(x))
 }
+
 
 pub fn compute_fft_recursive(a: &mut [Cplx<f32>]) {
 	let l = a.len();
@@ -26,7 +43,7 @@ pub fn compute_fft_recursive(a: &mut [Cplx<f32>]) {
 	compute_fft_recursive(&mut a[..lh]);
 	compute_fft_recursive(&mut a[lh..]);
 
-	let twiddle = twiddle_norm(- 1.0 / l as f32);
+	let twiddle = twiddle_norm(1.0 / l as f32);
 	let mut w = Cplx::<f32>::one();
 	for i in 0..lh
 	{
@@ -51,13 +68,14 @@ pub fn compute_fft_iterative(a: &mut [Cplx<f32>]) {
     }
 
     let mut window = 4usize;
+    let mut root_angle = -0.25;
 
     while window <= length {
 
-        let root = twiddle_norm(-1.0 / window as f32);
+        let root = twiddle_norm(root_angle);
 
         a.chunks_exact_mut(window).for_each(|chunk| {
-            let (left, right) = chunk.split_at_mut(window >> 1);
+            let (left, right) = chunk.split_at_mut(window / 2);
 
             let mut factor = Cplx::<f32>::one();
 
@@ -74,7 +92,8 @@ pub fn compute_fft_iterative(a: &mut [Cplx<f32>]) {
 
         });
 
-        window <<= 1;
+        window *= 2;
+        root_angle *= 0.5;
     }
 }
 
@@ -82,5 +101,5 @@ pub fn compute_fft_iterative(a: &mut [Cplx<f32>]) {
 pub fn compute_fft_half(a: &mut [Cplx<f32>])
 {
 	let lh = a.len()/2;
-	compute_fft_recursive(&mut a[..lh]);
+	compute_fft_iterative(&mut a[..lh]);
 }

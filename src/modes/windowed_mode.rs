@@ -56,7 +56,7 @@ pub fn win_legacy_main(mut prog: Program) -> Result<(), minifb::Error> {
 
          let s = (s.0 / scale, s.1 / scale);
 
-        if s.0 != prog.pix.width || s.1 != prog.pix.height {
+        if s.0 != prog.pix.width() || s.1 != prog.pix.height() {
             //let s = (s.0 / WIN_SCALE, s.1 / WIN_SCALE);
             prog.update_size_win(s);
         }
@@ -95,8 +95,8 @@ pub fn win_legacy_main(mut prog: Program) -> Result<(), minifb::Error> {
 
         prog.print_err_win();
 
-        let winw = prog.pix.width*scale;
-        let winh = prog.pix.height*scale;
+        let winw = prog.pix.width()*scale;
+        let winh = prog.pix.height()*scale;
 
         if (scale == 1) {
 	        win.update_with_buffer(prog.pix.as_slice(), winw, winh);
@@ -110,8 +110,8 @@ pub fn win_legacy_main(mut prog: Program) -> Result<(), minifb::Error> {
 	    for y in 0..winh {
             let xbase = y*winw;
 
-            let xbase_scaled = y / scale * prog.pix.width;
-            // println!("{} {}", xbase_scaled, xbase / scale / winw * prog.pix.width);
+            let xbase_scaled = y / scale * prog.pix.width();
+            // println!("{} {}", xbase_scaled, xbase / scale / winw * prog.pix.width());
 
 	        for x in 0..winw {
 	            buffer[xbase + x] = prog.pix.pixel(xbase_scaled + x/scale);
@@ -123,12 +123,12 @@ pub fn win_legacy_main(mut prog: Program) -> Result<(), minifb::Error> {
         let jumprow = winw*scale2;*/
 
 
-        /*for yibase in (0..prog.pix.sizel()).step_by(prog.pix.width) {
+        /*for yibase in (0..prog.pix.sizel()).step_by(prog.pix.width()) {
             let ybase = yibase * scale2;
 
             let bound = ybase + jumprow + scale;
 
-            for xi in 0..prog.pix.width {
+            for xi in 0..prog.pix.width() {
                 let pixel = prog.pix.pixel(yibase + xi);
 
                 for y in (ybase..bound).step_by(jump) {
@@ -148,7 +148,7 @@ pub fn win_legacy_main(mut prog: Program) -> Result<(), minifb::Error> {
 	    let buffer =
             prog.pix
             .as_slice()
-            .chunks_exact(prog.pix.width)
+            .chunks_exact(prog.pix.width())
             .flat_map(|line|
                 line.iter().map(|pixel| repeat(*pixel).take(scale)).cycle().take(winw)
             )
@@ -175,15 +175,15 @@ pub fn win_main_winit(mut prog: Program) -> Result<(), &'static str> {
 	}
 
 	let size = (
-		prog.pix.width as u32, //*prog.SCALE as u32,
-		prog.pix.height as u32 //*prog.SCALE as u32
+		prog.pix.width() as u32, //*prog.SCALE as u32,
+		prog.pix.height() as u32 //*prog.SCALE as u32
 	);
 
 	let mut icon =
 	    winit::window::Icon::from_rgba(
 	        to_u8_vec(prog.IMG.as_slice()),
-	        prog.IMG.width as u32,
-	        prog.IMG.height as u32
+	        prog.IMG.width() as u32,
+	        prog.IMG.height() as u32
 	    ).unwrap();
 
 	std::env::set_var("WINIT_X11_SCALE_FACTOR", prog.SCALE.to_string());
@@ -216,8 +216,8 @@ pub fn win_main_winit(mut prog: Program) -> Result<(), &'static str> {
 	let surface_texture = pixels::SurfaceTexture::new(inner_size.width, inner_size.height, &window);
 	let mut pixels_context =
 		pixels::PixelsBuilder::new(
-			prog.pix.width as u32,
-			prog.pix.height as u32,
+			prog.pix.width() as u32,
+			prog.pix.height() as u32,
 			surface_texture
 		)
 		.request_adapter_options(RequestAdapterOptions {

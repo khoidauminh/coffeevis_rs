@@ -13,8 +13,8 @@ static DATA: std::sync::RwLock<LocalData> = std::sync::RwLock::new(LocalData {
 });
 
 pub const draw_lazer: crate::VisFunc = |para, stream| {
-    let w = para.pix.width  as i32;
-    let h = para.pix.height as i32;
+    let w = para.pix.width()  as i32;
+    let h = para.pix.height() as i32;
 
     let (ax, ay) = {
         let mut sum = Cplx::<f32>::zero();

@@ -8,4 +8,5 @@ pub mod lazer;
 pub mod wave;
 pub mod vol_sweeper;
 pub mod dash_line;
+pub mod tests;
 mod cross;

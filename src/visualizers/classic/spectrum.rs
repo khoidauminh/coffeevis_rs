@@ -35,64 +35,77 @@ fn volume_scale(x: f32) -> f32 {
 	//math::fast::unit_exp2_0(2.0*x)
 }
 
+fn prepare(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
+    const WINDOW: usize = 2*FFT_SIZE/3;
+    const NORMALIZE: f32 = 1.0 / WINDOW as f32;
+
+    let mut fft = [Cplx::<f32>::zero(); FFT_SIZE];
+
+    fft.iter_mut()
+    .take(WINDOW)
+    .enumerate()
+    .for_each(|(i, smp)| {
+        let idx = i*2;
+        *smp = stream[idx];
+    });
+
+    math::fft(&mut fft);
+    
+    let mut LOCAL = DATA.write().unwrap();
+    
+    math::highpass_inplace(&mut fft[..LOCAL.len()]);
+    math::highpass_inplace(&mut fft[FFT_SIZE-LOCAL.len()-1..]);
+
+    let fall_factor = 0.333*prog.SMOOTHING.powi(2);
+
+    // let pre_scale = 0.6*(0.5 + stream.amplitude()*0.5);
+
+    LOCAL
+    .iter_mut()
+	.enumerate()
+	.for_each(
+		|(i, smp)| {
+			let rev_i = FFT_SIZE-i-1;
+            
+            // Avoids having to evaluate a 2nd FFT.
+            //
+            // This leverages the the linear and symetrical
+            // property of the FFT.
+            // 
+            // Errors accumulating in the output (due to 
+            // approximating sin and cos) can be tolerated.
+			let fft_1 = fft[i];
+			let fft_2 = fft[rev_i].conj();
+						
+            let y = (fft_1 + fft_2).l1_norm();
+            let x = (fft_1 - fft_2).times_i().l1_norm();
+
+            let scalef = math::fft_scale_up(i, RANGE)* NORMALIZE;
+
+    	    smp.x = multiplicative_fall(smp.x, x*scalef, 0.0, fall_factor);
+			smp.y = multiplicative_fall(smp.y, y*scalef, 0.0, fall_factor);
+
+		}
+	);
+	
+	stream.rotate_left(WINDOW);
+}
+
 pub const draw_spectrum: crate::VisFunc = |prog, stream| {
     let l = stream.len();
 
     let (w, h) = prog.pix.sizet();
 
-    // let scale = FFT_SIZE as f32 * prog.pix.height as f32 * 0.0625;
+    // let scale = FFT_SIZE as f32 * prog.pix.height() as f32 * 0.0625;
     let winwh = w >> 1;
-
+    
+    prepare(prog, stream);
+    
     let wf = w as f32;
 	let hf = h as f32;
-
-    let mut data_l = [Cplx::<f32>::zero(); FFT_SIZE];
-    let mut data_r = [Cplx::<f32>::zero(); FFT_SIZE];
-
-    data_l.iter_mut()
-    .zip(data_r.iter_mut())
-    .enumerate()
-    .for_each(|(i, (smpl, smpr))| {
-        let idx = i*2;
-        smpl.x = stream[idx].x;
-        smpr.x = stream[idx+crate::data::PHASE_OFFSET].y;
-    });
-
-    math::fft(&mut data_l);
-    math::fft(&mut data_r);
-    
-    math::highpass_inplace(&mut data_l);
-    math::highpass_inplace(&mut data_r);
-
-    let mut LOCAL = DATA.write().unwrap();
-
-    let fall_factor = 0.25*prog.SMOOTHING.powi(2);
-    
-    // let pre_scale = 0.6*(0.5 + stream.amplitude()*0.5);
-
-    LOCAL
-    .iter_mut()
-	.zip(
-		data_l.iter().zip(
-			data_r.iter()
-		)
-	)
-	.enumerate()
-	.for_each(
-		|(i, (smp, (&smp_in_l, &smp_in_r)))| {
-//			smp.x = linearf(smp.x, smp_in_l.l1_norm(), prog.SMOOTHING);
-//			smp.y = linearf(smp.y, smp_in_r.l1_norm(), prog.SMOOTHING);
-            //let scalef = math::log2i::<usize>(i+2) as f32 * FFT_SIZEF_RECIP;
-            let scalef = math::fft_scale_up(i, RANGE)* FFT_SIZEF_RECIP;
-            //let scalef =  2.4*FFT_SIZEF_RECIP;
-
-    	    smp.x = multiplicative_fall(smp.x, smp_in_l.l1_norm()*scalef, 0.0, fall_factor);
-			smp.y = multiplicative_fall(smp.y, smp_in_r.l1_norm()*scalef, 0.0, fall_factor);
-
-		}
-	);
-
-    let normalized = LOCAL.as_slice();
+	
+	let binding = DATA.read().unwrap();
+    let normalized = binding.as_slice();
 
 //	let mut normalized = [Cplx::<f32>::zero(); RANGE+1];
 //	normalized.copy_from_slice(LOCAL.as_slice());
@@ -108,10 +121,9 @@ pub const draw_spectrum: crate::VisFunc = |prog, stream| {
 
     const INTERVAL: f32 = 1.0;
 
-    let height_prescale = wf * prog.VOL_SCL;
+    let height_prescale = wf * prog.VOL_SCL *0.333;
 
-    while if32 < hf {
-        let i = if32 as i32;
+    for i in 0..h as i32 {
         let i_rev = (h as i32) - i;
 
         let i_ratio = i_rev as f32 / hf;
@@ -149,9 +161,5 @@ pub const draw_spectrum: crate::VisFunc = |prog, stream| {
 
 		let alpha = (128.0 + stream[i as usize / 2].x*32768.0) as u8;
         prog.pix.draw_rect_wh(P2::new(winwh -1, i), 2, 1, blend::u32_fade(color, alpha));
-
-        if32 += INTERVAL;
     }
-
-    stream.rotate_left(FFT_SIZE);
 };

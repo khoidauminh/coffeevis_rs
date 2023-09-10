@@ -4,6 +4,7 @@ use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 mod audio_buffer;
 use audio_buffer::AudioBuffer;
 
+use std::ops::*;
 use std::sync::{
     Arc, RwLock,
     atomic::{AtomicU8, AtomicBool, AtomicUsize, Ordering},
@@ -76,10 +77,11 @@ pub fn read_samples<T: cpal::Sample<Float = f32>>(data: &[T]) {
 
     let mut ns = get_no_sample().saturating_add(1);
 
-    ns *= b.read_from_input(data) as u8;
-    
     if get_normalizer() {
-		b.normalize();
+        ns *= b.read_from_input(data) as u8;
+        b.normalize();
+	} else {
+	    ns *= b.read_from_input_quiet(data) as u8;
 	}
 
 	// println!("SAMPLE_READ");
@@ -95,14 +97,14 @@ pub fn get_no_sample() -> u8 {
 	NO_SAMPLE.load(Ordering::Relaxed)
 }
 
-pub fn limiter(
-	a: &mut [Cplx<f32>],
+pub fn limiter<T>(
+	a: &mut [T],
 	limit: f32,
-	attack_samples: usize, 
-	release_samples: usize,
 	hold_samples: usize,
 	gain: f32
-) {
+) 
+where T: Into<f32> + std::ops::Mul<f32, Output = T> + std::marker::Copy
+{
 	use crate::math::interpolate::{envelope, subtractive_fall_hold};
 	
 	let mut index = 0usize;
@@ -110,91 +112,86 @@ pub fn limiter(
 	let mut hold_index = 0;
 	let mut amp = 0.0;
 	let mut l = a.len();
-	
-	let attack_amount = 1.0 / attack_samples as f32;
-	let release_amount = 1.0 / release_samples as f32; 
 
-	let mut peak_holder = 
-		PeakHolder::init(
-			limit, 
-			release_amount,
-			hold_samples
-		);
+    let hold_samples_double = hold_samples*2;
 		
-	let hold_samples_half = hold_samples/2;
-	
-	let full_delay = hold_samples + attack_samples;
+	let full_delay = hold_samples;
 		
-	let mut delay = DelaySmooth::init(full_delay, limit);
+	let mut peak = Peak::init(limit, hold_samples_double);
+	let mut moving_average = MovingAverage::init(limit, full_delay);
 
 	let bound = l + full_delay;
 	
 	let mut getrg = |smp| {
-		gain / delay.update(peak_holder.update(smp))
+		gain / moving_average.update(peak.update(smp))
 	};
 
 	while index < full_delay {
-		replay_gain = getrg(a[index].l1_norm());
+		replay_gain = getrg(a[index].into());
 		index += 1;
 	}
 	
 	while index < l {
-		replay_gain = getrg(a[index].l1_norm());
+		replay_gain = getrg(a[index].into());
 		
-		let smp = &mut a[index-full_delay];			
+		let smp = &mut a[index-full_delay];
 		
-		*smp = smp.scale(replay_gain);
+		*smp = *smp *replay_gain;
 		
 		index += 1;
 	}
 	
 	while index < bound {
-		replay_gain = getrg(limit);
+		replay_gain = getrg(0.0);
 		
 		let smp = &mut a[index-full_delay];
-		*smp = smp.scale(replay_gain);
+		*smp = *smp *replay_gain;
 		
 		index += 1;
 	}
 }
 
-struct PeakHolder {
+struct Peak {
+    peak: f32,
 	amp: f32,
 	limit: f32,
-	release: f32, 
 	hold_for: usize,
 	hold: usize,
 }
 
-impl PeakHolder {
+impl Peak {
 	pub fn init(
 		limit: f32,
-		release: f32,
 		hold_for: usize
 	) -> Self {
 		Self {
+		    peak: limit,
 			amp: limit,
 			limit: limit,
-			release: release, 
 			hold_for: hold_for,
 			hold: 0
 		}
 	}
 	
-	pub fn update(&mut self, new_amp: f32) -> f32 {
-		use crate::math::interpolate::linearf;
-	
-		let new_amp = f32::max(new_amp, self.limit);
+	pub fn update(&mut self, inp: f32) -> f32 {
+		use crate::math::interpolate::{self, linearf};
 		
-		if new_amp > self.amp {
-			self.amp = new_amp;
+		let inp = f32::max(inp.abs(), self.limit);
+		
+		if self.peak < inp || self.hold >= self.hold_for {
+			self.peak = inp;
 			self.hold = 0;
-		} else if self.hold >= self.hold_for {
-			self.amp = linearf(self.amp, new_amp, self.release);
-		} else {
-			self.hold += 1;
-		}
+	    }
 		
+		self.amp = self.peak;
+		
+	    // self.amp = interpolate::multiplicative_fall(self.amp, self.peak, self.limit, 1.0 / self.hold_for as f32);
+		
+		self.amp
+	}
+	
+	// freeze the peakholder
+	pub fn stall(&self) -> f32 {
 		self.amp
 	}
 	
@@ -203,40 +200,173 @@ impl PeakHolder {
 	}
 }
 
-struct DelaySmooth {
-	delay_for: usize,
-	denominator: f32,
+
+pub struct MovingAverage<T> {
+	size: usize,
 	index: usize,
-	vec: Vec<f32>,
-	sum: f32,
+	vec: Vec<T>,
+	sum: T,
+	denominator: f32,
+	average: T
 }
 
-impl DelaySmooth {
-	pub fn init(delay_for: usize, val: f32) -> Self {
-		let size = delay_for+1;
-		let denominator = 1.0 / size as f32; 
+impl<T> MovingAverage<T>
+where 
+    T:
+        Add<Output = T> +
+        Sub<Output = T> +
+        Mul<f32, Output = T> +
+        std::marker::Copy,
+    f32: 
+        Mul<T, Output = T>
+{
+	pub fn init(val: T, size: usize) -> Self {
 		Self {
-			delay_for: size,
-			denominator: denominator,
+			size: size,
 			index: 0,
 			vec: vec![val; size],
-			sum: size as f32 * val
+			denominator: (size as f32).recip(),
+			sum: size as f32 * val,
+		    average: val
 		}
 	}
 	
-	pub fn update(&mut self, val: f32) -> f32 {	
-		let out = self.sum * self.denominator;
-		
-		self.sum += val;
-		self.sum -= self.vec[self.index];
-		
-		self.vec[self.index] = val;
+	fn pop(&mut self, val: T) -> T {
+	    let out = self.vec[self.index];
+	    
+	    self.vec[self.index] = val;
 		
 		self.index = 
 			crate::math::increment_index(
-				self.index, self.delay_for
-			);
+				self.index, self.size
+		    );
 		
 		out
 	}
+	
+	pub fn update(&mut self, val: T) -> T {
+        let old = self.pop(val);
+        
+        self.average = self.denominator * self.sum;
+        
+        self.sum = self.sum - old + val;
+		
+		self.average
+	}
+
+	pub fn current(&self) -> T {
+        self.average
+	}
 }
+/*
+struct HoldRelease {
+    peak: f32,
+    amp: f32,
+    lim: f32,
+	rel: f32, 
+	hold_for: usize,
+	hold: usize,
+}
+
+impl HoldRelease {
+    fn saturating_increment(a: usize, b: usize) -> usize {
+        if a == b {a} else {a+1}
+    }
+
+    pub fn init(limit: f32, rel: usize, hold_for: usize, gain: f32) -> Self {
+        //let att = att.saturating_sub(hold_for/2).max(1);
+        //let rel = rel.saturating_sub(hold_for/2).max(1);
+        let rel_a = (rel as f32).recip();
+        
+        Self {
+            peak: limit,
+            amp: limit,
+            lim: limit,
+            rel: att_a,
+            hold_for: hold_for,
+            hold: 0
+        }
+    }
+    
+    pub fn update_peak(&mut self, inp: f32) -> f32 {
+        let inp = inp.abs();
+	
+		let inp = f32::max(inp, self.lim);
+		
+		if inp > self.peak {
+			self.peak = inp;
+			self.hold = 0;
+		} else if self.hold >= self.hold_for {
+			self.peak = inp;
+		} else {
+			self.hold += 1;
+		}
+        
+        self.peak
+    }
+    
+    pub fn update(&mut self, inp: f32) -> f32 {
+        use crate::math::interpolate::linearf;
+        let peak = self.update_peak(inp);
+        
+        if peak > self.amp {
+            self.amp = peak;
+        } else {
+            self.amp = linearf(self.amp, peak, self.rel);
+        }
+        
+        self.amp
+    }
+}*/
+/*
+struct PeakEvent {
+    pub peak: f32,
+    pub index: usize,
+    pub hold: usize
+}
+
+struct PeakRecorder {
+    buffer: [PeakEvent; 2],
+    limit: f32,
+    hold_for: usize,
+}
+
+impl PeakRecorder {
+    pub fn init(hold_for: usize, limit: f32) -> Self {
+        Self {
+            buffer: [PeakEvent{peak: limit, index: 0, hold: 0}; 2],
+            limit: limit,
+            hold_for: hold_for,
+        }
+    }
+    
+    pub fn update(&mut self, inp: f32, index: usize) -> Option<[PeakEvent; 2]> {
+        let inp = f32::max(inp.abs(), self.lim);
+		
+		let mut out = None;
+		
+		if inp > self.peak || self.buffer[0].hold >= self.hold_for {
+		    out = Some(self.buffer.clone());
+	
+			self.buffer[1] = self.buffer[0];
+			self.buffer[0] = PeakEvent{peak: inp, index: index, hold: 0};
+		} else {
+            self.buffer[0].hold += 1;
+		}
+		
+		out
+    }
+}
+
+pub fn limiter<T>(
+	a: &mut [T],
+	limit: f32,
+	attack_samples: usize, 
+	release_samples: usize,
+	hold_samples: usize,
+	gain: f32
+)
+where T: Into<f32> + std::ops::Mul<f32, Output = T> + std::marker::Copy
+{
+    let mut peak_recorder = PeakRecorder::init(hold_samples, limit);
+}*/

@@ -56,7 +56,7 @@ impl Program
 	) {
 		self.CON_MAX_W =
 			((self.CON_MAX_W * (!replace) as u16) as i16 + amount)
-			.clamp(0, self.pix.width as i16)
+			.clamp(0, self.pix.width() as i16)
 			as u16
 			;
 		self.CON_MAX_H = self.CON_MAX_W >> 1;
@@ -109,8 +109,8 @@ impl Program
 	fn get_center(&self, divider_x: u16, divider_y: u16) -> (u16, u16)
 	{
 		(
-			(self.CON_W /2).saturating_sub(self.pix.width as u16 /divider_x),
-			(self.CON_H /2).saturating_sub(self.pix.height as u16 /divider_y)
+			(self.CON_W /2).saturating_sub(self.pix.width() as u16 /divider_x),
+			(self.CON_H /2).saturating_sub(self.pix.height() as u16 /divider_y)
 		)
 	}
 
@@ -152,16 +152,16 @@ impl Program
 	{
 		let center = self.get_center(2, 4);
 
-		for y in (0..self.pix.height)
+		for y in (0..self.pix.height())
 		{
 
 			let cy = center.1 + y as u16 / 2;
 			queue!(stdout, cursor::MoveTo(center.0, cy));
 
-			for x in (0..self.pix.width)
+			for x in (0..self.pix.width())
 			{
 
-				let i = y*self.pix.width + x;
+				let i = y*self.pix.width() + x;
 
 				let [a, r, g, b] = self.pix.pixel(i).to_be_bytes();
 
@@ -180,22 +180,22 @@ impl Program
 	{
 		let center = self.get_center(2, 4);
 
-		for y_base in (0..self.pix.height).step_by(2)
+		for y_base in (0..self.pix.height()).step_by(2)
 		{
 			let cy = center.1 + y_base as u16 / 2;
 			queue!(stdout, cursor::MoveTo(center.0, cy));
 
-			for x_base in (0..self.pix.width).step_by(1)
+			for x_base in (0..self.pix.width()).step_by(1)
 			{
 
-				let idx_base = y_base*self.pix.width + x_base;
+				let idx_base = y_base*self.pix.width() + x_base;
 				let [_, mut r, mut g, mut b] = self.pix.pixel(idx_base).to_be_bytes();
 
 				let mut bg: Option<(u8, u8, u8)> = None;
 
 				let bx =
 					(0..2).fold(0, |acc, i| {
-						let idx = idx_base + i*self.pix.width; // iterate horizontally, then jump to the nex row;
+						let idx = idx_base + i*self.pix.width(); // iterate horizontally, then jump to the nex row;
 						let [_, pr, pg, pb] = self.pix.pixel(idx).to_be_bytes();
 
 						/*
@@ -247,16 +247,16 @@ impl Program
 	{
 		let center = self.get_center(4, 8);
 
-		for y_base in (0..self.pix.height).step_by(4)
+		for y_base in (0..self.pix.height()).step_by(4)
 		{
 			let cy = center.1 + y_base as u16 / 4;
 
 			queue!(stdout, cursor::MoveTo(center.0, cy));
 
-			for x_base in (0..self.pix.width).step_by(2)
+			for x_base in (0..self.pix.width()).step_by(2)
 			{
 
-				let idx_base = y_base*self.pix.width + x_base;
+				let idx_base = y_base*self.pix.width() + x_base;
 
 				let [_, mut r, mut g, mut b] = self.pix.pixel(idx_base).to_be_bytes();
 
@@ -265,9 +265,9 @@ impl Program
 					{
 						let idx = idx_base +
 							if i < 6 {
-								(i / 3) + (i % 3)*self.pix.width
+								(i / 3) + (i % 3)*self.pix.width()
 							} else {
-								(i & 1) + 3*self.pix.width
+								(i & 1) + 3*self.pix.width()
 							}
 						;
 
@@ -290,8 +290,8 @@ impl Program
 	}
 	/*
 	pub fn print_sixel(&self, stdout: &mut Stdout) {
-	    let w = self.pix.width;
-	    let h = self.pix.height;
+	    let w = self.pix.width();
+	    let h = self.pix.height();
 	    let canvas =
 	        sixel_rs::encoder::QuickFrameBuilder::new()
 	        .width(w)
@@ -381,16 +381,16 @@ pub fn con_main(mut prog: Program) -> Result<()>
 /*
 pub fn prepare_stdout_ascii(prog: &mut Program, stdout: &mut Stdout) {
     let center = (
-        (prog.CON_W /2).saturating_sub(prog.pix.width as u16 /2),
-        (prog.CON_H /2).saturating_sub(prog.pix.height as u16 /4)
+        (prog.CON_W /2).saturating_sub(prog.pix.width() as u16 /2),
+        (prog.CON_H /2).saturating_sub(prog.pix.height() as u16 /4)
     );
 
-    for y in 0..prog.pix.height {
+    for y in 0..prog.pix.height() {
         let cy = center.1 + y as u16 / 2;
         queue!(stdout, cursor::MoveTo(center.0, cy));
 
-        for x in 0..prog.pix.width {
-            let [_, r, g, b] = prog.pix[y*prog.pix.width + x].to_le_bytes();
+        for x in 0..prog.pix.width() {
+            let [_, r, g, b] = prog.pix[y*prog.pix.width() + x].to_le_bytes();
            // let cx = center.0 + x as u16;
 
             //let gray = (30 * r as usize + 59 * g as usize + 11 * b as usize) / 100;
@@ -415,15 +415,15 @@ pub fn prepare_stdout_ascii(prog: &mut Program, stdout: &mut Stdout) {
 
 pub fn prepare_stdout_braille(prog: &mut Program, stdout: &mut Stdout) {
     let center = (
-        (prog.CON_W /2).saturating_sub(prog.pix.width as u16 /4),
-        (prog.CON_H /2).saturating_sub(prog.pix.height as u16 /8)
+        (prog.CON_W /2).saturating_sub(prog.pix.width() as u16 /4),
+        (prog.CON_H /2).saturating_sub(prog.pix.height() as u16 /8)
     );
 
-    //let w = prog.pix.width.saturating_sub(2) as u32;
-    //let h = prog.pix.height.saturating_sub(4) as u32;
+    //let w = prog.pix.width().saturating_sub(2) as u32;
+    //let h = prog.pix.height().saturating_sub(4) as u32;
 
-    let w = prog.pix.width as u32;
-    let h = prog.pix.height as u32;
+    let w = prog.pix.width() as u32;
+    let h = prog.pix.height() as u32;
 
     let mut braille = Canvas::new(
         w,
@@ -432,14 +432,14 @@ pub fn prepare_stdout_braille(prog: &mut Program, stdout: &mut Stdout) {
 
     let (mut ar, mut ag, mut ab) = (0u8, 0u8, 0u8);
 
-    //let hh = prog.pix.height-1;
+    //let hh = prog.pix.height()-1;
 
     for (i, p) in prog.pix.iter().enumerate() {
         let (r, g, b) = u32_to_rgb(*p);
         let gray = (r as u16 + g as u16 + b as u16) / 144;
         let (x, y) = (
-            (i % prog.pix.width),
-            (i / prog.pix.width)
+            (i % prog.pix.width()),
+            (i / prog.pix.width())
         );
 
 		if gray > 0 {

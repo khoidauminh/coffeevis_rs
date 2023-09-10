@@ -19,7 +19,7 @@ use data::*;
 use modes::{Mode, windowed_mode::*,console_mode::con_main};
 
 // Audio lib
-use audio::{get_source, read_samples, GSA};
+use audio::{get_source, read_samples};
 use cpal::traits::StreamTrait;
 use visualizers::VisFunc;
 use minifb::{Key, KeyRepeat, Window, WindowOptions};
@@ -72,8 +72,7 @@ fn main() {
 		}
 	}*/
 
-	// std::env::set_var("LC_CTYPE", "en_US.utf8");
-
+	std::env::set_var("LC_CTYPE", "en_US.utf8");
 	std::env::set_var("WINIT_UNIX_BACKEND", "x11");
 
 	let mut prog = Program::new().eval_args(&mut args.iter());

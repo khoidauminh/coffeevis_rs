@@ -23,8 +23,8 @@ use crate::{
 pub fn init_window(prog: &Program) -> Result<Window, minifb::Error> {
 	let mut win = Window::new(
         "kvis",
-        prog.pix.width*prog.SCALE as usize,
-        prog.pix.height*prog.SCALE as usize,
+        prog.pix.width()*prog.SCALE as usize,
+        prog.pix.height()*prog.SCALE as usize,
         WindowOptions {
             resize: prog.RESIZE,
             topmost: true,

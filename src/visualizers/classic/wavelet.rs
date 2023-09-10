@@ -1,9 +1,74 @@
 use crate::{
 	math::Cplx,
 	data::{FFT_POWER, ROTATE_SIZE, SAMPLE_SIZE},
+	graphics::{Canvas, P2, blend::Blend}
 };
 
 const COPY_SIZE: usize = ROTATE_SIZE;
+const WT_POWER: usize = crate::data::POWER;
+const WT_SIZE: usize = 1 << WT_POWER;
+
+struct WaveletTable {
+    table: [Cplx<f32>; WT_SIZE]
+}
+
+impl WaveletTable {
+    pub fn init(inp: &mut crate::audio::SampleArr) -> Self {
+        let mut cloned = [Cplx::<f32>::zero(); WT_SIZE];
+        for i in 0..WT_SIZE {
+            cloned[i] = inp[i >> 2];
+        }
+        inp.rotate_left(WT_SIZE/8);
+        hwt(&mut cloned);
+        Self {
+            table: cloned
+        }
+    }
+    
+    pub fn get(&self, i: usize) -> Option<Cplx<f32>> {
+        if i >= WT_SIZE {
+            return None;
+        }
+        Some(self.table[i])
+    }
+    
+    pub fn translate_coord(
+        x: usize, y: usize, 
+        w: usize, h: usize
+    ) -> usize {
+        let depth = WT_POWER * y / h;
+        let depth_width = 1 << depth;
+        let index = depth_width * x / w;
+        
+        // let index_next = index+1;
+        // let index_next = if index_next == depth_width {index} else {index_next};
+        
+        depth_width + index
+    }
+    
+    pub fn draw(&self, canvas: &mut Canvas) {
+        let ch = canvas.height();
+        let cw = canvas.width();
+        for canvas_y in 0..ch {
+            let canvas_y_rev = ch - canvas_y - 1;
+            let depth = WT_POWER * canvas_y_rev / ch;
+            let depth_width = 1 << depth;
+            
+            let offset = depth_width;
+            
+            for canvas_x in 0..cw {
+                let index = depth_width * canvas_x / cw;
+                
+                if index >= WT_SIZE {return}
+                
+                let val = (self.table[offset + index].l1_norm()*128.0) as u8;
+                let color = u32::compose([0xFF, val, val, val]);
+                
+                canvas.set_pixel(P2::new(canvas_x as i32, canvas_y as i32), color)
+            }
+        }
+    }
+}
 
 pub const draw_wavelet: crate::VisFunc = |prog, stream|
 {
@@ -32,7 +97,7 @@ pub const draw_wavelet: crate::VisFunc = |prog, stream|
 	
 	let wl = WT_SIZE;
 	let pl = prog.pix.sizel();
-	let (pw, ph) = (prog.pix.width, prog.pix.height);
+	let (pw, ph) = (prog.pix.width(), prog.pix.height());
 	
 	let power = WT_SIZE.ilog2() as usize;
 	/*
@@ -90,37 +155,18 @@ pub const draw_wavelet: crate::VisFunc = |prog, stream|
 	stream.rotate_left(ROTATE_SIZE);
 };
 
-const WT_SIZE: usize = 1 << (crate::data::POWER+2);
-
-/*
-fn wt(a: &mut [Cplx<f32>; FFT_SIZE])
+pub const draw_wavelet_: crate::VisFunc = |prog, stream|
 {
-	let mut o = [Cplx::<f32>::zero(); FFT_SIZE]; FFT_POWER];
-	
-	o[0].copy_from_slice(&stream[..FFT_SIZE]);
-	
-	for depth in 1..FFT_POWER 
-	{
-		let lh = FFT_SIZE >> depth;
-		for i in 0..lh 
-		{
-			let i2 = i*2;
-			let depthl = depth-1;
-			o[depth][i   ] = o[depthl][i2];
-			o[depth][i+lh] = o[depthl][i2];
-	}
-}
-*/
+    let table = WaveletTable::init(stream);
+    table.draw(&mut prog.pix);
+};
 
-fn hwt(a: &mut [Cplx<f32>; WT_SIZE]) 
-{
+fn hwt(a: &mut [Cplx<f32>; WT_SIZE]) {
 	let mut aux = [Cplx::<f32>::zero(); WT_SIZE];
 	let mut l = WT_SIZE/2;
 	
-	while l > 0
-	{
-		for i in 0..l 
-		{
+	while l > 0 {
+		for i in 0..l {
 			let i2 = i*2;
 			let i21 = i2+1;
 			aux[i]   = (a[i2] + a[i21]).scale(0.5);
@@ -128,6 +174,37 @@ fn hwt(a: &mut [Cplx<f32>; WT_SIZE])
 		}
 		a[..l*2].copy_from_slice(&aux[..l*2]);
 		l /= 2;
+	}
+}
+
+fn hwt_pong(a: &mut [Cplx<f32>; WT_SIZE]) {
+    let mut aux = [Cplx::<f32>::zero(); WT_SIZE];
+	let mut l = WT_SIZE/2;
+	let mut pong = true;
+	
+	while l > 0 {
+	    if pong {
+		    for i in 0..l {
+			    let i2 = i*2;
+			    let i21 = i2+1;
+			    aux[i]   = (a[i2] + a[i21]).scale(0.5);
+			    aux[i+l] = a[i2] - a[i21];
+		    }
+		} else {
+		    for i in 0..l {
+			    let i2 = i*2;
+			    let i21 = i2+1;
+			    a[i]   = (aux[i2] + aux[i21]).scale(0.5);
+			    a[i+l] = aux[i2] - aux[i21];
+		    }
+		}
+		pong ^= true;
+		// a[..l*2].copy_from_slice(&aux[..l*2]);
+		l /= 2;
+	}
+	
+	if pong {
+	    a[..l*2].copy_from_slice(&aux[..l*2]);
 	}
 }
 /*
@@ -146,22 +223,7 @@ fn hwt_recursive(a: &mut [Cplx<f32>])
 	hwt_recursive(a[..l/2]);
 }
 */
-fn wt(a: &mut [Cplx<f32>]) 
-{
-	let mut aux: Vec<Cplx<f32>> = a.to_vec();
-	let mut l = a.len() /2;
-	while l > 0 
-	{
-		for i in 0..l 
-		{
-			aux[i  ] = convole(a, HAAR_WAVELET_G, 2, i);
-			aux[i+l] = convole(a, HAAR_WAVELET_H, 2, i);
-		}
-		
-		a.copy_from_slice(&aux);
-		l /= 2;
-	}
-}
+
 
 fn convole(a: &[Cplx<f32>], b: &[Cplx<f32>], mult: usize, shift: usize) -> Cplx<f32>
 {
