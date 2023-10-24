@@ -5,9 +5,10 @@ pub mod draw;
 use blend::Blend;
 use crate::math::Cplx;
 
-const COLOR_BLANK: u32 = 0x00_00_00_00;
-const COLOR_BLACK: u32 = 0xFF_00_00_00;
-const COLOR_WHITE: u32 = 0xFF_FF_FF_FF;
+pub const COLOR_BLANK: u32 = 0x00_00_00_00;
+pub const COLOR_BLACK: u32 = 0xFF_00_00_00;
+pub const COLOR_WHITE: u32 = 0xFF_FF_FF_FF;
+
 const SIZE_DEFAULT: (usize, usize) = (50, 50);
 
 pub type P2 = Cplx<i32>;
@@ -66,8 +67,34 @@ impl Canvas {
 		self.pix.fill(c);
 	}
 
-	pub fn clear(&mut self) {
+	pub fn clear<'a>(&'a mut self) {
+		/*use std::thread;
+
+		let quarterlen = self.pix.len() / 4;
+		let halflen = self.pix.len() / 2;
+		let halfquarterlen = halflen + quarterlen;
+
+		let (mut slice_a, mut slice_b) = self.pix.split_at_mut(halflen);
+		
+		let thread1 = thread::spawn(move || {
+			slice_a.fill(COLOR_BLANK);
+		});
+
+		let thread2 = thread::spawn(move || {
+			slice_b.fill(COLOR_BLANK);
+		});	
+
+		thread1.join().unwrap();
+		thread2.join().unwrap();*/
+	
 		self.fill(COLOR_BLANK);
+	}
+	
+	pub fn clear_row(&mut self, y: usize) {	
+		// if y >= self.height {return}
+		
+		let i = y*self.width;
+		self.pix[i..i+self.width].fill(COLOR_BLANK);
 	}
 	
 	pub fn subtract_clear(&mut self, amount: u8) {
@@ -112,7 +139,9 @@ impl Canvas {
 		    x >= self.width
 	    ) as usize).wrapping_sub(1);*/
 
-		x.wrapping_add(y.wrapping_mul(self.width))
+		y
+        .wrapping_mul(self.width)
+        .wrapping_add(x)
 	}
 
 	pub fn pixel(&self, i: usize) -> u32 {
@@ -133,18 +162,26 @@ impl Canvas {
 	}
 
 	pub fn set_pixel(&mut self, p: P2, c: u32) {
-		let i = self.get_idx_fast(p);
-		// if i >= self.pix.len() {return}
-		if let Some(p) = self.pix.get_mut(i) {
-			*p = c;
-		}
+		if self.is_in_bound(p) {
+            let i = self.get_idx_fast(p);		
+		    self.pix[i] = c;
+        }
 	}
 
 	pub fn set_pixel_by(&mut self, p: P2, c: u32, b: fn(u32, u32)->u32) {
-		let i = self.get_idx_fast(p);
-		if let Some(p) = self.pix.get_mut(i) {
-			*p = b(*p, c);
-		}
+		if self.is_in_bound(p) {
+		    let i = self.get_idx_fast(p);
+            let p = &mut self.pix[i];	
+		    *p = b(*p, c);
+        }
+	}
+	
+	pub fn plot(&mut self, p: P2, c: u32, b: fn(u32, u32)->u32) {
+		if self.is_in_bound(p) {
+	    	let i = self.get_idx_fast(p);
+		    let p = &mut self.pix[i];
+		    *p = b(*p, c);
+        }
 	}
 
 	pub fn scale_to(&self, dest: &mut [u32], scale: usize) {

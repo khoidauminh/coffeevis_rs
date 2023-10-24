@@ -21,6 +21,8 @@ use crate::{
 };
 
 pub fn init_window(prog: &Program) -> Result<Window, minifb::Error> {
+	std::env::set_var("GDK_BACKEND", "x11");
+	
 	let mut win = Window::new(
         "kvis",
         prog.pix.width()*prog.SCALE as usize,
@@ -35,7 +37,9 @@ pub fn init_window(prog: &Program) -> Result<Window, minifb::Error> {
         },
     )?;
 
-    win.limit_update_rate(Some(prog.REFRESH_RATE));
+	if cfg!(not(feature = "benchmark")) {
+	    win.limit_update_rate(Some(prog.REFRESH_RATE));
+	}
 
     Ok(win)
 }
@@ -143,7 +147,7 @@ pub fn control_key_events_win(
 pub fn control_key_events_con(
     prog: &mut Program,
     exit: &mut bool
-) -> crossterm::Result<()> {
+) -> std::io::Result<()> {
 	prog.update_vis();
 
     if poll(prog.REFRESH_RATE)? {

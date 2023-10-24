@@ -1,5 +1,5 @@
 use crate::visualizers::{VisFunc, classic::*, milk};
-use crate::math::{increment_index, decrement};
+use crate::math::{increment, decrement};
 
 #[derive(Copy, Clone)]
 pub struct Visualizer {
@@ -107,7 +107,7 @@ impl VisNavigator {
 	pub fn next_vis(&mut self) -> Visualizer {
 		let list_size = self.current_list_len();
 
-		self.index_vis = increment_index(self.index_vis, list_size);
+		self.index_vis = increment(self.index_vis, list_size);
 		
 		let current = self.current_vis();
 		
@@ -130,17 +130,29 @@ impl VisNavigator {
 
 	pub fn next_list(&mut self) {
 		let size = self.num_of_lists();
-		self.index_list = increment_index(self.index_list, size);
+		self.index_list = increment(self.index_list, size);
 		self.index_vis = 0;
 	}
 
 	pub fn prev_list(&mut self) {
 		let size = self.num_of_lists();
-		self.index_list = increment_index(self.index_list, size);
+		self.index_list = increment(self.index_list, size);
 		self.index_vis = 0;
 	}
-	/*
-	pub fn point_to_vis(&mut self, name: &str) {
+
+	pub fn switch_by_index(&mut self, index: usize) -> Visualizer {
+        let current_list = self.structure[self.index_list].list;
+
+        if let Some(vis) = current_list.get(index) {
+            self.index_vis = index;
+
+            return self.current_vis();
+        }
+
+        return self.current_vis();
+	}
+    /*
+	pub fn switch_by_name(&mut self, name: &str) {
 		let current_name = self.current_vis_name();
 
 		if current_vis_name == current_name {return}
@@ -149,12 +161,11 @@ impl VisNavigator {
 		while {
 			let current = self.current_vis_name();
 
-			return current != current_name && current != name
-		}
-		{
-			self.next_vis()
-		}
-	}*/
+			if current != current_name && current != name {
+                break;
+			}
+            */
+			
 }
 
 pub const VIS_MENU: &[VisList] =

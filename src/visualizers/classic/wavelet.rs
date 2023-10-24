@@ -1,10 +1,10 @@
 use crate::{
 	math::Cplx,
-	data::{FFT_POWER, ROTATE_SIZE, SAMPLE_SIZE},
+	data::{FFT_POWER, DEFAULT_ROTATE_SIZE, SAMPLE_SIZE},
 	graphics::{Canvas, P2, blend::Blend}
 };
 
-const COPY_SIZE: usize = ROTATE_SIZE;
+const COPY_SIZE: usize = DEFAULT_ROTATE_SIZE;
 const WT_POWER: usize = crate::data::POWER;
 const WT_SIZE: usize = 1 << WT_POWER;
 
@@ -62,7 +62,7 @@ impl WaveletTable {
                 if index >= WT_SIZE {return}
                 
                 let val = (self.table[offset + index].l1_norm()*128.0) as u8;
-                let color = u32::compose([0xFF, val, val, val]);
+                let color = u32::compose([val, val, val, val]);
                 
                 canvas.set_pixel(P2::new(canvas_x as i32, canvas_y as i32), color)
             }
@@ -70,8 +70,11 @@ impl WaveletTable {
     }
 }
 
-pub const draw_wavelet: crate::VisFunc = |prog, stream|
-{
+pub fn draw_wavelet(
+	prog: &mut crate::data::Program, 
+	stream: &mut crate::audio::SampleArr
+) {
+
 	let mut w = [Cplx::<f32>::zero(); WT_SIZE];
 	let l = stream.len();
 	
@@ -148,18 +151,20 @@ pub const draw_wavelet: crate::VisFunc = |prog, stream|
 			let g = ((r as u16 + b as u16) / 2) as u8;
 			
 			let pi = y*pw + x;
-			*prog.pix.pixel_mut(pi) = u32::from_be_bytes([0xFF, r, g, b]);
+			*prog.pix.pixel_mut(pi) = u32::from_be_bytes([b, r, g, b]);
 		}
 	}
 	
-	stream.rotate_left(ROTATE_SIZE);
-};
+	stream.rotate_left(DEFAULT_ROTATE_SIZE);
+}
 
-pub const draw_wavelet_: crate::VisFunc = |prog, stream|
-{
+pub fn draw_wavelet_(
+	prog: &mut crate::data::Program, 
+	stream: &mut crate::audio::SampleArr
+) {
     let table = WaveletTable::init(stream);
     table.draw(&mut prog.pix);
-};
+}
 
 fn hwt(a: &mut [Cplx<f32>; WT_SIZE]) {
 	let mut aux = [Cplx::<f32>::zero(); WT_SIZE];

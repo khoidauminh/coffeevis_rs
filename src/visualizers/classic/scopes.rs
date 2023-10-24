@@ -13,7 +13,10 @@ use crate::math::{self, Cplx};
 static LOCALI: AtomicUsize = AtomicUsize::new(0);
 static WAVE_SCALE_FACTOR: RwLock<f32> = RwLock::new(1.0);
 
-pub const draw_oscilloscope: crate::VisFunc = |prog, stream| {
+pub fn draw_oscilloscope(
+	prog: &mut crate::data::Program, 
+	stream: &mut crate::audio::SampleArr
+) {
     let l = stream.len();
     let li = l as i32;
 
@@ -141,10 +144,13 @@ pub const draw_oscilloscope: crate::VisFunc = |prog, stream| {
     
     stream.rotate_left(200);
     LOCALI.store(li, Relaxed);
-};
+}
 
 
-pub const draw_vectorscope: crate::VisFunc = |prog, stream| {
+pub fn draw_vectorscope(
+	prog: &mut crate::data::Program, 
+	stream: &mut crate::audio::SampleArr
+) {
     let range = prog.WAV_WIN;
     let l = stream.len();
 
@@ -216,9 +222,9 @@ pub const draw_vectorscope: crate::VisFunc = |prog, stream| {
     }
 
     draw_cross(prog);
-    
-    stream.rotate_left(crate::data::ROTATE_SIZE);
-};
+
+    stream.auto_rotate();
+}
 
 fn to_color(s: i32, size: i32) -> u8 {
     (s.abs() * 256 / size).min(255) as u8

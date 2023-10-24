@@ -16,7 +16,6 @@ use crossterm::{
     },
     style::{Stylize, Colors, SetColors, Print, Color, Attribute, SetAttribute},
     cursor::{self, Hide, Show},
-    Result
 };
 /*
 use sixel_rs;
@@ -43,8 +42,7 @@ const CHARSET_OPAC_EXP: &[u8] = b"`.-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ
 //pub const CHARSET_SIZEOPAC: &[u8] = &[' ', '-', '~', '+', 'o', 'i', 'w', 'G', 'W', '@', '$'].as_bytes();
 pub const CHARSET_SIZEOPAC: &[u8] = b" -~+oiwGW@$";
 
-impl Program
-{
+impl Program {
 	pub fn print_con(&mut self) {
 		(self.flusher)(self, &mut std::io::stdout());
 	}
@@ -148,18 +146,15 @@ impl Program
 		);
 	}
 
-	pub fn print_alpha(&self, stdout: &mut Stdout)
-	{
+	pub fn print_alpha(&self, stdout: &mut Stdout) {
 		let center = self.get_center(2, 4);
 
-		for y in (0..self.pix.height())
-		{
+		for y in (0..self.pix.height()) {
 
 			let cy = center.1 + y as u16 / 2;
 			queue!(stdout, cursor::MoveTo(center.0, cy));
 
-			for x in (0..self.pix.width())
-			{
+			for x in (0..self.pix.width()) {
 
 				let i = y*self.pix.width() + x;
 
@@ -176,17 +171,14 @@ impl Program
 		}
 	}
 
-	pub fn print_block(&self, stdout: &mut Stdout)
-	{
+	pub fn print_block(&self, stdout: &mut Stdout) {
 		let center = self.get_center(2, 4);
 
-		for y_base in (0..self.pix.height()).step_by(2)
-		{
+		for y_base in (0..self.pix.height()).step_by(2) {
 			let cy = center.1 + y_base as u16 / 2;
 			queue!(stdout, cursor::MoveTo(center.0, cy));
 
-			for x_base in (0..self.pix.width()).step_by(1)
-			{
+			for x_base in (0..self.pix.width()).step_by(1) {
 
 				let idx_base = y_base*self.pix.width() + x_base;
 				let [_, mut r, mut g, mut b] = self.pix.pixel(idx_base).to_be_bytes();
@@ -243,26 +235,22 @@ impl Program
 		}
 	}
 
-	pub fn print_brail(&self, stdout: &mut Stdout)
-	{
+	pub fn print_brail(&self, stdout: &mut Stdout) {
 		let center = self.get_center(4, 8);
 
-		for y_base in (0..self.pix.height()).step_by(4)
-		{
+		for y_base in (0..self.pix.height()).step_by(4) {
 			let cy = center.1 + y_base as u16 / 4;
 
 			queue!(stdout, cursor::MoveTo(center.0, cy));
 
-			for x_base in (0..self.pix.width()).step_by(2)
-			{
+			for x_base in (0..self.pix.width()).step_by(2) {
 
 				let idx_base = y_base*self.pix.width() + x_base;
 
 				let [_, mut r, mut g, mut b] = self.pix.pixel(idx_base).to_be_bytes();
 
 				let bx = '⠀' as u32 + // first char of braille
-					(0..8).fold(0u8, |acc, i|
-					{
+					(0..8).fold(0u8, |acc, i| {
 						let idx = idx_base +
 							if i < 6 {
 								(i / 3) + (i % 3)*self.pix.width()
@@ -304,18 +292,15 @@ impl Program
 }
 
 fn to_art<T>(table: &[u8], x: T) -> char
-where usize: From<T>
-{
+where usize: From<T> {
     *table.get(usize::from(x) * table.len() / 256).unwrap_or(&b' ') as char
 }
 
-fn rgb_to_ansi(r: u8, g: u8, b: u8) -> u8
-{
+fn rgb_to_ansi(r: u8, g: u8, b: u8) -> u8 {
     (16 + (r as u16 *6/256)*36 + (g as u16 *6/256)*6 + (b as u16*6/256)) as u8
 }
 
-pub fn rescale(mut s: (u16, u16), prog: &Program) -> (u16, u16)
-{
+pub fn rescale(mut s: (u16, u16), prog: &Program) -> (u16, u16) {
     use super::Mode;
 
 	s.0 = s.0.min(prog.CON_MAX_W);
@@ -334,8 +319,7 @@ pub fn rescale(mut s: (u16, u16), prog: &Program) -> (u16, u16)
     s
 }
 
-pub fn con_main(mut prog: Program) -> Result<()>
-{
+pub fn con_main(mut prog: Program) -> std::io::Result<()> {
 	let mut stdout = stdout();
 
     enable_raw_mode()?;
@@ -347,23 +331,18 @@ pub fn con_main(mut prog: Program) -> Result<()>
     prog.update_size(size);
 
 
-	if !prog.DISPLAY
-	{
-		while !EXIT
-		{
+	if !prog.DISPLAY {
+		while !EXIT {
 			control_key_events_con(&mut prog, &mut EXIT)?;
 			prog.render();
 		}
-	}
-	else
-	{
+	} else {
 		queue!(
 			stdout, EnterAlternateScreen,
 			Hide,
 			SetAttribute(Attribute::Bold)
 		);
-		while !EXIT
-		{
+		while !EXIT {
 			control_key_events_con(&mut prog, &mut EXIT)?;
 			prog.render();
 			prog.print_con();

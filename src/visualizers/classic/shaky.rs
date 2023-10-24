@@ -1,6 +1,7 @@
 use crate::data::{Program};
 use crate::graphics::{self, Image};
 use crate::math::{self, Cplx, fast};
+use crate::graphics::blend::Blend;
 
 // soft shaking
 const incr: f32 = 0.0001;
@@ -30,11 +31,12 @@ fn triangle_wav(amp: f32, prd: f32, t: f32) -> f32 {
     (4.0*(t/prd - (t/prd+0.5).trunc()).abs()-1.0)*amp
 }
 
-pub const draw_shaky: crate::VisFunc = |prog, stream| {
+pub fn draw_shaky(
+	prog: &mut crate::data::Program, 
+	stream: &mut crate::audio::SampleArr
+) {
     let mut LOCALDATA = DATA.write().unwrap();
    
-    LOCALDATA.i = (LOCALDATA.i + incr) % 1.0;
-
     let mut data_f = [Cplx::<f32>::zero(); 512];
 
     let sizef = prog.pix.width().min(prog.pix.height()) as f32;
@@ -52,7 +54,7 @@ pub const draw_shaky: crate::VisFunc = |prog, stream| {
     // let mut LOCALDATA = DATA.write().unwrap();
 
     //smooth_amplitude = graphical_fn::linear_interp(smooth_amplitude, amplitude.min(1024.0), 0.5);
-    let smooth_amplitude = amplitude * 0.00001;
+    let smooth_amplitude = amplitude * 0.00003;
     let amplitude_scaled = amplitude * 0.00000002;
     
     LOCALDATA.js = (LOCALDATA.js + amplitude_scaled) % 2.0;
@@ -68,21 +70,41 @@ pub const draw_shaky: crate::VisFunc = |prog, stream| {
 
     LOCALDATA.js += 0.01;
     LOCALDATA.jc += 0.01;
+    LOCALDATA.i = (LOCALDATA.i + incr +amplitude_scaled) % 1.0;
 
     
-    prog.clear_pix();
+    prog.pix.fade(254);
     
     let (x_soft_shake, y_soft_shake) = diamond_func(8.0, 1.0, LOCALDATA.i);
     
-    prog.pix.draw_image(
+    let final_x = x_soft_shake + LOCALDATA.x;
+    let final_y = y_soft_shake + LOCALDATA.y;
+    
+    let width = prog.pix.width() as i32;
+    let height = prog.pix.height() as i32;
+    
+    let red = 255i32.saturating_sub(final_x.abs()*5) as u8;
+    let blue  = 255i32.saturating_sub(final_y.abs()*5) as u8;
+    let green = (amplitude * 0.0001) as u8;
+    
+    /*prog.pix.draw_image(
 		&prog.IMG,
 		crate::graphics::P2::new(
 		    x_soft_shake + LOCALDATA.x,
 		    y_soft_shake + LOCALDATA.y,
 		), 
 		150
-	);
+	);*/
+	
+	prog.pix.draw_rect_wh(
+		crate::graphics::P2::new(
+		   final_x + width /2 - 1,
+		   final_y + height/2 - 1,
+		),
+		3, 3,
+		u32::compose([0xFF, red, green, blue])
+	); 
 
-};
+}
 
 const wrapper: f32 = 725.0;

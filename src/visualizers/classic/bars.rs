@@ -55,7 +55,7 @@ fn prepare(stream: &mut crate::audio::SampleArr, bar_num: usize, volume_scale: f
         .take(bar_num)
         .enumerate()
         .map(|(i, smp)| {
-		    let scl = math::fast::fsqrt(i as f32);
+		    let scl = (i as f32).sqrt();
 		    let smp_f32: f32 = (*smp).into();
 		    smp_f32 * (volume_scale * scl as f32)
 	    })
@@ -83,11 +83,15 @@ fn prepare(stream: &mut crate::audio::SampleArr, bar_num: usize, volume_scale: f
 	stream.rotate_left(FFT_SIZE_HALF/2);
 }
 
-pub const draw_bars: crate::VisFunc = |prog, stream| {
-	use crate::math::{interpolate::bezierf, fast::cubed_sqrt, increment_index};
+pub fn draw_bars(
+	prog: &mut crate::data::Program, 
+	stream: &mut crate::audio::SampleArr
+) {
+	use crate::math::{interpolate::bezierf, fast::cubed_sqrt, increment};
 	
 	let bar_num = prog.pix.width() / 2;
 	let bnf = bar_num as f32;
+	let bnf_recip = 1.0 / bnf;
 	let l = stream.len();
 	
 	prepare(stream, bar_num, prog.VOL_SCL);
@@ -106,7 +110,7 @@ pub const draw_bars: crate::VisFunc = |prog, stream| {
 	let mut num_of_smp_each = 0usize;
 
     loop {
-        let i_ = iter / bnf;
+        let i_ = iter * bnf_recip;
         let idxf = iter;
         
         iter += i_;
@@ -149,15 +153,18 @@ pub const draw_bars: crate::VisFunc = |prog, stream| {
 		
 		if idx+1 == bar_num {break}
     }
-};
+}
 
-pub const draw_bars_circle: crate::VisFunc = |prog, stream| 
-{
+pub fn draw_bars_circle(
+	prog: &mut crate::data::Program, 
+	stream: &mut crate::audio::SampleArr
+) {
 	let size = prog.pix.height().min(prog.pix.width()) as i32;
 	let sizef = size as f32;
 
 	let bar_num = math::fast::isqrt(prog.pix.sizel());
 	let bnf = bar_num as f32;
+	let bnf_recip = 1.0 / bnf;
 	let l = stream.len();
 	
 	let wh = prog.pix.width() as i32 / 2;
@@ -169,21 +176,21 @@ pub const draw_bars_circle: crate::VisFunc = |prog, stream|
 
     prog.clear_pix();
 
-    let base_angle = math::cos_sin(1.0 / bnf);
+    //let base_angle = math::cos_sin(1.0 / bnf);
     let mut angle = Cplx::<f32>::one();
     const fft_window: f32 = (FFT_SIZE >> 6) as f32 * 1.5;
 
     for i in 0..bar_num 
     {
 
-        let i_ = i as f32 / bnf;
+        let i_ = i as f32 * bnf_recip;
 
         let idxf = i_*fft_window;
         let idx = idxf as usize;
         let t = idxf.fract();
         let i_next = i+1;
 
-        angle = angle*base_angle;
+        angle = math::cos_sin(i_);
         
         // let scalef = math::fft_scale_up(i, bar_num);
 
@@ -207,4 +214,4 @@ pub const draw_bars_circle: crate::VisFunc = |prog, stream|
 
         prog.pix.draw_line(p1, p2, c);
     }
-};
+}

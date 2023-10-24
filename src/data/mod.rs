@@ -17,14 +17,14 @@ pub const SAMPLE_RATE_MAX: usize = 384000;
 pub const SAMPLE_RATE: usize = 44100;
 
 pub const POWER: usize = 13;
-pub const FFT_POWER: usize = 10;
+pub const FFT_POWER: usize = 9;
 pub const SAMPLE_SIZE: usize = 1 << POWER;
-pub const FFT_SIZE: usize = 1 << (FFT_POWER-1);
+pub const FFT_SIZE: usize = 1 << FFT_POWER;
 
 pub const INCREMENT: usize = 2;
 pub const DEFAULT_FPS: u8 = 144;
 pub const DEFAULT_WAV_WIN: usize = 144 * INCREMENT;
-pub const ROTATE_SIZE: usize = 289; // 3539;
+pub const DEFAULT_ROTATE_SIZE: usize = 289; // 3539;
 pub const PHASE_OFFSET: usize = SAMPLE_RATE / 50 / 4;
 pub const DEFAULT_VOL_SCL: f32   = 0.86;
 pub const DEFAULT_SMOOTHING: f32 = 0.65;
@@ -34,13 +34,11 @@ pub const SILENCE_LIMIT: u8 = 7;
 #[doc(hidden)]
 pub const IDLE_REFRESH_RATE: Duration = Duration::from_millis(1000/24);
 
-pub const DEFAULT_SIZE_WIN: u16 = 80;
+pub const DEFAULT_SIZE_WIN: u16 = 60;
 #[doc(hidden)]
 pub const ERR_MSG: &str = "Configration error at line";
 
-pub const DEFAULT_WIN_SCALE: u8 = 2;
-
-pub static IMAGE: &[u8; 1442] = include_bytes!("coffee_pixart_2x.png");
+pub const DEFAULT_WIN_SCALE: u8 = 3;
 
 /// Status of the audio system.
 /// The transitional stages only exist for one iteration in the main loop.
@@ -71,16 +69,22 @@ pub struct Program
 
 	/// Allow for resizing. Windowed mode only.
 	pub RESIZE: bool,
+	
+	/// Scaling purposes
+	pub WAYLAND: bool,
 
 	pub pix: crate::graphics::Canvas,
 
 	pub mode: Mode,
+	
+	pub transparency: u8,
 
 	pub FPS: u64,
 	pub REFRESH_RATE: std::time::Duration,
 	pub WAV_WIN: usize,
 	pub VOL_SCL: f32,
 	pub SMOOTHING: f32,
+	pub ROTATE_SIZE: usize,
 
 	pub WIN_W: u16,
 	pub WIN_H: u16,
@@ -98,8 +102,6 @@ pub struct Program
 	pub SWITCH: Instant,
     pub AUTO_SWITCH: bool,
     pub AUTO_SWITCH_ITVL: Duration,
-
-    pub IMG: Image,
 
     pub motion_blur_index: u8,
 
@@ -138,6 +140,10 @@ impl Program {
 			RESIZE: false,
 
 			mode: Mode::Win,
+			
+			WAYLAND: false,
+			
+			transparency: 255,
 
 			pix: crate::graphics::Canvas::new(DEFAULT_SIZE_WIN as usize, DEFAULT_SIZE_WIN as usize),
 
@@ -156,6 +162,7 @@ impl Program {
 			WAV_WIN: DEFAULT_WAV_WIN,
 			VOL_SCL: DEFAULT_VOL_SCL,
 			SMOOTHING: DEFAULT_SMOOTHING,
+			ROTATE_SIZE: DEFAULT_ROTATE_SIZE,
 
 			WIN_W: DEFAULT_SIZE_WIN,
 			WIN_H: DEFAULT_SIZE_WIN,
@@ -163,8 +170,6 @@ impl Program {
 			CON_H: 25,
 		    CON_MAX_W: 50,
             CON_MAX_H: 25,
-
-			IMG: crate::data::reader::prepare_image(IMAGE),
 
 			render_trigger: 0u8,
 			state: State::Waiting,
@@ -307,10 +312,11 @@ impl Program {
 	}
 
 	pub fn clear_pix(&mut self) {
-		// self.pix.clear();
+		//self.pix.clear();
         //self.pix.fade((256*self.FPS as usize / DEFAULT_FPS as usize) as u8);
 		//self.timed_clear();
-		if self.FPS <= (DEFAULT_FPS / 2) as u64  {
+		
+		if self.FPS >= (DEFAULT_FPS / 2) as u64  {
 			self.pix.clear();
 			return
 		}
@@ -395,4 +401,38 @@ impl Program {
                              => Waken,
         }
 	}
+	
+	pub fn increase_vol_scl(&mut self) {
+		self.VOL_SCL = (self.VOL_SCL / 1.2).clamp(0.0, 10.0);
+	}
+	
+	pub fn decrease_vol_scl(&mut self) {
+		self.VOL_SCL = (self.VOL_SCL * 1.2).clamp(0.0, 10.0);
+	}
+	
+	pub fn increase_smoothing(&mut self) {
+		self.SMOOTHING = (self.SMOOTHING + 0.05).clamp(0.0, 0.95);
+	}
+	
+	pub fn decrease_smoothing(&mut self) {
+		self.SMOOTHING = (self.SMOOTHING - 0.05).clamp(0.0, 0.95);
+	}
+	
+	pub fn increase_wav_win(&mut self) {
+		self.WAV_WIN = (self.WAV_WIN + 3).clamp(3, 50)
+	}
+	
+	pub fn decrease_wav_win(&mut self) {
+		self.WAV_WIN = (self.WAV_WIN - 3).clamp(3, 50)
+	}
+	
+	pub fn toggle_auto_switch(&mut self) {
+		self.AUTO_SWITCH ^= true;
+	}
+	
+	pub fn reset_parameters(&mut self) {
+		self.VOL_SCL = DEFAULT_VOL_SCL;
+		self.SMOOTHING = DEFAULT_SMOOTHING;
+		self.WAV_WIN = DEFAULT_WAV_WIN;
+	} 
 }

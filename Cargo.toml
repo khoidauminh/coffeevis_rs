@@ -1,9 +1,9 @@
 [package]
 name = "coffeevis"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2021"
 authors = ["khoidauminh <khoidauminh@tutanota.com>"]
-description = "A simple graphical audio visualizer mainly for Linux."
+description = "A simple graphical audio visualizer for Linux."
 license = "MIT"
 keywords = ["graphics", "audio", "music", "visualizer"]
 repository = "https://github.com/khoidauminh/coffeevis_rs"
@@ -14,16 +14,18 @@ readme = "README.md"
 [dependencies]
 cpal = "0.15.2"
 minifb = "0.25"
-crossterm = "0.26"
-image = "0.24"
-dirs = "4.0"
+crossterm = "0.27.0"
+softbuffer = "0.3.2"
+winit = { version = "0.29.2", features = ["rwh_05"] }
 
-softbuffer = "0.3.0"
-winit = "0.28.6"
+[features]
+wtf = []
+aprrox_trig = []
+benchmark = []
 
-fps_clock = "2.0.0"
+[profile.dev]
+overflow-checks = false
 
-num-traits = "0.2.16"
 
 [profile.release]
 #strip = true

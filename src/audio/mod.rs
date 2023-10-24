@@ -84,7 +84,7 @@ pub fn read_samples<T: cpal::Sample<Float = f32>>(data: &[T]) {
 	    ns *= b.read_from_input_quiet(data) as u8;
 	}
 
-	// println!("SAMPLE_READ");
+	// dbg!(b.input_size());
 
     NO_SAMPLE.store(ns, Ordering::Relaxed);
 }
@@ -174,14 +174,19 @@ impl Peak {
 	}
 	
 	pub fn update(&mut self, inp: f32) -> f32 {
-		use crate::math::interpolate::{self, linearf};
+		use crate::math::{
+			interpolate::{self, linearf},
+			fast::abs
+		};
 		
-		let inp = f32::max(inp.abs(), self.limit);
+		let inp = f32::max(abs(inp), self.limit);
 		
 		if self.peak < inp || self.hold >= self.hold_for {
 			self.peak = inp;
 			self.hold = 0;
-	    }
+	    } else {
+			self.hold += 1;
+		}
 		
 		self.amp = self.peak;
 		
@@ -237,7 +242,7 @@ where
 	    self.vec[self.index] = val;
 		
 		self.index = 
-			crate::math::increment_index(
+			crate::math::increment(
 				self.index, self.size
 		    );
 		

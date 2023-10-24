@@ -1,6 +1,6 @@
 use cpal;
-use crate::math::{Cplx, increment_index};
-use crate::data::SAMPLE_SIZE;
+use crate::math::{Cplx, increment};
+use crate::data::{SAMPLE_SIZE, DEFAULT_ROTATE_SIZE};
 use std::{iter, sync::atomic::AtomicBool};
 
 const SILENCE_LIMIT: f32 = 0.01;
@@ -25,8 +25,8 @@ type BufferArray = [Cplx<f32>; BUFFER_SIZE];
 /// send input data that quickly between each rendering.
 /// Moreover, the visualizers don't use all of the
 /// data sent in in one rendering. Therefore, one
-/// solution was to use the a slice of the
-/// buffer, then rotate it to get to the next one.
+/// solution was to use one slice of then rotate
+/// it to get to the next one.
 ///
 /// AudioBuffer used the mentioned the offset index to
 /// simulate rotating and bypass having to move elemenents.
@@ -47,7 +47,7 @@ pub struct AudioBuffer {
     /// the old one was.
     write_point: usize,
     
-    
+    rotate_size: usize,
 
     input_size: usize,
 
@@ -105,6 +105,8 @@ impl AudioBuffer {
             size: BUFFER_SIZE,
             size_mask: SIZE_MASK,
             
+            rotate_size: DEFAULT_ROTATE_SIZE,
+            
             max: 0.0,
             average: 0.0,
             silent: true
@@ -117,6 +119,10 @@ impl AudioBuffer {
             index: 0,
             take: self.buffer.len()
         }
+    }
+
+    pub fn input_size(&self) -> usize {
+    	self.input_size
     }
 
     pub fn len(&self) -> usize {
@@ -175,6 +181,10 @@ impl AudioBuffer {
         .for_each(|(out, inp)| *out = *inp);
         o
     }
+    
+    pub fn auto_rotate(&mut self) {
+		self.rotate_left(self.rotate_size);
+	}
 
     #[doc(hidden)]
     pub fn reset_offset(&mut self) {
@@ -234,6 +244,8 @@ impl AudioBuffer {
         } else {
             self.offset = self.index_sub(self.write_point, input_size);
         }
+
+		self.rotate_size = self.input_size / 4 + 1;
 
         self.silent = silence_index < SILENCE_INDEX;
 
@@ -303,6 +315,8 @@ impl AudioBuffer {
             );
 
         self.silent = silence_index < SILENCE_INDEX;
+        
+        self.rotate_size = self.input_size / 4 + 1;
 
         self.silent
     }

@@ -5,7 +5,10 @@ use crate::math::Cplx;
 //static mut prog._i: usize = 0;
 //static mut wrap_rate.incremeter: f32 = 0.0;
 
-pub const draw_ring: crate::VisFunc = |prog, stream| {
+pub fn draw_ring(
+	prog: &mut crate::data::Program, 
+	stream: &mut crate::audio::SampleArr
+) {
 
     let range = prog.WAV_WIN;
 
@@ -45,14 +48,15 @@ pub const draw_ring: crate::VisFunc = |prog, stream| {
 	
 		let int = (smp.l1_norm()*128.0) as u8;
 
-        prog.pix.set_pixel(
+        prog.pix.plot(
 			P2::new(x/2+width_top_h, y/2+height_top_h),
             u32::from_be_bytes([
 				255, 
 				((128 + x.abs()*64/size as i32) as u8).saturating_sub(int), 
 				255,
 				((128 + y.abs()*64/size as i32) as u8).saturating_add(int)
-			])
+			]),
+			|a, b| b
 		);
     }
 
@@ -62,6 +66,6 @@ pub const draw_ring: crate::VisFunc = |prog, stream| {
     //~ }
 
     //crate::graphics::visualizers::cross::draw_cross(buf);
-    
-    stream.rotate_left(crate::data::ROTATE_SIZE / 2);
-};
+
+    stream.auto_rotate();
+}

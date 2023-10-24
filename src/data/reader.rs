@@ -1,10 +1,3 @@
-use dirs;
-use image::{
-	ImageFormat,
-	io::Reader,
-	GenericImageView
-};
-
 use std::{
 	io::{Read, BufReader, Write, Cursor, prelude::*},
 	fs::File,
@@ -17,7 +10,7 @@ use crate::{
 	graphics::{self, Image},
 	modes::Mode
 };
-
+/*
 pub fn check_path() -> Option<PathBuf> {
 
 	let PATHS: [PathBuf; 2] = [
@@ -32,7 +25,14 @@ pub fn check_path() -> Option<PathBuf> {
 	}
 	return None
 }
+*/
+/*
 
+use image::{
+	ImageFormat,
+	io::Reader,
+	GenericImageView
+};
 pub fn prepare_image(file: &[u8]) -> Image {
 
 	let img =
@@ -52,7 +52,7 @@ pub fn prepare_image(file: &[u8]) -> Image {
 		w,
 		h
 	)
-}
+}*/
 
 impl Program {
 	pub fn write_err<E: std::error::Error>(&mut self, l: usize, err: E) {
@@ -73,7 +73,7 @@ impl Program {
 		let mut size = (DEFAULT_SIZE_WIN, DEFAULT_SIZE_WIN);
 
 		args.next();
-
+		
 		loop {
 			let mut arg =  "";
 
@@ -118,11 +118,6 @@ impl Program {
 					if self.SCALE == 0 {
 					    panic!("Argument error: scale is 0");
 					}
-
-					/*if !self.SCALE.is_power_of_two() {
-					    println!("WARNING: scale is not a power of 2! Selecting the nearest smaller power.");
-					    self.SCALE = self.SCALE.next_power_of_two() / 2;
-					}*/
 				},
 
 				"--fps" =>
@@ -134,7 +129,7 @@ impl Program {
 				        .expect("Argument error: Invalid value.");
 
 				    if new_fps > 200 {
-				        panic!("Fps value too high (must be lower than 200");
+				        panic!("Fps value too high (must be lower than 200)");
 				    }
 
 				    self.update_fps(new_fps);
@@ -142,8 +137,17 @@ impl Program {
 
 				"--resizeable" =>
 				{
+				    todo!();
 				    self.RESIZE = true;
 				},
+				
+				"--transparent" => 
+				{
+					match args.next() {
+						Some(string) => self.transparency = string.parse::<u8>().expect("Invalid value for transparency"),
+						None => self.transparency = 0
+				    }
+				}
 
 				"--max-con-size" => {
 					let s = args.next()
@@ -156,12 +160,12 @@ impl Program {
 				}
 
 				"--force-wayland" => {
-                    std::env::set_var("WINIT_UNIX_BACKEND", "wayland");
+                    self.WAYLAND = true;
                     std::env::set_var("LANG", "C");
                     self.SCALE = 1;
 				},
 
-				&_ => self.msg = Err("Argument error: Unknown option".to_string()),
+				&_ => eprintln!("Argument error: Unknown option {}", arg),
 			}
 		}
 
@@ -176,6 +180,10 @@ impl Program {
 
 			_ => (self.CON_W, self.CON_H) = crate::modes::console_mode::rescale((size[0] as u16, size[1] as u16), self),
 		}*/
+		
+		if !self.WAYLAND {
+			std::env::set_var("WAYLAND_DISPLAY", "");
+		}
 
 		self
 	}
@@ -216,7 +224,7 @@ impl Program {
 		}
 	}
 
-	pub fn print_err_win(&mut self) {
+	/*pub fn print_err_win(&mut self) {
 		match &self.msg {
 			Ok(()) => {},
 			Err(string)  => {
@@ -224,5 +232,5 @@ impl Program {
 				self.msg = Ok(());
 			}
 		}
-	}
+	}*/
 }

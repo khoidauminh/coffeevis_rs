@@ -18,7 +18,10 @@ static DATA: std::sync::RwLock<LocalData> = std::sync::RwLock::new(LocalData {
     pong: false,
 });
 
-pub const draw_vol_sweeper: crate::VisFunc = |para, stream| {
+pub fn draw_vol_sweeper(
+	para: &mut crate::data::Program, 
+	stream: &mut crate::audio::SampleArr
+) {
     //let w = PIX_W*stream[_sweep].abs() as usize /32768;
     para.clear_pix_alpha(253);
 
@@ -67,4 +70,4 @@ pub const draw_vol_sweeper: crate::VisFunc = |para, stream| {
     }
     
     stream.rotate_left(SAMPLE_SIZE >> 5);
-};
+}

@@ -12,7 +12,10 @@ static DATA: std::sync::RwLock<LocalData> = std::sync::RwLock::new(LocalData {
     p1: P2 { x: 0, y: 0 },
 });
 
-pub const draw_lazer: crate::VisFunc = |para, stream| {
+pub fn draw_lazer(
+	para: &mut crate::data::Program, 
+	stream: &mut crate::audio::SampleArr
+) {
     let w = para.pix.width()  as i32;
     let h = para.pix.height() as i32;
 
@@ -53,4 +56,4 @@ pub const draw_lazer: crate::VisFunc = |para, stream| {
     para.pix.draw_line(LOCAL.p1, LOCAL.p0, color);
 
     LOCAL.p1 = LOCAL.p0;
-};
+}

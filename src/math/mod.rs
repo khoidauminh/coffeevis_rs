@@ -16,6 +16,21 @@ pub struct Cplx<T: Copy + Clone> {
 	pub y: T
 }
 
+pub trait ToUsize<T> {
+    fn new(value: T) -> Self;
+}
+
+impl ToUsize<i32> for usize {
+	fn new(x: i32) -> usize {
+		if x > 0 {return x as usize}
+		0
+		
+		//x.max(0) as usize
+		//const MINUS1: usize = -1i32 as usize;
+		//(x as usize) & ((x < 0) as usize).wrapping_add(MINUS1)
+	}
+}
+
 pub fn fft(a: &mut [Cplx<f32>]) {
 	let l = a.len();
 	let power = log2i::<usize>(l);
@@ -36,25 +51,12 @@ pub const fn log2i<T>(n: usize) -> usize {
 	usize::BITS.saturating_sub(n.leading_zeros()).wrapping_sub(1) as usize
 }
 
-pub fn increment<
-	T: num_traits::WrappingAdd<Output = T>
-	+  ops::Mul<Output = T>
-	+  PartialOrd<T>
-	+  From<bool>
-	+ std::marker::Copy
-	>(a: T, limit: T) -> T {
-	
-	let b = a.wrapping_add(&T::from(true));
-	if b >= limit 
-        {return T::from(false)} 
-    else
-        {return b}
-}
-
-pub fn increment_index(a: usize, limit: usize) -> usize {
-    let b = a.wrapping_add(1);
-    let mask = ((b >= limit) as usize).wrapping_sub(1);
-    b & mask
+pub fn increment<T>(a: T, limit: T) -> T 
+where T: ops::Add<Output = T> + std::cmp::PartialOrd + From<u8>
+{
+    let b = a + T::from(1);
+    if b < limit {return b}
+    T::from(0)
 }
 
 pub fn decrement<T>(a: T, limit: T) -> T
@@ -125,7 +127,7 @@ pub fn integrate_inplace(a: &mut [Cplx<f32>], factor: usize, norm: bool)
 
         a[si] = sum;
 
-        fi = increment_index(fi, factor);
+        fi = increment(fi, factor);
         si += 1;
     }
 
@@ -134,7 +136,7 @@ pub fn integrate_inplace(a: &mut [Cplx<f32>], factor: usize, norm: bool)
         a[si] = sum;
 
         si += 1;
-        fi = increment_index(fi, factor);
+        fi = increment(fi, factor);
     }
 
     if norm {
@@ -221,9 +223,20 @@ where T: ops::Sub<Output = T> + ops::Add<Output = T>
     }
 }
 */
-pub fn cos_sin(a: f32) -> Cplx<f32>
-{
-	fft::twiddle_norm(a)
+pub fn cos_sin(x: f32) -> Cplx<f32> {
+    if cfg!(any(feature = "wtf", feature = "approx_trig")) { 
+		
+		use fast::{sin_norm, cos_norm, wrap};
+		let x2 = wrap(x);
+		Cplx::new(cos_norm(x2), sin_norm(x2))
+		
+	} else {
+		
+		let x = x*std::f32::consts::TAU;
+		let y = x.sin_cos();
+		Cplx::new(y.1, y.0)
+	
+	}
 }
 
 pub mod interpolate {
@@ -316,7 +329,7 @@ pub mod interpolate {
 
 	pub fn sqrt(a: f32, b: f32, factor: f32) -> f32 {
 		let offset = b-a;
-		a + super::fast::fsqrt(0.1*offset + 1.0) - 1.0
+		a + (0.1*offset + 1.0).sqrt() - 1.0
 	}
 	
 	pub fn envelope(
@@ -363,8 +376,7 @@ pub fn fps_slowdown(no_sample: u8) -> u8 {
 }*/
 
 pub fn highpass_inplace<T>(a: &mut [T])
-where T: std::ops::Sub<Output = T> + Copy
-{
+where T: std::ops::Sub<Output = T> + Copy {
 	for i in 1..a.len() {a[i-1] = a[i] - a[i-1]}
 }
 

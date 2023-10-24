@@ -13,21 +13,22 @@ use crate::{
 	visualizers::VisFunc,
 };
 
-use fps_clock;
+// use fps_clock;
 
 use winit::{
 	event::{
 		self,
 		Event,
-		WindowEvent,
-		KeyboardInput,
-		DeviceEvent::Key,
-		VirtualKeyCode,
-		ElementState::Released
+		WindowEvent::{self, KeyboardInput},
+		DeviceEvent::{self, Key},
+		ElementState::Released,
+		RawKeyEvent
 	},
+	keyboard::{PhysicalKey::Code, KeyCode},
 	event_loop::{EventLoop, ControlFlow},
 	window::{Window, WindowBuilder},
-	dpi::{PhysicalSize, LogicalSize}
+	dpi::{PhysicalSize, LogicalSize},
+	platform::x11::EventLoopBuilderExtX11
 };
 
 use std::num::NonZeroU32;
@@ -92,8 +93,6 @@ pub fn win_legacy_main(mut prog: Program) -> Result<(), minifb::Error> {
         }
 
         prog.force_render();
-
-        prog.print_err_win();
 
         let winw = prog.pix.width()*scale;
         let winh = prog.pix.height()*scale;
@@ -174,29 +173,32 @@ pub fn win_main_winit(mut prog: Program) -> Result<(), &'static str> {
 		}).flatten().collect::<Vec<u8>>()
 	}
 
-	let size = (
-		prog.pix.width() as u32, //*prog.SCALE as u32,
-		prog.pix.height() as u32 //*prog.SCALE as u32
+	let mut size = (
+		prog.pix.width()  as u32,
+		prog.pix.height() as u32
 	);
-
-	let mut icon =
+	
+	if prog.WAYLAND {
+		size.0 *= prog.SCALE as u32;
+		size.1 *= prog.SCALE as u32;
+	}
+	/*let mut icon =
 	    winit::window::Icon::from_rgba(
 	        to_u8_vec(prog.IMG.as_slice()),
 	        prog.IMG.width() as u32,
 	        prog.IMG.height() as u32
-	    ).unwrap();
+	    ).unwrap();*/
 
 	std::env::set_var("WINIT_X11_SCALE_FACTOR", prog.SCALE.to_string());
 
-	let mut event_loop = EventLoop::new();
+	let mut event_loop = EventLoop::new().unwrap();
+	
 	let mut window = WindowBuilder::new()
-		//~ .with_vsync(true)
 		.with_title("kvis")
 		.with_inner_size(LogicalSize::<u32>::new(size.0, size.1))
 		.with_window_level(winit::window::WindowLevel::AlwaysOnTop)
-		.with_transparent(false)
+		.with_transparent(prog.transparency < 255)
 		.with_resizable(false)
-		.with_window_icon(Some(icon))
 		.build(&event_loop)
 		.expect("Failed to init window");
 
@@ -211,29 +213,12 @@ pub fn win_main_winit(mut prog: Program) -> Result<(), &'static str> {
 		NonZeroU32::new(inner_size.height).unwrap()
 	)
 	.unwrap();
+	
+	// println!("{} {}", size.0, window.outer_size().width);
+	
+	event_loop.set_control_flow(ControlFlow::Poll);
 
-	/*
-	let surface_texture = pixels::SurfaceTexture::new(inner_size.width, inner_size.height, &window);
-	let mut pixels_context =
-		pixels::PixelsBuilder::new(
-			prog.pix.width() as u32,
-			prog.pix.height() as u32,
-			surface_texture
-		)
-		.request_adapter_options(RequestAdapterOptions {
-			power_preference: PowerPreference::LowPower,
-			force_fallback_adapter: false,
-			compatible_surface: None,
-		})
-		.build()
-		.expect("Failed to create Pixels context");
-	*/
-
-	let mut clock = fps_clock::FpsClock::new(prog.FPS as u32);
-
-	event_loop.run(move |event, _, control_flow| {
-
-		*control_flow = ControlFlow::Poll;
+	event_loop.run(move |event, elwt| {
 
 		prog.update_vis();
 
@@ -247,83 +232,74 @@ pub fn win_main_winit(mut prog: Program) -> Result<(), &'static str> {
 			let mut buffer = surface.buffer_mut().unwrap();
 
 			prog.force_render();
-
+						
 			prog.pix.scale_to(&mut buffer, prog.SCALE as usize);
 
-			buffer.present().unwrap();
+			let _ = buffer.present();
 		};
 
 		match event {
 			Event::WindowEvent {
 				event: WindowEvent::CloseRequested,
 				..
-			} => control_flow.set_exit(),
-
-			Event::DeviceEvent{ event: Key(KeyboardInput{virtual_keycode: Some(code), state: kstate, modifiers: modifier, .. }), ..} => {
-				//use VirtualKeyCode::*;
-				if kstate == Released {
-					//println!("{:?}", code.clone());
-
-					match code {
-						VirtualKeyCode::Q if modifier.shift() => control_flow.set_exit(),
-
-						VirtualKeyCode::Space => {
-							if modifier.shift()
-								{prog.change_visualizer(false)}
-							else
-								{prog.change_visualizer(true)}
-
-							perform_draw(&mut window, &mut prog, &mut surface);
-						},
-
-						//~ VirtualKeyCode::Key1 =>  change_fps(&mut prog, 10, true),
-						//~ VirtualKeyCode::Key2 =>  change_fps(&mut prog, 20, true),
-						//~ VirtualKeyCode::Key3 =>  change_fps(&mut prog, 30, true),
-						//~ VirtualKeyCode::Key4 =>  change_fps(&mut prog, 40, true),
-						//~ VirtualKeyCode::Key5 =>  change_fps(&mut prog, 50, true),
-						//~ VirtualKeyCode::Key6 =>  change_fps(&mut prog, 60, true),
-
-						//~ VirtualKeyCode::Key7 =>  change_fps(&mut prog, -5, false),
-						//~ VirtualKeyCode::Key8 =>  change_fps(&mut prog,  5, false),
-
-						VirtualKeyCode::Minus =>   prog.VOL_SCL = (prog.VOL_SCL / 1.2).clamp(0.0, 10.0),
-						VirtualKeyCode::Equals =>   prog.VOL_SCL = (prog.VOL_SCL * 1.2).clamp(0.0, 10.0),
-
-						VirtualKeyCode::LBracket =>   prog.SMOOTHING = (prog.SMOOTHING - 0.05).clamp(0.0, 0.95),
-						VirtualKeyCode::RBracket =>   prog.SMOOTHING = (prog.SMOOTHING + 0.05).clamp(0.0, 0.95),
-
-						VirtualKeyCode::Semicolon =>   prog.WAV_WIN = (prog.WAV_WIN - 3).clamp(3, 50),
-						VirtualKeyCode::Apostrophe =>  prog.WAV_WIN = (prog.WAV_WIN + 3).clamp(3, 50),
-
-						VirtualKeyCode::Backslash => prog.AUTO_SWITCH ^= true,
-
-						VirtualKeyCode::Slash => {
-							prog.VOL_SCL = DEFAULT_VOL_SCL;
-							prog.SMOOTHING = DEFAULT_SMOOTHING;
-							prog.WAV_WIN = DEFAULT_WAV_WIN;
-						}
-
-
-						_ => {},
-					}
-				}
+			} => {
+				elwt.exit()
 			},
-
-			Event::MainEventsCleared => {
-				window.request_redraw();
-				clock.tick();
-			},
-
-			Event::RedrawRequested(_) => {
+			
+			Event::AboutToWait => {
+				
 				prog.update_timer();
-
+				
 				if prog.render_trigger() {
 					perform_draw(&mut window, &mut prog, &mut surface);
 				}
-
-				// println!("WINDOW_DRAW")
-
+				
+				
+				if cfg!(not(feature = "benchmark")) {
+					std::thread::sleep(prog.REFRESH_RATE);
+				}
+				//clock.tick();
 			},
+			
+			Event::DeviceEvent{event: DeviceEvent::Key(RawKeyEvent{physical_key: Code(code), state: state }), .. } => {
+				//use VirtualKeyCode::*;
+				
+					//println!("{:?}", code.clone());
+				if state.is_pressed() {
+					return
+				} 
+
+				match code {
+					KeyCode::Escape => elwt.exit(),
+
+					KeyCode::Space => {
+						prog.change_visualizer(true);
+						perform_draw(&mut window, &mut prog, &mut surface);
+					},
+					
+					KeyCode::KeyB => {
+						prog.change_visualizer(false);
+						perform_draw(&mut window, &mut prog, &mut surface);
+					},
+
+					KeyCode::Minus =>   prog.decrease_vol_scl(),
+					KeyCode::Equal =>  prog.increase_vol_scl(),
+
+					KeyCode::BracketLeft =>  prog.decrease_smoothing(),
+					KeyCode::BracketRight =>  prog.increase_smoothing(),
+
+					KeyCode::Semicolon =>  prog.decrease_smoothing(),
+					KeyCode::Quote => prog.increase_smoothing(),
+
+					KeyCode::Backslash => prog.toggle_auto_switch(),
+
+					KeyCode::Slash => prog.reset_parameters(),
+
+					_ => {},
+				}
+				
+			},
+
 
 			_ => (),
 		}

@@ -20,6 +20,7 @@ Coffeevis supports temporary options at launch
 | ------ | ------ | ------ |
 | --win-legacy |  | opens window with minifb (coffeevis now runs with winit by default) |
 | --ascii<br />--block<br />--braille | | runs in the terminal |
+| --transparent | 192 | sets transparency, no value indicates full transparency (value currently ignored for now) |
 | --auto-switch | true<br />false | toggles auto visualizer switching |
 | --size | 80x80 | sets resolution in window mode |
 | --scale | 2 | upscales in window mode |

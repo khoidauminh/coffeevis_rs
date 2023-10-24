@@ -1,4 +1,5 @@
 use std::ops::*;
+use super::fast;
 use super::Cplx;
 
 impl<T> Neg for Cplx<T> 
@@ -103,7 +104,7 @@ where T:
 	std::marker::Copy + 
 	Mul<Output = T> + 
 	Add<Output = T> +
-	Neg<Output = T>
+	Neg<Output = T> +
 {
 	pub fn new(x: T, y: T) -> Cplx<T> {
 		Cplx::<T> { x: x, y: y }
@@ -132,30 +133,36 @@ where T:
 	pub fn mid(&self) -> T {
 		self.x + self.y
 	}
-
 }
 
 impl Into<f32> for Cplx<f32> {
     fn into(self) -> f32 {
-        self.l1_norm()
+        self.max()
     }
 }
 
 impl Cplx<f32> {
 	pub fn mag(&self) -> f32 {
-		super::fast::fsqrt(self.x.powi(2) + self.y.powi(2))
+		(self.x.powi(2) + self.y.powi(2)).sqrt()
 	}
 
 	pub fn l1_norm(&self) -> f32 {
-		self.x.abs() + self.y.abs()
+		fast::abs(self.x) + fast::abs(self.y)
 	}
 
 	pub fn abs(&self) -> Cplx<f32> {
-		Cplx::<f32> {x: self.x.abs(), y: self.y.abs()}
+		Cplx::<f32> {x: fast::abs(self.x), y: fast::abs(self.y)}
 	}
 
 	pub const fn zero() -> Cplx<f32> {
 		Cplx::<f32> { x: 0.0, y: 0.0 }
+	}
+	
+	pub fn max(&self) -> f32 {
+		f32::max(
+			fast::abs(self.x),
+			fast::abs(self.y)
+		)
 	}
 }
 

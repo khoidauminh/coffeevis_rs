@@ -1,27 +1,38 @@
 use super::{Canvas, P2};
-use crate::math::Cplx;
+use crate::math::{Cplx, ToUsize};
+
+
 impl Canvas {
 	pub fn draw_rect_xy(&mut self, ps: P2, pe: P2, c: u32) {
-		let [xs, ys] = [ps.x.max(0) as usize, ps.y.max(0) as usize];
+		let xbound = self.width;
+		let ybound = self.height.wrapping_sub(1);
+		
+		let [xs, ys] = [
+			usize::new(ps.x),
+			usize::new(ps.y)
+		];
+		
 		let [xe, ye] = [
-			(pe.x as usize).min(self.width),
-			(pe.y as usize).min(self.height)
+			usize::new(pe.x),
+			usize::new(pe.y)
 		];
 
-		let w = xe.saturating_sub(xs);
+		let w = xe.min(xbound).saturating_sub(xs);
 		
 		let l = self.pix.len();
 
-		for y in ys..=ye {
+		for y in ys..=(ye.min(ybound)) {
 			let i = xs + y*self.width;
-			if let Some(chunk) = self.pix.get_mut(i..i+w) {
-			    chunk.fill(c)
-			}
+			let iw = i + w;
+			
+			// if iw >= self.pix.len() {return}
+			
+			self.pix[i..iw].fill(c);
 		}
 	}
 
 	pub fn draw_rect_wh(&mut self, p: P2, w: usize, h: usize, c: u32) {
-		let [xs, ys] = [p.x.max(0) as usize, p.y.max(0) as usize];
+		/*let [xs, ys] = [p.x.max(0) as usize, p.y.max(0) as usize];
 
 		let ye = (ys+h.saturating_sub(if p.y < 0 {-p.y as usize} else {0})).min(self.height);
 		// let ye = if p.y < 0 {ye.saturating_sub((-p.y) as usize)} else {ye};
@@ -32,7 +43,15 @@ impl Canvas {
 		for y in ys..ye {
 			let i = xs + y*self.width;
 			self.pix[i..(i+wi)].fill(c);
-		}
+		}*/
+		
+		let ps = p;
+		let pe = P2::new(
+			ps.x.wrapping_add(w as i32), 
+			ps.y.wrapping_add(h as i32).wrapping_sub(1)
+		);
+		
+		self.draw_rect_xy(ps, pe, c);
 	}
 
 	// Using Bresenham's line algorithm.
@@ -46,7 +65,11 @@ impl Canvas {
 		let mut p = ps;
 
 		loop {
-			self.set_pixel(p, c);
+			
+			if self.is_in_bound(p) {
+				self.set_pixel(p, c);
+			}
+			
 			if p.x == pe.x && p.y == pe.y {return}
 			let e2 = error*2;
 
