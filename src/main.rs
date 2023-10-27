@@ -14,7 +14,6 @@ mod modes;
 mod visualizers;
 mod controls;
 mod misc;
-mod mem;
 
 use data::*;
 
