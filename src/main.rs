@@ -14,6 +14,7 @@ mod modes;
 mod visualizers;
 mod controls;
 mod misc;
+mod mem;
 
 use data::*;
 
@@ -40,6 +41,19 @@ fn main() {
     stream.play().unwrap();
 
 	let conf = "";
+
+	std::env::set_var("LC_CTYPE", "en_US.utf8");
+	
+	let mut prog = Program::new().eval_args(&mut args.iter());
+	match &prog.mode
+	{
+		&Mode::WinLegacy    => win_legacy_main(prog).unwrap(),
+		&Mode::Win          => win_main_winit(prog).unwrap(),
+		&_                  => con_main(prog).unwrap()
+	}
+
+    stream.pause();
+}
 
 	/*if "--config" == args.get(1).unwrap_or(&"".to_string())
 	{
@@ -72,16 +86,3 @@ fn main() {
 			_       	    => run(conf),
 		}
 	}*/
-
-	std::env::set_var("LC_CTYPE", "en_US.utf8");
-	
-	let mut prog = Program::new().eval_args(&mut args.iter());
-	match &prog.mode
-	{
-		&Mode::WinLegacy    => win_legacy_main(prog).unwrap(),
-		&Mode::Win          => win_main_winit(prog).unwrap(),
-		&_                  => con_main(prog).unwrap()
-	}
-
-    stream.pause();
-}

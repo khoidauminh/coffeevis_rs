@@ -27,8 +27,8 @@ pub fn draw_lazer(
         }
         
         (
-            (sum.x * para.VOL_SCL as f32 * 0.2) as i32,
-            (sum.y * para.VOL_SCL as f32 * 0.2 * stream[0].y.signum()) as i32,
+            (sum.x * para.VOL_SCL as f32 * 0.05) as i32,
+            (sum.y * para.VOL_SCL as f32 * 0.05) as i32,
         )
     };
 
@@ -51,7 +51,7 @@ pub fn draw_lazer(
         ((255 - ax * ay * 2).abs().min(255)) as u8,
     ]);
 
-    para.pix.fade(254);
+    para.pix.fade(3);
 
     para.pix.draw_line(LOCAL.p1, LOCAL.p0, color);
 

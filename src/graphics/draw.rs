@@ -1,49 +1,77 @@
-use super::{Canvas, P2};
+use super::{Canvas, P2, blend::{Blend, Mixer}};
 use crate::math::{Cplx, ToUsize};
 
-
 impl Canvas {
-	pub fn draw_rect_xy(&mut self, ps: P2, pe: P2, c: u32) {
-		let xbound = self.width;
-		let ybound = self.height.wrapping_sub(1);
+	
+	pub fn set_pixel_xy(&mut self, p: P2, c: u32) {
+		let i = self.get_idx_fast(p);		
+		self.set_pixel(i, c);
+	}
+	
+	pub fn set_pixel(&mut self, i: usize, c: u32) {
+		if let Some(p) = self.pix.get_mut(i) {
+			*p = u32::mix(*p, c);
+		}
+	}
+	
+	pub fn set_pixel_by(&mut self, i: usize, c: u32, b: Mixer) {
+		if let Some(p) = self.pix.get_mut(i) {
+			*p = u32::mix(*p, c);
+		}
+	}
+	
+	pub fn set_pixel_xy_by(&mut self, p: P2, c: u32, b: Mixer) {
+		let i = self.get_idx_fast(p);		
+		self.set_pixel_by(i, c, b);
+	}
+	
+	pub fn draw_rect_xy_by(&mut self, ps: P2, pe: P2, c: u32, b: Mixer) {
+		// let xbound = self.width;
+		// let ybound = self.height.wrapping_sub(1);
 		
 		let [xs, ys] = [
-			usize::new(ps.x),
-			usize::new(ps.y)
+			ps.x as usize,
+			ps.y as usize
 		];
 		
 		let [xe, ye] = [
-			usize::new(pe.x),
-			usize::new(pe.y)
+			pe.x as usize,
+			pe.y as usize
 		];
 
-		let w = xe.min(xbound).saturating_sub(xs);
+		let w = xe.min(self.width).saturating_sub(xs);
+				
+		let mut i = xs + ys*self.width;
+		let iend  = (xs + ye*self.width).min(self.len);
 		
-		let l = self.pix.len();
-
-		for y in ys..=(ye.min(ybound)) {
-			let i = xs + y*self.width;
-			let iw = i + w;
-			
-			// if iw >= self.pix.len() {return}
-			
-			self.pix[i..iw].fill(c);
+		while i <= iend {
+			let iw = i.wrapping_add(w);
+			for p in self.pix[i..iw].iter_mut() {
+				*p = b(*p, c);
+			}
+			i  = i.wrapping_add(self.width);
 		}
 	}
-
+	
+	pub fn draw_rect_xy(&mut self, ps: P2, pe: P2, c: u32) {
+		self.draw_rect_xy_by(ps, pe, c, u32::mix);
+	}
+	
+	pub fn fade(&mut self, al: u8) {
+		let fader = self.background & 0x00_FF_FF_FF;
+		let fader = fader | ((al as u32) << 24);
+		self.pix.iter_mut().take(self.len).for_each(|smp| *smp = u32::mix(*smp, fader));
+	}
+	
+	pub fn fill(&mut self, c: u32) {
+		self.pix[0..self.len].fill(c);
+	}
+	
 	pub fn draw_rect_wh(&mut self, p: P2, w: usize, h: usize, c: u32) {
-		/*let [xs, ys] = [p.x.max(0) as usize, p.y.max(0) as usize];
+		self.draw_rect_wh_by(p, w, h, c, u32::mix);
+	}
 
-		let ye = (ys+h.saturating_sub(if p.y < 0 {-p.y as usize} else {0})).min(self.height);
-		// let ye = if p.y < 0 {ye.saturating_sub((-p.y) as usize)} else {ye};
-		let wi = w.min(
-		    self.width.saturating_sub(p.x.abs() as usize)
-	    );
-
-		for y in ys..ye {
-			let i = xs + y*self.width;
-			self.pix[i..(i+wi)].fill(c);
-		}*/
+	pub fn draw_rect_wh_by(&mut self, p: P2, w: usize, h: usize, c: u32, b: Mixer) {
 		
 		let ps = p;
 		let pe = P2::new(
@@ -51,7 +79,7 @@ impl Canvas {
 			ps.y.wrapping_add(h as i32).wrapping_sub(1)
 		);
 		
-		self.draw_rect_xy(ps, pe, c);
+		self.draw_rect_xy_by(ps, pe, c, b);
 	}
 
 	// Using Bresenham's line algorithm.
@@ -66,9 +94,7 @@ impl Canvas {
 
 		loop {
 			
-			if self.is_in_bound(p) {
-				self.set_pixel(p, c);
-			}
+			self.set_pixel_xy(p, c);
 			
 			if p.x == pe.x && p.y == pe.y {return}
 			let e2 = error*2;
@@ -236,7 +262,7 @@ impl Canvas {
 
         let i_center_x = wi / 2;
         let i_center_y = hi / 2;
-
+	
         let c_center_x = wc / 2;
         let c_center_y = hc / 2;
 

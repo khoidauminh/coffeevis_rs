@@ -41,7 +41,7 @@ fn prepare(stream: &mut crate::audio::SampleArr, bar_num: usize, volume_scale: f
     .take(FFT_SIZE_HALF)
     .enumerate()
     .for_each(|(i, smp)| 
-        *smp = stream[i*5/2].scale(FFT_SIZE_RECIP)
+        *smp = stream[i*3].scale(FFT_SIZE_RECIP)
     );
     math::fft_half(&mut data_f);
     
@@ -98,7 +98,7 @@ pub fn draw_bars(
 	
 	let mut LOCAL = DATA.write().unwrap();
 
-    prog.clear_pix();
+    prog.pix.clear();
     let sizef = Cplx::<f32>::new(prog.pix.width() as f32, prog.pix.height() as f32);
 
     let bnfh = bnf * 0.5;
@@ -174,7 +174,7 @@ pub fn draw_bars_circle(
 	
 	let mut LOCAL = DATA.write().unwrap();
 
-    prog.clear_pix();
+    prog.pix.clear();
 
     //let base_angle = math::cos_sin(1.0 / bnf);
     let mut angle = Cplx::<f32>::one();

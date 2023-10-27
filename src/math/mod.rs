@@ -367,7 +367,7 @@ pub mod interpolate {
 		} else {now};
 		
 		out.max(limit)
-	} 
+	}
 }
 /*
 pub fn fps_slowdown(no_sample: u8) -> u8 {
@@ -381,5 +381,7 @@ where T: std::ops::Sub<Output = T> + Copy {
 }
 
 pub fn fft_scale_up(i: usize, bound: usize) -> f32 {
-	(((i + 3) * (bound+3 - i)) >> 7).max(1) as f32
+	const PAD_LOW:  usize = 2;
+	const PAD_HIGH: usize = 4;
+	((((i + PAD_LOW) * (bound+PAD_HIGH - i)) >> 7) +1) as f32
 }

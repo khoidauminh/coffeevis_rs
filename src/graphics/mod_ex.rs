@@ -13,15 +13,22 @@ const SIZE_DEFAULT: (usize, usize) = (50, 50);
 
 pub type P2 = Cplx<i32>;
 
+const MAX_STACK_RESOLUTION: usize = 400;
+const MAX_STACK_SIZE: usize = 
+	MAX_STACK_RESOLUTION*
+	MAX_STACK_RESOLUTION
+;
+
 pub struct Canvas {
+	#[cfg(not(feature = "noheap"))]
 	pix: Vec<u32>,
-	//~ pix: crate::mem::StackVec<u32, 20>,
+
+	#[cfg(feature = "noheap")]
+	pix: [u32; MAX_STACK_SIZE],
+	
 	len: usize,
-	mask: usize,
 	width: usize,
 	height: usize,
-	
-	pub background: u32,
 }
 
 pub type Image = Canvas;
@@ -32,32 +39,62 @@ pub fn grayb(r: u8, g: u8, b: u8) -> u8
 }
 
 impl Canvas {
-	pub fn from_buffer(vec: Vec<u32>, w: usize, h: usize, background: u32) -> Self {
-		let padded = vec.len().next_power_of_two();
-		let mut newvec = vec![0u32; padded];
-		newvec[0..vec.len()].copy_from_slice(&vec);
+	pub fn from_buffer(vec: Vec<u32>, w: usize, h: usize) -> Self {
 		
-		Self {
-			pix: newvec,
-			len: w*h,
-			mask: padded -1,
-			width: w,
-			height: h,
+		#[cfg(feature = "noheap")] 
+		{
 			
-			background: background,
+			let mut buf = [0u32; MAX_STACK_SIZE];
+			let copy_size = vec.len().min(MAX_STACK_SIZE);
+			buf[0..copy_size].copy_from_slice(&vec[0..copy_size]);
+			
+			Self {
+				pix: buf,
+				len: w*h,
+				width: w,
+				height: h,
+			}
+			
+		} 
+		
+		#[cfg(not(feature = "noheap"))] 
+		{
+			
+			Self {
+				pix: vec,
+				len: w*h,
+				width: w,
+				height: h,
+			}
+			
 		}
 	}
 
-	pub fn new(w: usize, h: usize, background: u32) -> Self {
-		let padded = (w*h).next_power_of_two();
-		Self {
-			pix: vec![0u32; padded],
-			mask: padded-1,
-			len: w*h,
-			width: w,
-			height: h,
-			background: background,
+	pub fn new(w: usize, h: usize) -> Self {
+		
+		#[cfg(feature = "noheap")] 
+		{
+		
+			Self {
+				pix: [0u32; MAX_STACK_SIZE],
+				len: w*h,
+				width: w,
+				height: h,
+			}
+			
 		}
+		
+		#[cfg(not(feature = "noheap"))] 
+		{
+			
+			Self {
+				pix: vec![0u32; w*h],
+				len: w*h,
+				width: w,
+				height: h,
+			}
+			
+		} 
 	}
 	
 	pub fn width(&self) -> usize {
@@ -80,8 +117,31 @@ impl Canvas {
 		(self.width as i32, self.height as i32)
 	}
 
-	pub fn clear(&mut self) {	
-		self.fill(self.background);
+	pub fn fill(&mut self, c: u32) {
+		self.pix.fill(c);
+	}
+
+	pub fn clear<'a>(&'a mut self) {
+		/*use std::thread;
+
+		let quarterlen = self.pix.len() / 4;
+		let halflen = self.pix.len() / 2;
+		let halfquarterlen = halflen + quarterlen;
+
+		let (mut slice_a, mut slice_b) = self.pix.split_at_mut(halflen);
+		
+		let thread1 = thread::spawn(move || {
+			slice_a.fill(COLOR_BLANK);
+		});
+
+		let thread2 = thread::spawn(move || {
+			slice_b.fill(COLOR_BLANK);
+		});	
+
+		thread1.join().unwrap();
+		thread2.join().unwrap();*/
+	
+		self.fill(COLOR_BLANK);
 	}
 	
 	pub fn clear_row(&mut self, y: usize) {	
@@ -92,32 +152,49 @@ impl Canvas {
 	}
 	
 	pub fn subtract_clear(&mut self, amount: u8) {
-		self.pix.iter_mut().take(self.len).for_each(|pixel| {
+		self.pix.iter_mut().for_each(|pixel| {
 			*pixel = pixel.sub_by_alpha(amount);
 		});
 	}
 
 	pub fn as_slice<'a>(&'a self) -> &'a [u32] {
-		&self.pix[0..self.len]
+		self.pix.as_slice()
 	}
 
 	pub fn as_mut_slice<'a>(&'a mut self) -> &'a mut [u32] {
-		&mut self.pix[0..self.len]
+		self.pix.as_mut_slice()
+	}
+
+	pub fn fade(&mut self, al: u8) {
+		self.pix.iter_mut().for_each(|smp| *smp = blend::u32_fade(*smp, al));
 	}
 
 	pub fn resize(&mut self, w: usize, h: usize) {
-		let len = w*h;
-		let padded = len.next_power_of_two();
 		
-		self.pix.resize(padded, 0u32);
+		#[cfg(feature = "noheap")] 
+		{
 		
-		self.mask = padded-1;
+			if w*h > self.len {
+				panic!(
+					"Maximum custom stack allocation size reached\n\
+					Note: This binary has been compiled under feature \"noheap\".
+				")
+			}
+		
+		}
+		
+		#[cfg(not(feature = "noheap"))] 
+		{
+		
+			self.pix.resize(w*h, 0u32);
+			
+		}	
+	
 		self.width = w;
 		self.height = h;
-		self.len = len;
 	}
 
-	pub fn update(&mut self) {
+	pub fn update_size(&mut self) {
 		self.resize(self.width, self.height);
 	}
 
@@ -139,33 +216,47 @@ impl Canvas {
         .wrapping_mul(self.width)
         .wrapping_add(x)
 	}
-	
-	pub fn get_idx_wrap(&self, p: P2) -> usize {
-		self.wrap(self.get_idx_fast(p))
-	}
 
 	pub fn pixel(&self, i: usize) -> u32 {
 		self.pix[i]
 	}
-	
-	fn wrap(&self, i: usize) -> usize {
-		i & self.mask 
-	}
 
 	pub fn pixel_mut<'a>(&'a mut self, i: usize) -> &'a mut u32 {
-		let iw = self.wrap(i);
-		&mut self.pix[iw]
+		&mut self.pix[i]
 	}
 
 	pub fn pixel_xy(&self, p: P2) -> u32 {
-		self.pix[self.get_idx_wrap(p)]
+		self.pix[self.get_idx_fast(p)]
 	}
 
 	pub fn pixel_xy_mut<'a>(&'a mut self, p: P2) -> &'a mut u32 {
-		let i = self.get_idx_wrap(p);
+		let i = self.get_idx_fast(p);
 		&mut self.pix[i]
 	}
+
+	pub fn set_pixel(&mut self, p: P2, c: u32) {
+		if self.is_in_bound(p) {
+            let i = self.get_idx_fast(p);		
+		    self.pix[i] = c;
+        }
+	}
+
+	pub fn set_pixel_by(&mut self, p: P2, c: u32, b: fn(u32, u32)->u32) {
+		if self.is_in_bound(p) {
+		    let i = self.get_idx_fast(p);
+            let p = &mut self.pix[i];	
+		    *p = b(*p, c);
+        }
+	}
 	
+	pub fn plot(&mut self, p: P2, c: u32, b: fn(u32, u32)->u32) {
+		if self.is_in_bound(p) {
+	    	let i = self.get_idx_fast(p);
+		    let p = &mut self.pix[i];
+		    *p = b(*p, c);
+        }
+	}
+
 	pub fn scale_to2(&self, dest: &mut [u32], scale: usize) {
 		let winw = self.width*scale;
 		let winh = self.height*scale;

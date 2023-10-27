@@ -27,7 +27,7 @@ pub fn draw_oscilloscope(
 
     let scale = prog.pix.height() as f32 * prog.VOL_SCL * 0.45;
 
-    prog.clear_pix();
+    prog.pix.clear();
 
     let mut stream_ = stream.to_vec();
     const up_count: usize = 75;
@@ -127,8 +127,8 @@ pub fn draw_oscilloscope(
         let y2 = height_top_h + (smoothed_smp.y*scale) as i32;
 
         let x = x - 4;
-        prog.pix.set_pixel_by(P2::new(x, y1), 0xFF_55_FF_55, |a, b| { a | b });
-        prog.pix.set_pixel_by(P2::new(x, y2), 0xFF_55_55_FF, |a, b| { a | b });
+        prog.pix.set_pixel_xy_by(P2::new(x, y1), 0xFF_55_FF_55, |a, b| { a | b });
+        prog.pix.set_pixel_xy_by(P2::new(x, y2), 0xFF_55_55_FF, |a, b| { a | b });
     }
 
     let li = (LOCALI.load(Relaxed) + prog.pix.width()*3 / 2 + 1) % prog.pix.width();
@@ -166,7 +166,7 @@ pub fn draw_vectorscope(
     let mut di = 0;
     // let mut dj = (PHASE_OFFSET / INCREMENT) % l;
 
-    prog.clear_pix();
+    prog.pix.clear();
 
     // let mut smooth = Cplx::<f32>::new(stream[0].x, stream[PHASE_OFFSET % l].y);
     // let smooth_factor = 0.05f32;
@@ -208,7 +208,7 @@ pub fn draw_vectorscope(
         let y = (sample.y * scale) as i32;
 		let amp = (x.abs() + y.abs()) * 3/2;
 
-        prog.pix.set_pixel(
+        prog.pix.set_pixel_xy(
 			P2::new(x + width_top_h, y + height_top_h),
 			u32::from_be_bytes([
 				255,

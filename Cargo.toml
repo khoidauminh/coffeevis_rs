@@ -22,6 +22,7 @@ winit = { version = "0.29.2", features = ["rwh_05"] }
 wtf = []
 aprrox_trig = []
 benchmark = []
+noheap = []
 
 [profile.dev]
 overflow-checks = false

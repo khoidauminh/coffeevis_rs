@@ -75,7 +75,7 @@ pub fn draw_wave_(
     for x in 0..para.pix.width() {
         for y in 0..para.pix.height() {
 
-            para.pix.set_pixel(
+            para.pix.set_pixel_xy(
             	crate::graphics::P2::new(x as i32, y as i32), 
             	u32::from_be_bytes([0xff, r, g, b])
            	);

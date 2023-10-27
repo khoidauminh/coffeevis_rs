@@ -78,6 +78,7 @@ pub struct Program
 	pub mode: Mode,
 	
 	pub transparency: u8,
+	pub background: u32,
 
 	pub FPS: u64,
 	pub REFRESH_RATE: std::time::Duration,
@@ -144,8 +145,9 @@ impl Program {
 			WAYLAND: false,
 			
 			transparency: 255,
+			background: 0x00_00_00_00,
 
-			pix: crate::graphics::Canvas::new(DEFAULT_SIZE_WIN as usize, DEFAULT_SIZE_WIN as usize),
+			pix: crate::graphics::Canvas::new(DEFAULT_SIZE_WIN as usize, DEFAULT_SIZE_WIN as usize, 0x00_00_00_00),
 
 	        FPS: DEFAULT_FPS as u64,
             REFRESH_RATE: std::time::Duration::from_micros(1_000_000 / DEFAULT_FPS as u64),
@@ -309,24 +311,6 @@ impl Program {
 		}
 
 		// self.pix.update();
-	}
-
-	pub fn clear_pix(&mut self) {
-		//self.pix.clear();
-        //self.pix.fade((256*self.FPS as usize / DEFAULT_FPS as usize) as u8);
-		//self.timed_clear();
-		
-		if self.FPS >= (DEFAULT_FPS / 2) as u64  {
-			self.pix.clear();
-			return
-		}
-		
-		let subtract_amount = 255*self.FPS as usize / DEFAULT_FPS as usize;
-		self.pix.subtract_clear(subtract_amount as u8);
-	}
-
-	pub fn clear_pix_alpha(&mut self, alpha: u8) {
-		self.pix.fade(alpha);
 	}
 
 	pub fn timed_clear(&mut self) {

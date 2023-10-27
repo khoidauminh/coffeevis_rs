@@ -256,13 +256,12 @@ impl AudioBuffer {
     pub fn read_from_input<T: cpal::Sample<Float = f32>>(&mut self, data: &[T]) -> bool {
         let input_size = data.len();
         self.input_size = input_size /2;
-        let mut silence_index: u32 = 0;
 
         let mut max_l = 0.0f32;
         let mut max_r = 0.0f32;
         
-        let mut sum_l = 0.0f32;
-        let mut sum_r = 0.0f32;
+        //~ let mut sum_l = 0.0f32;
+        //~ let mut sum_r = 0.0f32;
 
         let mut di = self.write_point;
         data
@@ -278,15 +277,15 @@ impl AudioBuffer {
             max_l = max_l.max(left);
             max_r = max_r.max(right);
             
-            sum_l += left;
-            sum_r += right;
+            //~ sum_l += left;
+            //~ sum_r += right;
 
-            silence_index += ((left > SILENCE_LIMIT) || (right > SILENCE_LIMIT)) as u32;
+            // silence_index += ((left > SILENCE_LIMIT) || (right > SILENCE_LIMIT)) as u32;
 	        di = self.index_add(di, 1);
         });
         
         let max = max_r.max(max_l);
-        let sum = sum_l + sum_r;
+        //~ let sum = sum_l + sum_r;
 
         self.write_point = di;
 
@@ -298,13 +297,13 @@ impl AudioBuffer {
         } else {
             self.offset = self.index_sub(self.write_point, input_size);
         }
-		self.average =
-			crate::math::interpolate::multiplicative_fall(
-                self.average,
-                sum / self.input_size as f32,
-                AMP_PERSIST_LIMIT,
-                REACT_SPEED
-            );
+		//~ self.average =
+			//~ crate::math::interpolate::multiplicative_fall(
+                //~ self.average,
+                //~ sum / self.input_size as f32,
+                //~ AMP_PERSIST_LIMIT,
+                //~ REACT_SPEED
+            //~ );
 
         self.max =
             crate::math::interpolate::multiplicative_fall(
@@ -314,7 +313,7 @@ impl AudioBuffer {
                 REACT_SPEED
             );
 
-        self.silent = silence_index < SILENCE_INDEX;
+        self.silent = self.max < SILENCE_LIMIT;
         
         self.rotate_size = self.input_size / 4 + 1;
 

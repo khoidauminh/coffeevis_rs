@@ -4,7 +4,7 @@ use std::sync::RwLock;
 
 use crate::math::{self, Cplx, interpolate::*, TAU, PIH};
 use crate::data::{FFT_SIZE, INCREMENT, FFT_POWER, Program};
-use crate::graphics::{P2, blend};
+use crate::graphics::{P2, blend::Blend};
 
 // const COPY_SIZE: usize = FFT_SIZE / 2;
 
@@ -83,11 +83,6 @@ fn prepare(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr
 					
 		let x = (fft_1 + fft_2).l1_norm();
 		
-		#[cfg(feature = "wtf")]
-		// For some reason, with the agressively optimized
-		// trig, x is smaller than y on mono input.
-		let x = x*1.21;
-		
 		let y = (fft_1 - fft_2).l1_norm();
 
 		let scalef = math::fft_scale_up(i, RANGE)* NORMALIZE;
@@ -95,7 +90,7 @@ fn prepare(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr
 		fft[i] = Cplx::new(x, y)*scalef;
 	}
 	
-	crate::audio::limiter(&mut fft[0..RANGE1], 1., 20, 1.);
+	crate::audio::limiter_hard(&mut fft[0..RANGE1], 1.35, 20, 1.);
 
     LOCAL
     .iter_mut()
@@ -139,7 +134,7 @@ pub fn draw_spectrum(
 //	let mut current_max = MAX.write().unwrap();
 //	*current_max = math::normalize_max(&mut normalized, 0.01, 1.0, *current_max, 0.002);
 
-    // prog.clear_pix();
+    // prog.pix.clear();
 
     let winlog = math::fast::flog2(wf);
 
@@ -148,6 +143,8 @@ pub fn draw_spectrum(
     const INTERVAL: f32 = 1.0;
 
     let height_prescale = wf * prog.VOL_SCL;
+    
+    prog.pix.clear();
 
     for i in 0..h as i32 {
         let i_rev = (h as i32) - i;
@@ -170,9 +167,13 @@ pub fn draw_spectrum(
         let bar_width_l = bar_temp1;
         let bar_width_r = bar_temp2;
 
+		let channel_l = (255.0 *bar_width_l.min(wf) * wf_recip) as u32;
+		let channel_r = (255.0 *bar_width_r.min(wf) * wf_recip) as u32;
+
 		let color  = u32::from_be_bytes([0xFF, (255 - 255*i_rev/h) as u8, 0, 128]);
-        let color1 = color | ((255.0 *bar_width_l.min(wf) * wf_recip) as u32) << 8;
-        let color2 = color | ((255.0 *bar_width_r.min(wf) * wf_recip) as u32) << 8;
+		
+        let color1 = color | channel_l << 8;
+        let color2 = color | channel_r << 8;
 
         let rect_l = P2::new((wf - bar_width_l).max(0.0) as i32 / 2, i);
         // let rect_l_size = (bar_width_l as usize / 2, 1);
@@ -184,13 +185,19 @@ pub fn draw_spectrum(
 		
 		//prog.pix.clear_row(i as usize);
 		
-		prog.pix.draw_rect_xy(P2::new(0, i), P2::new(rect_l.x, i), crate::graphics::COLOR_BLANK);
-		prog.pix.draw_rect_xy(P2::new(w - rect_r.x, i), P2::new(w, i), crate::graphics::COLOR_BLANK);
+		//prog.pix.draw_rect_xy(P2::new(0, i), P2::new(rect_l.x, i), prog.background);
+		//prog.pix.draw_rect_xy(P2::new(w - rect_r.x, i), P2::new(w, i), prog.background);
 		
         prog.pix.draw_rect_xy(rect_l, middle, color1);
         prog.pix.draw_rect_xy(middle, rect_r, color2);
 
 		let alpha = (128.0 + stream[i as usize / 2].x*32768.0) as u8;
-        prog.pix.draw_rect_wh(P2::new(winwh -1, i), 2, 1, blend::u32_fade(color, alpha));
+		// let bg = prog.pix.background & 0x00_FF_FF_FF | alpha;
+        prog.pix.draw_rect_wh_by(
+			P2::new(winwh -1, i), 
+			2, 1, 
+			u32::mix(prog.pix.background, color.set_alpha(alpha)), 
+			u32::over
+		);
     }
 }

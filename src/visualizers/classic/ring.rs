@@ -22,7 +22,7 @@ pub fn draw_ring(
     let width_top_h = width >> 1;
     let height_top_h = height >> 1;
 
-    prog.clear_pix();
+    prog.pix.clear();
 
     let rate = -1.0 /* (1.5 + crate::math::fast_sin(wrap_rateprog._incremeter)) */ / range as f32;
 
@@ -48,7 +48,7 @@ pub fn draw_ring(
 	
 		let int = (smp.l1_norm()*128.0) as u8;
 
-        prog.pix.plot(
+        prog.pix.set_pixel_xy(
 			P2::new(x/2+width_top_h, y/2+height_top_h),
             u32::from_be_bytes([
 				255, 
@@ -56,7 +56,6 @@ pub fn draw_ring(
 				255,
 				((128 + y.abs()*64/size as i32) as u8).saturating_add(int)
 			]),
-			|a, b| b
 		);
     }
 

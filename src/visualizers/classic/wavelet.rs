@@ -64,7 +64,7 @@ impl WaveletTable {
                 let val = (self.table[offset + index].l1_norm()*128.0) as u8;
                 let color = u32::compose([val, val, val, val]);
                 
-                canvas.set_pixel(P2::new(canvas_x as i32, canvas_y as i32), color)
+                canvas.set_pixel_xy(P2::new(canvas_x as i32, canvas_y as i32), color)
             }
         }
     }
@@ -151,7 +151,7 @@ pub fn draw_wavelet(
 			let g = ((r as u16 + b as u16) / 2) as u8;
 			
 			let pi = y*pw + x;
-			*prog.pix.pixel_mut(pi) = u32::from_be_bytes([b, r, g, b]);
+			prog.pix.set_pixel(pi, u32::from_be_bytes([b, r, g, b]));
 		}
 	}
 	

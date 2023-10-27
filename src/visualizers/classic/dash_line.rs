@@ -4,7 +4,7 @@ use crate::data::{INCREMENT, PHASE_OFFSET};
 use crate::math::Cplx;
 use crate::graphics::{blend::Blend, P2};
 
-const c: u32 = 16720064;
+const c: u32 = 0x00_FF_20_C0;
 
 pub fn draw_dash_line(
     para: &mut crate::data::Program,
@@ -26,7 +26,7 @@ pub fn draw_dash_line(
                 P2::new(i as i32, o as i32),
                 2,
                 2,
-                c.fade((stream[index].y * 32784.0 % 256.0) as i32 as u8),
+                c | (((stream[index].y * 32784.0 % 256.0) as u32) << 24),
             );
         }
     } else {
@@ -42,7 +42,7 @@ pub fn draw_dash_line(
                 P2::new(o as i32, i as i32),
                 2,
                 2,
-                c.fade((stream[index].y * 32784.0 % 256.0) as i32 as u8),
+                c | (((stream[index].y * 32784.0 % 256.0) as u32) << 24),
             );
         }
     }

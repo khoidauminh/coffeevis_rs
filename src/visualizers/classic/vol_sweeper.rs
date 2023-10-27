@@ -23,7 +23,7 @@ pub fn draw_vol_sweeper(
 	stream: &mut crate::audio::SampleArr
 ) {
     //let w = PIX_W*stream[_sweep].abs() as usize /32768;
-    para.clear_pix_alpha(253);
+    para.pix.fade(3);
 
     let w = {
         /*let sum = stream
@@ -39,7 +39,7 @@ pub fn draw_vol_sweeper(
 
     let color_ = (w * 255 / para.pix.width()).min(255) as u8;
     let color = u32::from_be_bytes([
-        0,
+        255,
         255,
         (sin_norm(color_ as f32 / 512.0) * 255.0) as u8,
         color_,

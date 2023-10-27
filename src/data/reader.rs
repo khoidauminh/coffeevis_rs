@@ -141,12 +141,33 @@ impl Program {
 				    self.RESIZE = true;
 				},
 				
-				"--transparent" => 
-				{
+				"--transparent" => {
 					match args.next() {
 						Some(string) => self.transparency = string.parse::<u8>().expect("Invalid value for transparency"),
 						None => self.transparency = 0
 				    }
+				    
+				    use crate::graphics::blend::Blend;
+				    self.pix.background = u32::mix(self.pix.background, (255 - self.transparency as u32) << 24);
+				    
+				    self.pix.background = self.pix.background & 0x00_FF_FF_FF | (self.transparency as u32) << 24;
+				}
+				
+				"--background" => {
+					let mut color = [0xFF, 0u8, 0u8, 0u8];
+					for (channel_string, channel) in ["red", "green", "blue"].iter().zip(color.iter_mut().skip(1)) {
+						match args.next() {
+							Some(string) => 
+								*channel = string.parse::<u8>()
+								.expect(&format!("Invalid value for {}", channel_string))
+							,
+							
+							None => 
+								panic!("Expected value for {}", channel_string)
+						}
+					}
+					
+					self.pix.background = u32::from_be_bytes(color);
 				}
 
 				"--max-con-size" => {

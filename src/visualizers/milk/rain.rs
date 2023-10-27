@@ -42,7 +42,7 @@ fn draw_rain_drop(
 		
 		let color_ready = u32::compose(color_ready);
 		
-		canvas.set_pixel_by(p, color_ready, u32::mix);
+		canvas.set_pixel_xy_by(p, color_ready, u32::mix);
 		
 		if p.y == 0 {break}
 		

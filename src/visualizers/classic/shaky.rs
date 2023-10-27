@@ -73,7 +73,7 @@ pub fn draw_shaky(
     LOCALDATA.i = (LOCALDATA.i + incr +amplitude_scaled) % 1.0;
 
     
-    prog.pix.fade(254);
+    prog.pix.fade(4);
     
     let (x_soft_shake, y_soft_shake) = diamond_func(8.0, 1.0, LOCALDATA.i);
     

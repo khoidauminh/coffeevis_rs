@@ -151,6 +151,47 @@ where T: Into<f32> + std::ops::Mul<f32, Output = T> + std::marker::Copy
 	}
 }
 
+
+pub fn limiter_hard<T>(
+	a: &mut [T],
+	limit: f32,
+	hold_samples: usize,
+	gain: f32
+) 
+where T: Into<f32> + std::ops::Mul<f32, Output = T> + std::marker::Copy
+{
+	use crate::math::interpolate::{envelope, subtractive_fall_hold};
+	
+	let mut index = 0usize;
+	let mut replay_gain = 1.0f32;
+	let mut hold_index = 0;
+	let mut amp = 0.0;
+	let mut l = a.len();
+
+    let hold_samples_double = hold_samples*2;
+		
+	let full_delay = hold_samples;
+		
+	let mut peak = Peak::init(limit, hold_samples_double);
+
+	let bound = l + full_delay;
+	
+	let mut getrg = |smp| {
+		gain / peak.update(smp)
+	};
+
+	while index < l {
+		replay_gain = getrg(a[index].into());
+		
+		let smp = &mut a[index];
+		
+		*smp = *smp *replay_gain;
+		
+		index += 1;
+	}
+	
+}
+
 struct Peak {
     peak: f32,
 	amp: f32,
