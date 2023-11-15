@@ -7,7 +7,7 @@ use std::{
 
 use crate::{
 	data::Program,
-	graphics::{self, Image},
+	graphics::{self, Image, blend::Blend},
 	modes::Mode
 };
 /*
@@ -54,6 +54,8 @@ pub fn prepare_image(file: &[u8]) -> Image {
 	)
 }*/
 
+use std::iter::{Iterator, Peekable};
+
 impl Program {
 	pub fn write_err<E: std::error::Error>(&mut self, l: usize, err: E) {
 		self.msg = Err(format!("{} {}: {}", crate::data::ERR_MSG, l, err));
@@ -63,7 +65,7 @@ impl Program {
 		self.msg = Err(format!("{} {}: {}", crate::data::ERR_MSG, l, err));
 	}
 
-	pub fn eval_args(mut self, args: &mut dyn std::iter::Iterator<Item = &String>) -> Self
+	pub fn eval_args(mut self, args: &mut dyn Iterator<Item = &String>) -> Self
 	{
 		use crate::{
 			modes::Mode::*,
@@ -72,7 +74,10 @@ impl Program {
 
 		let mut size = (DEFAULT_SIZE_WIN, DEFAULT_SIZE_WIN);
 
+		let mut args = args.peekable();
 		args.next();
+		
+		let mut color = [0u8; 4];
 		
 		loop {
 			let mut arg =  "";
@@ -142,22 +147,20 @@ impl Program {
 				},
 				
 				"--transparent" => {
-					match args.next() {
-						Some(string) => self.transparency = string.parse::<u8>().expect("Invalid value for transparency"),
+					match args.peek() {
+						Some(&string) =>
+						self.transparency = match string.parse::<u8>() {
+							Ok(num) => { _ = args.next(); num },
+							Err(_) => 0
+						},
 						None => self.transparency = 0
 				    }
-				    
-				    use crate::graphics::blend::Blend;
-				    self.pix.background = u32::mix(self.pix.background, (255 - self.transparency as u32) << 24);
-				    
-				    self.pix.background = self.pix.background & 0x00_FF_FF_FF | (self.transparency as u32) << 24;
-				}
+				},
 				
 				"--background" => {
-					let mut color = [0xFF, 0u8, 0u8, 0u8];
 					for (channel_string, channel) in ["red", "green", "blue"].iter().zip(color.iter_mut().skip(1)) {
 						match args.next() {
-							Some(string) => 
+							Some(string) => 	
 								*channel = string.parse::<u8>()
 								.expect(&format!("Invalid value for {}", channel_string))
 							,
@@ -166,8 +169,6 @@ impl Program {
 								panic!("Expected value for {}", channel_string)
 						}
 					}
-					
-					self.pix.background = u32::from_be_bytes(color);
 				}
 
 				"--max-con-size" => {
@@ -201,10 +202,16 @@ impl Program {
 
 			_ => (self.CON_W, self.CON_H) = crate::modes::console_mode::rescale((size[0] as u16, size[1] as u16), self),
 		}*/
+					
+		self.pix.background &= 0xFF_00_00_00;
+		self.pix.background |= u32::from_be_bytes(color);
+		self.pix.background = self.pix.background.set_alpha(self.transparency).premultiply();
 		
 		if !self.WAYLAND {
 			std::env::set_var("WAYLAND_DISPLAY", "");
 		}
+		
+		println!("Backround: {:x}", self.pix.background);
 
 		self
 	}

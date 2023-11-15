@@ -10,32 +10,32 @@ use super::*;
 // more performance.
 
 #[inline]
-fn to_bits(x: f32) -> u32 { x.to_bits() }
+fn to_bits(x: f64) -> u64 { x.to_bits() }
 
 #[inline]
-fn from_bits(x: u32) -> f32 { f32::from_bits(x) }
+fn from_bits(x: u64) -> f64 { f64::from_bits(x) }
 
-pub fn wrap(x: f32) -> f32 {
+pub fn wrap(x: f64) -> f64 {
 	x - x.round()
 }
 
-pub fn radian_wrap(x: f32) -> f32 {
-	x % std::f32::consts::PI
+pub fn radian_wrap(x: f64) -> f64 {
+	x % std::f64::consts::PI
 }
 
 #[inline]
-pub fn abs(x: f32) -> f32 {
-	from_bits(to_bits(x) & 0x7FFF_FFFF)
+pub fn abs(x: f64) -> f64 {
+	from_bits(to_bits(x) & 0x7FFF_FFFF_FFFF_FFFF)
 }
 
 #[inline]
-pub fn copysign(x: f32, sign: u32) -> f32 {
+pub fn copysign(x: f64, sign: u64) -> f64 {
 	from_bits(to_bits(x) | sign)
 }
 
 #[inline]
-pub fn sign(x: f32) -> u32 {
-	to_bits(x) & 0x80000000
+pub fn sign(x: f64) -> u64 {
+	to_bits(x) & 0x8000_0000_0000_0000
 }
 
 // Turns out none of the attempts at outperforming 
@@ -49,12 +49,12 @@ mod wtf {
 	use super::{abs, copysign, to_bits, sign};
 
 	/// Agressively optimized sin
-	pub fn sin_norm(x: f32) -> f32 {
+	pub fn sin_norm(x: f64) -> f64 {
 		
 		let xabs = abs(x);
 
-		const linear_coef: f32 = 6.06;
-		const quadra_coef: f32 = 18.36;
+		const linear_coef: f64 = 6.06;
+		const quadra_coef: f64 = 18.36;
 		
 		if xabs < 0.0865 {
 			return linear_coef*x;
@@ -73,17 +73,17 @@ mod wtf {
 	}
 
 	/// Agressively optimized cos
-	pub fn cos_norm(x: f32) -> f32 {
+	pub fn cos_norm(x: f64) -> f64 {
 		/*let x = 0.25 - abs(x);
 		x*(7.3 - 13.1125*abs(x))*/
 		
 		let x = abs(x);
 		
-		const linear_coef: f32 = 6.034;
-		const quadra_coef: f32 = 18.676;
+		const linear_coef: f64 = 6.034;
+		const quadra_coef: f64 = 18.676;
 		
-		const bound1: f32 = 0.167;
-		const bound2: f32 = 0.3371;
+		const bound1: f64 = 0.167;
+		const bound2: f64 = 0.3371;
 		
 		if x < bound1 {
 			return 1.0 - quadra_coef*x*x;
@@ -105,34 +105,34 @@ mod fast_trig {
 	/// http://web.archive.org/web/20141220225551/http://forum.devmaster.net/t/fast-and-accurate-sine-cosine/9648
 	/// This is a similar implementation that uses less floating point operations
 	/// while retaining similar amount of accuracy.
-	pub fn sin_norm(x: f32) -> f32 {
+	pub fn sin_norm(x: f64) -> f64 {
 		let y = x*(0.5 - abs(x));
 		y*(12.47 + 56.48*abs(y))
 	}
 
 	
-	pub fn cos_norm(x: f32) -> f32 {
+	pub fn cos_norm(x: f64) -> f64 {
 		sin_norm (0.25 - abs(x))
 	}
 
 	/// Reimplementation of fastapprox::faster::cos	
-	pub fn other_cos_norm(x: f32) -> f32 {
+	pub fn other_cos_norm(x: f64) -> f64 {
 		let x = 0.25 - abs(x);
 		x*(6.191 - 35.34*x*x)
 	}
 }
 
 mod std_trig {
-	pub fn sin_norm(x: f32) -> f32 {
-		(x*std::f32::consts::TAU).sin()
+	pub fn sin_norm(x: f64) -> f64 {
+		(x*std::f64::consts::TAU).sin()
 	}
 	
-	pub fn cos_norm(x: f32) -> f32 {
-		(x*std::f32::consts::TAU).cos()
+	pub fn cos_norm(x: f64) -> f64 {
+		(x*std::f64::consts::TAU).cos()
 	}
 }
 
-pub fn sin_norm(x: f32) -> f32 {
+pub fn sin_norm(x: f64) -> f64 {
 	if cfg!(feature = "wtf") {
 		wtf::sin_norm(x)
 	} else if cfg!(feature = "aprrox_trig") {
@@ -142,7 +142,7 @@ pub fn sin_norm(x: f32) -> f32 {
 	}
 }
 
-pub fn cos_norm(x: f32) -> f32 {
+pub fn cos_norm(x: f64) -> f64 {
 	if cfg!(feature = "wtf") {
 		wtf::cos_norm(x)
 	} else if cfg!(feature = "aprrox_trig") {
@@ -156,18 +156,18 @@ pub fn bit_reverse(n: usize, power: usize) -> usize {
 	n.reverse_bits() >> usize::BITS.saturating_sub(power as u32) as usize
 }
 /*
-pub fn twiddle_norm(x: f32) -> Cplx<f32> {
+pub fn twiddle_norm(x: f64) -> Cplx<f64> {
 	let xabs = x.abs();
 
 	let cos_one8th = 1.0 - (4.329568*x).powi(2);
 	let sin_one8th = fsqrt(1.0 - cos_one8th.powi(2)).copysign(x);
 
 	if xabs > 0.375 {
-		return Cplx::<f32>::new(-cos_one8th, -sin_one8th)
+		return Cplx::<f64>::new(-cos_one8th, -sin_one8th)
 	}
 
 	if xabs > 0.125 {
-		return Cplx::<f32>::new(-sin_one8th, cos_one8th)
+		return Cplx::<f64>::new(-sin_one8th, cos_one8th)
 	}
 
 	//let cos = (x*TAU).cos();
@@ -178,16 +178,16 @@ pub fn twiddle_norm(x: f32) -> Cplx<f32> {
 	Cplx::new(cos_one8th, sin_one8th)
 }*/
 
-pub fn cubed_sqrt(x: f32) -> f32 {
+pub fn cubed_sqrt(x: f64) -> f64 {
 	x * x.sqrt()
 }
 
-pub fn unit_exp2_0(x: f32) -> f32 {
+pub fn unit_exp2_0(x: f64) -> f64 {
     x*(0.3431*x + 0.6568)
 }
 
 // Used in rage 0..=1
-pub fn unit_exp2(x: f32) -> f32 {
+pub fn unit_exp2(x: f64) -> f64 {
     unit_exp2_0(x) + 1.0
 }
 
@@ -209,18 +209,5 @@ pub fn isqrt(val: usize) -> usize {
     
     return a;*/
     
-    (val as f32).sqrt() as usize
-}
-
-pub fn flog2(x: f32) -> f32 {
-    const error: f32 = 0.086071014*0.5;
-    const mask: u32 = (1 << 23)-1;
-    const ratio_recip: f32 = 1.0 / (mask+1) as f32;
-
-    let xi = to_bits(x);
-
-    let exp = (xi >> 23) as f32 - 128.0;
-    let fract = ((xi & mask) as f32)*ratio_recip;
-
-    exp + fract + error
+    (val as f64).sqrt() as usize
 }

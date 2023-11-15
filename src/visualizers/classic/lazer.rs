@@ -20,20 +20,20 @@ pub fn draw_lazer(
     let h = para.pix.height() as i32;
 
     let (ax, ay) = {
-        let mut sum = Cplx::<f32>::zero();
+        let mut sum = Cplx::<f64>::zero();
         
         for i in 0..SAMPLE_SIZE/4 {
             sum = sum + stream[i]
         }
         
         (
-            (sum.x * para.VOL_SCL as f32 * 0.05) as i32,
-            (sum.y * para.VOL_SCL as f32 * 0.05) as i32,
+            (sum.x * para.VOL_SCL as f64 * 0.05) as i32,
+            (sum.y * para.VOL_SCL as f64 * 0.05) as i32,
         )
     };
 
-    //~ pos.x = linear_interp(pos.x as f32, (pos.x+ax).clamp(0, w -1) as f32, 0.7) as i32;
-    //~ pos.y = linear_interp(pos.y as f32, (pos.y+ay).clamp(0, h -1) as f32, 0.7) as i32;
+    //~ pos.x = linear_interp(pos.x as f64, (pos.x+ax).clamp(0, w -1) as f64, 0.7) as i32;
+    //~ pos.y = linear_interp(pos.y as f64, (pos.y+ay).clamp(0, h -1) as f64, 0.7) as i32;
 
     // no smoothing version
     //~ pos.x = (pos.x+ax).clamp(0, w -1);

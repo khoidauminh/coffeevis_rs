@@ -4,16 +4,16 @@ use crate::{
     audio
 };
 
-fn prepare(stream: &mut crate::audio::SampleArr, bar_num: usize, volume_scale: f32, width: usize) {
+fn prepare(stream: &mut crate::audio::SampleArr, bar_num: usize, volume_scale: f64, width: usize) {
 }
 /*
 pub const test2: crate::VisFunc = |prog, _| {
     let hh = prog.pix.height()/2;
-    let hf = (prog.pix.height()/2) as f32;
-    let w = prog.pix.width() as f32;
+    let hf = (prog.pix.height()/2) as f64;
+    let w = prog.pix.width() as f64;
     
     for i in 0..prog.pix.width() {
-        let x = (i as f32 / w)*0.5;
+        let x = (i as f64 / w)*0.5;
         
         let sin = fast::sin_norm_first_quarter(x)*10.0;
         
@@ -25,10 +25,10 @@ pub const test2: crate::VisFunc = |prog, _| {
 
 pub const test: crate::VisFunc = |prog, stream| {
     let w = prog.pix.width() as i32;
-    let wf = prog.pix.width() as f32;
+    let wf = prog.pix.width() as f64;
     let h = prog.pix.height();
     let vec_size = h.next_power_of_two() << 2;
-    let mut vec = vec![Cplx::<f32>::zero(); vec_size];
+    let mut vec = vec![Cplx::<f64>::zero(); vec_size];
     for i in 0..h {
         vec[i] = stream[i*2];
     }
@@ -36,7 +36,7 @@ pub const test: crate::VisFunc = |prog, stream| {
     /*crate::math::fft(&mut vec);
     
     vec.iter_mut().enumerate().for_each(|(i, bin)| {
-        *bin = *bin * crate::math::fast::fsqrt((i+1) as f32)*0.05;
+        *bin = *bin * crate::math::fast::fsqrt((i+1) as f64)*0.05;
     });*/
     
     audio::limiter(&mut vec, 0.75, 10, 0.75);

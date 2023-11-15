@@ -50,11 +50,11 @@ where T: Mul<Output = T> + std::marker::Copy
     }
 }
 
-impl Mul<Cplx<f32>> for f32 {
-    type Output = Cplx<f32>;
+impl Mul<Cplx<f64>> for f64 {
+    type Output = Cplx<f64>;
     
-    fn mul(self, other: Cplx<f32>) -> Cplx<f32> {
-        Cplx::<f32> {
+    fn mul(self, other: Cplx<f64>) -> Cplx<f64> {
+        Cplx::<f64> {
             x: self * other.y,
             y: self * other.x
         }
@@ -110,18 +110,22 @@ where T:
 		Cplx::<T> { x: x, y: y }
 	}
 
-	pub fn one() -> Cplx<f32> {
-		Cplx::<f32> { x: 1.0, y: 0.0 }
+	pub fn one() -> Cplx<f64> {
+		Cplx::<f64> { x: 1.0, y: 0.0 }
 	}
 
-	pub fn i() -> Cplx<f32> {
-		Cplx::<f32> {x: 0.0, y: 1.0}
+	pub fn i() -> Cplx<f64> {
+		Cplx::<f64> {x: 0.0, y: 1.0}
 	}
 
 	pub fn times_i(self) -> Cplx<T> {
 		Cplx::<T> {x: -self.y, y: self.x}
 	}
 	
+	pub fn times_minus_i(self) -> Cplx<T> {
+	    Cplx::<T> {x: self.y, y: -self.x}
+	}
+		
 	pub fn conj(self) -> Cplx<T> {
 		Cplx::<T> {x: self.x, y: -self.y}
 	}
@@ -135,31 +139,47 @@ where T:
 	}
 }
 
-impl Into<f32> for Cplx<f32> {
-    fn into(self) -> f32 {
+impl Into<f64> for Cplx<f64> {
+    fn into(self) -> f64 {
         self.max()
     }
 }
 
-impl Cplx<f32> {
-	pub fn mag(&self) -> f32 {
+impl Cplx<f64> {
+	pub fn times_twiddle_8th(self) -> Cplx<f64> {
+		let scale = 0.70710678118654752440084436210484;
+		Cplx::<f64> {
+			x: (  self.x + self.y) * scale,
+			y: (- self.y + self.y) * scale
+		}
+	}
+	
+	pub fn times_twiddle_3_8th(self) -> Cplx<f64> {
+		let scale = -0.70710678118654752440084436210484;
+		Cplx::<f64> {
+			x: (self.x - self.y) * scale,
+			y: (self.x + self.y) * scale,
+		}
+	}
+
+	pub fn mag(&self) -> f64 {
 		(self.x.powi(2) + self.y.powi(2)).sqrt()
 	}
 
-	pub fn l1_norm(&self) -> f32 {
+	pub fn l1_norm(&self) -> f64 {
 		fast::abs(self.x) + fast::abs(self.y)
 	}
 
-	pub fn abs(&self) -> Cplx<f32> {
-		Cplx::<f32> {x: fast::abs(self.x), y: fast::abs(self.y)}
+	pub fn abs(&self) -> Cplx<f64> {
+		Cplx::<f64> {x: fast::abs(self.x), y: fast::abs(self.y)}
 	}
 
-	pub const fn zero() -> Cplx<f32> {
-		Cplx::<f32> { x: 0.0, y: 0.0 }
+	pub const fn zero() -> Cplx<f64> {
+		Cplx::<f64> { x: 0.0, y: 0.0 }
 	}
 	
-	pub fn max(&self) -> f32 {
-		f32::max(
+	pub fn max(&self) -> f64 {
+		f64::max(
 			fast::abs(self.x),
 			fast::abs(self.y)
 		)

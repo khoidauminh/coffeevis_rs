@@ -11,7 +11,7 @@ use crate::visualizers::classic::cross::{draw_cross, CROSS_COL};
 use crate::math::{self, Cplx};
 
 static LOCALI: AtomicUsize = AtomicUsize::new(0);
-static WAVE_SCALE_FACTOR: RwLock<f32> = RwLock::new(1.0);
+static WAVE_SCALE_FACTOR: RwLock<f64> = RwLock::new(1.0);
 
 pub fn draw_oscilloscope(
 	prog: &mut crate::data::Program, 
@@ -25,7 +25,7 @@ pub fn draw_oscilloscope(
     let width_top_h = width >> 1;
     let height_top_h = height >> 1;
 
-    let scale = prog.pix.height() as f32 * prog.VOL_SCL * 0.45;
+    let scale = prog.pix.height() as f64 * prog.VOL_SCL * 0.45;
 
     prog.pix.clear();
 
@@ -86,7 +86,7 @@ pub fn draw_oscilloscope(
         }
     }
 
-    let wave_scale_factor = (bass / (stream_.len() as f32)) * 13.0 +2.0;
+    let wave_scale_factor = (bass / (stream_.len() as f64)) * 13.0 +2.0;
 
 	let wave_scale_factor_old = *WAVE_SCALE_FACTOR.read().unwrap();
 
@@ -103,7 +103,7 @@ pub fn draw_oscilloscope(
 
 
     let mut smoothed_smp = stream[zeroi];
-    /*let mut smoothed_smp = Cplx::<f32>::new(0.0, 0.0);
+    /*let mut smoothed_smp = Cplx::<f64>::new(0.0, 0.0);
     for i in (0..3).rev() {
         let di = zeroi.saturating_sub(i as usize*wave_scale_factor as usize);
         smoothed_smp = crate::math::interpolate::linearfc(smoothed_smp, stream[di], 0.33);
@@ -156,7 +156,7 @@ pub fn draw_vectorscope(
 
     let size = prog.pix.height().min(prog.pix.width()) as i32;
     let sizei = size as i32;
-    let scale = size as f32 * prog.VOL_SCL * 0.5;
+    let scale = size as f64 * prog.VOL_SCL * 0.5;
 
     let (width, height) = prog.pix.sizet();
 
@@ -168,8 +168,8 @@ pub fn draw_vectorscope(
 
     prog.pix.clear();
 
-    // let mut smooth = Cplx::<f32>::new(stream[0].x, stream[PHASE_OFFSET % l].y);
-    // let smooth_factor = 0.05f32;
+    // let mut smooth = Cplx::<f64>::new(stream[0].x, stream[PHASE_OFFSET % l].y);
+    // let smooth_factor = 0.05f64;
 
     //let mut data = stream.iter().step_by(INCREMENT).map(|x| *x).collect::<Vec<_>>();
     //math::integrate_streamlace(&mut data, 10, true);
@@ -178,24 +178,24 @@ pub fn draw_vectorscope(
     
     let mut smoothed_sample = 
         MovingAverage::init(
-            Cplx::<f32>::zero(),
+            Cplx::<f64>::zero(),
             SMOOTH_SIZE
          );
         
     
     for _ in 0..SMOOTH_SIZE { 
-        let sample = Cplx::<f32>::new(stream[di].x, stream[di+PHASE_OFFSET].y);
+        let sample = Cplx::<f64>::new(stream[di].x, stream[di+PHASE_OFFSET].y);
         _ = smoothed_sample.update(sample);
         di += INCREMENT;
     }
 
     while di < range {
-        let sample = Cplx::<f32>::new(stream[di].x, stream[di+PHASE_OFFSET].y);
+        let sample = Cplx::<f64>::new(stream[di].x, stream[di+PHASE_OFFSET].y);
         
         let sample = smoothed_sample.update(sample);
         
         //let sample = math::interpolate::linearfc(smoothed_sample, sample, 0.3);
-        /*let sample = Cplx::<f32>::new(
+        /*let sample = Cplx::<f64>::new(
 			math::interpolate::sqrt(smoothed_sample.x, sample.x, 0.1),
 			math::interpolate::sqrt(smoothed_sample.y, sample.y, 0.1)
         );*/

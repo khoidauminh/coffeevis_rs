@@ -3,7 +3,7 @@ use crate::graphics::{self, P2};
 use crate::math::Cplx;
 
 //static mut prog._i: usize = 0;
-//static mut wrap_rate.incremeter: f32 = 0.0;
+//static mut wrap_rate.incremeter: f64 = 0.0;
 
 pub fn draw_ring(
 	prog: &mut crate::data::Program, 
@@ -24,7 +24,7 @@ pub fn draw_ring(
 
     prog.pix.clear();
 
-    let rate = -1.0 /* (1.5 + crate::math::fast_sin(wrap_rateprog._incremeter)) */ / range as f32;
+    let rate = -1.0 /* (1.5 + crate::math::fast_sin(wrap_rateprog._incremeter)) */ / range as f64;
 
     //let mut data = stream[..range].to_vec();
     //crate::math::highpass_array(&mut data, 0.995);
@@ -37,14 +37,14 @@ pub fn draw_ring(
     for i in 1..loop_range {
         let di = i * range / loop_range;
 
-		//~ let t = 1.0 * di as f32 / range as f32;
+		//~ let t = 1.0 * di as f64 / range as f64;
 		//~ let shift = crate::math::interpolate::linearfc(end_smp, start_smp, t);
 		
 		let smp = stream[di] - stream[di.saturating_sub(1)].scale(0.7);
 
-        let p = (smp * Cplx::<f32>::new(prog.VOL_SCL*0.65, 0.0) + Cplx::<f32>::new(0.4, 0.4)) *crate::math::cos_sin(di as f32 * rate);
-        let x = (p.x*size as f32) as i32;
-        let y = (p.y*size as f32) as i32;
+        let p = (smp * Cplx::<f64>::new(prog.VOL_SCL*0.65, 0.0) + Cplx::<f64>::new(0.4, 0.4)) *crate::math::cos_sin(di as f64 * rate);
+        let x = (p.x*size as f64) as i32;
+        let y = (p.y*size as f64) as i32;
 	
 		let int = (smp.l1_norm()*128.0) as u8;
 

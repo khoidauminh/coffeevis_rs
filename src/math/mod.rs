@@ -5,10 +5,10 @@ pub mod rng;
 
 use std::ops;
 
-pub const PI: f32 = std::f32::consts::PI;
-pub const TAU: f32 = PI*2.0;
-pub const PIH: f32 = PI*0.5;
-pub const TAU_RECIP: f32 = 1.0 / TAU;
+pub const PI: f64 = std::f64::consts::PI;
+pub const TAU: f64 = PI*2.0;
+pub const PIH: f64 = PI*0.5;
+pub const TAU_RECIP: f64 = 1.0 / TAU;
 
 #[derive(Copy, Clone)]
 pub struct Cplx<T: Copy + Clone> {
@@ -22,8 +22,12 @@ pub trait ToUsize<T> {
 
 impl ToUsize<i32> for usize {
 	fn new(x: i32) -> usize {
-		if x > 0 {return x as usize}
-		0
+	    if x > 0 {x as usize} else {0}
+	
+		/*let b = (x < 0) as i32;
+		let mask = !(-b);
+		
+		(x & mask) as usize*/
 		
 		//x.max(0) as usize
 		//const MINUS1: usize = -1i32 as usize;
@@ -31,24 +35,20 @@ impl ToUsize<i32> for usize {
 	}
 }
 
-pub fn fft(a: &mut [Cplx<f32>]) {
+pub fn fft(a: &mut [Cplx<f64>]) {
 	let l = a.len();
-	let power = log2i::<usize>(l);
+	let power = l.ilog2() as usize;
 
 	fft::butterfly(a, power);
-	fft::compute_fft_iterative(a);
+	fft::compute_fft(a);
 }
 
-pub fn fft_half(a: &mut [Cplx<f32>]) {
+pub fn fft_half(a: &mut [Cplx<f64>]) {
 	let l = a.len();
-	let power = log2i::<usize>(l);
+	let power = l.ilog2() as usize;
 
 	fft::butterfly_half(a, power);
 	fft::compute_fft_half(a);
-}
-
-pub const fn log2i<T>(n: usize) -> usize {
-	usize::BITS.saturating_sub(n.leading_zeros()).wrapping_sub(1) as usize
 }
 
 pub fn increment<T>(a: T, limit: T) -> T 
@@ -66,9 +66,9 @@ pub fn decrement<T>(a: T, limit: T) -> T
     a - 1.into()
 }
 
-pub fn squish(x: f32, scale: f32, limit: f32) -> f32 {
+pub fn squish(x: f64, scale: f64, limit: f64) -> f64 {
 	// (-192.0*x.max(0.0).recip()).exp()
-	// const scale: f32 = 621.0;
+	// const scale: f64 = 621.0;
 	(-scale*(x.abs()+scale).recip()+1.0)*limit*x.signum()
 }
 
@@ -86,7 +86,7 @@ pub fn inverse_factorial(i: usize) -> usize {
 	o
 }
 /*
-pub fn derivative<T>(a: &mut [Cplx<T>], amount: f32)
+pub fn derivative<T>(a: &mut [Cplx<T>], amount: f64)
 where T: std::marker::Copy + ops::Sub<Output = T>
 {
 	for i in 1..a.len()
@@ -95,12 +95,12 @@ where T: std::marker::Copy + ops::Sub<Output = T>
 	}
 }*/
 
-pub fn integrate_inplace(a: &mut [Cplx<f32>], factor: usize, norm: bool)
+pub fn integrate_inplace(a: &mut [Cplx<f64>], factor: usize, norm: bool)
 {
     if factor < 2 { return; }
 
-    let mut sum = Cplx::<f32>::zero();
-    let mut table = vec![Cplx::<f32>::zero(); factor];
+    let mut sum = Cplx::<f64>::zero();
+    let mut table = vec![Cplx::<f64>::zero(); factor];
     let mut fi = 0;
     let mut si = 0;
 
@@ -140,16 +140,16 @@ pub fn integrate_inplace(a: &mut [Cplx<f32>], factor: usize, norm: bool)
     }
 
     if norm {
-        let div = 1.0 / factor as f32;
-        // a.iter_mut().for_each(|x| *x = *x * Cplx::new((factor as f32).recip(), 0.0));
+        let div = 1.0 / factor as f64;
+        // a.iter_mut().for_each(|x| *x = *x * Cplx::new((factor as f64).recip(), 0.0));
         let mut i = 0;
-        while i < first_iter {a[i] = a[i].scale(1.0 / i as f32); i+=1};
+        while i < first_iter {a[i] = a[i].scale(1.0 / i as f64); i+=1};
         while i < bound {a[i] = a[i].scale(div); i+=1};
-        while i < l {a[i] = a[i].scale(1.0 / (l-i) as f32); i+=1};
+        while i < l {a[i] = a[i].scale(1.0 / (l-i) as f64); i+=1};
     }
 }
 
-pub fn normalize_max_cplx(a: &mut [Cplx<f32>], limit: f32, threshold: f32, prev_max: f32, smooth_factor: f32) -> f32 {
+pub fn normalize_max_cplx(a: &mut [Cplx<f64>], limit: f64, threshold: f64, prev_max: f64, smooth_factor: f64) -> f64 {
     let mut max = limit;
     for i in a.iter() {
         max = max.max(i.x.abs());
@@ -158,7 +158,7 @@ pub fn normalize_max_cplx(a: &mut [Cplx<f32>], limit: f32, threshold: f32, prev_
 
     // if max >= threshold {return}
 
-    let max = f32::min(max, threshold);
+    let max = f64::min(max, threshold);
 
     let max = interpolate::subtractive_fall(prev_max, max, limit, smooth_factor);
 
@@ -171,14 +171,14 @@ pub fn normalize_max_cplx(a: &mut [Cplx<f32>], limit: f32, threshold: f32, prev_
     max
 }
 
-pub fn normalize_max_f32(a: &mut [f32], limit: f32, threshold: f32, prev_max: f32, smooth_factor: f32) -> f32
+pub fn normalize_max_f64(a: &mut [f64], limit: f64, threshold: f64, prev_max: f64, smooth_factor: f64) -> f64
 {
     let mut max = limit;
     for i in a.iter() {max = max.max(*i)}
 
     // if max >= threshold {return}
 
-    let max = f32::min(max, threshold);
+    let max = f64::min(max, threshold);
 
     let max = interpolate::subtractive_fall(prev_max, max, limit, smooth_factor);
 
@@ -189,7 +189,7 @@ pub fn normalize_max_f32(a: &mut [f32], limit: f32, threshold: f32, prev_max: f3
     max
 }
 
-pub fn normalize_average(a: &mut [Cplx<f32>], limit: f32, prev_ave: f32, smooth_factor: f32) -> f32 {
+pub fn normalize_average(a: &mut [Cplx<f64>], limit: f64, prev_ave: f64, smooth_factor: f64) -> f64 {
 	let mut ave = limit;
 	for i in a.iter() {
 		ave = (ave + i.x.abs());
@@ -223,7 +223,7 @@ where T: ops::Sub<Output = T> + ops::Add<Output = T>
     }
 }
 */
-pub fn cos_sin(x: f32) -> Cplx<f32> {
+pub fn cos_sin(x: f64) -> Cplx<f64> {
     if cfg!(any(feature = "wtf", feature = "approx_trig")) { 
 		
 		use fast::{sin_norm, cos_norm, wrap};
@@ -232,7 +232,7 @@ pub fn cos_sin(x: f32) -> Cplx<f32> {
 		
 	} else {
 		
-		let x = x*std::f32::consts::TAU;
+		let x = x*std::f64::consts::TAU;
 		let y = x.sin_cos();
 		Cplx::new(y.1, y.0)
 	
@@ -241,23 +241,23 @@ pub fn cos_sin(x: f32) -> Cplx<f32> {
 
 pub mod interpolate {
 	use super::Cplx;
-	pub fn linearfc(a: Cplx<f32>, b: Cplx<f32>, t: f32) -> Cplx<f32> {
+	pub fn linearfc(a: Cplx<f64>, b: Cplx<f64>, t: f64) -> Cplx<f64> {
 		a + (b-a).scale(t)
 	}
 
-	pub fn linearf(a: f32, b: f32, t: f32) -> f32 {
+	pub fn linearf(a: f64, b: f64, t: f64) -> f64 {
 		a + (b-a)*t
 	}
 
-	pub fn cosf(a: f32, b: f32, t: f32) -> f32 {
+	pub fn cosf(a: f64, b: f64, t: f64) -> f64 {
 		a + (b-a)*(0.5-0.5*super::fast::cos_norm(t*0.5))
 	}
 
-	pub fn bezierf(a: f32, b: f32, t: f32) -> f32 {
+	pub fn bezierf(a: f64, b: f64, t: f64) -> f64 {
 	    a + (b-a)*(t*t*(3.0-2.0*t))
 	}
 
-	pub fn nearest<T>(a: T, b: T, t: f32) -> T {
+	pub fn nearest<T>(a: T, b: T, t: f64) -> T {
 		if t < 0.5 {return a}
 		return b
 	}
@@ -267,7 +267,7 @@ pub mod interpolate {
 		a + (((b-a)*perbyte) >> 8)
 	}
 
-	pub fn subtractive_fall(prev: f32, now: f32, min: f32, amount: f32) -> f32 {
+	pub fn subtractive_fall(prev: f64, now: f64, min: f64, amount: f64) -> f64 {
         //(now - (prev/now.max(min))*amount).max(min)
         if now > prev {return now}
         let new = prev - amount;
@@ -277,13 +277,13 @@ pub mod interpolate {
 	}
 	
 	pub fn subtractive_fall_hold(
-		prev: f32, 
-		now: f32, 
-		min: f32, 
-		amount: f32,
+		prev: f64, 
+		now: f64, 
+		min: f64, 
+		amount: f64,
 		hold: usize,
 		hold_index: &mut usize
-	) -> f32 {
+	) -> f64 {
 		if now > prev {
 			*hold_index = 0;
 			return now
@@ -301,7 +301,7 @@ pub mod interpolate {
 		}
 	}
 
-	pub fn multiplicative_fall(prev: f32, now: f32, min: f32, factor: f32) -> f32 {
+	pub fn multiplicative_fall(prev: f64, now: f64, min: f64, factor: f64) -> f64 {
         if now > prev {return now}
         let new = prev * (1.0 - factor);
         if new < min {return min}
@@ -309,7 +309,7 @@ pub mod interpolate {
         new
 	}
 
-	pub fn gravitational_fall(prev: f32, now: f32, min: f32, max: &mut f32, acc: f32) -> f32 {
+	pub fn gravitational_fall(prev: f64, now: f64, min: f64, max: &mut f64, acc: f64) -> f64 {
         if now > prev {
             *max = now;
             return now;
@@ -327,20 +327,20 @@ pub mod interpolate {
         new
 	}
 
-	pub fn sqrt(a: f32, b: f32, factor: f32) -> f32 {
+	pub fn sqrt(a: f64, b: f64, factor: f64) -> f64 {
 		let offset = b-a;
 		a + (0.1*offset + 1.0).sqrt() - 1.0
 	}
 	
 	pub fn envelope(
-		prev: f32, 
-		now: f32, 
-		limit: f32, 
-		attack: f32, 
-		release: f32, 
+		prev: f64, 
+		now: f64, 
+		limit: f64, 
+		attack: f64, 
+		release: f64, 
 		hold: usize, 
 		hold_index: &mut usize
-	) -> f32 {
+	) -> f64 {
 		
 		let out = if prev < now {
 			
@@ -380,8 +380,8 @@ where T: std::ops::Sub<Output = T> + Copy {
 	for i in 1..a.len() {a[i-1] = a[i] - a[i-1]}
 }
 
-pub fn fft_scale_up(i: usize, bound: usize) -> f32 {
+pub fn fft_scale_up(i: usize, bound: usize) -> f64 {
 	const PAD_LOW:  usize = 2;
 	const PAD_HIGH: usize = 4;
-	((((i + PAD_LOW) * (bound+PAD_HIGH - i)) >> 7) +1) as f32
+	((((i + PAD_LOW) * (bound+PAD_HIGH - i)) >> 7) +1) as f64
 }

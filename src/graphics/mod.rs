@@ -145,7 +145,8 @@ impl Canvas {
 	}
 
 	pub fn pixel(&self, i: usize) -> u32 {
-		self.pix[i]
+		let iw = self.wrap(i);
+		*unsafe{self.pix.get_unchecked(iw)}
 	}
 	
 	fn wrap(&self, i: usize) -> usize {
@@ -154,16 +155,16 @@ impl Canvas {
 
 	pub fn pixel_mut<'a>(&'a mut self, i: usize) -> &'a mut u32 {
 		let iw = self.wrap(i);
-		&mut self.pix[iw]
+		unsafe{self.pix.get_unchecked_mut(iw)}
 	}
 
 	pub fn pixel_xy(&self, p: P2) -> u32 {
-		self.pix[self.get_idx_wrap(p)]
+		*unsafe{self.pix.get_unchecked(self.get_idx_wrap(p))}
 	}
 
 	pub fn pixel_xy_mut<'a>(&'a mut self, p: P2) -> &'a mut u32 {
 		let i = self.get_idx_wrap(p);
-		&mut self.pix[i]
+		unsafe{self.pix.get_unchecked_mut(i)}
 	}
 	
 	pub fn scale_to2(&self, dest: &mut [u32], scale: usize) {

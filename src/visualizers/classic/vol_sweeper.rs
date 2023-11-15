@@ -29,19 +29,19 @@ pub fn draw_vol_sweeper(
         /*let sum = stream
             .iter()
             .take(SAMPLE_SIZE / 2)
-            .fold(0f32, |s, &x| s + x.mag());*/
+            .fold(0f64, |s, &x| s + x.mag());*/
         let mut sum = 0.0;
         for i in 0..SAMPLE_SIZE/2 {
             sum += stream[i].l1_norm();
         }
-        (sum / (SAMPLE_SIZE / 3) as f32 * para.VOL_SCL * para.pix.width() as f32) as usize
+        (sum / (SAMPLE_SIZE / 3) as f64 * para.VOL_SCL * para.pix.width() as f64) as usize
     };
 
     let color_ = (w * 255 / para.pix.width()).min(255) as u8;
     let color = u32::from_be_bytes([
         255,
         255,
-        (sin_norm(color_ as f32 / 512.0) * 255.0) as u8,
+        (sin_norm(color_ as f64 / 512.0) * 255.0) as u8,
         color_,
     ]);
 

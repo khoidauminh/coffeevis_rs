@@ -97,18 +97,22 @@ pub fn get_no_sample() -> u8 {
 	NO_SAMPLE.load(Ordering::Relaxed)
 }
 
+pub fn is_silent() -> bool {
+	get_no_sample() > 0
+}
+
 pub fn limiter<T>(
 	a: &mut [T],
-	limit: f32,
+	limit: f64,
 	hold_samples: usize,
-	gain: f32
+	gain: f64
 ) 
-where T: Into<f32> + std::ops::Mul<f32, Output = T> + std::marker::Copy
+where T: Into<f64> + std::ops::Mul<f64, Output = T> + std::marker::Copy
 {
 	use crate::math::interpolate::{envelope, subtractive_fall_hold};
 	
 	let mut index = 0usize;
-	let mut replay_gain = 1.0f32;
+	let mut replay_gain = 1.0f64;
 	let mut hold_index = 0;
 	let mut amp = 0.0;
 	let mut l = a.len();
@@ -154,16 +158,16 @@ where T: Into<f32> + std::ops::Mul<f32, Output = T> + std::marker::Copy
 
 pub fn limiter_hard<T>(
 	a: &mut [T],
-	limit: f32,
+	limit: f64,
 	hold_samples: usize,
-	gain: f32
+	gain: f64
 ) 
-where T: Into<f32> + std::ops::Mul<f32, Output = T> + std::marker::Copy
+where T: Into<f64> + std::ops::Mul<f64, Output = T> + std::marker::Copy
 {
 	use crate::math::interpolate::{envelope, subtractive_fall_hold};
 	
 	let mut index = 0usize;
-	let mut replay_gain = 1.0f32;
+	let mut replay_gain = 1.0f64;
 	let mut hold_index = 0;
 	let mut amp = 0.0;
 	let mut l = a.len();
@@ -193,16 +197,16 @@ where T: Into<f32> + std::ops::Mul<f32, Output = T> + std::marker::Copy
 }
 
 struct Peak {
-    peak: f32,
-	amp: f32,
-	limit: f32,
+    peak: f64,
+	amp: f64,
+	limit: f64,
 	hold_for: usize,
 	hold: usize,
 }
 
 impl Peak {
 	pub fn init(
-		limit: f32,
+		limit: f64,
 		hold_for: usize
 	) -> Self {
 		Self {
@@ -214,13 +218,13 @@ impl Peak {
 		}
 	}
 	
-	pub fn update(&mut self, inp: f32) -> f32 {
+	pub fn update(&mut self, inp: f64) -> f64 {
 		use crate::math::{
 			interpolate::{self, linearf},
 			fast::abs
 		};
 		
-		let inp = f32::max(abs(inp), self.limit);
+		let inp = f64::max(abs(inp), self.limit);
 		
 		if self.peak < inp || self.hold >= self.hold_for {
 			self.peak = inp;
@@ -231,17 +235,17 @@ impl Peak {
 		
 		self.amp = self.peak;
 		
-	    // self.amp = interpolate::multiplicative_fall(self.amp, self.peak, self.limit, 1.0 / self.hold_for as f32);
+	    // self.amp = interpolate::multiplicative_fall(self.amp, self.peak, self.limit, 1.0 / self.hold_for as f64);
 		
 		self.amp
 	}
 	
 	// freeze the peakholder
-	pub fn stall(&self) -> f32 {
+	pub fn stall(&self) -> f64 {
 		self.amp
 	}
 	
-	pub fn update_and_get_gain(&mut self, new_amp: f32) -> f32 {
+	pub fn update_and_get_gain(&mut self, new_amp: f64) -> f64 {
 		1.0 / self.update(new_amp)
 	}
 }
@@ -252,7 +256,7 @@ pub struct MovingAverage<T> {
 	index: usize,
 	vec: Vec<T>,
 	sum: T,
-	denominator: f32,
+	denominator: f64,
 	average: T
 }
 
@@ -261,9 +265,9 @@ where
     T:
         Add<Output = T> +
         Sub<Output = T> +
-        Mul<f32, Output = T> +
+        Mul<f64, Output = T> +
         std::marker::Copy,
-    f32: 
+    f64: 
         Mul<T, Output = T>
 {
 	pub fn init(val: T, size: usize) -> Self {
@@ -271,8 +275,8 @@ where
 			size: size,
 			index: 0,
 			vec: vec![val; size],
-			denominator: (size as f32).recip(),
-			sum: size as f32 * val,
+			denominator: (size as f64).recip(),
+			sum: size as f64 * val,
 		    average: val
 		}
 	}
@@ -306,10 +310,10 @@ where
 }
 /*
 struct HoldRelease {
-    peak: f32,
-    amp: f32,
-    lim: f32,
-	rel: f32, 
+    peak: f64,
+    amp: f64,
+    lim: f64,
+	rel: f64, 
 	hold_for: usize,
 	hold: usize,
 }
@@ -319,10 +323,10 @@ impl HoldRelease {
         if a == b {a} else {a+1}
     }
 
-    pub fn init(limit: f32, rel: usize, hold_for: usize, gain: f32) -> Self {
+    pub fn init(limit: f64, rel: usize, hold_for: usize, gain: f64) -> Self {
         //let att = att.saturating_sub(hold_for/2).max(1);
         //let rel = rel.saturating_sub(hold_for/2).max(1);
-        let rel_a = (rel as f32).recip();
+        let rel_a = (rel as f64).recip();
         
         Self {
             peak: limit,
@@ -334,10 +338,10 @@ impl HoldRelease {
         }
     }
     
-    pub fn update_peak(&mut self, inp: f32) -> f32 {
+    pub fn update_peak(&mut self, inp: f64) -> f64 {
         let inp = inp.abs();
 	
-		let inp = f32::max(inp, self.lim);
+		let inp = f64::max(inp, self.lim);
 		
 		if inp > self.peak {
 			self.peak = inp;
@@ -351,7 +355,7 @@ impl HoldRelease {
         self.peak
     }
     
-    pub fn update(&mut self, inp: f32) -> f32 {
+    pub fn update(&mut self, inp: f64) -> f64 {
         use crate::math::interpolate::linearf;
         let peak = self.update_peak(inp);
         
@@ -366,19 +370,19 @@ impl HoldRelease {
 }*/
 /*
 struct PeakEvent {
-    pub peak: f32,
+    pub peak: f64,
     pub index: usize,
     pub hold: usize
 }
 
 struct PeakRecorder {
     buffer: [PeakEvent; 2],
-    limit: f32,
+    limit: f64,
     hold_for: usize,
 }
 
 impl PeakRecorder {
-    pub fn init(hold_for: usize, limit: f32) -> Self {
+    pub fn init(hold_for: usize, limit: f64) -> Self {
         Self {
             buffer: [PeakEvent{peak: limit, index: 0, hold: 0}; 2],
             limit: limit,
@@ -386,8 +390,8 @@ impl PeakRecorder {
         }
     }
     
-    pub fn update(&mut self, inp: f32, index: usize) -> Option<[PeakEvent; 2]> {
-        let inp = f32::max(inp.abs(), self.lim);
+    pub fn update(&mut self, inp: f64, index: usize) -> Option<[PeakEvent; 2]> {
+        let inp = f64::max(inp.abs(), self.lim);
 		
 		let mut out = None;
 		
@@ -406,13 +410,13 @@ impl PeakRecorder {
 
 pub fn limiter<T>(
 	a: &mut [T],
-	limit: f32,
+	limit: f64,
 	attack_samples: usize, 
 	release_samples: usize,
 	hold_samples: usize,
-	gain: f32
+	gain: f64
 )
-where T: Into<f32> + std::ops::Mul<f32, Output = T> + std::marker::Copy
+where T: Into<f64> + std::ops::Mul<f64, Output = T> + std::marker::Copy
 {
     let mut peak_recorder = PeakRecorder::init(hold_samples, limit);
 }*/

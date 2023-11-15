@@ -4,14 +4,14 @@ use crate::math::{self, Cplx, fast};
 use crate::graphics::blend::Blend;
 
 // soft shaking
-const incr: f32 = 0.0001;
+const incr: f64 = 0.0001;
 
 struct LocalData {
-    i: f32,
-    js: f32,
-    jc: f32,
-    xshake: f32,
-    yshake: f32,
+    i: f64,
+    js: f64,
+    jc: f64,
+    xshake: f64,
+    yshake: f64,
     x: i32,
     y: i32
 }
@@ -20,14 +20,14 @@ static DATA: std::sync::RwLock<LocalData> = std::sync::RwLock::new(
     LocalData{i: 0.0, js: 0.0, jc: 0.0, xshake: 0.0, yshake: 0.0, x: 0, y: 0}
 );
 
-fn diamond_func(amp: f32, prd: f32, t: f32) -> (i32, i32) {
+fn diamond_func(amp: f64, prd: f64, t: f64) -> (i32, i32) {
     (
         triangle_wav(amp, prd, t) as i32,
         triangle_wav(amp, prd, t+prd/4.0) as i32
     )
 }
 
-fn triangle_wav(amp: f32, prd: f32, t: f32) -> f32 {
+fn triangle_wav(amp: f64, prd: f64, t: f64) -> f64 {
     (4.0*(t/prd - (t/prd+0.5).trunc()).abs()-1.0)*amp
 }
 
@@ -37,9 +37,9 @@ pub fn draw_shaky(
 ) {
     let mut LOCALDATA = DATA.write().unwrap();
    
-    let mut data_f = [Cplx::<f32>::zero(); 512];
+    let mut data_f = [Cplx::<f64>::zero(); 512];
 
-    let sizef = prog.pix.width().min(prog.pix.height()) as f32;
+    let sizef = prog.pix.width().min(prog.pix.height()) as f64;
 
     data_f
     .iter_mut()
@@ -49,7 +49,7 @@ pub fn draw_shaky(
     );
     math::integrate_inplace(&mut data_f, 128, false);
 
-    let amplitude = data_f.iter().fold(0f32, |acc, x| acc + x.l1_norm())*sizef;
+    let amplitude = data_f.iter().fold(0f64, |acc, x| acc + x.l1_norm())*sizef;
     
     // let mut LOCALDATA = DATA.write().unwrap();
 
@@ -65,8 +65,8 @@ pub fn draw_shaky(
 
     // println!("{:.2} {:.2}", LOCALDATA.xshake, LOCALDATA.yshake);
 
-    LOCALDATA.x = math::interpolate::linearf(LOCALDATA.x as f32, LOCALDATA.xshake, 0.1) as i32;
-    LOCALDATA.y = math::interpolate::linearf(LOCALDATA.y as f32, LOCALDATA.yshake, 0.1) as i32;
+    LOCALDATA.x = math::interpolate::linearf(LOCALDATA.x as f64, LOCALDATA.xshake, 0.1) as i32;
+    LOCALDATA.y = math::interpolate::linearf(LOCALDATA.y as f64, LOCALDATA.yshake, 0.1) as i32;
 
     LOCALDATA.js += 0.01;
     LOCALDATA.jc += 0.01;
@@ -107,4 +107,4 @@ pub fn draw_shaky(
 
 }
 
-const wrapper: f32 = 725.0;
+const wrapper: f64 = 725.0;

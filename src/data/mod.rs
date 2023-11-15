@@ -26,8 +26,8 @@ pub const DEFAULT_FPS: u8 = 144;
 pub const DEFAULT_WAV_WIN: usize = 144 * INCREMENT;
 pub const DEFAULT_ROTATE_SIZE: usize = 289; // 3539;
 pub const PHASE_OFFSET: usize = SAMPLE_RATE / 50 / 4;
-pub const DEFAULT_VOL_SCL: f32   = 0.86;
-pub const DEFAULT_SMOOTHING: f32 = 0.65;
+pub const DEFAULT_VOL_SCL: f64   = 0.86;
+pub const DEFAULT_SMOOTHING: f64 = 0.65;
 
 /// How long silence has happened to trigger render slow down.
 pub const SILENCE_LIMIT: u8 = 7;
@@ -83,8 +83,8 @@ pub struct Program
 	pub FPS: u64,
 	pub REFRESH_RATE: std::time::Duration,
 	pub WAV_WIN: usize,
-	pub VOL_SCL: f32,
-	pub SMOOTHING: f32,
+	pub VOL_SCL: f64,
+	pub SMOOTHING: f64,
 	pub ROTATE_SIZE: usize,
 
 	pub WIN_W: u16,

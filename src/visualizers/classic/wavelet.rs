@@ -9,12 +9,12 @@ const WT_POWER: usize = crate::data::POWER;
 const WT_SIZE: usize = 1 << WT_POWER;
 
 struct WaveletTable {
-    table: [Cplx<f32>; WT_SIZE]
+    table: [Cplx<f64>; WT_SIZE]
 }
 
 impl WaveletTable {
     pub fn init(inp: &mut crate::audio::SampleArr) -> Self {
-        let mut cloned = [Cplx::<f32>::zero(); WT_SIZE];
+        let mut cloned = [Cplx::<f64>::zero(); WT_SIZE];
         for i in 0..WT_SIZE {
             cloned[i] = inp[i >> 2];
         }
@@ -25,7 +25,7 @@ impl WaveletTable {
         }
     }
     
-    pub fn get(&self, i: usize) -> Option<Cplx<f32>> {
+    pub fn get(&self, i: usize) -> Option<Cplx<f64>> {
         if i >= WT_SIZE {
             return None;
         }
@@ -75,7 +75,7 @@ pub fn draw_wavelet(
 	stream: &mut crate::audio::SampleArr
 ) {
 
-	let mut w = [Cplx::<f32>::zero(); WT_SIZE];
+	let mut w = [Cplx::<f64>::zero(); WT_SIZE];
 	let l = stream.len();
 	
 	w
@@ -85,7 +85,7 @@ pub fn draw_wavelet(
 		let copy_size = l >> 2;
 		let start = 0;
 		
-		let inew 	= copy_size as f32 * i as f32 / WT_SIZE as f32;
+		let inew 	= copy_size as f64 * i as f64 / WT_SIZE as f64;
 		let ifloor 	= start + inew as usize;
 		let iceil  	= start + inew.ceil() as usize;
 		
@@ -130,11 +130,11 @@ pub fn draw_wavelet(
 		let floor = (1 << layer)-1;
 		let ceil  = floor*2;*/
 		
-		let yt = WT_SIZE as f32 * (ph - y -1) as f32 / ph as f32;
+		let yt = WT_SIZE as f64 * (ph - y -1) as f64 / ph as f64;
 		
 		for x in 0..pw 
 		{
-			let xt = WT_SIZE as f32 * x as f32 / pw as f32;
+			let xt = WT_SIZE as f64 * x as f64 / pw as f64;
 			
 			// let ix = (ceil - floor) * x / pw;
 			
@@ -166,8 +166,8 @@ pub fn draw_wavelet_(
     table.draw(&mut prog.pix);
 }
 
-fn hwt(a: &mut [Cplx<f32>; WT_SIZE]) {
-	let mut aux = [Cplx::<f32>::zero(); WT_SIZE];
+fn hwt(a: &mut [Cplx<f64>; WT_SIZE]) {
+	let mut aux = [Cplx::<f64>::zero(); WT_SIZE];
 	let mut l = WT_SIZE/2;
 	
 	while l > 0 {
@@ -182,8 +182,8 @@ fn hwt(a: &mut [Cplx<f32>; WT_SIZE]) {
 	}
 }
 
-fn hwt_pong(a: &mut [Cplx<f32>; WT_SIZE]) {
-    let mut aux = [Cplx::<f32>::zero(); WT_SIZE];
+fn hwt_pong(a: &mut [Cplx<f64>; WT_SIZE]) {
+    let mut aux = [Cplx::<f64>::zero(); WT_SIZE];
 	let mut l = WT_SIZE/2;
 	let mut pong = true;
 	
@@ -213,10 +213,10 @@ fn hwt_pong(a: &mut [Cplx<f32>; WT_SIZE]) {
 	}
 }
 /*
-fn hwt_recursive(a: &mut [Cplx<f32>]) 
+fn hwt_recursive(a: &mut [Cplx<f64>]) 
 {
 	let l = a.len();
-	let aux = vec![Cplx::<f32>::zero(); l];
+	let aux = vec![Cplx::<f64>::zero(); l];
 	for i in 0..l/2
 	{
 		let i2 = i*2;
@@ -230,9 +230,9 @@ fn hwt_recursive(a: &mut [Cplx<f32>])
 */
 
 
-fn convole(a: &[Cplx<f32>], b: &[Cplx<f32>], mult: usize, shift: usize) -> Cplx<f32>
+fn convole(a: &[Cplx<f64>], b: &[Cplx<f64>], mult: usize, shift: usize) -> Cplx<f64>
 {
-	let mut sum = Cplx::<f32>::zero();
+	let mut sum = Cplx::<f64>::zero();
 	let lb = b.len();
 	
 	for i in 0..a.len() 
@@ -246,33 +246,33 @@ fn convole(a: &[Cplx<f32>], b: &[Cplx<f32>], mult: usize, shift: usize) -> Cplx<
 	sum
 }
 
-const HAAR_WAVELET_H: &[Cplx<f32>] = &[
-	Cplx::<f32> {x: -0.707107, y: 0.0},
-	Cplx::<f32> {x: 0.707107, y: 0.0}
+const HAAR_WAVELET_H: &[Cplx<f64>] = &[
+	Cplx::<f64> {x: -0.707107, y: 0.0},
+	Cplx::<f64> {x: 0.707107, y: 0.0}
 ];
 
-const HAAR_WAVELET_G: &[Cplx<f32>] = &[
-	Cplx::<f32> {x: 0.707107, y: 0.0},
-	Cplx::<f32> {x: 0.707107, y: 0.0}
+const HAAR_WAVELET_G: &[Cplx<f64>] = &[
+	Cplx::<f64> {x: 0.707107, y: 0.0},
+	Cplx::<f64> {x: 0.707107, y: 0.0}
 ];
 
-fn cos_bell_wavelet(x: f32, scale: f32, shift: f32) -> Cplx<f32>
+fn cos_bell_wavelet(x: f64, scale: f64, shift: f64) -> Cplx<f64>
 {
 	let x = scale*(x + shift);
 	crate::math::cos_sin(x).scale((-x.powi(2)).exp())
 }
 
 // p ranges in 0..w.len()
-fn wavelet_xy_interpolated(w: &[Cplx<f32>], p: Cplx<f32>, pow: usize /*, itpl: fn(f32, f32, f32)->f32*/) -> Cplx<f32> 
+fn wavelet_xy_interpolated(w: &[Cplx<f64>], p: Cplx<f64>, pow: usize /*, itpl: fn(f64, f64, f64)->f64*/) -> Cplx<f64> 
 {	
-	let pf = pow as f32;
+	let pf = pow as f64;
 	let l = w.len();
-	let lf = l as f32;
+	let lf = l as f64;
 	let ll = l-1;
 	
-	let idx = |x: f32, h: f32| -> f32
+	let idx = |x: f64, h: f64| -> f64
 	{
-		let iy = ((1<<(h as u32))-1) as f32;
+		let iy = ((1<<(h as u32))-1) as f64;
 		let ix = iy *x /lf;
 		iy +ix
 	};

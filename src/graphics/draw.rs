@@ -9,14 +9,12 @@ impl Canvas {
 	}
 	
 	pub fn set_pixel(&mut self, i: usize, c: u32) {
-		if let Some(p) = self.pix.get_mut(i) {
-			*p = u32::mix(*p, c);
-		}
+		self.set_pixel_by(i, c, u32::blend);
 	}
 	
 	pub fn set_pixel_by(&mut self, i: usize, c: u32, b: Mixer) {
 		if let Some(p) = self.pix.get_mut(i) {
-			*p = u32::mix(*p, c);
+			*p = b(*p, c);
 		}
 	}
 	
@@ -58,9 +56,9 @@ impl Canvas {
 	}
 	
 	pub fn fade(&mut self, al: u8) {
-		let fader = self.background & 0x00_FF_FF_FF;
-		let fader = fader | ((al as u32) << 24);
-		self.pix.iter_mut().take(self.len).for_each(|smp| *smp = u32::mix(*smp, fader));
+		let mut fader  = self.background & 0x00_FF_FF_FF;
+		fader |= ((al as u32) << 24);
+		self.pix.iter_mut().take(self.len).for_each(|smp| *smp = smp.mix(fader));
 	}
 	
 	pub fn fill(&mut self, c: u32) {

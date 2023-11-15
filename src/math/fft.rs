@@ -21,19 +21,19 @@ pub fn butterfly_half<T: std::marker::Copy>(a: &mut [Cplx<T>], power: usize) {
 	}
 }
 
-pub fn twiddle_norm(x: f32) -> Cplx<f32> {
+pub fn twiddle_norm(x: f64) -> Cplx<f64> {
 	if cfg!(any(feature = "wtf", feature = "approx_trig")) { 
 		let sin = fast::sin_norm(x);
 		let cos = fast::cos_norm(x);
 		Cplx::new(cos, sin)
 	} else {
-		let x = x*std::f32::consts::TAU;
+		let x = x*std::f64::consts::TAU;
 		let y = x.sin_cos();
 		Cplx::new(y.1, y.0)
 	}
 }
 
-pub fn twiddle(x: f32) -> Cplx<f32> {
+pub fn twiddle(x: f64) -> Cplx<f64> {
 	if cfg!(any(feature = "wtf", feature = "approx_trig")) { 
 		let x = x * super::TAU_RECIP;
 		let sin = fast::sin_norm(x);
@@ -45,7 +45,7 @@ pub fn twiddle(x: f32) -> Cplx<f32> {
 	}
 }
 
-pub fn compute_fft_recursive(a: &mut [Cplx<f32>]) {
+pub fn compute_fft_recursive(a: &mut [Cplx<f64>]) {
 	let l = a.len();
 
 	if l == 2
@@ -60,8 +60,8 @@ pub fn compute_fft_recursive(a: &mut [Cplx<f32>]) {
 	compute_fft_recursive(&mut a[..lh]);
 	compute_fft_recursive(&mut a[lh..]);
 
-	let twiddle = twiddle_norm(1.0 / l as f32);
-	let mut w = Cplx::<f32>::one();
+	let twiddle = twiddle_norm(1.0 / l as f64);
+	let mut w = Cplx::<f64>::one();
 	for i in 0..lh
 	{
 		let il = i+lh;
@@ -75,7 +75,7 @@ pub fn compute_fft_recursive(a: &mut [Cplx<f32>]) {
 	}
 }
 
-pub fn compute_fft_iterative(a: &mut [Cplx<f32>]) {
+pub fn compute_fft_iterative(a: &mut [Cplx<f64>]) {
     let length = a.len();
 
     for pair in a.chunks_exact_mut(2) {
@@ -83,10 +83,40 @@ pub fn compute_fft_iterative(a: &mut [Cplx<f32>]) {
 		pair[1] = pair[0] - q;
 		pair[0] = pair[0] + q;
     }
+    
+    for four in a.chunks_exact_mut(4) {
+        let mut 
+        q = four[2];
+        four[2] = four[0] - q;
+        four[0] = four[0] + q;
+        
+        q = four[3].times_minus_i();
+        four[3] = four[1] - q;
+        four[1] = four[1] + q;
+    }
+    
+    for eight in a.chunks_exact_mut(8) {
+        let mut 
+        q = eight[4];
+        eight[4] = eight[0] - q;
+        eight[0] = eight[0] + q;
+        
+        q = eight[5].times_twiddle_8th();
+        eight[5] = eight[1] - q;
+        eight[1] = eight[1] + q;
+        
+        q = eight[6].times_minus_i();
+        eight[6] = eight[2] - q;
+        eight[2] = eight[2] + q;
+        
+        q = eight[7].times_twiddle_3_8th();
+        eight[7] = eight[3] - q;
+        eight[3] = eight[3] + q;
+    }
 
-	const FIST_ROOT_ANGLE: f32 = -0.25 * std::f32::consts::TAU;
+	const FIST_ROOT_ANGLE: f64 = -0.0625 * std::f64::consts::TAU;
 
-    let mut window = 4usize;
+    let mut window = 16usize;
     let mut root_angle = FIST_ROOT_ANGLE;
 
     while window <= length {
@@ -96,10 +126,15 @@ pub fn compute_fft_iterative(a: &mut [Cplx<f32>]) {
         a.chunks_exact_mut(window).for_each(|chunk| {
             let (left, right) = chunk.split_at_mut(window / 2);
 
-            let mut factor = Cplx::<f32>::one();
+			let q = right[0];
+			right[0] = left[0] - q;
+			left[0]  = left[0] + q;
+
+			let mut factor = root;
 
             left.iter_mut()
             .zip(right.iter_mut())
+            .skip(1)
             .for_each(|(smpl, smpr)| {
                 let q = *smpr * factor;
 
@@ -116,8 +151,12 @@ pub fn compute_fft_iterative(a: &mut [Cplx<f32>]) {
     }
 }
 
+pub fn compute_fft(a: &mut [Cplx<f64>]) {
+    compute_fft_iterative(a);
+}
+
 // Discards the other half of the fft.
-pub fn compute_fft_half(a: &mut [Cplx<f32>]) {
+pub fn compute_fft_half(a: &mut [Cplx<f64>]) {
 	let lh = a.len()/2;
-	compute_fft_iterative(&mut a[..lh]);
+	compute_fft(&mut a[..lh]);
 }

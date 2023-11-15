@@ -33,17 +33,17 @@ where T: QuaternionBounds
     }
 }
 */
-impl Quaternion<f32> for &[f32]
+impl Quaternion<f64> for &[f64]
 {
-    fn mag(&self) -> f32 {
+    fn mag(&self) -> f64 {
         self.iter().fold(0.0, |acc, x| acc + x*x).sqrt()
     }
 
-    fn dot(&self, other: &[f32]) -> f32 {
+    fn dot(&self, other: &[f64]) -> f64 {
         self.iter().zip(other.iter())
         .fold(0.0, |acc, (x, y)| acc + x*y)
     }
 }
 
 
-impl Quaternion<f32> for [f32] {}
+impl Quaternion<f64> for [f64] {}
