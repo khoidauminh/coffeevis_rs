@@ -98,8 +98,8 @@ pub fn draw_wavelet(
 	//w.copy_from_slice(&stream[..WT_SIZE.min(stream.len())]);
 	hwt(&mut w);
 	
-	let wl = WT_SIZE;
-	let pl = prog.pix.sizel();
+	let _wl = WT_SIZE;
+	let _pl = prog.pix.sizel();
 	let (pw, ph) = (prog.pix.width(), prog.pix.height());
 	
 	let power = WT_SIZE.ilog2() as usize;
@@ -233,7 +233,7 @@ fn hwt_recursive(a: &mut [Cplx])
 fn convole(a: &[Cplx], b: &[Cplx], mult: usize, shift: usize) -> Cplx
 {
 	let mut sum = Cplx::zero();
-	let lb = b.len();
+	let _lb = b.len();
 	
 	for i in 0..a.len() 
 	{

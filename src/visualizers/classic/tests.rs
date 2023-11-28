@@ -4,7 +4,7 @@ use crate::{
     audio
 };
 
-fn prepare(stream: &mut crate::audio::SampleArr, bar_num: usize, volume_scale: f64, width: usize) {
+fn prepare(_stream: &mut crate::audio::SampleArr, _bar_num: usize, _volume_scale: f64, _width: usize) {
 }
 /*
 pub const test2: crate::VisFunc = |prog, _| {
@@ -24,7 +24,7 @@ pub const test2: crate::VisFunc = |prog, _| {
 };*/
 
 pub fn test(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
-    let w = prog.pix.width() as i32;
+    let _w = prog.pix.width() as i32;
     let wf = prog.pix.width() as f64;
     let h = prog.pix.height();
     let vec_size = h.next_power_of_two() << 2;

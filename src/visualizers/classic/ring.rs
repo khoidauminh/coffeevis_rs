@@ -1,5 +1,5 @@
-use crate::data::{INCREMENT, Program};
-use crate::graphics::{self, P2};
+
+use crate::graphics::{P2};
 use crate::math::Cplx;
 
 //static mut prog._i: usize = 0;
@@ -52,9 +52,9 @@ pub fn draw_ring(
 			P2::new(x/2+width_top_h, y/2+height_top_h),
             u32::from_be_bytes([
 				255, 
-				((128 + x.abs()*64/size as i32) as u8).saturating_sub(int), 
+				((128 + x.abs()*64/size) as u8).saturating_sub(int), 
 				255,
-				((128 + y.abs()*64/size as i32) as u8).saturating_add(int)
+				((128 + y.abs()*64/size) as u8).saturating_add(int)
 			]),
 		);
     }

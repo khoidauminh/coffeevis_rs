@@ -1,8 +1,5 @@
 use crossterm::{
     queue,
-    Command,
-    QueueableCommand,
-    event::{poll, read, Event, KeyCode},
     terminal::{
         Clear,
         ClearType,
@@ -10,31 +7,26 @@ use crossterm::{
         enable_raw_mode,
         size,
         EnterAlternateScreen,
-        LeaveAlternateScreen,
-        DisableLineWrap,
-        EnableLineWrap
+        LeaveAlternateScreen
     },
-    style::{Stylize, Colors, SetColors, Print, Color, Attribute, SetAttribute},
+    style::{Stylize, Print, Color, Attribute, SetAttribute},
     cursor::{self, Hide, Show},
 };
 /*
 use sixel_rs;
 use sixel_sys;
 */
-use std::{sync::{Arc, RwLock}, io::{Stdout, Stdin, stdout, stdin, Write}};
+use std::{io::{Stdout, stdout, Write}};
 use crate::{
-    audio::get_buf,
     graphics::grayb,
     data::*,
-    controls::{usleep, control_key_events_con},
-    math::Cplx,
-    visualizers::VisFunc,
+    controls::{control_key_events_con},
     modes::Mode,
 };
 
 pub type Flusher = fn(&Program, &mut Stdout);
 
-use std::str::Chars;
+
 
 // ASCII ONLY
 // pub const CHARSET_BLOCKOPAC: &str = &[' ', '░', '▒', '▓'];
@@ -137,9 +129,9 @@ impl Program {
 			stdout,
 			Print(
 				ch
-				.with(Color::Rgb{r: r, g: g, b: b})
+				.with(Color::Rgb{r, g, b})
 				.on(match bg {
-					Some((r, g, b)) => Color::Rgb{r: r, g: g, b: b},
+					Some((r, g, b)) => Color::Rgb{r, g, b},
 					None => Color::Reset,
 				})
 			)
@@ -149,16 +141,16 @@ impl Program {
 	pub fn print_alpha(&self, stdout: &mut Stdout) {
 		let center = self.get_center(2, 4);
 
-		for y in (0..self.pix.height()) {
+		for y in 0..self.pix.height() {
 
 			let cy = center.1 + y as u16 / 2;
 			queue!(stdout, cursor::MoveTo(center.0, cy));
 
-			for x in (0..self.pix.width()) {
+			for x in 0..self.pix.width() {
 
 				let i = y*self.pix.width() + x;
 
-				let [a, r, g, b] = self.pix.pixel(i).to_be_bytes();
+				let [_a, r, g, b] = self.pix.pixel(i).to_be_bytes();
 
 				let lum = grayb(r, g, b);
 
@@ -220,7 +212,7 @@ impl Program {
 							_ => {}
 						}
 
-						return acc;
+						acc
 					});
 
 				let block_char =
@@ -259,7 +251,7 @@ impl Program {
 							}
 						;
 
-						let [pa, pr, pg, pb] = self.pix.pixel(idx).to_be_bytes();
+						let [_pa, pr, pg, pb] = self.pix.pixel(idx).to_be_bytes();
 
 						r = r.max(pr);
 						g = g.max(pg);

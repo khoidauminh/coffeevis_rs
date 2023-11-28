@@ -1,7 +1,4 @@
-use crossterm::{
-	queue, QueueableCommand,
-	terminal::{self, Clear, ClearType}
-};
+
 
 pub mod reader;
 pub mod vislist;
@@ -9,9 +6,9 @@ pub mod log;
 
 use std::time::{Duration, Instant};
 use crate::modes::{Mode, console_mode::Flusher};
-use crate::graphics::Image;
+
 use crate::VisFunc;
-use vislist::VIS_MENU;
+
 
 pub const SAMPLE_RATE_MAX: usize = 384000;
 pub const SAMPLE_RATE: usize = 44100;
@@ -275,7 +272,7 @@ impl Program {
 
 	pub fn update_fps(&mut self, new_fps: u64) {
 	    self.FPS = new_fps;
-	    self.REFRESH_RATE = std::time::Duration::from_micros(1_000_000 / new_fps as u64);
+	    self.REFRESH_RATE = std::time::Duration::from_micros(1_000_000 / new_fps);
 	}
 
 	pub fn update_size_win<T>(&mut self, s: (T, T))

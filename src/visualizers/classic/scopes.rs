@@ -4,7 +4,7 @@ use std::sync::{
 };
 
 use crate::audio::MovingAverage;
-use crate::data::{Program, INCREMENT, PHASE_OFFSET, SAMPLE_SIZE};
+use crate::data::{INCREMENT, PHASE_OFFSET};
 use crate::graphics::P2;
 use crate::visualizers::classic::cross::{draw_cross, CROSS_COL};
 
@@ -18,11 +18,11 @@ pub fn draw_oscilloscope(
 	stream: &mut crate::audio::SampleArr
 ) {
     let l = stream.len();
-    let li = l as i32;
+    let _li = l as i32;
 
     let (width, height) = prog.pix.sizet();
 
-    let width_top_h = width >> 1;
+    let _width_top_h = width >> 1;
     let height_top_h = height >> 1;
 
     let scale = prog.pix.height() as f64 * prog.VOL_SCL * 0.45;
@@ -51,8 +51,8 @@ pub fn draw_oscilloscope(
 
     while zeroi < stream_.len() {
 
-		let mut smp1 = stream_[zeroi].x;
-		let mut smp2 = stream_[zeroi-2].x;
+		let smp1 = stream_[zeroi].x;
+		let smp2 = stream_[zeroi-2].x;
 
         //bass += stream[zeroi].l1_norm();
 
@@ -66,8 +66,8 @@ pub fn draw_oscilloscope(
     	zeroi = up_count;
     	
     	while zeroi < stream_.len() {
-			let mut smp1 = stream_[zeroi].y;
-			let mut smp2 = stream_[zeroi-2].y;
+			let smp1 = stream_[zeroi].y;
+			let smp2 = stream_[zeroi-2].y;
 
 			//bass += stream[zeroi].l1_norm();
 
@@ -152,10 +152,10 @@ pub fn draw_vectorscope(
 	stream: &mut crate::audio::SampleArr
 ) {
     let range = prog.WAV_WIN;
-    let l = stream.len();
+    let _l = stream.len();
 
     let size = prog.pix.height().min(prog.pix.width()) as i32;
-    let sizei = size as i32;
+    let sizei = size;
     let scale = size as f64 * prog.VOL_SCL * 0.5;
 
     let (width, height) = prog.pix.sizet();

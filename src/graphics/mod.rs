@@ -42,7 +42,7 @@ impl Canvas {
 			width: w,
 			height: h,
 			
-			background: background,
+			background,
 		}
 	}
 
@@ -54,7 +54,7 @@ impl Canvas {
 			len: w*h,
 			width: w,
 			height: h,
-			background: background,
+			background,
 		}
 	}
 	
@@ -95,11 +95,11 @@ impl Canvas {
 		});
 	}
 
-	pub fn as_slice<'a>(&'a self) -> &'a [u32] {
+	pub fn as_slice(&self) -> &[u32] {
 		&self.pix[0..self.len]
 	}
 
-	pub fn as_mut_slice<'a>(&'a mut self) -> &'a mut [u32] {
+	pub fn as_mut_slice(&mut self) -> &mut [u32] {
 		&mut self.pix[0..self.len]
 	}
 
@@ -151,7 +151,7 @@ impl Canvas {
 		i & self.mask 
 	}
 
-	pub fn pixel_mut<'a>(&'a mut self, i: usize) -> &'a mut u32 {
+	pub fn pixel_mut(&mut self, i: usize) -> &mut u32 {
 		let iw = self.wrap(i);
 		unsafe{self.pix.get_unchecked_mut(iw)}
 	}
@@ -160,18 +160,18 @@ impl Canvas {
 		*unsafe{self.pix.get_unchecked(self.get_idx_wrap(p))}
 	}
 
-	pub fn pixel_xy_mut<'a>(&'a mut self, p: P2) -> &'a mut u32 {
+	pub fn pixel_xy_mut(&mut self, p: P2) -> &mut u32 {
 		let i = self.get_idx_wrap(p);
 		unsafe{self.pix.get_unchecked_mut(i)}
 	}
 	
 	pub fn scale_to2(&self, dest: &mut [u32], scale: usize) {
 		let winw = self.width*scale;
-		let winh = self.height*scale;
+		let _winh = self.height*scale;
 
-		let jump = winw - scale;
+		let _jump = winw - scale;
         let scale2 = scale.pow(2);
-        let jumprow = winw*scale2;
+        let _jumprow = winw*scale2;
 
 		for obase in (0..self.sizel()).step_by(self.width) {
             let ibase = obase*scale2;
@@ -210,7 +210,7 @@ impl Canvas {
 			let (row1, rows) = block.split_at_mut(dst_width);
 			
 			for row in rows.chunks_mut(dst_width) {
-				row.copy_from_slice(&row1);
+				row.copy_from_slice(row1);
 			}
 		}
 	}

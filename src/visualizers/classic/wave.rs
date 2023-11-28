@@ -9,7 +9,7 @@ pub fn draw_wave(
 	stream: &mut crate::audio::SampleArr
 ) {
     let l = (stream.len() * PERBYTE) >> 8;
-	let mut random = 0usize; 
+	let _random = 0usize; 
     
     for x in 0..para.pix.width() {
         let i = l * x / para.pix.width();
@@ -61,7 +61,7 @@ pub fn draw_wave_(
 ) {
     let l = (stream.len() * PERBYTE) >> 8;
 
-    let mut pixel = para.pix.as_mut_slice().iter_mut();
+    let _pixel = para.pix.as_mut_slice().iter_mut();
     let mut i = 0usize;
     let mut j = 0usize;
     let mut smp = stream[i];

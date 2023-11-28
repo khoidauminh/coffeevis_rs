@@ -1,5 +1,5 @@
 use super::{Canvas, P2, blend::{Blend, Mixer}};
-use crate::math::{Cplx, ToUsize};
+use crate::math::{ToUsize};
 
 impl Canvas {
 
@@ -57,7 +57,7 @@ impl Canvas {
 	
 	pub fn fade(&mut self, al: u8) {
 		let mut fader  = self.background & 0x00_FF_FF_FF;
-		fader |= ((al as u32) << 24);
+		fader |= (al as u32) << 24;
 		self.pix.iter_mut().take(self.len).for_each(|smp| *smp = smp.mix(fader));
 	}
 	
@@ -111,7 +111,7 @@ impl Canvas {
 		}
 	}
 
-	pub fn draw_circle(&mut self, p: P2, r: i32) {
+	pub fn draw_circle(&mut self, _p: P2, _r: i32) {
 	    todo!();
     }
 

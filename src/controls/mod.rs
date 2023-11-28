@@ -58,7 +58,7 @@ pub fn change_stdout_func(
 pub fn change_fps(prog: &mut Program, amount: i16, replace: bool) {
     prog.FPS =
         ((prog.FPS * (!replace) as u64) as i16 + amount)
-        .clamp(1, 144 as i16)
+        .clamp(1, 144_i16)
         as u64
         ;
     prog.REFRESH_RATE = std::time::Duration::from_micros(1_000_000 / prog.FPS);
@@ -80,7 +80,7 @@ pub fn control_key_events_win(
     prog: &mut Program,
 ) {
 
-    let mut fps_change = false;
+    let fps_change = false;
 
     prog.update_vis();
 

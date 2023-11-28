@@ -3,14 +3,13 @@
 use crate::audio::SampleArr;
 use crate::math::Cplx;
 use crate::data::{
-	Program,
-	FFT_SIZE
+	Program
 };
 
 use crate::graphics::P2;
 
 pub fn draw_raw_fft(prog: &mut Program, stream: &mut SampleArr) {
-	let mut window = stream.len();
+	let window = stream.len();
 	let mut data = vec![Cplx::zero(); stream.len()];
 	for i in 0..window {
 		data[i] = stream[i];
@@ -21,7 +20,7 @@ pub fn draw_raw_fft(prog: &mut Program, stream: &mut SampleArr) {
 	crate::math::fft(&mut data);
 	
 	let w = prog.pix.width();
-	let h = prog.pix.height();
+	let _h = prog.pix.height();
 	
 	prog.pix.clear();
 	

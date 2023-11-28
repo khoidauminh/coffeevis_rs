@@ -1,9 +1,9 @@
-use cpal::Sample;
+
 
 use std::sync::RwLock;
 
-use crate::math::{self, Cplx, interpolate::*, TAU, PIH};
-use crate::data::{FFT_SIZE, INCREMENT, FFT_POWER, Program};
+use crate::math::{self, Cplx, interpolate::*};
+use crate::data::{FFT_SIZE};
 use crate::graphics::{P2, blend::Blend};
 
 // const COPY_SIZE: usize = FFT_SIZE / 2;
@@ -98,7 +98,7 @@ pub fn draw_spectrum(
 	prog: &mut crate::data::Program, 
 	stream: &mut crate::audio::SampleArr
 ) {
-    let l = stream.len();
+    let _l = stream.len();
 
     let (w, h) = prog.pix.sizet();
 
@@ -124,9 +124,9 @@ pub fn draw_spectrum(
 
     // prog.pix.clear();
 
-    let winlog = wf.log2();
+    let _winlog = wf.log2();
 
-    let mut if64: f64 = 0.0;
+    let _if64: f64 = 0.0;
 
     const INTERVAL: f64 = 1.0;
 
@@ -134,8 +134,8 @@ pub fn draw_spectrum(
     
     prog.pix.clear();
 
-    for i in 0..h as i32 {
-        let i_rev = (h as i32) - i;
+    for i in 0..h {
+        let i_rev = h - i;
 
         let i_ratio = i_rev as f64 * hf_recip;
 

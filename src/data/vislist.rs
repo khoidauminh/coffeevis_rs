@@ -21,7 +21,7 @@ macro_rules! define_visualizer_struct {
 #[macro_export]
 macro_rules! define_visualizer {
 	($func_name:ident, $func_body:block) => {
-		pub fn $func_name(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
+		pub fn $func_name(prog: &mut $crate::data::Program, stream: &mut $crate::audio::SampleArr) {
 			$func_body
 		}
 	};
@@ -29,7 +29,7 @@ macro_rules! define_visualizer {
 
 #[macro_export]
 macro_rules! vis_para {
-	() => { prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr };
+	() => { prog: &mut $crate::data::Program, stream: &mut $crate::audio::SampleArr };
 }
 
 
@@ -63,8 +63,8 @@ pub struct VisList {
 impl VisList {
 	pub const fn new(list: &'static [Visualizer], name: &'static str) -> Self {
 		Self {
-			list: list,
-			name: name
+			list,
+			name
 		}
 	}
 }
@@ -143,13 +143,13 @@ impl VisNavigator {
 	pub fn switch_by_index(&mut self, index: usize) -> Visualizer {
         let current_list = self.structure[self.index_list].list;
 
-        if let Some(vis) = current_list.get(index) {
+        if let Some(_vis) = current_list.get(index) {
             self.index_vis = index;
 
             return self.current_vis();
         }
 
-        return self.current_vis();
+        self.current_vis()
 	}
     /*
 	pub fn switch_by_name(&mut self, name: &str) {

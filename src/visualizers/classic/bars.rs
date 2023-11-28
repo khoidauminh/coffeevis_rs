@@ -27,7 +27,7 @@ fn prepare(stream: &mut crate::audio::SampleArr, bar_num: usize, volume_scale: f
 	let bar_num = bar_num +1;
 	
 	let bnf = bar_num as f64;
-	let l = stream.len();
+	let _l = stream.len();
 	
 	let mut LOCAL = DATA.write().unwrap();
 
@@ -48,7 +48,7 @@ fn prepare(stream: &mut crate::audio::SampleArr, bar_num: usize, volume_scale: f
     
     math::fft_half(&mut data_f);
     
-    let mut max = MAX.write().unwrap();
+    let _max = MAX.write().unwrap();
     
     // crate::math::highpass_inplace(&mut data_f[..bar_num]);
     
@@ -60,7 +60,7 @@ fn prepare(stream: &mut crate::audio::SampleArr, bar_num: usize, volume_scale: f
         .map(|(i, smp)| {
 		    let scl = ((i+2) as f64).log2().powi(2);
 		    let smp_f64: f64 = (*smp).into();
-		    smp_f64 * (volume_scale * scl as f64)
+		    smp_f64 * (volume_scale * scl)
 	    })
 	    .collect::<Vec<f64>>();
 	
@@ -97,16 +97,16 @@ pub fn draw_bars(
 	let bar_num = prog.pix.width() / 2;
 	let bnf = bar_num as f64;
 	let bnf_recip = 1.0 / bnf;
-	let l = stream.len();
+	let _l = stream.len();
 	
 	prepare(stream, bar_num, prog.VOL_SCL);
 	
-	let mut LOCAL = DATA.write().unwrap();
+	let LOCAL = DATA.write().unwrap();
 
     prog.pix.clear();
     let sizef = Cplx::new(prog.pix.width() as f64, prog.pix.height() as f64);
 
-    let bnfh = bnf * 0.5;
+    let _bnfh = bnf * 0.5;
 
 	let mut iter: f64 = 0.4;
 	
@@ -142,7 +142,7 @@ pub fn draw_bars(
         
         let fade = (128.0 + stream[idx*3/2].x*256.0) as u8;
         let peak = (bar*255/prog.pix.height()) as u8;
-        let red = (fade/2).saturating_add(128).max(peak);
+        let _red = (fade/2).saturating_add(128).max(peak);
 
         prog.pix.draw_rect_wh(
 			P2::new(
@@ -170,14 +170,14 @@ pub fn draw_bars_circle(
 	let bar_num = math::fast::isqrt(prog.pix.sizel());
 	let bnf = bar_num as f64;
 	let bnf_recip = 1.0 / bnf;
-	let l = stream.len();
+	let _l = stream.len();
 	
 	let wh = prog.pix.width() as i32 / 2;
 	let hh = prog.pix.height() as i32 / 2;
 	
 	prepare(stream, bar_num, prog.VOL_SCL);
 	
-	let mut LOCAL = DATA.write().unwrap();
+	let LOCAL = DATA.write().unwrap();
 
     prog.pix.clear();
 
@@ -191,7 +191,7 @@ pub fn draw_bars_circle(
         let i_ = i as f64 * bnf_recip;
 
         let idxf = i_*fft_window;
-        let idx = idxf as usize;
+        let _idx = idxf as usize;
         let t = idxf.fract();
         let i_next = i+1;
 
@@ -205,7 +205,7 @@ pub fn draw_bars_circle(
 		let p1 = P2::new(wh + (sizef*angle.x) as i32 / 2, hh + (sizef*angle.y) as i32 / 2);
 		let p2 = P2::new(wh + ((size-bar) as f64 *angle.x) as i32 / 2,  hh + ((size-bar) as f64*angle.y) as i32 / 2);
 		
-		let i2 = i << 2;
+		let _i2 = i << 2;
 
 		let pulse = (stream[i*3/2].x*32768.0) as u8;
 		let peak = (bar*255/size).min(255) as u8;

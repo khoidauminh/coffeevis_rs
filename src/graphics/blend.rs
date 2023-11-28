@@ -40,7 +40,7 @@ pub fn alpha_mix(a: u8, b: u8) -> u8 {
 	let a = a as i16;
 	let b = b as i16;
 	
-	(a + (b*(256 - a)) >> 8) as u8
+	((a + (b*(256 - a))) >> 8) as u8
 }
 
 pub fn channel_mix(x: u8, y: u8, a: u8) -> u8 {
@@ -92,7 +92,7 @@ impl Blend for u32 {
 	}
 	
 	fn mix(self, other: u32) -> u32 {
-		let [aa, ar, ag, ab] = self.to_be_bytes();
+		let [_aa, ar, ag, ab] = self.to_be_bytes();
 		let [ba, br, bg, bb] = other.to_be_bytes();
 		u32::from_be_bytes([
 			ba, // alpha_mix(aa, ba),

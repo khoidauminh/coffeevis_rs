@@ -1,5 +1,5 @@
 use crate::data::SAMPLE_SIZE;
-use crate::math::{self, Cplx, fast::sin_norm};
+use crate::math::{fast::sin_norm};
 use crate::graphics::P2;
 
 //static mut _i: usize = 0;

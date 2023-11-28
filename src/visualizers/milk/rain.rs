@@ -3,7 +3,7 @@ use crate::{
     math::{rng::Rng}
 };
 
-pub const draw: crate::VisFunc = |prog, stream| {
+pub const draw: crate::VisFunc = |prog, _stream| {
     let mut rng = Rng::new(255.0);
 
     prog.pix.as_mut_slice().iter_mut().for_each(|pixel| {
@@ -18,11 +18,11 @@ fn draw_rain_drop(
 	canvas: &mut Canvas,
 	mut p: P2,
 	length: usize,
-	intensity: u8,
+	_intensity: u8,
 	color: u32
 ) {
-	let w = canvas.width();
-	let h = canvas.height();
+	let _w = canvas.width();
+	let _h = canvas.height();
 
 	let mut current_length = length;
 

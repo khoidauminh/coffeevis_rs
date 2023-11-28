@@ -1,14 +1,8 @@
-use std::{
-	io::{BufReader, Cursor},
-	fs::File,
-	path::PathBuf,
-	env,
-};
+
 
 use crate::{
 	data::Program,
-	graphics::{self, Image, blend::Blend},
-	modes::Mode
+	graphics::{blend::Blend}
 };
 /*
 pub fn check_path() -> Option<PathBuf> {
@@ -54,7 +48,7 @@ pub fn prepare_image(file: &[u8]) -> Image {
 	)
 }*/
 
-use std::iter::{Iterator, Peekable};
+use std::iter::{Iterator};
 
 impl Program {
 	pub fn write_err<E: std::error::Error>(&mut self, l: usize, err: E) {
@@ -105,7 +99,7 @@ impl Program {
 				"--size" => {
 					let s = args.next()
 					.expect("Argument error: Expected value for size.")
-					.split("x")
+					.split('x')
 					.map(|x| x.parse::<u16>().expect("Argument error: Invalid value"))
 					.collect::<Vec<_>>();
 
@@ -162,7 +156,7 @@ impl Program {
 						match args.next() {
 							Some(string) =>
 								*channel = string.parse::<u8>()
-								.expect(&format!("Invalid value for {}", channel_string))
+								.unwrap_or_else(|_| panic!("Invalid value for {}", channel_string))
 							,
 							
 							None => 
@@ -174,7 +168,7 @@ impl Program {
 				"--max-con-size" => {
 					let s = args.next()
 					.expect("Argument error: Expected value for size")
-					.split("x")
+					.split('x')
 					.map(|x| x.parse::<u16>().expect("Argument error: Invalid value"))
 					.collect::<Vec<_>>();
 
@@ -219,12 +213,10 @@ impl Program {
 	pub fn print_err_con(&mut self) {
 		use crossterm::{
 			queue,
-			Command,
-			QueueableCommand,
-			cursor::{self, Hide, Show},
-			style::{Stylize, Colors, SetColors, Print, Color, Attribute, SetAttribute},
+			cursor::{self},
+			style::{Colors, SetColors, Print, Color},
 		};
-		use crate::modes::Mode;
+		
 
 		let mut stdout = std::io::stdout();
 

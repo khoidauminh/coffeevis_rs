@@ -204,8 +204,8 @@ pub fn normalize_max_f64(a: &mut [f64], limit: f64, threshold: f64, prev_max: f6
 pub fn normalize_average(a: &mut [Cplx], limit: f64, prev_ave: f64, smooth_factor: f64) -> f64 {
 	let mut ave = limit;
 	for i in a.iter() {
-		ave = (ave + i.x.abs());
-		ave = (ave + i.y.abs());
+		ave += i.x.abs();
+		ave += i.y.abs();
 	}
 
 	let ave = interpolate::subtractive_fall(prev_ave, ave, limit, smooth_factor);
@@ -275,7 +275,7 @@ pub mod interpolate {
 
 	pub fn nearest<T>(a: T, b: T, t: f64) -> T {
 		if t < 0.5 {return a}
-		return b
+		b
 	}
 
 	// perbyte = 1/256 (equivalent to percent = 1/100)
@@ -326,7 +326,7 @@ pub fn fft_scale_up(i: usize, bound: usize) -> f64 {
 pub mod blackmannuttall {
 	use crate::FFT_SIZE;
 	use super::Cplx;
-	use std::sync::RwLock;
+	
 	
 	const a0: f64 = 0.3635819;
 	const a1: f64 = -0.4891775;

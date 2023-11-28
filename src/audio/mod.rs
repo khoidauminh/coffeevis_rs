@@ -1,22 +1,19 @@
-use cpal::{Data, Sample, SampleFormat};
-use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+use cpal::{SampleFormat};
+use cpal::traits::{DeviceTrait, HostTrait};
 
 mod audio_buffer;
 use audio_buffer::AudioBuffer;
 
 use std::ops::*;
 use std::sync::{
-    Arc, RwLock,
-    atomic::{AtomicU8, AtomicBool, AtomicUsize, Ordering},
+    RwLock,
+    atomic::{AtomicU8, Ordering},
 };
 
 use crate::{
     data::{
-        Program,
-        SAMPLE_SIZE,
         SAMPLE_RATE
     },
-    math::Cplx,
 };
 
 /// Global sample array
@@ -48,7 +45,7 @@ pub fn get_source() -> cpal::Stream {
 
     let err_fn = |err| eprintln!("an error occurred on the input audio stream: {}", err);
 
-    let mut supported_configs_range = device.default_input_config()
+    let supported_configs_range = device.default_input_config()
         .expect("error while querying configs");
 
     let supported_config = supported_configs_range; //.next()
@@ -68,10 +65,10 @@ pub fn get_source() -> cpal::Stream {
 }
 
 pub fn read_samples<T: cpal::Sample<Float = f32>>(data: &[T]) {
-    let l = data.len();
+    let _l = data.len();
 
-    let mut i = 0usize;
-    let mut s = 0usize;
+    let _i = 0usize;
+    let _s = 0usize;
 
     let mut b = BUFFER.write().unwrap();
 
@@ -111,9 +108,9 @@ where T: Into<f64> + std::ops::Mul<f64, Output = T> + std::marker::Copy
 {
 	let mut index = 0usize;
 	let mut replay_gain = 1.0f64;
-	let mut hold_index = 0;
-	let mut amp = 0.0;
-	let mut l = a.len();
+	let _hold_index = 0;
+	let _amp = 0.0;
+	let l = a.len();
 
     let hold_samples_double = hold_samples*2;
 		
@@ -164,9 +161,9 @@ where T: Into<f64> + std::ops::Mul<f64, Output = T> + std::marker::Copy
 {	
 	let mut index = 0usize;
 	let mut replay_gain = 1.0f64;
-	let mut hold_index = 0;
-	let mut amp = 0.0;
-	let mut l = a.len();
+	let _hold_index = 0;
+	let _amp = 0.0;
+	let l = a.len();
 
     let hold_samples_double = hold_samples*2;
 		
@@ -174,7 +171,7 @@ where T: Into<f64> + std::ops::Mul<f64, Output = T> + std::marker::Copy
 		
 	let mut peak = Peak::init(limit, hold_samples_double);
 
-	let bound = l + full_delay;
+	let _bound = l + full_delay;
 	
 	let mut getrg = |smp| {
 		gain / peak.update(smp)
@@ -208,15 +205,14 @@ impl Peak {
 		Self {
 		    peak: limit,
 			amp: limit,
-			limit: limit,
-			hold_for: hold_for,
+			limit,
+			hold_for,
 			hold: 0
 		}
 	}
 	
 	pub fn update(&mut self, inp: f64) -> f64 {
 		use crate::math::{
-			interpolate::{self, linearf},
 			fast::abs
 		};
 		
@@ -268,7 +264,7 @@ where
 {
 	pub fn init(val: T, size: usize) -> Self {
 		Self {
-			size: size,
+			size,
 			index: 0,
 			vec: vec![val; size],
 			denominator: (size as f64).recip(),

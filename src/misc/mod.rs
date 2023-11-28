@@ -3,7 +3,7 @@ mod tests {
     use std::time::Instant;
     use std::ops::Range;
     use crate::math::fast;
-    use super::randomizer;
+    
     
     const range: Range<i32> = -10_000_000..10_000_000;
     const modulo: i32 = 211;
@@ -14,7 +14,7 @@ mod tests {
 		let mut a = 0.0;
 		let mut j = 1.0;
 		let now = Instant::now();
-		for i in range {
+		for _i in range {
 			j *= 0.5;
 			a = fast::sin_norm(j);
 		}
@@ -26,7 +26,7 @@ mod tests {
 		let mut a = 0.0;
 		let mut j = 1.0;
 		let now = Instant::now();
-		for i in range {
+		for _i in range {
 			j *= 0.5;
 			a = fast::cos_norm(j);
 		}
@@ -44,7 +44,7 @@ fn randomizer(i: i32, range: i32) -> i32 {
 	let b = a.wrapping_mul(1333).wrapping_shl(2);
 	let c = i;
 	
-	let d = (a ^ b | c) as i32;
+	let d = a ^ b | c;
 	
 	let mut r = RAND.load(Relaxed);
 	

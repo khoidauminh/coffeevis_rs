@@ -8,5 +8,5 @@ use crate::{
 
 pub mod rain;
 
-pub fn draw_bubbles(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
+pub fn draw_bubbles(_prog: &mut crate::data::Program, _stream: &mut crate::audio::SampleArr) {
 }

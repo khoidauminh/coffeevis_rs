@@ -3,8 +3,8 @@
 
 use std::env;
 
-use cpal;
-use minifb;
+
+
 
 mod data;
 mod audio;
@@ -27,17 +27,17 @@ use visualizers::VisFunc;
 type WriteLock<T> = std::sync::RwLockWriteGuard<'static, T>;
 
 fn main() {
-    let mut stream;
-    let mut args = env::args().collect::<Vec<String>>();
+    
+    let args = env::args().collect::<Vec<String>>();
 
-    stream = get_source();
+    let stream = get_source();
     stream.play().unwrap();
 
-	let conf = "";
+	let _conf = "";
 
 	std::env::set_var("LC_CTYPE", "en_US.utf8");
 	
-	let mut prog = Program::new().eval_args(&mut args.iter());
+	let prog = Program::new().eval_args(&mut args.iter());
 	match &prog.mode
 	{
 		&Mode::WinLegacy    => win_legacy_main(prog).unwrap(),

@@ -1,36 +1,28 @@
-use minifb::{self, Scale};
+use minifb::{self};
 
 use std::{
 	thread,
-	rc::Rc,
-	sync::{Arc, atomic::{Ordering::Relaxed, AtomicBool}},
-	time::{Instant, Duration}
+	sync::{Arc, atomic::{Ordering::Relaxed, AtomicBool}}
 };
 
 use crate::{
-	audio::get_buf,
 	data::*,
 	controls,
-	graphics,
-	visualizers::VisFunc,
 };
 
 //~ use fps_clock;
 
 use winit::{
 	event::{
-		self,
 		Event,
-		WindowEvent::{self, KeyboardInput},
-		DeviceEvent::{self, Key},
-		ElementState::Released,
+		WindowEvent::{self},
+		DeviceEvent::{self},
 		RawKeyEvent
 	},
 	keyboard::{PhysicalKey::Code, KeyCode},
-	event_loop::{EventLoop, ControlFlow},
-	window::{Window, WindowBuilder},
-	dpi::{PhysicalSize, LogicalSize},
-	platform::x11::EventLoopBuilderExtX11
+	event_loop::{EventLoop},
+	window::{WindowBuilder},
+	dpi::{LogicalSize}
 };
 
 use std::num::NonZeroU32;
@@ -70,7 +62,7 @@ pub fn win_legacy_main(mut prog: Program) -> Result<(), minifb::Error> {
         let winw = prog.pix.width()*scale;
         let winh = prog.pix.height()*scale;
 
-        if (scale == 1) {
+        if scale == 1 {
 	        win.update_with_buffer(prog.pix.as_slice(), winw, winh);
 	        continue;
 	    }
@@ -92,11 +84,11 @@ pub fn win_main_winit(mut prog: Program) -> Result<(), &'static str> {
 	// let mut prog = Program::new().from_conf_file(conf).as_win();
 
 	pub fn to_u8_vec(buf: &[u32]) -> Vec<u8> {
-		buf.iter().map(|x| { // buf stores pixel samples as u32 of [a, r, g, b]
+		buf.iter().flat_map(|x| { // buf stores pixel samples as u32 of [a, r, g, b]
 			let mut p = x.to_be_bytes();
 			p.rotate_left(1);
 			p
-		}).flatten().collect::<Vec<u8>>()
+		}).collect::<Vec<u8>>()
 	}
 
 	let mut size = (
@@ -111,9 +103,9 @@ pub fn win_main_winit(mut prog: Program) -> Result<(), &'static str> {
 
 	std::env::set_var("WINIT_X11_SCALE_FACTOR", prog.SCALE.to_string());
 
-	let mut event_loop = EventLoop::new().unwrap();
+	let event_loop = EventLoop::new().unwrap();
 	
-	let mut window = Arc::new(
+	let window = Arc::new(
 			WindowBuilder::new()
 			.with_title("kvis")
 			.with_inner_size(LogicalSize::<u32>::new(size.0, size.1))
@@ -144,8 +136,8 @@ pub fn win_main_winit(mut prog: Program) -> Result<(), &'static str> {
 		use std::time::Duration;
 		
 		let thread_main_running = thread_main_running.clone();
-		let active_frame_duration = prog.REFRESH_RATE;
-		let idle_frame_duration = Duration::from_millis(333);
+		let _active_frame_duration = prog.REFRESH_RATE;
+		let _idle_frame_duration = Duration::from_millis(333);
 	
 		let durations: [Duration; 4] = [
 			prog.REFRESH_RATE,
@@ -229,7 +221,7 @@ pub fn win_main_winit(mut prog: Program) -> Result<(), &'static str> {
 				
 			//~ },
 			
-			Event::DeviceEvent{event: DeviceEvent::Key(RawKeyEvent{physical_key: Code(code), state: state }), .. } => {
+			Event::DeviceEvent{event: DeviceEvent::Key(RawKeyEvent{physical_key: Code(code), state }), .. } => {
 
 				if state.is_pressed() {
 					return

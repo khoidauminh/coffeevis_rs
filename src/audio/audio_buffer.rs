@@ -1,7 +1,7 @@
-use cpal;
-use crate::math::{Cplx, increment, fast};
-use crate::data::{SAMPLE_SIZE, DEFAULT_ROTATE_SIZE};
-use std::{iter, sync::atomic::AtomicBool};
+
+use crate::math::{Cplx, fast};
+use crate::data::{DEFAULT_ROTATE_SIZE};
+
 
 const SILENCE_LIMIT: f64 = 0.01;
 const AMP_PERSIST_LIMIT: f64 = 0.05;
@@ -113,15 +113,15 @@ impl AudioBuffer {
         }
     }
 
-    pub fn iter<'a>(&'a self) -> AudioBufferIterator<'a> {
+    pub fn iter(&self) -> AudioBufferIterator<'_> {
         AudioBufferIterator {
-            reference: &self,
+            reference: self,
             index: 0,
             take: self.buffer.len()
         }
     }
     
-    pub fn as_slice<'a>(&'a self) -> &'a [Cplx] {
+    pub fn as_slice(&self) -> &[Cplx] {
 		&self.buffer
 	}
 
@@ -233,8 +233,8 @@ impl AudioBuffer {
         data
         .chunks_exact(2)
         .enumerate()
-        .for_each(|(i, chunk)| {
-            let mut smp = &mut unsafe{self.buffer.get_unchecked_mut(di)};
+        .for_each(|(_i, chunk)| {
+            let smp = &mut unsafe{self.buffer.get_unchecked_mut(di)};
             write_sample(smp, chunk);
 
 			let left  = fast::abs(smp.x);
@@ -275,8 +275,8 @@ impl AudioBuffer {
         data
         .chunks_exact(2)
         .enumerate()
-        .for_each(|(i, chunk)| {
-            let mut smp = &mut unsafe{self.buffer.get_unchecked_mut(di)};
+        .for_each(|(_i, chunk)| {
+            let smp = &mut unsafe{self.buffer.get_unchecked_mut(di)};
             write_sample(smp, chunk);
 
 			let left  = fast::abs(smp.x);
@@ -338,7 +338,7 @@ impl AudioBuffer {
 		let mut write_point = self.index_sub(self.write_point, self.input_size);
 
         for _ in 0..self.input_size {
-            let mut smp = unsafe {self.buffer.get_unchecked_mut(write_point)};
+            let smp = unsafe {self.buffer.get_unchecked_mut(write_point)};
             *smp = smp.scale(scale_up_factor);
             write_point = self.index_add(write_point, 1);
         }

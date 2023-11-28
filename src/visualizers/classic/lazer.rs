@@ -26,8 +26,8 @@ pub fn draw_lazer(
         }
         
         (
-            (sum.x * para.VOL_SCL as f64 * 0.05) as i32,
-            (sum.y * para.VOL_SCL as f64 * 0.05) as i32,
+            (sum.x * para.VOL_SCL * 0.05) as i32,
+            (sum.y * para.VOL_SCL * 0.05) as i32,
         )
     };
 

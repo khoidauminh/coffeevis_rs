@@ -201,7 +201,7 @@ pub fn compute_fft_stereo_small(a: &mut [Cplx], up_to: usize, scale_factor: u8, 
 
 pub fn compute_fft_stereo(a: &mut [Cplx], up_to: usize, normalize: bool) {
 	let l = a.len();
-	let power = l.ilog2() as usize;
+	let _power = l.ilog2() as usize;
 	
 	let norm = if normalize { 1.0 / l as f64 } else { 1.0 };
 	

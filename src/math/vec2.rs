@@ -162,16 +162,16 @@ where T:
 	}
 }
 
-impl Into<f64> for Vec2<f64> {
-    fn into(self) -> f64 {
-        self.max()
+impl From<Vec2<f64>> for f64 {
+    fn from(val: Vec2<f64>) -> Self {
+        val.max()
     }
 }
 
 impl Vec2<f64> {
 	pub fn new(x: f64, y: f64) -> Vec2<f64> {
 		Vec2::<f64> {
-			x: x, y: y
+			x, y
 		}
 	}
 	
@@ -183,7 +183,7 @@ impl Vec2<f64> {
 	}
 	
 	pub fn times_twiddle_8th(self) -> Vec2<f64> {
-		let scale = 0.70710678118654752440084436210484;
+		let scale = 0.707_106_781_186_547_6;
 		Vec2::<f64> {
 			x: (  self.x + self.y) * scale,
 			y: (- self.y + self.y) * scale
@@ -191,7 +191,7 @@ impl Vec2<f64> {
 	}
 	
 	pub fn times_twiddle_3_8th(self) -> Vec2<f64> {
-		let scale = -0.70710678118654752440084436210484;
+		let scale = -0.707_106_781_186_547_6;
 		Vec2::<f64> {
 			x: (self.x - self.y) * scale,
 			y: (self.x + self.y) * scale,
