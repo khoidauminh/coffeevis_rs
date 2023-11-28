@@ -1,11 +1,11 @@
 use crate::{
-    graphics::{self, Canvas, P2, blend::{self, Blend}},
-    math::{self, rng::Rng}
+    graphics::{Canvas, P2, blend::{self, Blend}},
+    math::{rng::Rng}
 };
 
 pub const draw: crate::VisFunc = |prog, stream| {
     let mut rng = Rng::new(255.0);
-    
+
     prog.pix.as_mut_slice().iter_mut().for_each(|pixel| {
         let n = rng.advance();
         let r = n as u8;
@@ -15,25 +15,25 @@ pub const draw: crate::VisFunc = |prog, stream| {
 };
 
 fn draw_rain_drop(
-	canvas: &mut Canvas, 
+	canvas: &mut Canvas,
 	mut p: P2,
-	length: usize, 
-	intensity: u8, 
+	length: usize,
+	intensity: u8,
 	color: u32
 ) {
 	let w = canvas.width();
 	let h = canvas.height();
-	
+
 	let mut current_length = length;
-	
+
 	let color = color.decompose();
-	
+
 	if !canvas.is_in_bound(p) {
 		return
 	}
-	
+
 	while current_length > 0 {
-		
+
 		let fade = current_length * 256 / length;
 		let fade = fade as u8;
 		

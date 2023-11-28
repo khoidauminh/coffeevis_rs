@@ -15,7 +15,7 @@ use crate::{
 	visualizers::VisFunc,
 };
 
-// use fps_clock;
+//~ use fps_clock;
 
 use winit::{
 	event::{
@@ -138,37 +138,45 @@ pub fn win_main_winit(mut prog: Program) -> Result<(), &'static str> {
 		
 	let thread_main_running  = Arc::new(AtomicBool::new(true));
 	
+	
 	#[cfg(not(feature = "benchmark"))]
 	{
+		use std::time::Duration;
+		
 		let thread_main_running = thread_main_running.clone();
-		let mut counter = 0u8;
-		
 		let active_frame_duration = prog.REFRESH_RATE;
-		let idle_frame_duration = std::time::Duration::from_millis(250);
+		let idle_frame_duration = Duration::from_millis(333);
+	
+		let durations: [Duration; 4] = [
+			prog.REFRESH_RATE,
+			prog.REFRESH_RATE*4,
+			prog.REFRESH_RATE*16,
+			Duration::from_millis(250)
+		];
 		
-		let window_thread = window.clone();
+		let window = window.clone();
+
 		thread::spawn(move || {
 			while thread_main_running.load(Relaxed) {
-				if counter == 0 {
-					window_thread.request_redraw();
-				}
+								
 				let no_sample = crate::audio::get_no_sample();
-				let no_sample = crate::graphics::blend::u8_mul(no_sample, no_sample);
-				counter = crate::math::increment(counter, no_sample);
 				
-				thread::sleep(
-					if no_sample < 255 {active_frame_duration} 
-					else {idle_frame_duration}
-				);
+				if no_sample < 255 { 
+					window.request_redraw();
+				}
+				
+				thread::sleep(durations[(no_sample >> 6) as usize]);
 			}
 		});
 	}
+	
+	// let mut clock = fps_clock::FpsClock::new(prog.FPS as u32);
 	
 	fn set_exit(b: Arc<AtomicBool>) {
 		b.store(false, Relaxed);
 	}
 	
-	//~ let mut clock = fps_clock::FpsClock::new(prog.FPS as u32);
+	//~ 
 
 	event_loop.run(move |event, elwt| {
 		prog.update_vis();
@@ -201,12 +209,6 @@ pub fn win_main_winit(mut prog: Program) -> Result<(), &'static str> {
 				event: WindowEvent::RedrawRequested,
 				..
 			} => {
-				/*prog.update_timer();
-				
-				if prog.render_trigger() {
-					
-				}*/
-				
 				perform_draw(&mut prog, &mut surface);
 				
 				#[cfg(feature = "benchmark")]
@@ -214,18 +216,18 @@ pub fn win_main_winit(mut prog: Program) -> Result<(), &'static str> {
 			},
 			
 			
-			/*Event::AboutToWait => {
-				prog.update_timer();
+			//~ Event::AboutToWait => {
+				//~ let no_sample = crate::audio::get_no_sample();
 				
-				if prog.render_trigger() {
-					perform_draw(&mut prog, &mut surface);
-					// 
-				}
+				//~ if no_sample < 128 {
+					//~ perform_draw(&mut prog, &mut surface);
+					//~ window.request_redraw();
+					//~ clock.tick();
+				//~ } else {
+					//~ thread::sleep(Duration::from_millis(250));
+				//~ }
 				
-				window.request_redraw();
-				
-				clock.tick();
-			},*/
+			//~ },
 			
 			Event::DeviceEvent{event: DeviceEvent::Key(RawKeyEvent{physical_key: Code(code), state: state }), .. } => {
 
@@ -249,18 +251,18 @@ pub fn win_main_winit(mut prog: Program) -> Result<(), &'static str> {
 						perform_draw(&mut prog, &mut surface);
 					},
 
-					KeyCode::Minus =>   prog.decrease_vol_scl(),
-					KeyCode::Equal =>  prog.increase_vol_scl(),
+					KeyCode::Minus 			=>   prog.decrease_vol_scl(),
+					KeyCode::Equal 			=>  prog.increase_vol_scl(),
 
-					KeyCode::BracketLeft =>  prog.decrease_smoothing(),
-					KeyCode::BracketRight =>  prog.increase_smoothing(),
+					KeyCode::BracketLeft 	=>  prog.decrease_smoothing(),
+					KeyCode::BracketRight 	=>  prog.increase_smoothing(),
 
-					KeyCode::Semicolon =>  prog.decrease_smoothing(),
-					KeyCode::Quote => prog.increase_smoothing(),
+					KeyCode::Semicolon 		=>  prog.decrease_smoothing(),
+					KeyCode::Quote 			=> prog.increase_smoothing(),
 
-					KeyCode::Backslash => prog.toggle_auto_switch(),
+					KeyCode::Backslash 		=> prog.toggle_auto_switch(),
 
-					KeyCode::Slash => prog.reset_parameters(),
+					KeyCode::Slash 			=> prog.reset_parameters(),
 					
 					_ => {},
 				}

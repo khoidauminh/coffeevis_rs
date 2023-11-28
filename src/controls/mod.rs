@@ -1,28 +1,11 @@
 use minifb::{Key, KeyRepeat, Window, WindowOptions};
-use crossterm::{
-    queue, QueueableCommand,
-    terminal::{Clear, ClearType},
-    event::{poll, read, Event, KeyCode},
-};
+use crossterm::event::{poll, read, Event, KeyCode};
 
-use std::sync::{
-    Arc, atomic::{AtomicBool, Ordering},
-};
-
-use crate::{
-    data::*,
-    modes::console_mode::{
-        Flusher,
-        rescale,
-    },
-    graphics,
-    math,
-    visualizers::*
-};
+use crate::data::*;
 
 pub fn init_window(prog: &Program) -> Result<Window, minifb::Error> {
 	std::env::set_var("GDK_BACKEND", "x11");
-	
+
 	let mut win = Window::new(
         "kvis",
         prog.pix.width()*prog.SCALE as usize,

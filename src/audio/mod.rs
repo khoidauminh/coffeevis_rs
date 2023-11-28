@@ -109,8 +109,6 @@ pub fn limiter<T>(
 ) 
 where T: Into<f64> + std::ops::Mul<f64, Output = T> + std::marker::Copy
 {
-	use crate::math::interpolate::{envelope, subtractive_fall_hold};
-	
 	let mut index = 0usize;
 	let mut replay_gain = 1.0f64;
 	let mut hold_index = 0;
@@ -163,9 +161,7 @@ pub fn limiter_hard<T>(
 	gain: f64
 ) 
 where T: Into<f64> + std::ops::Mul<f64, Output = T> + std::marker::Copy
-{
-	use crate::math::interpolate::{envelope, subtractive_fall_hold};
-	
+{	
 	let mut index = 0usize;
 	let mut replay_gain = 1.0f64;
 	let mut hold_index = 0;

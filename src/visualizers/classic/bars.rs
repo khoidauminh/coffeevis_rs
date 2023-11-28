@@ -1,8 +1,8 @@
 use std::sync::RwLock;
 
-use crate::data::{FFT_SIZE, INCREMENT, Program};
+use crate::data::FFT_SIZE;
 use crate::graphics::{P2, blend::Blend};
-use crate::math::{self, Cplx, PIH, TAU};
+use crate::math::{self, Cplx};
 
 const color: [u32; 3] = [0x66ff66, 0xaaffff, 0xaaaaff];
 
@@ -35,7 +35,7 @@ fn prepare(stream: &mut crate::audio::SampleArr, bar_num: usize, volume_scale: f
 		LOCAL.resize(bar_num, 0.0);
 	}
 
-    let mut data_f = [Cplx::<f64>::zero(); FFT_SIZE];
+    let mut data_f = [Cplx::zero(); FFT_SIZE];
     data_f
     .iter_mut()
     .take(FFT_SIZE_HALF)
@@ -43,6 +43,9 @@ fn prepare(stream: &mut crate::audio::SampleArr, bar_num: usize, volume_scale: f
     .for_each(|(i, smp)| 
         *smp = stream[i*2].scale(FFT_SIZE_RECIP)
     );
+    
+    //~ math::blackmannuttall::perform_window(&mut data_f);
+    
     math::fft_half(&mut data_f);
     
     let mut max = MAX.write().unwrap();
@@ -89,8 +92,8 @@ pub fn draw_bars(
 	prog: &mut crate::data::Program, 
 	stream: &mut crate::audio::SampleArr
 ) {
-	use crate::math::{interpolate::bezierf, fast::cubed_sqrt, increment};
-	
+	use crate::math::{interpolate::smooth_step, fast::cubed_sqrt};
+
 	let bar_num = prog.pix.width() / 2;
 	let bnf = bar_num as f64;
 	let bnf_recip = 1.0 / bnf;
@@ -101,7 +104,7 @@ pub fn draw_bars(
 	let mut LOCAL = DATA.write().unwrap();
 
     prog.pix.clear();
-    let sizef = Cplx::<f64>::new(prog.pix.width() as f64, prog.pix.height() as f64);
+    let sizef = Cplx::new(prog.pix.width() as f64, prog.pix.height() as f64);
 
     let bnfh = bnf * 0.5;
 
@@ -123,7 +126,7 @@ pub fn draw_bars(
         
         smoothed_smp = smoothed_smp.max({
 			num_of_smp_each += 1;
-			cubed_sqrt(bezierf(LOCAL[idx], LOCAL[(idx+1).min(bar_num)], t))
+			cubed_sqrt(smooth_step(LOCAL[idx], LOCAL[(idx+1).min(bar_num)], t))
 		});
 		
 		if prev_index == idx {continue}
@@ -179,7 +182,7 @@ pub fn draw_bars_circle(
     prog.pix.clear();
 
     //let base_angle = math::cos_sin(1.0 / bnf);
-    let mut angle = Cplx::<f64>::one();
+    let mut angle = Cplx::one();
     const fft_window: f64 = (FFT_SIZE >> 6) as f64 * 1.5;
 
     for i in 0..bar_num 
@@ -204,7 +207,7 @@ pub fn draw_bars_circle(
 		
 		let i2 = i << 2;
 
-		let pulse = ((stream[i*3/2].x*32768.0) as u8);
+		let pulse = (stream[i*3/2].x*32768.0) as u8;
 		let peak = (bar*255/size).min(255) as u8;
 
 		let r: u8 = 0;

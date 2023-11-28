@@ -1,6 +1,7 @@
-mod cplx;
-pub mod fast;
+mod vec2;
 mod fft;
+
+pub mod fast;
 pub mod rng;
 
 use std::ops;
@@ -9,12 +10,15 @@ pub const PI: f64 = std::f64::consts::PI;
 pub const TAU: f64 = PI*2.0;
 pub const PIH: f64 = PI*0.5;
 pub const TAU_RECIP: f64 = 1.0 / TAU;
+pub const ZERO: Cplx = Cplx { x: 0.0, y: 0.0 };
 
 #[derive(Copy, Clone)]
-pub struct Cplx<T: Copy + Clone> {
+pub struct Vec2<T: Copy + Clone> {
 	pub x: T,
 	pub y: T
 }
+
+pub type Cplx = Vec2<f64>;
 
 pub trait ToUsize<T> {
     fn new(value: T) -> Self;
@@ -35,7 +39,15 @@ impl ToUsize<i32> for usize {
 	}
 }
 
-pub fn fft(a: &mut [Cplx<f64>]) {
+pub fn fft_stereo_small(a: &mut [Cplx], up_to: usize, scale_factor: u8, normalize: bool) {
+	fft::compute_fft_stereo_small(a, up_to, scale_factor, normalize);
+}
+
+pub fn fft_stereo(a: &mut [Cplx], up_to: usize, normalize: bool) {
+	fft::compute_fft_stereo(a, up_to, normalize);
+}
+
+pub fn fft(a: &mut [Cplx]) {
 	let l = a.len();
 	let power = l.ilog2() as usize;
 
@@ -43,7 +55,7 @@ pub fn fft(a: &mut [Cplx<f64>]) {
 	fft::compute_fft(a);
 }
 
-pub fn fft_half(a: &mut [Cplx<f64>]) {
+pub fn fft_half(a: &mut [Cplx]) {
 	let l = a.len();
 	let power = l.ilog2() as usize;
 
@@ -86,7 +98,7 @@ pub fn inverse_factorial(i: usize) -> usize {
 	o
 }
 /*
-pub fn derivative<T>(a: &mut [Cplx<T>], amount: f64)
+pub fn derivative<T>(a: &mut [Vec2<T>], amount: f64)
 where T: std::marker::Copy + ops::Sub<Output = T>
 {
 	for i in 1..a.len()
@@ -95,12 +107,12 @@ where T: std::marker::Copy + ops::Sub<Output = T>
 	}
 }*/
 
-pub fn integrate_inplace(a: &mut [Cplx<f64>], factor: usize, norm: bool)
+pub fn integrate_inplace(a: &mut [Cplx], factor: usize, norm: bool)
 {
     if factor < 2 { return; }
 
-    let mut sum = Cplx::<f64>::zero();
-    let mut table = vec![Cplx::<f64>::zero(); factor];
+    let mut sum = Cplx::zero();
+    let mut table = vec![Cplx::zero(); factor];
     let mut fi = 0;
     let mut si = 0;
 
@@ -149,7 +161,7 @@ pub fn integrate_inplace(a: &mut [Cplx<f64>], factor: usize, norm: bool)
     }
 }
 
-pub fn normalize_max_cplx(a: &mut [Cplx<f64>], limit: f64, threshold: f64, prev_max: f64, smooth_factor: f64) -> f64 {
+pub fn normalize_max_cplx(a: &mut [Cplx], limit: f64, threshold: f64, prev_max: f64, smooth_factor: f64) -> f64 {
     let mut max = limit;
     for i in a.iter() {
         max = max.max(i.x.abs());
@@ -189,7 +201,7 @@ pub fn normalize_max_f64(a: &mut [f64], limit: f64, threshold: f64, prev_max: f6
     max
 }
 
-pub fn normalize_average(a: &mut [Cplx<f64>], limit: f64, prev_ave: f64, smooth_factor: f64) -> f64 {
+pub fn normalize_average(a: &mut [Cplx], limit: f64, prev_ave: f64, smooth_factor: f64) -> f64 {
 	let mut ave = limit;
 	for i in a.iter() {
 		ave = (ave + i.x.abs());
@@ -223,7 +235,7 @@ where T: ops::Sub<Output = T> + ops::Add<Output = T>
     }
 }
 */
-pub fn cos_sin(x: f64) -> Cplx<f64> {
+pub fn cos_sin(x: f64) -> Cplx {
     if cfg!(any(feature = "wtf", feature = "approx_trig")) { 
 		
 		use fast::{sin_norm, cos_norm, wrap};
@@ -241,7 +253,7 @@ pub fn cos_sin(x: f64) -> Cplx<f64> {
 
 pub mod interpolate {
 	use super::Cplx;
-	pub fn linearfc(a: Cplx<f64>, b: Cplx<f64>, t: f64) -> Cplx<f64> {
+	pub fn linearfc(a: Cplx, b: Cplx, t: f64) -> Cplx {
 		a + (b-a).scale(t)
 	}
 
@@ -253,8 +265,12 @@ pub mod interpolate {
 		a + (b-a)*(0.5-0.5*super::fast::cos_norm(t*0.5))
 	}
 
-	pub fn bezierf(a: f64, b: f64, t: f64) -> f64 {
-	    a + (b-a)*(t*t*(3.0-2.0*t))
+	pub fn smooth_step(a: f64, b: f64, t: f64) -> f64 {
+	    // a + (b-a)*(t*t*(3.0-2.0*t))
+		let t = t - 0.5;
+		let t = t * (2.0 - 2.0*super::fast::abs(t)) + 0.5;
+		
+		a + (b-a)*t
 	}
 
 	pub fn nearest<T>(a: T, b: T, t: f64) -> T {
@@ -276,31 +292,6 @@ pub mod interpolate {
         new
 	}
 	
-	pub fn subtractive_fall_hold(
-		prev: f64, 
-		now: f64, 
-		min: f64, 
-		amount: f64,
-		hold: usize,
-		hold_index: &mut usize
-	) -> f64 {
-		if now > prev {
-			*hold_index = 0;
-			return now
-		}
-		
-		if *hold_index < hold {
-			*hold_index += 1;
-			return prev
-		} else {
-			*hold_index = 0;
-			let new = prev - amount;
-			if new < min {return min}
-			if new < now {return now}
-			new
-		}
-	}
-
 	pub fn multiplicative_fall(prev: f64, now: f64, min: f64, factor: f64) -> f64 {
         if now > prev {return now}
         let new = prev * (1.0 - factor);
@@ -309,64 +300,10 @@ pub mod interpolate {
         new
 	}
 
-	pub fn gravitational_fall(prev: f64, now: f64, min: f64, max: &mut f64, acc: f64) -> f64 {
-        if now > prev {
-            *max = now;
-            return now;
-        }
-
-        if now == *max {
-            return now - acc
-        }
-
-        let new = now - (*max - now)*0.5;
-
-        if new < min {return min}
-        if new < now {return now}
-
-        new
-	}
 
 	pub fn sqrt(a: f64, b: f64, factor: f64) -> f64 {
 		let offset = b-a;
-		a + (0.1*offset + 1.0).sqrt() - 1.0
-	}
-	
-	pub fn envelope(
-		prev: f64, 
-		now: f64, 
-		limit: f64, 
-		attack: f64, 
-		release: f64, 
-		hold: usize, 
-		hold_index: &mut usize
-	) -> f64 {
-		
-		let out = if prev < now {
-			
-			*hold_index = 0;
-			
-			/*let new = prev + attack;
-			new.min(now)*/
-			
-			now
-			
-		} else if prev >= now {
-			
-			if *hold_index < hold {
-				*hold_index += 1;
-				prev
-			} else {
-				
-				*hold_index = 0;
-				
-				let new = prev - release;
-				new.max(now)
-			}
-			
-		} else {now};
-		
-		out.max(limit)
+		a + offset*factor.sqrt()
 	}
 }
 /*
@@ -384,4 +321,65 @@ pub fn fft_scale_up(i: usize, bound: usize) -> f64 {
 	const PAD_LOW:  usize = 2;
 	const PAD_HIGH: usize = 4;
 	((((i + PAD_LOW) * (bound+PAD_HIGH - i)) >> 7) +1) as f64
+}
+
+pub mod blackmannuttall {
+	use crate::FFT_SIZE;
+	use super::Cplx;
+	use std::sync::RwLock;
+	
+	const a0: f64 = 0.3635819;
+	const a1: f64 = -0.4891775;
+	const a2: f64 = 0.1365995;
+	const a3: f64 = -0.0106411;
+	const MASK: usize = FFT_SIZE-1;
+	
+	static mut array_: [f64; FFT_SIZE] = [0.0; FFT_SIZE];
+	static INIT: std::sync::Once = std::sync::Once::new();
+	
+	pub fn get(i: usize, N: usize) -> f64 {
+		/*let mut array = array_.write().unwrap();
+		
+		if array.1 {
+			
+			array.0[i * FFT_SIZE / N]
+		
+		} else {
+			
+			for i in 0..FFT_SIZE {
+				array.0[i] = window(i, FFT_SIZE);
+			}
+			
+			array.1 = true;
+		
+			array.0[i * FFT_SIZE / N]
+		}*/
+		
+		unsafe {
+			INIT.call_once(|| {
+				for i in 0..FFT_SIZE {
+					array_[i] = window(i, FFT_SIZE);
+				}
+			});
+			
+			array_[i * FFT_SIZE / N]
+		}
+	}
+	
+	pub fn perform_window(a: &mut [Cplx]) {
+		let N = a.len();
+		let N_2 = N / 2;
+		for i in 0..N_2 {
+			let factor = get(i, N);
+			let i_rev = N - i - 1;
+			a[i] = a[i] * factor;
+			a[i_rev] = a[i_rev] * factor;
+		}
+	}
+	
+	fn window(i: usize, N: usize) -> f64 {
+		let N = N.wrapping_sub(1);
+		let x = std::f64::consts::PI * i as f64 / (N as f64);
+		a0 + a1* (2.0 * x).cos() + a2 * (4.0 * x).cos() + a3 * (6.0 * x).cos()
+	}
 }

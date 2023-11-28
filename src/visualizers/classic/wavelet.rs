@@ -1,6 +1,6 @@
 use crate::{
 	math::Cplx,
-	data::{FFT_POWER, DEFAULT_ROTATE_SIZE, SAMPLE_SIZE},
+	data::DEFAULT_ROTATE_SIZE,
 	graphics::{Canvas, P2, blend::Blend}
 };
 
@@ -9,12 +9,12 @@ const WT_POWER: usize = crate::data::POWER;
 const WT_SIZE: usize = 1 << WT_POWER;
 
 struct WaveletTable {
-    table: [Cplx<f64>; WT_SIZE]
+    table: [Cplx; WT_SIZE]
 }
 
 impl WaveletTable {
     pub fn init(inp: &mut crate::audio::SampleArr) -> Self {
-        let mut cloned = [Cplx::<f64>::zero(); WT_SIZE];
+        let mut cloned = [Cplx::zero(); WT_SIZE];
         for i in 0..WT_SIZE {
             cloned[i] = inp[i >> 2];
         }
@@ -25,7 +25,7 @@ impl WaveletTable {
         }
     }
     
-    pub fn get(&self, i: usize) -> Option<Cplx<f64>> {
+    pub fn get(&self, i: usize) -> Option<Cplx> {
         if i >= WT_SIZE {
             return None;
         }
@@ -75,7 +75,7 @@ pub fn draw_wavelet(
 	stream: &mut crate::audio::SampleArr
 ) {
 
-	let mut w = [Cplx::<f64>::zero(); WT_SIZE];
+	let mut w = [Cplx::zero(); WT_SIZE];
 	let l = stream.len();
 	
 	w
@@ -166,8 +166,8 @@ pub fn draw_wavelet_(
     table.draw(&mut prog.pix);
 }
 
-fn hwt(a: &mut [Cplx<f64>; WT_SIZE]) {
-	let mut aux = [Cplx::<f64>::zero(); WT_SIZE];
+fn hwt(a: &mut [Cplx; WT_SIZE]) {
+	let mut aux = [Cplx::zero(); WT_SIZE];
 	let mut l = WT_SIZE/2;
 	
 	while l > 0 {
@@ -182,8 +182,8 @@ fn hwt(a: &mut [Cplx<f64>; WT_SIZE]) {
 	}
 }
 
-fn hwt_pong(a: &mut [Cplx<f64>; WT_SIZE]) {
-    let mut aux = [Cplx::<f64>::zero(); WT_SIZE];
+fn hwt_pong(a: &mut [Cplx; WT_SIZE]) {
+    let mut aux = [Cplx::zero(); WT_SIZE];
 	let mut l = WT_SIZE/2;
 	let mut pong = true;
 	
@@ -213,10 +213,10 @@ fn hwt_pong(a: &mut [Cplx<f64>; WT_SIZE]) {
 	}
 }
 /*
-fn hwt_recursive(a: &mut [Cplx<f64>]) 
+fn hwt_recursive(a: &mut [Cplx]) 
 {
 	let l = a.len();
-	let aux = vec![Cplx::<f64>::zero(); l];
+	let aux = vec![Cplx::zero(); l];
 	for i in 0..l/2
 	{
 		let i2 = i*2;
@@ -230,9 +230,9 @@ fn hwt_recursive(a: &mut [Cplx<f64>])
 */
 
 
-fn convole(a: &[Cplx<f64>], b: &[Cplx<f64>], mult: usize, shift: usize) -> Cplx<f64>
+fn convole(a: &[Cplx], b: &[Cplx], mult: usize, shift: usize) -> Cplx
 {
-	let mut sum = Cplx::<f64>::zero();
+	let mut sum = Cplx::zero();
 	let lb = b.len();
 	
 	for i in 0..a.len() 
@@ -246,24 +246,24 @@ fn convole(a: &[Cplx<f64>], b: &[Cplx<f64>], mult: usize, shift: usize) -> Cplx<
 	sum
 }
 
-const HAAR_WAVELET_H: &[Cplx<f64>] = &[
-	Cplx::<f64> {x: -0.707107, y: 0.0},
-	Cplx::<f64> {x: 0.707107, y: 0.0}
+const HAAR_WAVELET_H: &[Cplx] = &[
+	Cplx {x: -std::f64::consts::FRAC_1_SQRT_2, y: 0.0},
+	Cplx {x:  std::f64::consts::FRAC_1_SQRT_2, y: 0.0}
 ];
 
-const HAAR_WAVELET_G: &[Cplx<f64>] = &[
-	Cplx::<f64> {x: 0.707107, y: 0.0},
-	Cplx::<f64> {x: 0.707107, y: 0.0}
+const HAAR_WAVELET_G: &[Cplx] = &[
+	Cplx {x: std::f64::consts::FRAC_1_SQRT_2, y: 0.0},
+	Cplx {x: std::f64::consts::FRAC_1_SQRT_2, y: 0.0}
 ];
 
-fn cos_bell_wavelet(x: f64, scale: f64, shift: f64) -> Cplx<f64>
+fn cos_bell_wavelet(x: f64, scale: f64, shift: f64) -> Cplx
 {
 	let x = scale*(x + shift);
 	crate::math::cos_sin(x).scale((-x.powi(2)).exp())
 }
 
 // p ranges in 0..w.len()
-fn wavelet_xy_interpolated(w: &[Cplx<f64>], p: Cplx<f64>, pow: usize /*, itpl: fn(f64, f64, f64)->f64*/) -> Cplx<f64> 
+fn wavelet_xy_interpolated(w: &[Cplx], p: Cplx, pow: usize /*, itpl: fn(f64, f64, f64)->f64*/) -> Cplx 
 {	
 	let pf = pow as f64;
 	let l = w.len();

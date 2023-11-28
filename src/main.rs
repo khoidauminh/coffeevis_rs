@@ -1,4 +1,4 @@
-#![allow(warnings)]
+// #![allow(warnings)]
 // #![forbid(unsafe_code)]
 
 use std::env;
@@ -20,15 +20,9 @@ use data::*;
 use modes::{Mode, windowed_mode::*,console_mode::con_main};
 
 // Audio lib
-use audio::{get_source, read_samples};
+use audio::{get_source};
 use cpal::traits::StreamTrait;
 use visualizers::VisFunc;
-use minifb::{Key, KeyRepeat, Window, WindowOptions};
-
-use std::sync::{
-    Arc, RwLock,
-    atomic::{AtomicBool, Ordering},
-};
 
 type WriteLock<T> = std::sync::RwLockWriteGuard<'static, T>;
 

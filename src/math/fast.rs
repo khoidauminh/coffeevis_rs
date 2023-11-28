@@ -38,136 +38,49 @@ pub fn sign(x: f64) -> u64 {
 	to_bits(x) & 0x8000_0000_0000_0000
 }
 
-// Turns out none of the attempts at outperforming 
-// Rust's sin, cos worked. 
-// Oh well.
-//
-// Std sin, cos are currently the default functions 
-// Install with `--features wtf` or `--features approx_trig`
-// to force using these functions.
-mod wtf {
-	use super::{abs, copysign, to_bits, sign};
+pub fn twiddle(depth: usize) -> Cplx {
+	// 0, 1, 2, 3, 4
+	// 1, 2, 4, 8, 16
+	pub static mut TWIDDLES_: [Cplx; 16] = [Cplx::zero(); 16];
+	static ONCE: std::sync::Once = std::sync::Once::new();
 
-	/// Agressively optimized sin
-	pub fn sin_norm(x: f64) -> f64 {
-		
-		let xabs = abs(x);
-
-		const linear_coef: f64 = 6.06;
-		const quadra_coef: f64 = 18.36;
-		
-		if xabs < 0.0865 {
-			return linear_coef*x;
-		}
-
-		let sign = sign(x);
-
-		if xabs < 0.4135 {
-			let x2 = xabs - 0.25;
-			let y = 1.0 - quadra_coef*x2*x2;
-			return copysign(y, sign);
-		}
-
-		let y = linear_coef*(0.5 - xabs);
-		return copysign(y, sign);
-	}
-
-	/// Agressively optimized cos
-	pub fn cos_norm(x: f64) -> f64 {
-		/*let x = 0.25 - abs(x);
-		x*(7.3 - 13.1125*abs(x))*/
-		
-		let x = abs(x);
-		
-		const linear_coef: f64 = 6.034;
-		const quadra_coef: f64 = 18.676;
-		
-		const bound1: f64 = 0.167;
-		const bound2: f64 = 0.3371;
-		
-		if x < bound1 {
-			return 1.0 - quadra_coef*x*x;
-		}
-		
-		if x < bound2 {
-			return linear_coef*(0.25 - x);
-		}
-	
-		let x2 = 0.5 - x;
-		let y = quadra_coef*x2*x2 - 1.0;
-		return y;
-	}
-}
-
-mod fast_trig {
-	use super::abs;
-	/// Credits to:
-	/// http://web.archive.org/web/20141220225551/http://forum.devmaster.net/t/fast-and-accurate-sine-cosine/9648
-	/// This is a similar implementation that uses less floating point operations
-	/// while retaining similar amount of accuracy.
-	pub fn sin_norm(x: f64) -> f64 {
-		let y = x*(0.5 - abs(x));
-		y*(12.47 + 56.48*abs(y))
-	}
-
-	
-	pub fn cos_norm(x: f64) -> f64 {
-		sin_norm (0.25 - abs(x))
-	}
-
-	/// Reimplementation of fastapprox::faster::cos	
-	pub fn other_cos_norm(x: f64) -> f64 {
-		let x = 0.25 - abs(x);
-		x*(6.191 - 35.34*x*x)
-	}
-}
-
-mod std_trig {
-	pub fn sin_norm(x: f64) -> f64 {
-		(x*std::f64::consts::TAU).sin()
-	}
-	
-	pub fn cos_norm(x: f64) -> f64 {
-		(x*std::f64::consts::TAU).cos()
+	unsafe {
+		ONCE.call_once(|| {
+			for i in 0..16 {
+				let x = -std::f64::consts::TAU / (1 << i) as f64;
+				TWIDDLES_[i] = Cplx::new(x.cos(), x.sin());
+			}
+		});
+		TWIDDLES_[depth]
 	}
 }
 
 pub fn sin_norm(x: f64) -> f64 {
-	if cfg!(feature = "wtf") {
-		wtf::sin_norm(x)
-	} else if cfg!(feature = "aprrox_trig") {
-		fast_trig::sin_norm(x)
-	} else {
-		std_trig::sin_norm(x)
-	}
+	let x = x * std::f64::consts::TAU;
+	x.sin()
 }
 
 pub fn cos_norm(x: f64) -> f64 {
-	if cfg!(feature = "wtf") {
-		wtf::cos_norm(x)
-	} else if cfg!(feature = "aprrox_trig") {
-		fast_trig::cos_norm(x)
-	} else {
-		std_trig::cos_norm(x)
-	}
+	let x = x * std::f64::consts::TAU;
+	x.cos()
 }
 
 pub fn bit_reverse(n: usize, power: usize) -> usize {
 	n.reverse_bits() >> usize::BITS.saturating_sub(power as u32) as usize
 }
 /*
-pub fn twiddle_norm(x: f64) -> Cplx<f64> {
+pub fn twiddle_norm(x: f64) -> Cplx {
 	let xabs = x.abs();
 
 	let cos_one8th = 1.0 - (4.329568*x).powi(2);
 	let sin_one8th = fsqrt(1.0 - cos_one8th.powi(2)).copysign(x);
 
 	if xabs > 0.375 {
-		return Cplx::<f64>::new(-cos_one8th, -sin_one8th)
+		return Cplx::new(-cos_one8th, -sin_one8th)
 	}
 
 	if xabs > 0.125 {
-		return Cplx::<f64>::new(-sin_one8th, cos_one8th)
+		return Cplx::new(-sin_one8th, cos_one8th)
 	}
 
 	//let cos = (x*TAU).cos();

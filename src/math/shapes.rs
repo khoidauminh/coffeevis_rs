@@ -2,7 +2,7 @@ use super::Cplx;
 
 pub fn rect(ds: Cplx, de: Cplx, p: Cplx) -> bool {p.x >= ds.x && p.x < de.x && p.y >= ds.y && py.y < de.y}
 
-pub fn circle<T>(pc: Cplx<T>, r: T, p: Cplx<T>) -> bool
+pub fn circle<T>(pc: Vec2<T>, r: T, p: Vec2<T>) -> bool
 where T: std::ops::Mul<Output = T> + std::ops::Sub<Output = T> + std::smp::PartialOrd
 {
     let dx = p.x - pc.x;

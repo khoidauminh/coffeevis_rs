@@ -247,7 +247,6 @@ impl Program {
 		let vis_name = self.VIS.current_vis_name();
 		let vis_list = self.VIS.current_list_name();
 
-		use std::io::Write;
 		use crossterm::{self,
 			terminal::{
 				EnterAlternateScreen,

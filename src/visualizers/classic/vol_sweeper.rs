@@ -1,12 +1,11 @@
-use crate::data::{Program, SAMPLE_SIZE};
-use crate::data::{INCREMENT, PHASE_OFFSET};
+use crate::data::SAMPLE_SIZE;
 use crate::math::{self, Cplx, fast::sin_norm};
 use crate::graphics::P2;
 
 //static mut _i: usize = 0;
 //static mut _sweep: usize = 0;
 
-const c: u32 = 16720064;
+const C: u32 = 16720064;
 
 struct LocalData {
     sweepi: usize,
@@ -19,7 +18,7 @@ static DATA: std::sync::RwLock<LocalData> = std::sync::RwLock::new(LocalData {
 });
 
 pub fn draw_vol_sweeper(
-	para: &mut crate::data::Program, 
+	para: &mut crate::data::Program,
 	stream: &mut crate::audio::SampleArr
 ) {
     //let w = PIX_W*stream[_sweep].abs() as usize /32768;
@@ -45,27 +44,27 @@ pub fn draw_vol_sweeper(
         color_,
     ]);
 
-    let mut LOCAL = DATA.write().unwrap();
+    let mut local = DATA.write().unwrap();
 
-    para.pix.draw_rect_wh(P2::new(2, LOCAL.sweepi as i32), para.pix.width(), 1, 0);
-    para.pix.draw_rect_wh(P2::new(2, LOCAL.sweepi as i32), w, 1, color);
+    para.pix.draw_rect_wh(P2::new(2, local.sweepi as i32), para.pix.width(), 1, 0);
+    para.pix.draw_rect_wh(P2::new(2, local.sweepi as i32), w, 1, color);
 
     crate::visualizers::classic::dash_line::draw_dash_line(para, stream, false, 0, false);
 
     // para.vol_sweeper.1 = math::advance_with_limit(para.vol_sweeper.1, para.pix.height());
 
-    match (LOCAL.sweepi >= para.pix.height(), LOCAL.pong) {
-        (false, true) => LOCAL.sweepi = LOCAL.sweepi.wrapping_add(1),
-        (false, false) => LOCAL.sweepi = LOCAL.sweepi.wrapping_sub(1),
+    match (local.sweepi >= para.pix.height(), local.pong) {
+        (false, true) => local.sweepi = local.sweepi.wrapping_add(1),
+        (false, false) => local.sweepi = local.sweepi.wrapping_sub(1),
 
         (true, true) => {
-            LOCAL.sweepi -= 1;
-            LOCAL.pong ^= true;
+            local.sweepi -= 1;
+            local.pong ^= true;
         }
 
         (true, false) => {
-            LOCAL.sweepi = 0;
-            LOCAL.pong ^= true;
+            local.sweepi = 0;
+            local.pong ^= true;
         }
     }
     

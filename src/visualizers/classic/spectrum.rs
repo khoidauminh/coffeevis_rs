@@ -13,10 +13,10 @@ const RANGEF: f64   = RANGE as f64;
 const FFT_SIZEF: f64 = FFT_SIZE as f64;
 const FFT_SIZEF_RECIP: f64 = 1.0 / FFT_SIZEF;
 
-static DATA: RwLock<[Cplx<f64>; RANGE+1]> = RwLock::new([Cplx::<f64>::zero(); RANGE+1]);
+static DATA: RwLock<[Cplx; RANGE+1]> = RwLock::new([Cplx::zero(); RANGE+1]);
 static MAX: RwLock<f64> = RwLock::new(1.0);
 
-fn l1_norm_slide(a: Cplx<f64>, t: f64) -> f64 {
+fn l1_norm_slide(a: Cplx, t: f64) -> f64 {
 	a.x.abs()*t + a.y.abs()*(1.0-t)
 }
 
@@ -39,8 +39,9 @@ fn volume_scale(x: f64) -> f64 {
 fn prepare(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
     const WINDOW: usize = 2*FFT_SIZE/3;
     const NORMALIZE: f64 = 1.0 / FFT_SIZE as f64;
-
-    let mut fft = [Cplx::<f64>::zero(); FFT_SIZE];
+	let fall_factor = 0.333*prog.SMOOTHING.powi(2) * prog.FPS as f64 * 0.006944444;
+	let mut LOCAL = DATA.write().unwrap();
+    let mut fft = [Cplx::zero(); FFT_SIZE];
 
     fft.iter_mut()
     .take(WINDOW)
@@ -50,25 +51,12 @@ fn prepare(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr
         *smp = stream[idx];
     });
 
-    math::fft(&mut fft);
-    
-    let mut LOCAL = DATA.write().unwrap();
-    
-    //math::highpass_inplace(&mut fft[..LOCAL.len()]);
-    //math::highpass_inplace(&mut fft[FFT_SIZE-LOCAL.len()-1..]);
-
-    let fall_factor = 0.333*prog.SMOOTHING.powi(2) * prog.FPS as f64 * 0.006944444;
-    
-    // let mut spectrum_norm = [Cplx::<f64>::zero(); RANGE];
+    math::fft_stereo(&mut fft, RANGE, true);
     
     let RANGE1 = RANGE+1;
     	
-	// crate::audio::limiter(&mut fft[0..RANGE1], 1.0, 20, 1.35);
-
-    // let pre_scale = 0.6*(0.5 + stream.amplitude()*0.5);
-
 	for i in 0..RANGE1 {
-		let rev_i = (FFT_SIZE-i).min(FFT_SIZE-1);
+		/*let rev_i = (FFT_SIZE-i).min(FFT_SIZE-1);
             
 		// Avoids having to evaluate a 2nd FFT.
 		//
@@ -83,11 +71,11 @@ fn prepare(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr
 					
 		let x = (fft_1 + fft_2).l1_norm();
 		
-		let y = (fft_1 - fft_2).l1_norm();
+		let y = (fft_1 - fft_2).l1_norm();*/
 
-		let scalef = math::fft_scale_up(i, RANGE)* NORMALIZE;
+		let scalef = math::fft_scale_up(i, RANGE);
 
-		fft[i] = Cplx::new(x, y)*scalef;
+		fft[i] = fft[i]*scalef;
 	}
 	
 	crate::audio::limiter_hard(&mut fft[0..RANGE1], 1.35, 20, 1.);
@@ -128,7 +116,7 @@ pub fn draw_spectrum(
 	let binding = DATA.read().unwrap();
     let normalized = binding.as_slice();
 
-//	let mut normalized = [Cplx::<f64>::zero(); RANGE+1];
+//	let mut normalized = [Cplx::zero(); RANGE+1];
 //	normalized.copy_from_slice(LOCAL.as_slice());
 	
 //	let mut current_max = MAX.write().unwrap();
@@ -161,8 +149,8 @@ pub fn draw_spectrum(
 
         let scale = /*(math::fast::fsqrt(idxf) + 0.5)*2.0**/ height_prescale;
 
-        let bar_temp1 = linearf(normalized[idx].x, normalized[idx_next].x, t)*scale;
-        let bar_temp2 = linearf(normalized[idx].y, normalized[idx_next].y, t)*scale;
+        let bar_temp1 = smooth_step(normalized[idx].x, normalized[idx_next].x, t)*scale;
+        let bar_temp2 = smooth_step(normalized[idx].y, normalized[idx_next].y, t)*scale;
 
         let bar_width_l = bar_temp1;
         let bar_width_r = bar_temp2;

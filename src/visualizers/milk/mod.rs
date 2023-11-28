@@ -1,3 +1,5 @@
+#[allow(warnings)]
+
 use crate::{
     math::{self, Cplx},
     graphics,
@@ -6,7 +8,5 @@ use crate::{
 
 pub mod rain;
 
-const draw_bubbles: VisFunc = |prog, stream| 
-{
-    
-};
+pub fn draw_bubbles(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
+}

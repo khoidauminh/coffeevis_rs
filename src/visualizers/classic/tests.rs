@@ -1,6 +1,6 @@
 use crate::{
-    math::{Cplx, fast},
-    graphics::{self, P2},
+    math::Cplx,
+    graphics::P2,
     audio
 };
 
@@ -11,24 +11,24 @@ pub const test2: crate::VisFunc = |prog, _| {
     let hh = prog.pix.height()/2;
     let hf = (prog.pix.height()/2) as f64;
     let w = prog.pix.width() as f64;
-    
+
     for i in 0..prog.pix.width() {
         let x = (i as f64 / w)*0.5;
-        
+
         let sin = fast::sin_norm_first_quarter(x)*10.0;
-        
+
         let sin = sin as i32 + hh as i32;
-        
+
         prog.pix.set_pixel(P2::new(i as i32, sin), 0xFF_FF_FF_FF);
     }
 };*/
 
-pub const test: crate::VisFunc = |prog, stream| {
+pub fn test(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
     let w = prog.pix.width() as i32;
     let wf = prog.pix.width() as f64;
     let h = prog.pix.height();
     let vec_size = h.next_power_of_two() << 2;
-    let mut vec = vec![Cplx::<f64>::zero(); vec_size];
+    let mut vec = vec![Cplx::zero(); vec_size];
     for i in 0..h {
         vec[i] = stream[i*2];
     }
@@ -70,4 +70,4 @@ pub const test: crate::VisFunc = |prog, stream| {
     }
     
     stream.rotate_left(h);
-};
+}

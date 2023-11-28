@@ -14,7 +14,7 @@ const SIZE_MASK: usize = BUFFER_SIZE - 1;
 
 const REACT_SPEED: f64 = 0.025;
 
-type BufferArray = [Cplx<f64>; BUFFER_SIZE];
+type BufferArray = [Cplx; BUFFER_SIZE];
 
 // pub static EXPANDER:
 
@@ -63,9 +63,9 @@ pub struct AudioBufferIterator<'a> {
 }
 
 impl<'a> Iterator for AudioBufferIterator<'a> {
-    type Item = Cplx<f64>;
+    type Item = Cplx;
 
-    fn next(&mut self) -> Option<Cplx<f64>> {
+    fn next(&mut self) -> Option<Cplx> {
         if self.index >= self.take {return None}
         let o = self.reference[self.index];
         self.index = self.index.wrapping_add(1);
@@ -74,7 +74,7 @@ impl<'a> Iterator for AudioBufferIterator<'a> {
 }
 
 impl std::ops::Index<usize> for AudioBuffer {
-    type Output = Cplx<f64>;
+    type Output = Cplx;
     fn index(&self, index: usize) -> &Self::Output {
         /// Unsafe allowed because this cannot fail.
         unsafe{self.buffer.get_unchecked(index.wrapping_add(self.offset)&SIZE_MASK)}
@@ -89,7 +89,7 @@ impl std::ops::IndexMut<usize> for AudioBuffer {
 
 use std::ops::Range;
 
-fn write_sample<T: cpal::Sample<Float = f32>>(smp: &mut Cplx<f64>, smp_in: &[T]) {
+fn write_sample<T: cpal::Sample<Float = f32>>(smp: &mut Cplx, smp_in: &[T]) {
     smp.x = smp_in[0].to_float_sample() as f64;
     smp.y = smp_in[1].to_float_sample() as f64;
 }
@@ -97,7 +97,7 @@ fn write_sample<T: cpal::Sample<Float = f32>>(smp: &mut Cplx<f64>, smp_in: &[T])
 impl AudioBuffer {
     pub const fn new() -> Self {
         Self {
-            buffer: [Cplx::<f64>::zero(); BUFFER_SIZE],
+            buffer: [Cplx::zero(); BUFFER_SIZE],
             offset: 0,
             write_point: 0,
             input_size: 1000,
@@ -120,6 +120,10 @@ impl AudioBuffer {
             take: self.buffer.len()
         }
     }
+    
+    pub fn as_slice<'a>(&'a self) -> &'a [Cplx] {
+		&self.buffer
+	}
 
     pub fn input_size(&self) -> usize {
     	self.input_size
@@ -154,6 +158,10 @@ impl AudioBuffer {
         self.average
     }
     
+    pub fn readpoint(&self) -> usize {
+		self.offset
+	}
+    
     pub fn normalize_factor_peak(&self) -> f64 {
         const MAX_FACTOR: f64 = AMP_TRIGGER_THRESHOLD / AMP_PERSIST_LIMIT;
     
@@ -173,8 +181,8 @@ impl AudioBuffer {
 			.max(AMP_PERSIST_LIMIT)
 	}
 
-    pub fn to_vec(&mut self) -> Vec<Cplx<f64>> {
-        let mut o = vec![Cplx::<f64>::zero(); BUFFER_SIZE];
+    pub fn to_vec(&mut self) -> Vec<Cplx> {
+        let mut o = vec![Cplx::zero(); BUFFER_SIZE];
         o
         .iter_mut()
         .zip(self.buffer.iter().cycle().skip(self.offset))
@@ -194,7 +202,7 @@ impl AudioBuffer {
     pub fn set_to_writepoint(&mut self) {
         self.offset = self.write_point;
     }
-
+    
 	/*
     /// Ignores `write_point`. Rotates the buffer and writes to the start.
     /// Returns boolean indicating silence.
@@ -339,9 +347,9 @@ impl AudioBuffer {
 	}
 
     #[doc(hidden)]
-    pub fn range(&self, index: Range<usize>) -> Vec<Cplx<f64>> {
+    pub fn range(&self, index: Range<usize>) -> Vec<Cplx> {
         let range_ = index.start - index.end;
-        let mut o = vec![Cplx::<f64>::zero(); range_];
+        let mut o = vec![Cplx::zero(); range_];
         self.buffer
         .iter()
         .cycle()

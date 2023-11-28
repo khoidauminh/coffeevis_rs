@@ -1,5 +1,5 @@
 use std::{
-	io::{Read, BufReader, Write, Cursor, prelude::*},
+	io::{BufReader, Cursor},
 	fs::File,
 	path::PathBuf,
 	env,
@@ -143,9 +143,9 @@ impl Program {
 				"--resizeable" =>
 				{
 				    todo!();
-				    self.RESIZE = true;
+				    // self.RESIZE = true;
 				},
-				
+
 				"--transparent" => {
 					match args.peek() {
 						Some(&string) =>
@@ -156,11 +156,11 @@ impl Program {
 						None => self.transparency = 0
 				    }
 				},
-				
+
 				"--background" => {
 					for (channel_string, channel) in ["red", "green", "blue"].iter().zip(color.iter_mut().skip(1)) {
 						match args.next() {
-							Some(string) => 	
+							Some(string) =>
 								*channel = string.parse::<u8>()
 								.expect(&format!("Invalid value for {}", channel_string))
 							,

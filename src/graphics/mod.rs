@@ -3,15 +3,13 @@ pub mod draw;
 // pub mod space;
 
 use blend::Blend;
-use crate::math::Cplx;
-
 pub const COLOR_BLANK: u32 = 0x00_00_00_00;
 pub const COLOR_BLACK: u32 = 0xFF_00_00_00;
 pub const COLOR_WHITE: u32 = 0xFF_FF_FF_FF;
 
 const SIZE_DEFAULT: (usize, usize) = (50, 50);
 
-pub type P2 = Cplx<i32>;
+pub(crate) type P2 = crate::math::Vec2<i32>;
 
 pub struct Canvas {
 	pix: Vec<u32>,

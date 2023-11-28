@@ -177,7 +177,7 @@ pub const VIS_MENU: &[VisList] =
 
 pub const VIS_CLASSIC: &[Visualizer] =
 &[
-    // define_visualizer_struct!(tests::test2, "Test", false),
+    //~ define_visualizer_struct!(raw::draw_raw_fft, "Raw FFT", false),
 
 	define_visualizer_struct!(scopes::draw_vectorscope, "Vectorscope", true),
 	define_visualizer_struct!(scopes::draw_oscilloscope, "Oscilloscope", true),

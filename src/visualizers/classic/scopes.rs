@@ -103,7 +103,7 @@ pub fn draw_oscilloscope(
 
 
     let mut smoothed_smp = stream[zeroi];
-    /*let mut smoothed_smp = Cplx::<f64>::new(0.0, 0.0);
+    /*let mut smoothed_smp = Cplx::new(0.0, 0.0);
     for i in (0..3).rev() {
         let di = zeroi.saturating_sub(i as usize*wave_scale_factor as usize);
         smoothed_smp = crate::math::interpolate::linearfc(smoothed_smp, stream[di], 0.33);
@@ -164,46 +164,30 @@ pub fn draw_vectorscope(
     let height_top_h = height >> 1;
 
     let mut di = 0;
-    // let mut dj = (PHASE_OFFSET / INCREMENT) % l;
 
     prog.pix.clear();
 
-    // let mut smooth = Cplx::<f64>::new(stream[0].x, stream[PHASE_OFFSET % l].y);
-    // let smooth_factor = 0.05f64;
-
-    //let mut data = stream.iter().step_by(INCREMENT).map(|x| *x).collect::<Vec<_>>();
-    //math::integrate_streamlace(&mut data, 10, true);
     
-    const SMOOTH_SIZE: usize = 8; 
+    const SMOOTH_SIZE: usize = 5; 
     
     let mut smoothed_sample = 
         MovingAverage::init(
-            Cplx::<f64>::zero(),
+            Cplx::zero(),
             SMOOTH_SIZE
          );
         
     
     for _ in 0..SMOOTH_SIZE { 
-        let sample = Cplx::<f64>::new(stream[di].x, stream[di+PHASE_OFFSET].y);
+        let sample = Cplx::new(stream[di].x, stream[di+PHASE_OFFSET].y);
         _ = smoothed_sample.update(sample);
         di += INCREMENT;
     }
 
     while di < range {
-        let sample = Cplx::<f64>::new(stream[di].x, stream[di+PHASE_OFFSET].y);
+        let sample = Cplx::new(stream[di].x, stream[di+PHASE_OFFSET].y);
         
         let sample = smoothed_sample.update(sample);
-        
-        //let sample = math::interpolate::linearfc(smoothed_sample, sample, 0.3);
-        /*let sample = Cplx::<f64>::new(
-			math::interpolate::sqrt(smoothed_sample.x, sample.x, 0.1),
-			math::interpolate::sqrt(smoothed_sample.y, sample.y, 0.1)
-        );*/
-        
-        // smoothed_sample = sample;
-
-        // smooth = crate::math::interpolate::linearfc(smooth, sample, smooth_factor);
-
+       
         let x = (sample.x * scale) as i32;
         let y = (sample.y * scale) as i32;
 		let amp = (x.abs() + y.abs()) * 3/2;
@@ -213,7 +197,7 @@ pub fn draw_vectorscope(
 			u32::from_be_bytes([
 				255,
 				to_color(amp, sizei),
-				255, //.saturating_sub(to_color(amp, sizei),
+				255,
 				64
 			])
         );

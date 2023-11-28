@@ -2,46 +2,46 @@ use super::{Canvas, P2, blend::{Blend, Mixer}};
 use crate::math::{Cplx, ToUsize};
 
 impl Canvas {
-	
+
 	pub fn set_pixel_xy(&mut self, p: P2, c: u32) {
-		let i = self.get_idx_fast(p);		
+		let i = self.get_idx_fast(p);
 		self.set_pixel(i, c);
 	}
-	
+
 	pub fn set_pixel(&mut self, i: usize, c: u32) {
 		self.set_pixel_by(i, c, u32::blend);
 	}
-	
+
 	pub fn set_pixel_by(&mut self, i: usize, c: u32, b: Mixer) {
 		if let Some(p) = self.pix.get_mut(i) {
 			*p = b(*p, c);
 		}
 	}
-	
+
 	pub fn set_pixel_xy_by(&mut self, p: P2, c: u32, b: Mixer) {
-		let i = self.get_idx_fast(p);		
+		let i = self.get_idx_fast(p);
 		self.set_pixel_by(i, c, b);
 	}
-	
+
 	pub fn draw_rect_xy_by(&mut self, ps: P2, pe: P2, c: u32, b: Mixer) {
 		// let xbound = self.width;
 		// let ybound = self.height.wrapping_sub(1);
-		
+
 		let [xs, ys] = [
-			ps.x as usize,
-			ps.y as usize
+			usize::new(ps.x),
+			usize::new(ps.y)
 		];
-		
+
 		let [xe, ye] = [
 			pe.x as usize,
 			pe.y as usize
 		];
 
 		let w = xe.min(self.width).saturating_sub(xs);
-				
+
 		let mut i = xs + ys*self.width;
 		let iend  = (xs + ye*self.width).min(self.len);
-		
+
 		while i <= iend {
 			let iw = i.wrapping_add(w);
 			for p in self.pix[i..iw].iter_mut() {

@@ -1,5 +1,3 @@
-use crate::data::{Program};
-use crate::graphics::{self, Image};
 use crate::math::{self, Cplx, fast};
 use crate::graphics::blend::Blend;
 
@@ -37,7 +35,7 @@ pub fn draw_shaky(
 ) {
     let mut LOCALDATA = DATA.write().unwrap();
    
-    let mut data_f = [Cplx::<f64>::zero(); 512];
+    let mut data_f = [Cplx::zero(); 512];
 
     let sizef = prog.pix.width().min(prog.pix.height()) as f64;
 

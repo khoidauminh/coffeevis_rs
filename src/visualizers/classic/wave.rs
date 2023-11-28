@@ -1,6 +1,4 @@
-use crate::data::*;
 use crate::graphics::P2;
-use crate::math::{self, Cplx};
 // use std::sync::atomic::{AtomicUsize, Order::Relaxed};
 
 // static offset: AtomicUsize = AtomicUsize::new(0);
@@ -29,13 +27,15 @@ pub fn draw_wave(
 }
 
 pub fn draw_wave__(
-	para: &mut crate::data::Program, 
+	para: &mut crate::data::Program,
 	stream: &mut crate::audio::SampleArr
 ) {
     let l = (stream.len() * PERBYTE) >> 8;
 
     let mut pixel = para.pix.as_mut_slice().iter_mut();
     let mut i = 0usize;
+
+	stream.rotate_left(l << 1);
 
     loop {
         let smp = stream[i];
@@ -53,12 +53,10 @@ pub fn draw_wave__(
 
 		i += 1;
     }
-
-    stream.rotate_left(l << 1);
 }
 
 pub fn draw_wave_(
-	para: &mut crate::data::Program, 
+	para: &mut crate::data::Program,
 	stream: &mut crate::audio::SampleArr
 ) {
     let l = (stream.len() * PERBYTE) >> 8;

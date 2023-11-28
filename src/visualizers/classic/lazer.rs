@@ -1,6 +1,5 @@
-use crate::data::Program;
-use crate::data::{INCREMENT, PHASE_OFFSET, SAMPLE_SIZE};
-use crate::graphics::{Canvas, P2};
+use crate::data::SAMPLE_SIZE;
+use crate::graphics::P2;
 use crate::math::Cplx;
 
 struct LocalData {
@@ -20,7 +19,7 @@ pub fn draw_lazer(
     let h = para.pix.height() as i32;
 
     let (ax, ay) = {
-        let mut sum = Cplx::<f64>::zero();
+        let mut sum = Cplx::zero();
         
         for i in 0..SAMPLE_SIZE/4 {
             sum = sum + stream[i]
