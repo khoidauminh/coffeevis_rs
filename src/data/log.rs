@@ -5,8 +5,8 @@ pub fn write_to_stdout(string: &str, mode: Mode) {
         Mode::Win => println!("{}", string),
 
         _ => {
-            use crossterm::{self, queue, terminal::{EnterAlternateScreen as ES, LeaveAlternateScreen as LS}, style::Print};
-            queue!(std::io::stdout(), LS, Print(string.to_string()), ES);
+            use crossterm::{queue, terminal::{EnterAlternateScreen as ES, LeaveAlternateScreen as LS}, style::Print};
+            let _ = queue!(std::io::stdout(), LS, Print(string.to_string()), ES);
         }
     }
 }

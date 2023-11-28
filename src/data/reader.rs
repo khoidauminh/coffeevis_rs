@@ -1,5 +1,3 @@
-
-
 use crate::{
 	data::Program,
 	graphics::{blend::Blend}
@@ -70,18 +68,17 @@ impl Program {
 
 		let mut args = args.peekable();
 		args.next();
-		
-		let mut color = [0u8; 4];
-		
-		loop {
-			let mut arg =  "";
 
-			if let Some(st) = args.next() {
-				arg = st.as_str();
-				println!("{}", arg);
-			} else {
-				break
-			}
+		let mut color = [0u8; 4];
+
+		loop {
+			let arg =  match args.next() {
+				Some(st) => {
+					println!("{}", st);
+					st.as_str()
+				},
+				None => break,
+			};
 
 			match arg
 			{
@@ -216,7 +213,7 @@ impl Program {
 			cursor::{self},
 			style::{Colors, SetColors, Print, Color},
 		};
-		
+
 
 		let mut stdout = std::io::stdout();
 
@@ -224,7 +221,7 @@ impl Program {
 			Ok(()) => {},
 
 			Err(string) => {
-				queue!(
+				let _ = queue!(
 					stdout,
 					cursor::MoveTo(0, 0),
 						SetColors(Colors::new(

@@ -103,46 +103,46 @@ pub fn limiter<T>(
 	limit: f64,
 	hold_samples: usize,
 	gain: f64
-) 
+)
 where T: Into<f64> + std::ops::Mul<f64, Output = T> + std::marker::Copy
 {
+	let mut replay_gain;
 	let mut index = 0usize;
-	let mut replay_gain = 1.0f64;
 	let _hold_index = 0;
 	let _amp = 0.0;
 	let l = a.len();
 
     let hold_samples_double = hold_samples*2;
-		
+
 	let full_delay = hold_samples;
-		
+
 	let mut peak = Peak::init(limit, hold_samples_double);
 	let mut moving_average = MovingAverage::init(limit, full_delay);
 
 	let bound = l + full_delay;
-	
+
 	let mut getrg = |smp| {
 		gain / moving_average.update(peak.update(smp))
 	};
 
 	while index < full_delay {
-		replay_gain = getrg(a[index].into());
+		let _ = getrg(a[index].into());
 		index += 1;
 	}
-	
+
 	while index < l {
 		replay_gain = getrg(a[index].into());
-		
+
 		let smp = &mut a[index-full_delay];
-		
+
 		*smp = *smp *replay_gain;
-		
+
 		index += 1;
 	}
-	
+
 	while index < bound {
 		replay_gain = getrg(0.0);
-		
+
 		let smp = &mut a[index-full_delay];
 		*smp = *smp *replay_gain;
 		
@@ -160,7 +160,7 @@ pub fn limiter_hard<T>(
 where T: Into<f64> + std::ops::Mul<f64, Output = T> + std::marker::Copy
 {	
 	let mut index = 0usize;
-	let mut replay_gain = 1.0f64;
+	let mut replay_gain;
 	let _hold_index = 0;
 	let _amp = 0.0;
 	let l = a.len();

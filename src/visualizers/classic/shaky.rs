@@ -2,7 +2,7 @@ use crate::math::{self, Cplx, fast};
 use crate::graphics::blend::Blend;
 
 // soft shaking
-const incr: f64 = 0.0001;
+const INCR: f64 = 0.0001;
 
 struct LocalData {
     i: f64,
@@ -68,7 +68,7 @@ pub fn draw_shaky(
 
     LOCALDATA.js += 0.01;
     LOCALDATA.jc += 0.01;
-    LOCALDATA.i = (LOCALDATA.i + incr +amplitude_scaled) % 1.0;
+    LOCALDATA.i = (LOCALDATA.i + INCR +amplitude_scaled) % 1.0;
 
     
     prog.pix.fade(4);
@@ -105,4 +105,4 @@ pub fn draw_shaky(
 
 }
 
-const wrapper: f64 = 725.0;
+const WRAPPER: f64 = 725.0;

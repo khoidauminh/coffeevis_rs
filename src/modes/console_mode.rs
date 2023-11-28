@@ -93,7 +93,7 @@ impl Program {
 	}
 
 	pub fn clear_con(&mut self) {
-		queue!(std::io::stdout(), Clear(ClearType::All));
+		let _ = queue!(std::io::stdout(), Clear(ClearType::All));
 	}
 
 	fn get_center(&self, divider_x: u16, divider_y: u16) -> (u16, u16)
@@ -119,13 +119,13 @@ impl Program {
 				)
 			);
 		} else {
-			queue!(
+			let _ = queue!(
 				stdout,
 				Print(' ')
 			);
 		}*/
 
-		queue!(
+		let _ = queue!(
 			stdout,
 			Print(
 				ch
@@ -144,7 +144,7 @@ impl Program {
 		for y in 0..self.pix.height() {
 
 			let cy = center.1 + y as u16 / 2;
-			queue!(stdout, cursor::MoveTo(center.0, cy));
+			let _ = queue!(stdout, cursor::MoveTo(center.0, cy));
 
 			for x in 0..self.pix.width() {
 
@@ -168,7 +168,7 @@ impl Program {
 
 		for y_base in (0..self.pix.height()).step_by(2) {
 			let cy = center.1 + y_base as u16 / 2;
-			queue!(stdout, cursor::MoveTo(center.0, cy));
+			let _ = queue!(stdout, cursor::MoveTo(center.0, cy));
 
 			for x_base in (0..self.pix.width()).step_by(1) {
 
@@ -233,7 +233,7 @@ impl Program {
 		for y_base in (0..self.pix.height()).step_by(4) {
 			let cy = center.1 + y_base as u16 / 4;
 
-			queue!(stdout, cursor::MoveTo(center.0, cy));
+			let _ = queue!(stdout, cursor::MoveTo(center.0, cy));
 
 			for x_base in (0..self.pix.width()).step_by(2) {
 
@@ -293,8 +293,6 @@ fn rgb_to_ansi(r: u8, g: u8, b: u8) -> u8 {
 }
 
 pub fn rescale(mut s: (u16, u16), prog: &Program) -> (u16, u16) {
-    use super::Mode;
-
 	s.0 = s.0.min(prog.CON_MAX_W);
     s.1 = s.1.min(prog.CON_MAX_H);
 
@@ -329,7 +327,7 @@ pub fn con_main(mut prog: Program) -> std::io::Result<()> {
 			prog.render();
 		}
 	} else {
-		queue!(
+		let _ = queue!(
 			stdout, EnterAlternateScreen,
 			Hide,
 			SetAttribute(Attribute::Bold)
@@ -342,7 +340,7 @@ pub fn con_main(mut prog: Program) -> std::io::Result<()> {
 
 			stdout.flush().unwrap();
 		}
-		queue!(stdout, LeaveAlternateScreen, Show)?;
+		let _ = queue!(stdout, LeaveAlternateScreen, Show)?;
 	}
     disable_raw_mode()?;
 

@@ -1,3 +1,6 @@
+#![allow(non_snake_case)]
+#![allow(dead_code)]
+
 // #![allow(warnings)]
 // #![forbid(unsafe_code)]
 
@@ -27,7 +30,7 @@ use visualizers::VisFunc;
 type WriteLock<T> = std::sync::RwLockWriteGuard<'static, T>;
 
 fn main() {
-    
+
     let args = env::args().collect::<Vec<String>>();
 
     let stream = get_source();
@@ -36,7 +39,7 @@ fn main() {
 	let _conf = "";
 
 	std::env::set_var("LC_CTYPE", "en_US.utf8");
-	
+
 	let prog = Program::new().eval_args(&mut args.iter());
 	match &prog.mode
 	{
@@ -45,7 +48,7 @@ fn main() {
 		&_                  => con_main(prog).unwrap()
 	}
 
-    stream.pause();
+    stream.pause().unwrap();
 }
 
 	/*if "--config" == args.get(1).unwrap_or(&"".to_string())

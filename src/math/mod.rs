@@ -326,46 +326,39 @@ pub fn fft_scale_up(i: usize, bound: usize) -> f64 {
 pub mod blackmannuttall {
 	use crate::FFT_SIZE;
 	use super::Cplx;
-	
-	
-	const a0: f64 = 0.3635819;
-	const a1: f64 = -0.4891775;
-	const a2: f64 = 0.1365995;
-	const a3: f64 = -0.0106411;
+
 	const MASK: usize = FFT_SIZE-1;
-	
-	static mut array_: [f64; FFT_SIZE] = [0.0; FFT_SIZE];
+
+	static mut ARRAY_: [f64; FFT_SIZE] = [0.0; FFT_SIZE];
 	static INIT: std::sync::Once = std::sync::Once::new();
-	
+
 	pub fn get(i: usize, N: usize) -> f64 {
-		/*let mut array = array_.write().unwrap();
-		
+		/*let mut array = ARRAY_.write().unwrap();
+
 		if array.1 {
-			
-			array.0[i * FFT_SIZE / N]
-		
+
+		array.0[i * FFT_SIZE / N]
+
 		} else {
-			
+
 			for i in 0..FFT_SIZE {
 				array.0[i] = window(i, FFT_SIZE);
 			}
-			
 			array.1 = true;
-		
 			array.0[i * FFT_SIZE / N]
 		}*/
-		
+
 		unsafe {
 			INIT.call_once(|| {
 				for i in 0..FFT_SIZE {
-					array_[i] = window(i, FFT_SIZE);
+					ARRAY_[i] = window(i, FFT_SIZE);
 				}
 			});
-			
-			array_[i * FFT_SIZE / N]
+
+			ARRAY_[i * FFT_SIZE / N]
 		}
 	}
-	
+
 	pub fn perform_window(a: &mut [Cplx]) {
 		let N = a.len();
 		let N_2 = N / 2;
@@ -376,8 +369,13 @@ pub mod blackmannuttall {
 			a[i_rev] = a[i_rev] * factor;
 		}
 	}
-	
+
 	fn window(i: usize, N: usize) -> f64 {
+		let a0: f64 = 0.3635819;
+		let a1: f64 = -0.4891775;
+		let a2: f64 = 0.1365995;
+		let a3: f64 = -0.0106411;
+
 		let N = N.wrapping_sub(1);
 		let x = std::f64::consts::PI * i as f64 / (N as f64);
 		a0 + a1* (2.0 * x).cos() + a2 * (4.0 * x).cos() + a3 * (6.0 * x).cos()

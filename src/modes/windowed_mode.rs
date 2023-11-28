@@ -63,7 +63,7 @@ pub fn win_legacy_main(mut prog: Program) -> Result<(), minifb::Error> {
         let winh = prog.pix.height()*scale;
 
         if scale == 1 {
-	        win.update_with_buffer(prog.pix.as_slice(), winw, winh);
+	        let _ = win.update_with_buffer(prog.pix.as_slice(), winw, winh);
 	        continue;
 	    }
 
@@ -72,7 +72,7 @@ pub fn win_legacy_main(mut prog: Program) -> Result<(), minifb::Error> {
 
         prog.pix.scale_to(&mut buffer, scale);
 
-	    win.update_with_buffer(&buffer, winw, winh);
+	    let _ = win.update_with_buffer(&buffer, winw, winh);
 
     }
 
@@ -95,7 +95,7 @@ pub fn win_main_winit(mut prog: Program) -> Result<(), &'static str> {
 		prog.pix.width()  as u32,
 		prog.pix.height() as u32
 	);
-	
+
 	if prog.WAYLAND {
 		size.0 *= prog.SCALE as u32;
 		size.1 *= prog.SCALE as u32;
@@ -104,7 +104,7 @@ pub fn win_main_winit(mut prog: Program) -> Result<(), &'static str> {
 	std::env::set_var("WINIT_X11_SCALE_FACTOR", prog.SCALE.to_string());
 
 	let event_loop = EventLoop::new().unwrap();
-	
+
 	let window = Arc::new(
 			WindowBuilder::new()
 			.with_title("kvis")
@@ -127,48 +127,46 @@ pub fn win_main_winit(mut prog: Program) -> Result<(), &'static str> {
 		NonZeroU32::new(inner_size.height).unwrap()
 	)
 	.unwrap();
-		
+
 	let thread_main_running  = Arc::new(AtomicBool::new(true));
-	
-	
+
+
 	#[cfg(not(feature = "benchmark"))]
 	{
 		use std::time::Duration;
-		
+
 		let thread_main_running = thread_main_running.clone();
 		let _active_frame_duration = prog.REFRESH_RATE;
 		let _idle_frame_duration = Duration::from_millis(333);
-	
+
 		let durations: [Duration; 4] = [
 			prog.REFRESH_RATE,
 			prog.REFRESH_RATE*4,
 			prog.REFRESH_RATE*16,
 			Duration::from_millis(250)
 		];
-		
+
 		let window = window.clone();
 
 		thread::spawn(move || {
 			while thread_main_running.load(Relaxed) {
-								
+
 				let no_sample = crate::audio::get_no_sample();
-				
-				if no_sample < 255 { 
+
+				if no_sample < 255 {
 					window.request_redraw();
 				}
-				
+
 				thread::sleep(durations[(no_sample >> 6) as usize]);
 			}
 		});
 	}
-	
+
 	// let mut clock = fps_clock::FpsClock::new(prog.FPS as u32);
-	
+
 	fn set_exit(b: Arc<AtomicBool>) {
 		b.store(false, Relaxed);
 	}
-	
-	//~ 
 
 	event_loop.run(move |event, elwt| {
 		prog.update_vis();
@@ -182,7 +180,7 @@ pub fn win_main_winit(mut prog: Program) -> Result<(), &'static str> {
 			let mut buffer = surface.buffer_mut().unwrap();
 
 			prog.force_render();
-						
+
 			prog.pix.scale_to(&mut buffer, prog.SCALE as usize);
 
 			let _ = buffer.present();
@@ -196,21 +194,21 @@ pub fn win_main_winit(mut prog: Program) -> Result<(), &'static str> {
 				set_exit(thread_main_running.clone());
 				elwt.exit()
 			},
-								
+
 			Event::WindowEvent {
 				event: WindowEvent::RedrawRequested,
 				..
 			} => {
 				perform_draw(&mut prog, &mut surface);
-				
+
 				#[cfg(feature = "benchmark")]
 				window.request_redraw();
 			},
-			
-			
+
+
 			//~ Event::AboutToWait => {
 				//~ let no_sample = crate::audio::get_no_sample();
-				
+
 				//~ if no_sample < 128 {
 					//~ perform_draw(&mut prog, &mut surface);
 					//~ window.request_redraw();
@@ -218,9 +216,9 @@ pub fn win_main_winit(mut prog: Program) -> Result<(), &'static str> {
 				//~ } else {
 					//~ thread::sleep(Duration::from_millis(250));
 				//~ }
-				
+
 			//~ },
-			
+
 			Event::DeviceEvent{event: DeviceEvent::Key(RawKeyEvent{physical_key: Code(code), state }), .. } => {
 
 				if state.is_pressed() {
@@ -237,7 +235,7 @@ pub fn win_main_winit(mut prog: Program) -> Result<(), &'static str> {
 						prog.change_visualizer(true);
 						perform_draw(&mut prog, &mut surface);
 					},
-					
+
 					KeyCode::KeyB => {
 						prog.change_visualizer(false);
 						perform_draw(&mut prog, &mut surface);
@@ -255,15 +253,15 @@ pub fn win_main_winit(mut prog: Program) -> Result<(), &'static str> {
 					KeyCode::Backslash 		=> prog.toggle_auto_switch(),
 
 					KeyCode::Slash 			=> prog.reset_parameters(),
-					
+
 					_ => {},
 				}
-				
+
 			},
-			
+
 			_ => {},
 		}
-	});
+	}).unwrap();
 
 	Ok(())
 }

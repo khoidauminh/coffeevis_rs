@@ -76,7 +76,7 @@ impl<'a> Iterator for AudioBufferIterator<'a> {
 impl std::ops::Index<usize> for AudioBuffer {
     type Output = Cplx;
     fn index(&self, index: usize) -> &Self::Output {
-        /// Unsafe allowed because this cannot fail.
+        // Unsafe allowed because this cannot fail.
         unsafe{self.buffer.get_unchecked(index.wrapping_add(self.offset)&SIZE_MASK)}
     }
 }

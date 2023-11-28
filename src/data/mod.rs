@@ -244,7 +244,7 @@ impl Program {
 		let vis_name = self.VIS.current_vis_name();
 		let vis_list = self.VIS.current_list_name();
 
-		use crossterm::{self,
+		use crossterm::{
 			terminal::{
 				EnterAlternateScreen,
 				LeaveAlternateScreen
@@ -256,7 +256,7 @@ impl Program {
 			self.DISPLAY &&
 			self.mode.is_con()
 		{
-			crossterm::queue!(
+			let _ = crossterm::queue!(
 				std::io::stdout(),
 				LeaveAlternateScreen,
 				Print(format!("Switching to {} in list {}\r\n", vis_name, vis_list)),

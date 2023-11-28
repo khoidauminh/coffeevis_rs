@@ -1,9 +1,11 @@
 use crate::{
+	data::Program,
+	audio::SampleArr,
     graphics::{Canvas, P2, blend::{self, Blend}},
     math::{rng::Rng}
 };
 
-pub const draw: crate::VisFunc = |prog, _stream| {
+pub fn draw(prog: &mut Program, _stream: &mut SampleArr) {
     let mut rng = Rng::new(255.0);
 
     prog.pix.as_mut_slice().iter_mut().for_each(|pixel| {
@@ -12,7 +14,7 @@ pub const draw: crate::VisFunc = |prog, _stream| {
 
         *pixel = u32::from_be_bytes([0xFF, r, r, r]);
     });
-};
+}
 
 fn draw_rain_drop(
 	canvas: &mut Canvas,

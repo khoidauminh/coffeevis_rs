@@ -30,15 +30,15 @@ pub fn draw_oscilloscope(
     prog.pix.clear();
 
     let mut stream_ = stream.to_vec();
-    const up_count: usize = 75;
-    math::integrate_inplace(&mut stream_, up_count, true);
+    const UP_COUNT: usize = 75;
+    math::integrate_inplace(&mut stream_, UP_COUNT, true);
 
-    let mut zeroi = up_count;
+    let mut zeroi = UP_COUNT;
     /*let mut zero = 0;
     'restart: while zeroi < l {
         if stream_[zeroi].x.abs() < 1e-2 {
             zero = zeroi;
-            if stream_[zeroi..(zeroi+up_count).min(l)].iter().fold(0.0, |acc, x| x.x) < 0.0 { break; }
+            if stream_[zeroi..(zeroi+UP_COUNT).min(l)].iter().fold(0.0, |acc, x| x.x) < 0.0 { break; }
         }
         zeroi += 1;
     }
@@ -63,7 +63,7 @@ pub fn draw_oscilloscope(
     }
     
     if zeroi == stream_.len() {
-    	zeroi = up_count;
+    	zeroi = UP_COUNT;
     	
     	while zeroi < stream_.len() {
 			let smp1 = stream_[zeroi].y;
@@ -79,7 +79,7 @@ pub fn draw_oscilloscope(
     }
 
     if zeroi == stream_.len() {
-    	zeroi = up_count;
+    	zeroi = UP_COUNT;
     } else {
         for rest in zeroi+1..stream_.len() {
             bass += stream_[rest].l1_norm();
