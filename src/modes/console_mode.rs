@@ -9,7 +9,10 @@ use crossterm::{
         EnterAlternateScreen,
         LeaveAlternateScreen
     },
-    style::{Stylize, Print, Color, Attribute, SetAttribute},
+    style::{
+		Stylize, Print, Color, 
+		Attribute, SetAttribute,
+	},
     cursor::{self, Hide, Show},
 };
 /*
@@ -26,7 +29,68 @@ use crate::{
 
 pub type Flusher = fn(&Program, &mut Stdout);
 
+trait StyledLine {
+	//~ fn new() -> Self;
+	fn push_pixel(&mut self, ch: char, r: u8, g: u8, b: u8);
+	fn queue_print(&self);
+}
 
+struct ColoredString {
+	pub string: String,
+	pub r: u8,
+	pub g: u8,
+	pub b: u8,
+	error: u8,
+}
+
+enum ConsolePixel {
+	Line(ColoredString),
+	NewLine
+}
+
+impl ColoredString {
+	pub fn new(ch: char, r: u8, g: u8, b: u8, error: u8) -> Self {
+		Self {
+			string: String::from(ch),
+			r, g, b, error
+		}
+	}
+	
+	pub fn append(&mut self, ch: char, r: u8, g: u8, b: u8) -> bool{
+		let er = self.r.abs_diff(r);
+		let eg = self.g.abs_diff(g);
+		let eb = self.b.abs_diff(b);
+		
+		if 
+			er <= self.error &&
+			eg <= self.error &&
+			eb <= self.error
+		{
+			self.string.push(ch);
+			return true;
+		}
+		
+		false
+		//return Some(Self::new(ch, r, g, b, self.error));
+	}
+}
+
+impl StyledLine for Vec<ColoredString> {	
+	fn push_pixel(&mut self, ch: char, r: u8, g: u8, b: u8) {
+		
+		if let Some(s) = self.iter_mut().last() {
+			if s.append(ch, r, g, b) {return}
+		}
+		
+		self.push(ColoredString::new(ch, r, g, b, 3));
+	}
+	
+	fn queue_print(&self) {
+		for ColoredString{string, r, g, b, ..} in self {
+			let _ = queue!(stdout(), Print(string.clone().with(Color::Rgb{r: *r, g: *g, b: *b})));
+		}
+	}
+}
 
 // ASCII ONLY
 // pub const CHARSET_BLOCKOPAC: &str = &[' ', '░', '▒', '▓'];
@@ -104,8 +168,7 @@ impl Program {
 		)
 	}
 
-	fn print_ascii(stdout: &mut Stdout, ch: char, r: u8, g: u8, b: u8, bg: Option<(u8, u8, u8)>)
-	{
+	fn print_ascii_with_bg(stdout: &mut Stdout, ch: char, r: u8, g: u8, b: u8, bg: Option<(u8, u8, u8)>) {
 		/*if ch != ' ' && ch != '⠀' /*empty braille*/ {
 			queue!(
 				stdout,
@@ -137,15 +200,28 @@ impl Program {
 			)
 		);
 	}
+	
+	fn print_ascii(stdout: &mut Stdout, ch: char, r: u8, g: u8, b: u8) {
+		let _ = queue!(
+			stdout,
+			Print(
+				ch
+				.with(Color::Rgb{r, g, b})
+			)
+		);
+	}
 
 	pub fn print_alpha(&self, stdout: &mut Stdout) {
+		
 		let center = self.get_center(2, 4);
 
+		let mut line = Vec::<ColoredString>::new();
+		
 		for y in 0..self.pix.height() {
 
 			let cy = center.1 + y as u16 / 2;
 			let _ = queue!(stdout, cursor::MoveTo(center.0, cy));
-
+		
 			for x in 0..self.pix.width() {
 
 				let i = y*self.pix.width() + x;
@@ -157,9 +233,13 @@ impl Program {
 				let alpha_char = to_art(CHARSET_SIZEOPAC, lum);
 				//let alpha_char = CHARSET_OPAC_EXP[lum as usize*CHARSET_OPAC_EXP.len() / 256] as char;
 
-				Self::print_ascii(stdout, alpha_char, r, g, b, None);
-
+				// Self::print_ascii(stdout, alpha_char, r, g, b);
+				
+				line.push_pixel(alpha_char, r, g, b);
 			}
+			
+			line.queue_print();
+			line.clear();
 		}
 	}
 
@@ -169,6 +249,8 @@ impl Program {
 		for y_base in (0..self.pix.height()).step_by(2) {
 			let cy = center.1 + y_base as u16 / 2;
 			let _ = queue!(stdout, cursor::MoveTo(center.0, cy));
+			
+			// let mut line = Vec::<ColoredString>::new();
 
 			for x_base in (0..self.pix.width()).step_by(1) {
 
@@ -222,13 +304,15 @@ impl Program {
 
 				// let [_, bgr, bgg, bgb] = self.bg.to_be_bytes();
 
-				Self::print_ascii(stdout, block_char, r, g, b, bg);
+				Self::print_ascii_with_bg(stdout, block_char, r, g, b, bg);
 			}
 		}
 	}
 
 	pub fn print_brail(&self, stdout: &mut Stdout) {
 		let center = self.get_center(4, 8);
+		
+		let mut line = Vec::<ColoredString>::new();
 
 		for y_base in (0..self.pix.height()).step_by(4) {
 			let cy = center.1 + y_base as u16 / 4;
@@ -262,10 +346,11 @@ impl Program {
 						// be used to increase performance
 					}) as u32;
 
-				let braille_char = char::from_u32(bx).unwrap_or(' ');
-
-				Self::print_ascii(stdout, braille_char, r, g, b, None);
+				line.push_pixel(unsafe { char::from_u32_unchecked(bx) }, r, g, b);
 			}
+			
+			line.queue_print();
+			line.clear();
 		}
 	}
 	/*
@@ -338,7 +423,7 @@ pub fn con_main(mut prog: Program) -> std::io::Result<()> {
 			prog.print_con();
 			prog.print_err_con();
 
-			stdout.flush().unwrap();
+			let _ = stdout.flush();
 		}
 		let _ = queue!(stdout, LeaveAlternateScreen, Show)?;
 	}

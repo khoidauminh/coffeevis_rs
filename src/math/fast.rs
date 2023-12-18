@@ -48,10 +48,10 @@ pub fn twiddle(depth: usize) -> Cplx {
 		ONCE.call_once(|| {
 			for i in 0..16 {
 				let x = -std::f64::consts::TAU / (1 << i) as f64;
-				TWIDDLES_[i] = Cplx::new(x.cos(), x.sin());
+				TWIDDLES_[i] = super::fft::twiddle(x);
 			}
 		});
-		TWIDDLES_[depth]
+		*TWIDDLES_.get_unchecked(depth)
 	}
 }
 

@@ -118,8 +118,8 @@ pub fn win_main_winit(mut prog: Program) -> Result<(), &'static str> {
 
 	let inner_size = window.clone().inner_size();
 
-    let context = unsafe { softbuffer::Context::new(&window.clone()).unwrap() };
-    let mut surface = unsafe { softbuffer::Surface::new(&context, &window.clone()).unwrap() };
+    let context 	= softbuffer::Context::new(window.clone()).unwrap();
+    let mut surface = softbuffer::Surface::new(&context, window.clone()).unwrap();
 
 	surface
 	.resize(
@@ -153,7 +153,7 @@ pub fn win_main_winit(mut prog: Program) -> Result<(), &'static str> {
 
 				let no_sample = crate::audio::get_no_sample();
 
-				if no_sample < 255 {
+				if no_sample < 192 {
 					window.request_redraw();
 				}
 
@@ -171,12 +171,7 @@ pub fn win_main_winit(mut prog: Program) -> Result<(), &'static str> {
 	event_loop.run(move |event, elwt| {
 		prog.update_vis();
 
-		let perform_draw =
-			|
-				prog: &mut Program,
-				surface: &mut softbuffer::Surface
-			|
-		{
+		let mut perform_draw = |prog: &mut Program| {
 			let mut buffer = surface.buffer_mut().unwrap();
 
 			prog.force_render();
@@ -199,7 +194,7 @@ pub fn win_main_winit(mut prog: Program) -> Result<(), &'static str> {
 				event: WindowEvent::RedrawRequested,
 				..
 			} => {
-				perform_draw(&mut prog, &mut surface);
+				perform_draw(&mut prog);
 
 				#[cfg(feature = "benchmark")]
 				window.request_redraw();
@@ -233,15 +228,15 @@ pub fn win_main_winit(mut prog: Program) -> Result<(), &'static str> {
 
 					KeyCode::Space => {
 						prog.change_visualizer(true);
-						perform_draw(&mut prog, &mut surface);
+						perform_draw(&mut prog);
 					},
 
 					KeyCode::KeyB => {
 						prog.change_visualizer(false);
-						perform_draw(&mut prog, &mut surface);
+						perform_draw(&mut prog);
 					},
 
-					KeyCode::Minus 			=>   prog.decrease_vol_scl(),
+					KeyCode::Minus 			=>  prog.decrease_vol_scl(),
 					KeyCode::Equal 			=>  prog.increase_vol_scl(),
 
 					KeyCode::BracketLeft 	=>  prog.decrease_smoothing(),

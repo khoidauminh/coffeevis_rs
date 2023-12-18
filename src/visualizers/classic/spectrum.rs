@@ -39,7 +39,7 @@ fn volume_scale(x: f64) -> f64 {
 fn prepare(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
     const WINDOW: usize = 2*FFT_SIZE/3;
     const NORMALIZE: f64 = 1.0 / FFT_SIZE as f64;
-	let fall_factor = 0.333*prog.SMOOTHING.powi(2) * prog.FPS as f64 * 0.006944444;
+	let fall_factor = 0.5*prog.SMOOTHING.powi(2) * prog.FPS as f64 * 0.006944444;
 	let mut LOCAL = DATA.write().unwrap();
     let mut fft = [Cplx::zero(); FFT_SIZE];
 

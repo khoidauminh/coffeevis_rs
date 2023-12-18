@@ -1,4 +1,4 @@
-use super::{Cplx, Vec2, fast};
+use super::{Cplx, Vec2};
 
 pub fn butterfly<T: std::marker::Copy>(a: &mut [Vec2<T>], power: usize) {
 	for i in 1..a.len()-1 { // first and last element stays in place
@@ -21,27 +21,14 @@ pub fn butterfly_half<T: std::marker::Copy>(a: &mut [Vec2<T>], power: usize) {
 }
 
 pub fn twiddle_norm(x: f64) -> Cplx {
-	if cfg!(any(feature = "wtf", feature = "approx_trig")) { 
-		let sin = fast::sin_norm(x);
-		let cos = fast::cos_norm(x);
-		Cplx::new(cos, sin)
-	} else {
-		let x = x*std::f64::consts::TAU;
-		let y = x.sin_cos();
-		Cplx::new(y.1, y.0)
-	}
+	let x = x*std::f64::consts::TAU;
+	let y = x.sin_cos();
+	Cplx::new(y.1, y.0)
 }
 
 pub fn twiddle(x: f64) -> Cplx {
-	if cfg!(any(feature = "wtf", feature = "approx_trig")) { 
-		let x = x * super::TAU_RECIP;
-		let sin = fast::sin_norm(x);
-		let cos = fast::cos_norm(x);
-		Cplx::new(cos, sin)
-	} else {
-		let y = x.sin_cos();
-		Cplx::new(y.1, y.0)
-	}
+	let y = x.sin_cos();
+	Cplx::new(y.1, y.0)
 }
 
 pub fn compute_fft_recursive(a: &mut [Cplx]) {

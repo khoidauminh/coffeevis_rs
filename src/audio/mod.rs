@@ -74,7 +74,7 @@ pub fn read_samples<T: cpal::Sample<Float = f32>>(data: &[T]) {
 
     let mut ns = get_no_sample().saturating_add(1);
 
-    if get_normalizer() {
+    if get_normalizer() && ns < 2 {
         ns *= b.read_from_input(data) as u8;
         b.normalize();
 	} else {

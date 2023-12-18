@@ -79,7 +79,7 @@ fn prepare(stream: &mut crate::audio::SampleArr, bar_num: usize, volume_scale: f
     .enumerate()
     .for_each(|(i, (w, r))| {
 		let i_ = i as f64 * bnf;
-		let dynamic_smoothing = 0.175*dynamic_smooth2(i_, 3.0);
+		let dynamic_smoothing = 0.1 - 0.05 * i_;
         *w = math::interpolate::multiplicative_fall(*w, *r, 0.0, dynamic_smoothing);
 		
 		// *w = math::interpolate::linearf(*w, *r, dynamic_smoothing+0.25);
