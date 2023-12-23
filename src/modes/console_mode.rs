@@ -29,37 +29,44 @@ use crate::{
 
 pub type Flusher = fn(&Program, &mut Stdout);
 
-trait StyledLine {
-	//~ fn new() -> Self;
-	fn push_pixel(&mut self, ch: char, r: u8, g: u8, b: u8);
-	fn queue_print(&self);
-}
-
 struct ColoredString {
 	pub string: String,
-	pub r: u8,
-	pub g: u8,
-	pub b: u8,
+	pub fg: [u8; 3],
+	pub bg: [u8; 3],
 	error: u8,
 }
 
-enum ConsolePixel {
-	Line(ColoredString),
-	NewLine
-}
-
 impl ColoredString {
-	pub fn new(ch: char, r: u8, g: u8, b: u8, error: u8) -> Self {
+	pub fn new(ch: char, fg: [u8; 3], error: u8) -> Self {
 		Self {
 			string: String::from(ch),
-			r, g, b, error
+			fg: fg,
+			bg: [0; 3],
+			error
 		}
 	}
 	
-	pub fn append(&mut self, ch: char, r: u8, g: u8, b: u8) -> bool{
-		let er = self.r.abs_diff(r);
-		let eg = self.g.abs_diff(g);
-		let eb = self.b.abs_diff(b);
+	pub fn new_bg(ch: char, fg: [u8; 3], bg: [u8; 3], error: u8) -> Self {
+		Self {
+			string: String::from(ch),
+			fg: fg,
+			bg: bg,
+			error
+		}
+	}
+	
+	pub fn append(&mut self, ch: char, fg: [u8; 3]) -> bool {
+		/*if ch == '\0' {
+			self.string.push_str("\x1B[1C");
+			return true;
+		}*/
+		
+		let [r, g, b] = self.fg;
+		let [nr, ng, nb] = fg;
+		
+		let er = r.abs_diff(nr);
+		let eg = g.abs_diff(ng);
+		let eb = b.abs_diff(nb);
 		
 		if 
 			er <= self.error &&
@@ -73,20 +80,92 @@ impl ColoredString {
 		false
 		//return Some(Self::new(ch, r, g, b, self.error));
 	}
-}
-
-impl StyledLine for Vec<ColoredString> {	
-	fn push_pixel(&mut self, ch: char, r: u8, g: u8, b: u8) {
+	
+	pub fn append_bg(&mut self, ch: char, fg: [u8; 3], bg: [u8; 3]) -> bool {
+		/*if ch == '\0' {
+			self.string.push_str("\x1B[1C");
+			return true;
+		}*/
 		
-		if let Some(s) = self.iter_mut().last() {
-			if s.append(ch, r, g, b) {return}
+		let mergable_fg = {
+			let [r, g, b] = self.fg;
+			let [nr, ng, nb] = fg;
+			
+			let er = r.abs_diff(nr);
+			let eg = g.abs_diff(ng);
+			let eb = b.abs_diff(nb);
+			
+			er <= self.error &&
+			eg <= self.error &&
+			eb <= self.error
+		};
+		
+		let mergable_bg = {
+			let [r, g, b] = self.bg;
+			let [nr, ng, nb] = bg;
+			
+			let er = r.abs_diff(nr);
+			let eg = g.abs_diff(ng);
+			let eb = b.abs_diff(nb);
+			
+			er <= self.error &&
+			eg <= self.error &&
+			eb <= self.error
+		};
+		
+		if mergable_fg && mergable_bg {
+			self.string.push(ch);
+			return true;
 		}
 		
-		self.push(ColoredString::new(ch, r, g, b, 3));
+		false
+	}
+}
+
+trait StyledLine {
+	fn init() -> Self;
+	fn clear_line(&mut self);
+	fn push_pixel(&mut self, ch: char, fg: [u8; 3]);
+	fn push_pixel_bg(&mut self, ch: char, fg: [u8; 3], bg: [u8; 3]);
+	fn queue_print(&self);
+}
+
+/// WARNING: DO NOT CALL new() ON THIS VEC,
+/// THIS WILL TRIGGER SEGMENTATION FAULT
+impl StyledLine for Vec<ColoredString> {
+	fn init() -> Self {
+		vec![ColoredString::new('\0', [0; 3], 4)]
+	}
+	
+	fn clear_line(&mut self) {
+		self.clear();
+		self.push(ColoredString::new('\0', [0; 3], 4));
+	}
+	
+	fn push_pixel(&mut self, ch: char, fg: [u8; 3]) {
+		
+		if
+			unsafe{self.last_mut().unwrap_unchecked().append(ch, fg)}
+		{
+			return
+		}
+		
+		self.push(ColoredString::new(ch, fg, 3));
+	}
+	
+	fn push_pixel_bg(&mut self, ch: char, fg: [u8; 3], bg: [u8; 3]) {
+		
+		if
+			unsafe{self.last_mut().unwrap_unchecked().append_bg(ch, fg, bg)}
+		{
+			return
+		}
+		
+		self.push(ColoredString::new_bg(ch, fg, bg, 3));
 	}
 	
 	fn queue_print(&self) {
-		for ColoredString{string, r, g, b, ..} in self {
+		for ColoredString{string, fg: [r, g, b], ..} in self {
 			let _ = queue!(stdout(), Print(string.clone().with(Color::Rgb{r: *r, g: *g, b: *b})));
 		}
 	}
@@ -94,8 +173,9 @@ impl StyledLine for Vec<ColoredString> {
 
 // ASCII ONLY
 // pub const CHARSET_BLOCKOPAC: &str = &[' ', '░', '▒', '▓'];
-const CHARSET_OPAC_EXP: &[u8] = b"`.-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ5Yxjya]2ESwqkP6h9d4VpOGbUAKXHm8RD#$Bg0MNWQ%&@";
-//pub const CHARSET_SIZEOPAC: &[u8] = &[' ', '-', '~', '+', 'o', 'i', 'w', 'G', 'W', '@', '$'].as_bytes();
+const CHARSET_OPAC_EXP: &[u8] = b" `.-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ5Yxjya]2ESwqkP6h9d4VpOGbUAKXHm8RD#$Bg0MNWQ%&@";
+
+#[allow(dead_code)]
 pub const CHARSET_SIZEOPAC: &[u8] = b" -~+oiwGW@$";
 
 impl Program {
@@ -140,7 +220,8 @@ impl Program {
 
 		self.refresh_con();
 	}
-
+	
+	#[allow(dead_code)]
 	pub fn set_con_mode(&mut self, mode: Mode) {
 		match mode {
 			Mode::ConAlpha => self.flusher = Program::print_alpha,
@@ -168,115 +249,63 @@ impl Program {
 		)
 	}
 
-	fn print_ascii_with_bg(stdout: &mut Stdout, ch: char, r: u8, g: u8, b: u8, bg: Option<(u8, u8, u8)>) {
-		/*if ch != ' ' && ch != '⠀' /*empty braille*/ {
-			queue!(
-				stdout,
-				Print(
-					ch
-					.with(Color::Rgb{r: r, g: g, b: b})
-					.on(match bg {
-						Some((r, g, b)) => Color::Rgb{r: r, g: g, b: b},
-						None => Color::Reset,
-					})
-				)
-			);
-		} else {
-			let _ = queue!(
-				stdout,
-				Print(' ')
-			);
-		}*/
-
-		let _ = queue!(
-			stdout,
-			Print(
-				ch
-				.with(Color::Rgb{r, g, b})
-				.on(match bg {
-					Some((r, g, b)) => Color::Rgb{r, g, b},
-					None => Color::Reset,
-				})
-			)
-		);
-	}
-	
-	fn print_ascii(stdout: &mut Stdout, ch: char, r: u8, g: u8, b: u8) {
-		let _ = queue!(
-			stdout,
-			Print(
-				ch
-				.with(Color::Rgb{r, g, b})
-			)
-		);
-	}
-
 	pub fn print_alpha(&self, stdout: &mut Stdout) {
 		
 		let center = self.get_center(2, 4);
 
-		let mut line = Vec::<ColoredString>::new();
+		let mut line = Vec::<ColoredString>::init();
 		
-		for y in 0..self.pix.height() {
-
+		for y in (0..self.pix.height()).step_by(2) {
+	
 			let cy = center.1 + y as u16 / 2;
 			let _ = queue!(stdout, cursor::MoveTo(center.0, cy));
-		
+			
 			for x in 0..self.pix.width() {
-
-				let i = y*self.pix.width() + x;
-
-				let [_a, r, g, b] = self.pix.pixel(i).to_be_bytes();
-
-				let lum = grayb(r, g, b);
-
-				let alpha_char = to_art(CHARSET_SIZEOPAC, lum);
-				//let alpha_char = CHARSET_OPAC_EXP[lum as usize*CHARSET_OPAC_EXP.len() / 256] as char;
-
-				// Self::print_ascii(stdout, alpha_char, r, g, b);
+				let base = self.pix.width()*y + x;
 				
-				line.push_pixel(alpha_char, r, g, b);
+				let [_, mut r, mut g, mut b] = self.pix.pixel(base).to_be_bytes();
+	
+				let [_, nr, ng, nb] = self.pix.pixel(base + self.pix.width()).to_be_bytes();
+
+				r = r.max(nr);
+				g = g.max(ng);
+				b = b.max(nb);
+				
+				let lum = grayb(r, g, b);
+				
+				let alpha_char = to_ascii_art(CHARSET_OPAC_EXP, lum);
+				
+				line.push_pixel(alpha_char, [r, g, b]);
 			}
 			
 			line.queue_print();
-			line.clear();
+			line.clear_line();
 		}
 	}
 
 	pub fn print_block(&self, stdout: &mut Stdout) {
 		let center = self.get_center(2, 4);
+		
+		let mut line = Vec::<ColoredString>::init();
 
 		for y_base in (0..self.pix.height()).step_by(2) {
 			let cy = center.1 + y_base as u16 / 2;
 			let _ = queue!(stdout, cursor::MoveTo(center.0, cy));
-			
-			// let mut line = Vec::<ColoredString>::new();
 
 			for x_base in (0..self.pix.width()).step_by(1) {
 
 				let idx_base = y_base*self.pix.width() + x_base;
 				let [_, mut r, mut g, mut b] = self.pix.pixel(idx_base).to_be_bytes();
 
-				let mut bg: Option<(u8, u8, u8)> = None;
+				let mut bg = [0u8; 3];
 
 				let bx =
 					(0..2).fold(0, |acc, i| {
 						let idx = idx_base + i*self.pix.width(); // iterate horizontally, then jump to the nex row;
 						let [_, pr, pg, pb] = self.pix.pixel(idx).to_be_bytes();
 
-						/*
-						r = ((r as u16 + pr as u16) / 2) as u8;
-						g = ((g as u16 + pg as u16) / 2) as u8;
-						b = ((b as u16 + pb as u16) / 2) as u8;
-						* */
-
-						// let check = grayb(pr, pg, pb) > 36;
-
-						match grayb(pr, pg, pb)
-						{
-
-							48.. =>
-							{
+						match grayb(pr, pg, pb) {
+							48.. => {
 								r = r.max(pr);
 								g = g.max(pg);
 								b = b.max(pb);
@@ -284,12 +313,11 @@ impl Program {
 								return acc | (1 << (1-i));
 							},
 
-							32..=47 =>
-							{
-								bg = Some((pr, pg, pb));
+							32..=47 => {
+								bg = [pr, pg, pb];
 								// blocks that aren't drawn can still be displayed
 								// by addding background color
-							}
+							},
 
 							_ => {}
 						}
@@ -304,15 +332,20 @@ impl Program {
 
 				// let [_, bgr, bgg, bgb] = self.bg.to_be_bytes();
 
-				Self::print_ascii_with_bg(stdout, block_char, r, g, b, bg);
+				line.push_pixel_bg(block_char, [r, g, b], bg);
+
+				//Self::print_ascii_with_bg(stdout, block_char, r, g, b, bg);
 			}
+			
+			line.queue_print();
+			line.clear_line();
 		}
 	}
 
 	pub fn print_brail(&self, stdout: &mut Stdout) {
 		let center = self.get_center(4, 8);
 		
-		let mut line = Vec::<ColoredString>::new();
+		let mut line = Vec::<ColoredString>::init();
 
 		for y_base in (0..self.pix.height()).step_by(4) {
 			let cy = center.1 + y_base as u16 / 4;
@@ -346,11 +379,11 @@ impl Program {
 						// be used to increase performance
 					}) as u32;
 
-				line.push_pixel(unsafe { char::from_u32_unchecked(bx) }, r, g, b);
+				line.push_pixel(unsafe { char::from_u32_unchecked(bx) }, [r, g, b]);
 			}
 			
 			line.queue_print();
-			line.clear();
+			line.clear_line();
 		}
 	}
 	/*
@@ -368,11 +401,12 @@ impl Program {
 	}*/
 }
 
-fn to_art<T>(table: &[u8], x: T) -> char
+fn to_ascii_art<T>(table: &[u8], x: T) -> char
 where usize: From<T> {
-    *table.get(usize::from(x) * table.len() / 256).unwrap_or(&b' ') as char
+    unsafe{*table.get_unchecked((usize::from(x) * table.len()) >> 8) as char}
 }
 
+#[allow(dead_code)]
 fn rgb_to_ansi(r: u8, g: u8, b: u8) -> u8 {
     (16 + (r as u16 *6/256)*36 + (g as u16 *6/256)*6 + (b as u16*6/256)) as u8
 }
@@ -383,11 +417,12 @@ pub fn rescale(mut s: (u16, u16), prog: &Program) -> (u16, u16) {
 
 	match prog.mode {
 		Mode::ConBrail => {
-			s.0 <<= 1;
-			s.1 <<= 2;
+			s.0 *= 2;
+			s.1 *= 4;
 		},
 		_ => {
-			s.1 <<= 1;
+			
+			s.1 *= 2;
 		}
 	}
 

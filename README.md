@@ -1,6 +1,12 @@
 # Coffee Music Visualizer
 A small GUI + TUI music visualizer written in Rust.
 
+## About this project
+I decided to write the visualizer because existing projects didn't suit me.
+Some too slow, some didn't have the visualizer I like, some take up too much cpu usage, etc.
+
+This project also serves as my playground, so you'll see a lot of weird stuff in the source files.
+
 ## Examples (may be old):
 
 ![console mode](https://media.giphy.com/media/EjtGZZXlqdKeZ5ctBW/giphy.gif)

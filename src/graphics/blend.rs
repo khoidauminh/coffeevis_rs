@@ -8,6 +8,8 @@ pub trait Blend {
 	
 	fn premultiply(self) -> u32;
 	
+	fn copy_alpha(self, other: u32) -> u32;
+	
 	fn blend(self, other: u32) -> u32;
 	
 	fn sub_by_alpha(self, other: u8) -> u32;
@@ -75,6 +77,10 @@ pub fn channel_add(x: u8, y: u8, a: u8) -> u8 {
 impl Blend for u32 {
 	fn blend(self, other: u32) -> u32 {
 		self.over(other)
+	}
+	
+	fn copy_alpha(self, other: u32) -> u32 {
+		(self & 0x00_FF_FF_FF) | (other & 0xFF_00_00_00)
 	}
 	
 	fn premultiply(self) -> u32 {

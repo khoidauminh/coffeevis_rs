@@ -97,7 +97,7 @@ pub fn get_no_sample() -> u8 {
 pub fn is_silent() -> bool {
 	get_no_sample() > 0
 }
-
+/*
 pub fn limiter<T>(
 	a: &mut [T],
 	limit: f64,
@@ -139,9 +139,11 @@ where T: Into<f64> + std::ops::Mul<f64, Output = T> + std::marker::Copy
 
 		index += 1;
 	}
+	
+	let smp = a[l-1].into();
 
 	while index < bound {
-		replay_gain = getrg(0.0);
+		replay_gain = getrg(smp);
 
 		let smp = &mut a[index-full_delay];
 		*smp = *smp *replay_gain;
@@ -149,7 +151,6 @@ where T: Into<f64> + std::ops::Mul<f64, Output = T> + std::marker::Copy
 		index += 1;
 	}
 }
-
 
 pub fn limiter_hard<T>(
 	a: &mut [T],
@@ -165,7 +166,7 @@ where T: Into<f64> + std::ops::Mul<f64, Output = T> + std::marker::Copy
 	let _amp = 0.0;
 	let l = a.len();
 
-    let hold_samples_double = hold_samples*2;
+    let hold_samples_double = hold_samples;
 		
 	let full_delay = hold_samples;
 		
@@ -241,12 +242,13 @@ impl Peak {
 		1.0 / self.update(new_amp)
 	}
 }
-
+*/
+use crate::misc::stackvec::StackVec;
 
 pub struct MovingAverage<T> {
 	size: usize,
 	index: usize,
-	vec: Vec<T>,
+	vec: StackVec<T, 15>,
 	sum: T,
 	denominator: f64,
 	average: T
@@ -266,7 +268,7 @@ where
 		Self {
 			size,
 			index: 0,
-			vec: vec![val; size],
+			vec: StackVec::init(val, size),
 			denominator: (size as f64).recip(),
 			sum: size as f64 * val,
 		    average: val
@@ -300,115 +302,72 @@ where
         self.average
 	}
 }
-/*
-struct HoldRelease {
-    peak: f64,
-    amp: f64,
-    lim: f64,
-	rel: f64, 
-	hold_for: usize,
-	hold: usize,
-}
-
-impl HoldRelease {
-    fn saturating_increment(a: usize, b: usize) -> usize {
-        if a == b {a} else {a+1}
-    }
-
-    pub fn init(limit: f64, rel: usize, hold_for: usize, gain: f64) -> Self {
-        //let att = att.saturating_sub(hold_for/2).max(1);
-        //let rel = rel.saturating_sub(hold_for/2).max(1);
-        let rel_a = (rel as f64).recip();
-        
-        Self {
-            peak: limit,
-            amp: limit,
-            lim: limit,
-            rel: att_a,
-            hold_for: hold_for,
-            hold: 0
-        }
-    }
-    
-    pub fn update_peak(&mut self, inp: f64) -> f64 {
-        let inp = inp.abs();
-	
-		let inp = f64::max(inp, self.lim);
-		
-		if inp > self.peak {
-			self.peak = inp;
-			self.hold = 0;
-		} else if self.hold >= self.hold_for {
-			self.peak = inp;
-		} else {
-			self.hold += 1;
-		}
-        
-        self.peak
-    }
-    
-    pub fn update(&mut self, inp: f64) -> f64 {
-        use crate::math::interpolate::linearf;
-        let peak = self.update_peak(inp);
-        
-        if peak > self.amp {
-            self.amp = peak;
-        } else {
-            self.amp = linearf(self.amp, peak, self.rel);
-        }
-        
-        self.amp
-    }
-}*/
-/*
-struct PeakEvent {
-    pub peak: f64,
-    pub index: usize,
-    pub hold: usize
-}
-
-struct PeakRecorder {
-    buffer: [PeakEvent; 2],
-    limit: f64,
-    hold_for: usize,
-}
-
-impl PeakRecorder {
-    pub fn init(hold_for: usize, limit: f64) -> Self {
-        Self {
-            buffer: [PeakEvent{peak: limit, index: 0, hold: 0}; 2],
-            limit: limit,
-            hold_for: hold_for,
-        }
-    }
-    
-    pub fn update(&mut self, inp: f64, index: usize) -> Option<[PeakEvent; 2]> {
-        let inp = f64::max(inp.abs(), self.lim);
-		
-		let mut out = None;
-		
-		if inp > self.peak || self.buffer[0].hold >= self.hold_for {
-		    out = Some(self.buffer.clone());
-	
-			self.buffer[1] = self.buffer[0];
-			self.buffer[0] = PeakEvent{peak: inp, index: index, hold: 0};
-		} else {
-            self.buffer[0].hold += 1;
-		}
-		
-		out
-    }
-}
 
 pub fn limiter<T>(
 	a: &mut [T],
 	limit: f64,
-	attack_samples: usize, 
-	release_samples: usize,
 	hold_samples: usize,
 	gain: f64
 )
-where T: Into<f64> + std::ops::Mul<f64, Output = T> + std::marker::Copy
+where T: Into<f64> + std::ops::Mul<f64, Output = T> + std::marker::Copy 
 {
-    let mut peak_recorder = PeakRecorder::init(hold_samples, limit);
-}*/
+	use crate::math::{fast::abs, interpolate::smooth_step};
+	
+	struct PeakPoint {
+		amp: f64,
+		pos: usize
+	}
+	
+	fn peak(amp: f64, pos: usize) -> PeakPoint {
+		PeakPoint {amp, pos}
+	}
+	
+	let mut peaks: Vec<PeakPoint> = Vec::with_capacity(12);
+	
+	peaks.push(peak(limit.max(abs((a[0]).into())), 0));
+	
+	let mut expo_amp = limit;
+	
+	let fall_factor = 1.0 - 1.0 / hold_samples as f64;
+	
+	for (i, ele) in a.iter().enumerate().skip(1) {
+		let smp = abs((*ele).into());
+		
+		if expo_amp > limit {
+			expo_amp = limit.max(expo_amp * fall_factor);
+		}
+		
+		if smp > expo_amp {
+			expo_amp = smp;
+			peaks.push(peak(smp, i));
+		}
+	}
+	
+	match peaks.last() {
+		Some(p) if p.pos < a.len() 
+			=> peaks.push(peak(expo_amp, a.len())),
+		_ 	=> {}
+	}
+	
+	peaks.iter_mut().for_each(|peak| {
+		peak.amp = 1.0 / peak.amp;
+	});
+	
+	peaks.windows(2).for_each(|window| {
+		let head = &window[0];
+		let tail = &window[1];
+		
+		let range = tail.pos - head.pos +1;
+		let rangef = range as f64;
+		let range_recip = 1.0 / rangef;
+		
+		a[head.pos..tail.pos]
+		.iter_mut()
+		.enumerate()
+		.for_each(|(i, smp)| {
+			let t = i as f64 * range_recip;
+			let scale = smooth_step(head.amp, tail.amp, t);
+			*smp = *smp *scale * gain;
+		});
+	});
+}

@@ -1,3 +1,7 @@
+#![allow(dead_code)]
+
+pub mod stackvec;
+
 #[cfg(test)]
 mod tests {
     use std::time::Instant;

@@ -1,5 +1,5 @@
 #![allow(non_snake_case)]
-#![allow(dead_code)]
+// #![allow(dead_code)]
 
 // #![allow(warnings)]
 // #![forbid(unsafe_code)]
@@ -16,6 +16,7 @@ mod graphics;
 mod modes;
 mod visualizers;
 mod controls;
+
 mod misc;
 
 use data::*;
@@ -41,8 +42,10 @@ fn main() {
 	std::env::set_var("LC_CTYPE", "en_US.utf8");
 
 	let prog = Program::new().eval_args(&mut args.iter());
-	match &prog.mode
-	{
+
+	prog.print_startup_info();
+
+	match &prog.mode {
 		&Mode::WinLegacy    => win_legacy_main(prog).unwrap(),
 		&Mode::Win          => win_main_winit(prog).unwrap(),
 		&_                  => con_main(prog).unwrap()

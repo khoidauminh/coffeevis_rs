@@ -1,35 +1,16 @@
 #[derive(Debug)]
 pub struct StackVec<T, const N: usize> {
 	buffer: [T; N],
-	capacity: usize,
 	length: usize,
-	mask: usize,
 }
-
-macro_rules! stackvec {
-	($depth: expr, $len: expr, $val: expr) => {
-		{
-			use crate::mem::StackVec;
-			const cap: usize = 1 << $depth;
-			if $len > cap {
-				panic!(
-					"Capacity overflow.\nStackvec allocated with depth {} ({} elements) but passed length is {}", 
-					$depth,
-					1 << $depth,
-					$len
-				);
-			}
-			
-			StackVec::<_, cap>::init($val, $len)
-		}
-	}
-}
-
-pub(crate) use stackvec;
 
 impl<T: Copy + Clone, const N: usize> StackVec<T, N> {
 	pub fn panic_overflow() {
 		panic!("Capacity reached");
+	}
+	
+	pub fn panic_out_of_bounds() {
+		panic!("Out of bound");
 	}
 	
 	#[doc(hidden)]
@@ -37,11 +18,13 @@ impl<T: Copy + Clone, const N: usize> StackVec<T, N> {
 		// if len > N {panic!("Length exceeds maximum capacity")}
 		//if len > N {Self::panic_init(depth, len)}
 		
+		if len > N {
+			panic!("Init size larger than capacity");
+		}
+		
 		Self {
 			buffer: [v; N],
-			capacity: N,
 			length: len,
-			mask: {N-1}
 		}
 	}
 	
@@ -50,17 +33,21 @@ impl<T: Copy + Clone, const N: usize> StackVec<T, N> {
 	}
 	
 	pub fn cap(&self) -> usize {
-		self.capacity
+		self.buffer.len()
+	}
+	
+	pub fn is_full(&self) -> bool {
+		self.length == N
 	}
 	
 	pub fn resize(&mut self, newlen: usize) {
-		if newlen > self.capacity {
+		if newlen > self.buffer.len() {
 			Self::panic_overflow();
 		}
 	}
 	
-	pub fn append(&mut self, v: T) {
-		if self.length >= self.capacity {
+	pub fn push(&mut self, v: T) {
+		if self.length >= self.buffer.len() {
 			Self::panic_overflow();
 		}
 		self.buffer[self.length] = v;
@@ -75,6 +62,30 @@ impl<T: Copy + Clone, const N: usize> StackVec<T, N> {
 		self.buffer[self.length]
 	}
 	
+	pub fn first<'a>(&self) -> Option<&T> {
+		if self.length > 0 {
+			unsafe { Some(self.get_unchecked(0)) }
+		} else {
+			None
+		}
+	}
+	
+	pub fn last<'a>(&self) -> Option<&T> {
+		if self.length > 0 {
+			unsafe { Some(self.get_unchecked(self.length-1)) }
+		} else {
+			None
+		}
+	}
+	
+	pub unsafe fn get_unchecked(&self, i: usize) -> &T {
+		self.buffer.get_unchecked(i)
+	}
+	
+	pub unsafe fn get_unchecked_mut<'a>(&'a mut self, i: usize) -> &'a mut T {
+		self.buffer.get_unchecked_mut(i)
+	}
+	
 	pub fn fill(&mut self, v: T) {
 		self.buffer[0..self.length].fill(v)
 	}
@@ -85,7 +96,10 @@ where T: Copy + Clone
 {
 	type Output = T;
 	fn index(&self, i: usize) -> &Self::Output {
-		unsafe {self.buffer.get_unchecked(i & self.mask)}
+		if i >= self.length {
+			Self::panic_out_of_bounds();
+		}
+		unsafe { self.buffer.get_unchecked(i) }
 	}
 }
 
@@ -93,7 +107,10 @@ impl<T: Copy + Clone, const N: usize> std::ops::IndexMut<usize> for StackVec<T, 
 where T: Copy + Clone
 {
 	fn index_mut(&mut self, i: usize) -> &mut Self::Output {
-		unsafe {self.buffer.get_unchecked_mut(i & self.mask)}
+		if i >= self.length {
+			Self::panic_out_of_bounds();
+		}
+		unsafe { self.buffer.get_unchecked_mut(i) }
 	}
 }
 

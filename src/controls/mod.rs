@@ -27,34 +27,6 @@ pub fn init_window(prog: &Program) -> Result<Window, minifb::Error> {
     Ok(win)
 }
 
-pub fn usleep(micros: u64) {
-    std::thread::sleep(std::time::Duration::from_micros(micros));
-}
-/*
-pub fn update_size_con(
-    prog: &mut Program,
-    stdout: &mut std::io::Stdout
-) {
-    let size = crossterm::terminal::size().unwrap();
-    prog.update_con_size(size);
-    queue!(stdout, Clear(ClearType::All));
-}*/
-/*
-pub fn change_stdout_func(
-    prog: &mut Program,
-    stdout: &mut std::io::Stdout
-) {
-    prog.con_func =
-        if prog.con_bool {
-            prepare_stdout_ascii
-        } else {
-            prepare_stdout_braille
-        };
-    prog.con_bool ^= true;
-
-    update_size_con(prog, stdout);
-}
-*/
 pub fn change_fps(prog: &mut Program, amount: i16, replace: bool) {
     prog.FPS =
         ((prog.FPS * (!replace) as u64) as i16 + amount)
@@ -63,17 +35,6 @@ pub fn change_fps(prog: &mut Program, amount: i16, replace: bool) {
         ;
     prog.REFRESH_RATE = std::time::Duration::from_micros(1_000_000 / prog.FPS);
 }
-/*
-pub fn change_charset(prog: &mut Program) {
-    prog.ascii_set =
-        if prog.char_bool {
-            CHARSET_SIZEOPAC
-        } else {
-            CHARSET_BLOCKOPAC
-        };
-    prog.char_bool ^= true;
-}
-*/
 
 pub fn control_key_events_win(
     win: &mut minifb::Window,
@@ -138,6 +99,7 @@ pub fn control_key_events_con(
             Event::Key(event) => match event.code {
                 KeyCode::Char(' ') if event.modifiers == crossterm::event::KeyModifiers::CONTROL
                                    =>   prog.change_visualizer(false),
+
                 KeyCode::Char(' ') =>   prog.change_visualizer(true),
 
                 KeyCode::Char('q') =>   *exit = true,

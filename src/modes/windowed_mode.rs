@@ -12,22 +12,6 @@ use crate::{
 
 //~ use fps_clock;
 
-use winit::{
-	event::{
-		Event,
-		WindowEvent::{self},
-		DeviceEvent::{self},
-		RawKeyEvent
-	},
-	keyboard::{PhysicalKey::Code, KeyCode},
-	event_loop::{EventLoop},
-	window::{WindowBuilder},
-	dpi::{LogicalSize}
-};
-
-use std::num::NonZeroU32;
-
-const MOTION_BLUR_INDEX: u8 = 2;
 
 pub fn win_legacy_main(mut prog: Program) -> Result<(), minifb::Error> {
 
@@ -79,17 +63,23 @@ pub fn win_legacy_main(mut prog: Program) -> Result<(), minifb::Error> {
     Ok(())
 }
 
+
+use winit::{
+	event::{
+        ElementState,
+		Event,
+		WindowEvent,
+	},
+	platform::modifier_supplement::KeyEventExtModifierSupplement,
+	keyboard::{Key, ModifiersState, NamedKey::{Escape, Space}},
+	event_loop::EventLoop,
+	window::WindowBuilder,
+	dpi::LogicalSize
+};
+
+use std::num::NonZeroU32;
+
 pub fn win_main_winit(mut prog: Program) -> Result<(), &'static str> {
-
-	// let mut prog = Program::new().from_conf_file(conf).as_win();
-
-	pub fn to_u8_vec(buf: &[u32]) -> Vec<u8> {
-		buf.iter().flat_map(|x| { // buf stores pixel samples as u32 of [a, r, g, b]
-			let mut p = x.to_be_bytes();
-			p.rotate_left(1);
-			p
-		}).collect::<Vec<u8>>()
-	}
 
 	let mut size = (
 		prog.pix.width()  as u32,
@@ -181,80 +171,68 @@ pub fn win_main_winit(mut prog: Program) -> Result<(), &'static str> {
 			let _ = buffer.present();
 		};
 
-		match event {
-			Event::WindowEvent {
-				event: WindowEvent::CloseRequested,
-				..
-			} => {
-				set_exit(thread_main_running.clone());
-				elwt.exit()
-			},
+        let mut modifiers = ModifiersState::default();
 
-			Event::WindowEvent {
-				event: WindowEvent::RedrawRequested,
-				..
-			} => {
-				perform_draw(&mut prog);
+        if let Event::WindowEvent { event, .. } = event {
+		    match event {
+			    WindowEvent::CloseRequested => {
+				    set_exit(thread_main_running.clone());
+				    elwt.exit()
+			    },
 
-				#[cfg(feature = "benchmark")]
-				window.request_redraw();
-			},
+			    WindowEvent::RedrawRequested => {
+				    perform_draw(&mut prog);
 
+				    #[cfg(feature = "benchmark")]
+				    window.request_redraw();
+			    },
 
-			//~ Event::AboutToWait => {
-				//~ let no_sample = crate::audio::get_no_sample();
+			    WindowEvent::ModifiersChanged(new) => {
+			        modifiers = new.state();
+			    },
 
-				//~ if no_sample < 128 {
-					//~ perform_draw(&mut prog, &mut surface);
-					//~ window.request_redraw();
-					//~ clock.tick();
-				//~ } else {
-					//~ thread::sleep(Duration::from_millis(250));
-				//~ }
+			    WindowEvent::KeyboardInput {event, ..} => {
 
-			//~ },
+                    if !(event.state == ElementState::Pressed && !event.repeat) {
+                        return
+                    }
 
-			Event::DeviceEvent{event: DeviceEvent::Key(RawKeyEvent{physical_key: Code(code), state }), .. } => {
+				    match event.key_without_modifiers().as_ref() {
+					    Key::Named(Escape) => {
+						    set_exit(thread_main_running.clone());
+						    elwt.exit()
+					    },
 
-				if state.is_pressed() {
-					return
-				}
+					    Key::Named(Space) => {
+						    prog.change_visualizer(!modifiers.control_key());
+						    perform_draw(&mut prog);
+					    },
 
-				match code {
-					KeyCode::Escape => {
-						set_exit(thread_main_running.clone());
-						elwt.exit()
-					},
+					    Key::Character("b") => {
+						    prog.change_visualizer(false);
+						    perform_draw(&mut prog);
+					    },
 
-					KeyCode::Space => {
-						prog.change_visualizer(true);
-						perform_draw(&mut prog);
-					},
+					    Key::Character("-")		=>  prog.decrease_vol_scl(),
+					    Key::Character("=")	=>  prog.increase_vol_scl(),
 
-					KeyCode::KeyB => {
-						prog.change_visualizer(false);
-						perform_draw(&mut prog);
-					},
+					    Key::Character("[") 	=>  prog.decrease_smoothing(),
+					    Key::Character("]") 	=>  prog.increase_smoothing(),
 
-					KeyCode::Minus 			=>  prog.decrease_vol_scl(),
-					KeyCode::Equal 			=>  prog.increase_vol_scl(),
+					    Key::Character(";")		=>  prog.decrease_smoothing(),
+					    Key::Character("\'")	=> prog.increase_smoothing(),
 
-					KeyCode::BracketLeft 	=>  prog.decrease_smoothing(),
-					KeyCode::BracketRight 	=>  prog.increase_smoothing(),
+					    Key::Character("\\")	=> prog.toggle_auto_switch(),
 
-					KeyCode::Semicolon 		=>  prog.decrease_smoothing(),
-					KeyCode::Quote 			=> prog.increase_smoothing(),
+					    Key::Character("/") 	=> prog.reset_parameters(),
 
-					KeyCode::Backslash 		=> prog.toggle_auto_switch(),
+					    _ => {},
+				    }
 
-					KeyCode::Slash 			=> prog.reset_parameters(),
+			    },
 
-					_ => {},
-				}
-
-			},
-
-			_ => {},
+			    _ => {},
+		    }
 		}
 	}).unwrap();
 

@@ -12,6 +12,7 @@ pub enum Mode {
 }
 
 impl Mode {
+	/*
 	pub fn next_con(&mut self) {
 		*self = match self {
 			Mode::ConAlpha  => Mode::ConBlock,
@@ -20,7 +21,7 @@ impl Mode {
 			Mode::Win 	    => Mode::Win,
 			Mode::WinLegacy => Mode::WinLegacy,
 		}
-	}
+	}*/
 
 	pub fn is_con(&self) -> bool {
 		match self {
@@ -32,21 +33,3 @@ impl Mode {
 		}
 	}
 }
-/*
-pub fn run(mut conf: &str) {
-	let mut prog = crate::data::Program::new().from_conf_str(conf);
-
-	#[cfg(feature = "winit")]
-	if prog.mode == Mode::Winit
-	{
-		windowed_mode::winit_mode::win_main_winit(prog);
-		return
-	}
-
-	match &prog.mode {
-		&Mode::Win => windowed_mode::win_main(prog).unwrap(),
-
-		&_ 		   => console_mode::con_main(prog).unwrap(),
-	}
-}
-*/

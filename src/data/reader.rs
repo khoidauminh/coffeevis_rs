@@ -72,9 +72,9 @@ impl Program {
 		let mut color = [0u8; 4];
 
 		loop {
-			let arg =  match args.next() {
+			let arg = match args.next() {
 				Some(st) => {
-					println!("{}", st);
+					// println!("{}", st);
 					st.as_str()
 				},
 				None => break,
@@ -172,10 +172,9 @@ impl Program {
 					(self.CON_MAX_W, self.CON_MAX_H) = (s[0], s[1]);
 				}
 
-				"--force-wayland" => {
-                    self.WAYLAND = true;
+				"--force-x11" => {
+                    self.WAYLAND = false;
                     std::env::set_var("LANG", "C");
-                    self.SCALE = 1;
 				},
 
 				&_ => eprintln!("Argument error: Unknown option {}", arg),
@@ -183,17 +182,6 @@ impl Program {
 		}
 
 		self.update_size(size);
-
-		/*
-		match self.mode {
-			Win => (self.WIN_W, self.WIN_H) = (size[0], size[1]),
-
-			#[cfg(feature = "winit")]
-			Winit => (self.WIN_W, self.WIN_H) = (size[0], size[1]),
-
-			_ => (self.CON_W, self.CON_H) = crate::modes::console_mode::rescale((size[0] as u16, size[1] as u16), self),
-		}*/
-					
 		self.pix.background &= 0xFF_00_00_00;
 		self.pix.background |= u32::from_be_bytes(color);
 		self.pix.background = self.pix.background.set_alpha(self.transparency).premultiply();
@@ -202,7 +190,7 @@ impl Program {
 			std::env::set_var("WAYLAND_DISPLAY", "");
 		}
 		
-		println!("Backround: {:x}", self.pix.background);
+		// println!("Backround: {:x}", self.pix.background);
 
 		self
 	}
@@ -241,13 +229,48 @@ impl Program {
 		}
 	}
 
-	/*pub fn print_err_win(&mut self) {
-		match &self.msg {
-			Ok(()) => {},
-			Err(string)  => {
-				println!("Configuration error: {}", string);
-				self.msg = Ok(());
-			}
-		}
-	}*/
+	pub fn print_startup_info(&self) {
+	    use crate::modes::Mode::{
+            Win,
+            WinLegacy,
+
+	        ConAlpha,
+	        ConBlock,
+	        ConBrail,
+	    };
+
+	    println!(
+	        "Welcome to Coffeevis!\n\
+	        Audio visualizer by khoidauminh (Cas Pascal on github)"
+        );
+
+        println!("Refresh rate is {}", self.FPS);
+
+        println!("Auto switch is {}",
+            if self.AUTO_SWITCH {"on"}
+	        else {"off"}
+		);
+
+        match self.mode {
+            Win => println!(
+                "Running with Winit, {}",
+                if self.WAYLAND{"Wayland"} else {"X11"}
+            ),
+
+            WinLegacy => println!("Running with minifb, X11"),
+
+            _ => {
+                println!("Running in a terminal, rendering {}",
+                    match self.mode {
+                        ConBrail => "braille",
+                        ConAlpha => "ascii",
+                        ConBlock => "block",
+                        _ => "",
+                    }
+                );
+            }
+        }
+
+        println!();
+	}
 }

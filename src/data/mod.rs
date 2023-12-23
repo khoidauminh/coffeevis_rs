@@ -139,7 +139,7 @@ impl Program {
 
 			mode: Mode::Win,
 			
-			WAYLAND: false,
+			WAYLAND: true,
 			
 			transparency: 255,
 			background: 0x00_00_00_00,
@@ -244,7 +244,15 @@ impl Program {
 		let vis_name = self.VIS.current_vis_name();
 		let vis_list = self.VIS.current_list_name();
 
-		use crossterm::{
+		//println!("Switching to {}\r", self.VIS[self.VIS_IDX].1);
+		//std::io::stdout().flush().unwrap();
+
+		self.print_message(format!("Switching to {} in list {}\r\n", vis_name, vis_list))
+	}
+
+	pub fn print_message(&self, message: String) {
+        use std::io::Write;
+        use crossterm::{
 			terminal::{
 				EnterAlternateScreen,
 				LeaveAlternateScreen
@@ -252,22 +260,22 @@ impl Program {
 			style::Print
 		};
 
+        let mut stdout = std::io::stdout();
+
 		if
 			self.DISPLAY &&
 			self.mode.is_con()
 		{
 			let _ = crossterm::queue!(
-				std::io::stdout(),
+				stdout,
 				LeaveAlternateScreen,
-				Print(format!("Switching to {} in list {}\r\n", vis_name, vis_list)),
+				Print(message),
 				EnterAlternateScreen
 			);
 		} else {
-			println!("Switching to {} in list {}", vis_name, vis_list);
+			print!("{}", message);
+			let _ = stdout.flush();
 		}
-
-		//println!("Switching to {}\r", self.VIS[self.VIS_IDX].1);
-		//std::io::stdout().flush().unwrap();
 	}
 
 	pub fn update_fps(&mut self, new_fps: u64) {
@@ -408,6 +416,11 @@ impl Program {
 	
 	pub fn toggle_auto_switch(&mut self) {
 		self.AUTO_SWITCH ^= true;
+		self.print_message(format!("Auto switch is now {}\n",
+		        if self.AUTO_SWITCH {"on"}
+		        else {"off"}
+		    )
+		)
 	}
 	
 	pub fn reset_parameters(&mut self) {
