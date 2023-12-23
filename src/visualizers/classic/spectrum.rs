@@ -56,29 +56,11 @@ fn prepare(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr
     let RANGE1 = RANGE+1;
     	
 	for i in 0..RANGE1 {
-		/*let rev_i = (FFT_SIZE-i).min(FFT_SIZE-1);
-            
-		// Avoids having to evaluate a 2nd FFT.
-		//
-		// This leverages the the linear and symetrical
-		// property of the FFT.
-		// 
-		// Errors accumulating in the output (due to 
-		// approximating sin and cos) can be tolerated.
-		
-		let fft_1 = fft[i];
-		let fft_2 = fft[rev_i].conj();
-					
-		let x = (fft_1 + fft_2).l1_norm();
-		
-		let y = (fft_1 - fft_2).l1_norm();*/
-
 		let scalef = math::fft_scale_up(i, RANGE);
-
 		fft[i] = fft[i]*scalef;
 	}
 	
-	crate::audio::limiter_hard(&mut fft[0..RANGE1], 1.35, 20, 1.);
+	crate::audio::limiter(&mut fft[0..RANGE1], 1.35, 20, 1.);
 
     LOCAL
     .iter_mut()
@@ -184,7 +166,7 @@ pub fn draw_spectrum(
         prog.pix.draw_rect_wh_by(
 			P2::new(winwh -1, i), 
 			2, 1, 
-			u32::mix(prog.pix.background, color.set_alpha(alpha)), 
+			u32::mix(prog.pix.background, color.set_alpha(alpha)).copy_alpha(prog.pix.background), 
 			u32::over
 		);
     }
