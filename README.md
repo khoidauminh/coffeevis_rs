@@ -7,7 +7,7 @@ Some too slow, some didn't have the visualizer I like, some take up too much cpu
 
 This project also serves as my playground, so you'll see a lot of weird implementations in the source files.
 
-## Examples (may be old):
+## Examples:
 
 ![console mode](./kvis_preview_2.webp)
 ![windowed mode](./kvis_preview_1.webp)
