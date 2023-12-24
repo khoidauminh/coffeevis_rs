@@ -9,8 +9,8 @@ This project also serves as my playground, so you'll see a lot of weird implemen
 
 ## Examples (may be old):
 
-![console mode](https://media.giphy.com/media/EjtGZZXlqdKeZ5ctBW/giphy.gif)
-![windowed mode](https://media.giphy.com/media/ahIRySAELqiI7kIUI2/giphy.gif)
+![console mode](./kvis_preview_2.webp)
+![windowed mode](./kvis_preview_1.webp)
 
 ## Platform support
 Coffeevis is built for and runs on Linux.
@@ -27,11 +27,11 @@ Coffeevis supports temporary options at launch
 | --win-legacy |  | opens window with minifb (coffeevis now runs with winit by default) |
 | --ascii<br />--block<br />--braille | | runs in the terminal |
 | --transparent | 192 | sets transparency, no value indicates full transparency (value currently ignored for now) |
-| --auto-switch | true<br />false | toggles auto visualizer switching |
+| --no-auto-switch | | disables automatic visualizer switching |
 | --size | 80x80 | sets resolution in window mode |
 | --scale | 2 | upscales in window mode |
 | --fps | 60 | sets refresh rate |
-| --resizable | | allows resizing in window mode (not recommended) |
+| --resizable | | allows resizing in window mode (not supported and currently ignored) |
 | --max-con-size | 50x50 | sets maximum resolution in terminal mode |
 
 Currently reading from a file is not supported. It is recommended to launch coffeevis in a script.
