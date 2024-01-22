@@ -172,7 +172,7 @@ impl Program {
 					(self.CON_MAX_W, self.CON_MAX_H) = (s[0], s[1]);
 				}
 
-				"--force-x11" => {
+				"--x11" => {
                     self.WAYLAND = false;
                     std::env::set_var("LANG", "C");
 				},

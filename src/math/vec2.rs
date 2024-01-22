@@ -216,7 +216,12 @@ impl Vec2<f64> {
 			fast::abs(self.y)
 		)
 	}
+	
+	pub fn to_p2(&self) -> Vec2<i32> {
+		Vec2::<i32> { x: self.x as i32, y: self.y as i32 }
+	}
 }
+
 
 impl Vec2<i32> {
 	pub fn new<A, B>(x: A, y: B) -> Vec2<i32> 
@@ -231,5 +236,9 @@ impl Vec2<i32> {
 	
 	pub fn flatten(&self, s: Vec2<i32>) -> i32 {
 		self.x + self.y*s.x
+	}
+	
+	pub fn to_cplx(&self) -> Vec2<f64> {
+		Vec2::<f64> {x: self.x as f64, y: self.y as f64}
 	}
 }

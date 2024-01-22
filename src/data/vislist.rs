@@ -58,19 +58,21 @@ impl Visualizer {
 pub struct VisList {
 	list: &'static [Visualizer],
 	name: &'static str,
+	pub current_index: usize
 }
 
 impl VisList {
 	pub const fn new(list: &'static [Visualizer], name: &'static str) -> Self {
 		Self {
 			list,
-			name
+			name,
+			current_index: 0
 		}
 	}
 }
 
 pub struct VisNavigator {
-	structure: &'static [VisList],
+	structure: [VisList; 2],
 	index_vis: usize,
 	index_list: usize,
 }
@@ -78,7 +80,10 @@ pub struct VisNavigator {
 impl VisNavigator {
 	pub fn new() -> Self {
 		Self {
-			structure: VIS_MENU,
+			structure: [
+				VisList::new(VIS_CLASSIC, "Classic"),
+				VisList::new(VIS_MILK, "Milk")
+			],
 			index_vis: 0,
 			index_list: 0,
 		}
@@ -127,17 +132,27 @@ impl VisNavigator {
 		
 		current
 	}
+	
+	pub fn save_index(&mut self) {
+		self.structure[self.index_list].current_index = self.index_vis;
+	}
+	
+	pub fn load_index(&mut self) {
+		self.index_vis = self.structure[self.index_list].current_index;
+	}
 
 	pub fn next_list(&mut self) {
 		let size = self.num_of_lists();
+		self.save_index();
 		self.index_list = increment(self.index_list, size);
-		self.index_vis = 0;
+		self.load_index();
 	}
 
 	pub fn prev_list(&mut self) {
 		let size = self.num_of_lists();
+		self.save_index();
 		self.index_list = increment(self.index_list, size);
-		self.index_vis = 0;
+		self.load_index();
 	}
 
 	pub fn switch_by_index(&mut self, index: usize) -> Visualizer {
@@ -178,7 +193,6 @@ pub const VIS_MENU: &[VisList] =
 pub const VIS_CLASSIC: &[Visualizer] =
 &[
     //~ define_visualizer_struct!(raw::draw_raw_fft, "Raw FFT", false),
-
 	define_visualizer_struct!(scopes::draw_vectorscope, "Vectorscope", true),
 	define_visualizer_struct!(scopes::draw_oscilloscope, "Oscilloscope", true),
 	define_visualizer_struct!(ring::draw_ring, "Ring", true),

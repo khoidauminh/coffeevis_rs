@@ -10,6 +10,8 @@ pub trait Blend {
 	
 	fn copy_alpha(self, other: u32) -> u32;
 	
+	fn mul_alpha(self, a: u8) -> u32;
+	
 	fn blend(self, other: u32) -> u32;
 	
 	fn sub_by_alpha(self, other: u8) -> u32;
@@ -95,6 +97,17 @@ impl Blend for u32 {
 	
 	fn over(self, other: u32) -> u32 {
 		other
+	}
+	
+	fn mul_alpha(self, a: u8) -> u32 {
+		let [aa, ar, ag, ab] = self.to_be_bytes();
+		u32::from_be_bytes([
+			u8_mul(aa, a),
+			ar,
+			ag,
+			ab
+			
+		])
 	}
 	
 	fn mix(self, other: u32) -> u32 {

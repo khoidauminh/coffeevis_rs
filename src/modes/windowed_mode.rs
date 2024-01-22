@@ -185,51 +185,58 @@ pub fn win_main_winit(mut prog: Program) -> Result<(), &'static str> {
 
 				    #[cfg(feature = "benchmark")]
 				    window.request_redraw();
-			    },
+			    }
 
 			    WindowEvent::ModifiersChanged(new) => {
-			        modifiers = new.state();
-			    },
+                    modifiers = new.state();
+                }
 
 			    WindowEvent::KeyboardInput {event, ..} => {
 
-                    if !(event.state == ElementState::Pressed && !event.repeat) {
-                        return
-                    }
+                    if event.state == ElementState::Pressed && !event.repeat {
 
-				    match event.key_without_modifiers().as_ref() {
-					    Key::Named(Escape) => {
-						    set_exit(thread_main_running.clone());
-						    elwt.exit()
-					    },
+						match event.key_without_modifiers().as_ref() {
+							Key::Named(Escape) => {
+								set_exit(thread_main_running.clone());
+								elwt.exit()
+							}
 
-					    Key::Named(Space) => {
-						    prog.change_visualizer(!modifiers.control_key());
-						    perform_draw(&mut prog);
-					    },
+							Key::Named(Space) => {
+								prog.change_visualizer(true);
+								perform_draw(&mut prog);
+							},
+							
+							Key::Character("b") => {
+								prog.change_visualizer(false);
+								perform_draw(&mut prog);
+							},
+							
+							Key::Character("n") => {
+								prog.change_vislist();
+							}
 
-					    Key::Character("b") => {
-						    prog.change_visualizer(false);
-						    perform_draw(&mut prog);
-					    },
+							Key::Character("b") => {
+								prog.change_visualizer(false);
+								perform_draw(&mut prog);
+							},
 
-					    Key::Character("-")		=>  prog.decrease_vol_scl(),
-					    Key::Character("=")	=>  prog.increase_vol_scl(),
+							Key::Character("-")		=>  prog.decrease_vol_scl(),
+							Key::Character("=")	=>  prog.increase_vol_scl(),
 
-					    Key::Character("[") 	=>  prog.decrease_smoothing(),
-					    Key::Character("]") 	=>  prog.increase_smoothing(),
+							Key::Character("[") 	=>  prog.decrease_smoothing(),
+							Key::Character("]") 	=>  prog.increase_smoothing(),
 
-					    Key::Character(";")		=>  prog.decrease_smoothing(),
-					    Key::Character("\'")	=> prog.increase_smoothing(),
+							Key::Character(";")		=>  prog.decrease_smoothing(),
+							Key::Character("\'")	=> prog.increase_smoothing(),
 
-					    Key::Character("\\")	=> prog.toggle_auto_switch(),
+							Key::Character("\\")	=> prog.toggle_auto_switch(),
 
-					    Key::Character("/") 	=> prog.reset_parameters(),
+							Key::Character("/") 	=> prog.reset_parameters(),
 
-					    _ => {},
-				    }
-
-			    },
+							_ => {},
+						}
+					}
+			    }
 
 			    _ => {},
 		    }

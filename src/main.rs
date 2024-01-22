@@ -1,5 +1,5 @@
 #![allow(non_snake_case)]
-// #![allow(dead_code)]
+#![allow(dead_code)]
 
 // #![allow(warnings)]
 // #![forbid(unsafe_code)]

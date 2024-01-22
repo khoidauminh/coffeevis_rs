@@ -90,8 +90,10 @@ impl std::ops::IndexMut<usize> for AudioBuffer {
 use std::ops::Range;
 
 fn write_sample<T: cpal::Sample<Float = f32>>(smp: &mut Cplx, smp_in: &[T]) {
-    smp.x = smp_in[0].to_float_sample() as f64;
-    smp.y = smp_in[1].to_float_sample() as f64;
+    unsafe { 
+		smp.x = smp_in.get_unchecked(0).to_float_sample() as f64;
+		smp.y = smp_in.get_unchecked(1).to_float_sample() as f64;
+	}
 }
 
 impl AudioBuffer {
@@ -300,8 +302,6 @@ impl AudioBuffer {
 
     pub fn normalize(&mut self) {
 		let scale_up_factor = self.normalize_factor_peak();
-
-		// println!("{}, {}", self.max, scale_up_factor);
 
 		if self.silent || scale_up_factor <= 1.0 {return}
 

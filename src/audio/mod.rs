@@ -7,6 +7,8 @@ use audio_buffer::AudioBuffer;
 use std::ops::*;
 use std::sync::{
     RwLock,
+    Mutex,
+    MutexGuard,
     atomic::{AtomicU8, Ordering},
 };
 
@@ -17,11 +19,11 @@ use crate::{
 };
 
 /// Global sample array
-pub type GSA = RwLock<AudioBuffer>;
+pub type GSA = Mutex<AudioBuffer>;
 
-pub type SampleArr = crate::WriteLock<AudioBuffer>;
+pub type SampleArr<'a> = MutexGuard<'a, AudioBuffer>;
 
-static BUFFER: GSA = RwLock::new(AudioBuffer::new());
+static BUFFER: GSA = Mutex::new(AudioBuffer::new());
 
 static NO_SAMPLE: AtomicU8 = AtomicU8::new(0);
 
@@ -70,7 +72,7 @@ pub fn read_samples<T: cpal::Sample<Float = f32>>(data: &[T]) {
     let _i = 0usize;
     let _s = 0usize;
 
-    let mut b = BUFFER.write().unwrap();
+    let mut b = BUFFER.lock().unwrap();
 
     let mut ns = get_no_sample().saturating_add(1);
 
@@ -86,8 +88,8 @@ pub fn read_samples<T: cpal::Sample<Float = f32>>(data: &[T]) {
     NO_SAMPLE.store(ns, Ordering::Relaxed);
 }
 
-pub fn get_buf() -> SampleArr {
-    BUFFER.write().unwrap()
+pub fn get_buf() -> SampleArr<'static> {
+    BUFFER.lock().unwrap()
 }
 
 pub fn get_no_sample() -> u8 {

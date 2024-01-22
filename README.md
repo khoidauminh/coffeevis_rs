@@ -25,6 +25,7 @@ Coffeevis supports temporary options at launch
 | Option | Value (example) | Description |
 | ------ | ------ | ------ |
 | --win-legacy |  | opens window with minifb (coffeevis now runs with winit by default) |
+| --x11 | | runs in X11 (Wayland is the default) |
 | --ascii<br />--block<br />--braille | | runs in the terminal |
 | --transparent | 192 | sets transparency, no value indicates full transparency (value currently ignored for now) |
 | --no-auto-switch | | disables automatic visualizer switching |

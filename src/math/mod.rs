@@ -3,6 +3,7 @@ mod fft;
 
 pub mod fast;
 pub mod rng;
+pub mod space;
 
 use std::ops;
 

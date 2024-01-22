@@ -249,6 +249,29 @@ impl Program {
 
 		self.print_message(format!("Switching to {} in list {}\r\n", vis_name, vis_list))
 	}
+	
+	pub fn change_vislist(&mut self) {
+
+		self.VIS.next_list();
+
+		let new_visualizer = self.VIS.current_vis();
+
+		self.visualizer = new_visualizer.func();
+
+		self.pix.clear();
+
+		self.reset_switch();
+
+		crate::audio::set_normalizer(new_visualizer.request());
+
+		let vis_name = self.VIS.current_vis_name();
+		let vis_list = self.VIS.current_list_name();
+
+		//println!("Switching to {}\r", self.VIS[self.VIS_IDX].1);
+		//std::io::stdout().flush().unwrap();
+
+		self.print_message(format!("Switching to {} in list {}\r\n", vis_name, vis_list))
+	}
 
 	pub fn print_message(&self, message: String) {
         use std::io::Write;
