@@ -64,7 +64,7 @@ impl<T: Copy + Clone, const N: usize> StackVec<T, N> {
 	
 	pub fn first<'a>(&self) -> Option<&T> {
 		if self.length > 0 {
-			unsafe { Some(self.get_unchecked(0)) }
+			Some(&self.buffer[0])
 		} else {
 			None
 		}
@@ -72,19 +72,19 @@ impl<T: Copy + Clone, const N: usize> StackVec<T, N> {
 	
 	pub fn last<'a>(&self) -> Option<&T> {
 		if self.length > 0 {
-			unsafe { Some(self.get_unchecked(self.length-1)) }
+			Some(&self.buffer[self.length-1])
 		} else {
 			None
 		}
 	}
-	
+	/*
 	pub unsafe fn get_unchecked(&self, i: usize) -> &T {
 		self.buffer.get_unchecked(i)
 	}
 	
 	pub unsafe fn get_unchecked_mut<'a>(&'a mut self, i: usize) -> &'a mut T {
 		self.buffer.get_unchecked_mut(i)
-	}
+	}*/
 	
 	pub fn fill(&mut self, v: T) {
 		self.buffer[0..self.length].fill(v)
@@ -99,7 +99,7 @@ where T: Copy + Clone
 		if i >= self.length {
 			Self::panic_out_of_bounds();
 		}
-		unsafe { self.buffer.get_unchecked(i) }
+		&self.buffer[i]
 	}
 }
 
@@ -110,7 +110,7 @@ where T: Copy + Clone
 		if i >= self.length {
 			Self::panic_out_of_bounds();
 		}
-		unsafe { self.buffer.get_unchecked_mut(i) }
+		&mut self.buffer[i]
 	}
 }
 

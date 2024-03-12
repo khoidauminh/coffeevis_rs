@@ -71,3 +71,106 @@ pub fn test(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleAr
     
     stream.rotate_left(h);
 }
+
+
+use crate::math;
+use crate::graphics;
+use crate::data::*;
+use std::thread;
+
+const L: usize = 1 << 8;
+const LL: usize = L+1;
+
+pub fn draw_quick_sort_iter(prog: &mut Program, stream: &mut crate::audio::SampleArr) {
+
+    static mut a: [u16; L] = [0u16; L];
+    static mut stack: Vec<(usize, usize)> = Vec::new();
+    static mut top: usize = 0;
+ 
+    static mut i: usize = 0;
+    static mut j: usize = 0;
+ 
+    static mut x: u16 = 0u16;
+    static mut l: usize = 0;
+    static mut h: usize = 0;
+ 
+    static mut label: u8 = 0;
+    static mut finished_timeout: u64 = 0; // keeps finished fft in display for 1 second
+
+    unsafe {match label {
+        0 => {
+            stack = Vec::new();
+
+            stack.push((0, L));
+
+            for _i in (0..L) {
+                a[_i] = (stream[_i << 2].mag()*65535.0) as u16;
+            }
+
+            label = 1;
+        },
+        1 => {
+            if stack.is_empty() {
+                label = 4;
+                return;
+            }
+
+            (l, h) = stack.pop().unwrap();
+
+            if h == 0 {return};
+
+            i = l;
+            x = a[h-1];
+
+            j = l;
+
+            label = 2;
+        },
+        2 => {
+            if j == h-1 {
+                a.swap(i, h-1);
+                label = 3;
+            }
+
+            if a[j] <= x {
+                a.swap(i, j);
+                i += 1;
+            }
+            j += 1;
+        },
+        3 => {
+            if i+1 < h {
+                stack.push((i+1, h));
+            }
+
+            if i-1 > l {
+                stack.push((l, i-1));
+            }
+
+            label = 1;
+        },
+        _ => {
+            finished_timeout += 1;
+            if finished_timeout >= prog.FPS {
+                finished_timeout = 0;
+                label = 0;
+            }
+        }
+    }
+
+    //println!("{}", label);
+
+    prog.pix.clear();
+    
+    for (idx, smp) in a.iter().enumerate() {
+        let ix = idx *prog.pix.width() / L;
+        let bar = (prog.pix.height() * *smp as usize / 65536);
+        let y = prog.pix.height().saturating_sub(bar);
+        let c =
+            if      idx == i    {0xFF_00_00_FF}
+            else if idx == j    {0xFF_FF_00_00}
+            else                {0xFF_FF_FF_FF};
+			prog.pix.draw_rect_wh(P2::new(ix as i32, y), 1, bar, c);
+    }
+}
+}

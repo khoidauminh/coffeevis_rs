@@ -1,14 +1,10 @@
-
-
 pub mod reader;
 pub mod vislist;
-pub mod log;
 
 use std::time::{Duration, Instant};
 use crate::modes::{Mode, console_mode::Flusher};
 
 use crate::VisFunc;
-
 
 pub const SAMPLE_RATE_MAX: usize = 384000;
 pub const SAMPLE_RATE: usize = 44100;
@@ -37,20 +33,6 @@ pub const ERR_MSG: &str = "Configration error at line";
 
 pub const DEFAULT_WIN_SCALE: u8 = 3;
 
-/// Status of the audio system.
-/// The transitional stages only exist for one iteration in the main loop.
-#[doc(hidden)]
-#[derive(Copy, Clone)]
-pub enum State {
-    /// Transitional stage, program just received audio infomation.
-    Waken = 0,
-    Active = 1,
-    /// Transitional stage, program prepares for slowdown.
-    Waiting = 2,
-    /// Slowdown.
-    Idle = 3,
-}
-
 /// Main program struct
 ///
 /// Notes:
@@ -61,18 +43,18 @@ pub enum State {
 pub struct Program
 {
     /// for experimental purposes. Console mode only.
-	pub DISPLAY: bool,
-	pub SCALE: u8,
+	DISPLAY: bool,
+	SCALE: u8,
 
 	/// Allow for resizing. Windowed mode only.
-	pub RESIZE: bool,
+	RESIZE: bool,
 	
 	/// Scaling purposes
-	pub WAYLAND: bool,
+	WAYLAND: bool,
 
 	pub pix: crate::graphics::Canvas,
 
-	pub mode: Mode,
+	mode: Mode,
 	
 	pub transparency: u8,
 	pub background: u32,
@@ -84,47 +66,22 @@ pub struct Program
 	pub SMOOTHING: f64,
 	pub ROTATE_SIZE: usize,
 
-	pub WIN_W: u16,
-	pub WIN_H: u16,
+	WIN_W: u16,
+	WIN_H: u16,
 
 	pub CON_W: u16,
 	pub CON_H: u16,
 	pub CON_MAX_W: u16,
 	pub CON_MAX_H: u16,
 
-	pub VIS: vislist::VisNavigator,
+	VIS: vislist::VisNavigator,
 
-	pub visualizer: VisFunc,
+	visualizer: VisFunc,
 	pub flusher: Flusher,
 
-	pub SWITCH: Instant,
-    pub AUTO_SWITCH: bool,
-    pub AUTO_SWITCH_ITVL: Duration,
-
-    pub motion_blur_index: u8,
-
-    /// Triggers render when is 0.
-    ///
-    /// When there is no new audio information, the program triggers
-    /// slowdown to reduce processor consumption.
-    /// Over the `audio` module, there is an u8 global variable called
-    /// `NO_SAMPLE`. Everytime audio input returns silence, `NO_SAMPLE`
-    /// is incremented, saturating at 255. When there's new audio,
-    /// it's immediately dropped back to 0.
-    ///
-    /// `render_trigger` is incremented in every iteration of the main
-    /// loop and wraps around if it exceeds NO_SAMPLE. On active state,
-    /// NO_SAMPLE is 0 and therefore program renders at every loop
-    /// iteration.
-    ///
-    /// This is to reduce processor power when the program is idle,
-    /// while keeping the main loop and input evaluation running at
-    /// low latency.
-    render_trigger: u8,
-    pub state: State,
-
-    pub msg: Result<(), String>,
-    pub msg_timeout: u64,
+	SWITCH: Instant,
+    AUTO_SWITCH: bool,
+    AUTO_SWITCH_ITVL: Duration,
 }
 
 impl Program {
@@ -169,15 +126,15 @@ impl Program {
 			CON_H: 25,
 		    CON_MAX_W: 50,
             CON_MAX_H: 25,
-
-			render_trigger: 0u8,
-			state: State::Waiting,
-
-			msg: Ok(()),
-			msg_timeout: 0,
-
-			motion_blur_index: 0,
 		}
+	}
+	
+	pub fn is_display_enabled(&self) -> bool {
+		self.DISPLAY
+	}
+	
+	pub fn is_wayland(&self) -> bool {
+		self.WAYLAND
 	}
 
 	pub fn as_con(mut self) -> Self {
@@ -192,14 +149,6 @@ impl Program {
 		 self.set_con_mode(mode);
 		 self
 	}
-    /*
-	pub fn as_win(mut self) -> Self {
-		self.pix.width() = DEFAULT_SIZE_WIN as usize;
-		self.pix.height() = DEFAULT_SIZE_WIN as usize;
-		self.mode = Mode::Win;
-		self.refresh();
-		self
-	}*/
 
 	pub fn as_win(mut self) -> Self {
 		self.pix.resize(
@@ -223,6 +172,15 @@ impl Program {
 
 			self.change_visualizer(true);
 		}
+	}
+	
+	pub fn change_fps(&mut self, amount: i16, replace: bool) {
+		self.FPS =
+			((self.FPS * (!replace) as u64) as i16 + amount)
+			.clamp(1, 144_i16)
+			as u64
+			;
+		self.REFRESH_RATE = std::time::Duration::from_micros(1_000_000 / self.FPS);
 	}
 
 	pub fn change_visualizer(&mut self, forward: bool) {
@@ -266,10 +224,7 @@ impl Program {
 
 		let vis_name = self.VIS.current_vis_name();
 		let vis_list = self.VIS.current_list_name();
-
-		//println!("Switching to {}\r", self.VIS[self.VIS_IDX].1);
-		//std::io::stdout().flush().unwrap();
-
+		
 		self.print_message(format!("Switching to {} in list {}\r\n", vis_name, vis_list))
 	}
 
@@ -332,87 +287,21 @@ impl Program {
 
 	pub fn refresh(&mut self) {
 		match &self.mode {
-			Mode::Win | Mode::WinLegacy => self.pix.resize(self.WIN_W as usize, self.WIN_H as usize),
-
-			_ 			=> self.pix.resize(self.CON_W as usize, self.CON_H as usize),
+			Mode::Win | Mode::WinLegacy 
+				=> self.pix.resize(self.WIN_W as usize, self.WIN_H as usize),
+			_ 	=> self.pix.resize(self.CON_W as usize, self.CON_H as usize),
 		}
-
-		// self.pix.update();
 	}
-
-	pub fn timed_clear(&mut self) {
-	    if self.motion_blur_index == 0 { self.pix.clear() }
-	    else { self.pix.fade(192) }
-	    self.motion_blur_index = 
-			crate::math::increment(
-				self.motion_blur_index,
-				DEFAULT_FPS / self.FPS as u8
-			);
-	}
-    /*
-	pub fn advance_timer(&mut self) {
-	}*/
-
-    /// Automatically renders on trigger.
-	pub fn render(&mut self) {
-        self.update_timer();
-        if self.render_trigger() {
-            self.force_render();
-        }
-	}
-
-    pub fn render_trigger(&self) -> bool {
-        // crate::audio::get_no_sample() >
-        self.render_trigger == 0
-    }
-
-    pub fn update_timer(&mut self) {
-        let sample = crate::audio::get_no_sample();
-
-        if sample == 255 {
-            self.render_trigger = 255;
-            return;
-        }
-
-        self.render_trigger =
-			crate::math::increment(
-				self.render_trigger,
-                sample >> 3
-			);
-    }
 
 	pub fn force_render(&mut self) {
 		let mut buf = crate::audio::get_buf();
 
 	    // if self.render_trigger == 0 {
 			(self.visualizer)(self, &mut buf);
+			self.pix.draw_to_self();
 		//}
 	}
 
-	pub fn get_state(&self) -> State {
-        self.state
-	}
-
-	pub fn update_state(&mut self) {
-        use State::*;
-        let silence = crate::audio::get_no_sample() > SILENCE_LIMIT;
-        self.state = match (silence, &self.state) {
-            (true, Active)   => Waiting,
-
-            (true, Waiting)  => Idle,
-
-            (true, Waken) | (true, Idle)
-                             => Idle,
-
-            (false, Waken)   => Waken,
-
-            (false,  Active) => self.state,
-
-            (false, Waiting) | (false, Idle)
-                             => Waken,
-        }
-	}
-	
 	pub fn increase_vol_scl(&mut self) {
 		self.VOL_SCL = (self.VOL_SCL / 1.2).clamp(0.0, 10.0);
 	}
@@ -450,5 +339,49 @@ impl Program {
 		self.VOL_SCL = DEFAULT_VOL_SCL;
 		self.SMOOTHING = DEFAULT_SMOOTHING;
 		self.WAV_WIN = DEFAULT_WAV_WIN;
-	} 
+	}
+	
+	pub fn switch_con_mode(&mut self) {
+		// self.mode.next_con();
+
+		self.mode = match self.mode {
+			Mode::ConAlpha => {
+				self.flusher = Program::print_block;
+				Mode::ConBlock
+			},
+			Mode::ConBlock => {
+				self.flusher = Program::print_brail;
+				Mode::ConBrail
+			},
+			Mode::ConBrail => {
+				self.flusher = Program::print_alpha;
+				Mode::ConAlpha
+			},
+
+			Mode::Win       => Mode::Win,
+			Mode::WinLegacy => Mode::WinLegacy,
+		};
+
+		self.refresh_con();
+	}
+	
+	#[allow(dead_code)]
+	pub fn set_con_mode(&mut self, mode: Mode) {
+		match mode {
+			Mode::ConAlpha => self.flusher = Program::print_alpha,
+			Mode::ConBlock => self.flusher = Program::print_block,
+			Mode::ConBrail => self.flusher = Program::print_brail,
+			_ => {},
+		}
+		self.mode = mode;
+		self.refresh_con();
+	}
+	
+	pub fn mode(&self) -> Mode {
+		self.mode
+	}
+	
+	pub fn scale(&self) -> u8 {
+		self.SCALE
+	}
 }

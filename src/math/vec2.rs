@@ -71,60 +71,6 @@ impl Mul<Vec2<f64>> for f64 {
     }
 }
 
-/*
-impl Mul<i32> for Vec2<i32> {
-    type Output = Vec2<i32>;
-    
-    fn mul(self, other: i32) -> Vec2<i32> {
-        
-    }
-}*/
-
-/*
-impl<T: 'static> AddAssign for Vec2<T>
-where &'static mut Vec2<T>: std::ops::Add<Vec2<T>, Output = &'static mut Vec2<T>>, T: Copy
-{
-	fn add_assign(&mut self, other: Vec2<T>)
-	{
-		self = self + other;
-	}
-}
-
-impl<T: 'static> SubAssign for Vec2<T>
-where &'static mut Vec2<T>: std::ops::Sub<Vec2<T>, Output = &'static mut Vec2<T>>, T: Copy
-{
-	fn sub_assign(&mut self, other: Vec2<T>)
-	{
-		self = self - other;
-	}
-}
-
-impl<T: 'static> MulAssign for Vec2<T>
-where &'static mut Vec2<T>: std::ops::Mul<Vec2<T>, Output = &'static mut Vec2<T>>, T: Copy
-{
-	fn mul_assign(&mut self, other: Vec2<T>)
-	{
-		self = self * other;
-	}
-}*/
-
-/*
-impl<T: Copy> Vec2<T> {
-	pub const fn zero() -> Vec2<f64> {
-		Vec2::<f64> {
-			x: 0.0,
-			y: 0.0
-		}
-	}
-	
-	pub const fn zeroi() -> Vec2<i32> {
-		Vec2::<i32> {
-			x: 0,
-			y: 0
-		}
-	}
-}*/
-
 impl<T> Vec2<T>
 where T: 
 	std::default::Default + 

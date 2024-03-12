@@ -15,9 +15,9 @@ readme = "README.md"
 cpal = "0.15.2"
 minifb = "0.25"
 crossterm = "0.27.0"
-softbuffer = "0.4.0"
+softbuffer = "0.4.1"
 # fps_clock = "2.0.0"
-winit = { version = "0.29.9", features = ["rwh_05"] }
+winit = { version = "0.29", features = ["rwh_05"] }
 
 [features]
 benchmark = []
@@ -26,7 +26,7 @@ benchmark = []
 overflow-checks = false
 
 [profile.release]
-opt-level = 'z'     # Optimize for size
+opt-level = 3     # Optimize for size
 # lto = true          # Enable link-time optimization
 codegen-units = 1   # Reduce number of codegen units to increase optimizations
 panic = 'abort'     # Abort on panic

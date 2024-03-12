@@ -103,13 +103,29 @@ pub fn compute_fft_iterative(a: &mut [Cplx]) {
 	//~ const FIST_ROOT_ANGLE: f64 = -0.0625 * std::f64::consts::TAU;
 
     let mut window = 16usize;
-    //~ let mut root_angle = FIST_ROOT_ANGLE;
 	let mut depth = 4;
+
+	use std::sync::RwLock;
+	
+	// 0, 1, 2, 3, 4
+	// 1, 2, 4, 8, 16
+	pub static FAST_TWIDDLES: RwLock<[Cplx; 16]> = RwLock::new([Cplx::zero(); 16]);
+	static ONCE: std::sync::Once = std::sync::Once::new();
+		
+	ONCE.call_once(|| {
+		let mut twiddles = FAST_TWIDDLES.write().unwrap();
+		for i in 0..16 {
+			let x = -std::f64::consts::TAU / (1 << i) as f64;
+			twiddles[i] = super::fft::twiddle(x);
+		}
+	});
+	let fast_twiddle = FAST_TWIDDLES.read().unwrap();
+
 
     while window <= length {
 
         //~ let root = twiddle(root_angle);
-		let root = super::fast::twiddle(depth);
+		let root = fast_twiddle[depth];
 
         a.chunks_exact_mut(window).for_each(|chunk| {
             let (left, right) = chunk.split_at_mut(window / 2);

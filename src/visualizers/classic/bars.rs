@@ -23,7 +23,7 @@ fn dynamic_smooth2(t: f64, b: f64) -> f64 {
 	(b*t + 1.3).recip()
 }
 
-fn prepare(stream: &mut crate::audio::SampleArr, bar_num: usize, volume_scale: f64) {
+fn prepare(stream: &mut crate::audio::SampleArr, bar_num: usize, volume_scale: f64, prog_smoothing: f64) {
 	let bar_num = bar_num +1;
 	
 	let bnf = bar_num as f64;
@@ -59,14 +59,14 @@ fn prepare(stream: &mut crate::audio::SampleArr, bar_num: usize, volume_scale: f
         .enumerate()
         .map(|(i, smp)| {
 		    let scl = ((i+2) as f64).log2().powi(2);
-		    let smp_f64: f64 = (*smp).into();
+		    let smp_f64: f64 = (*smp).mag();
 		    smp_f64 * (volume_scale * scl)
 	    })
 	    .collect::<Vec<f64>>();
 	
 	//*max = math::normalize_max_cplx(&mut data_f, 0.01, 0.7, *max, 0.0035);
 	
-	crate::audio::limiter(&mut data_f[..bar_num], 0.9, 10, 0.98);
+	crate::audio::limiter(&mut data_f[..bar_num], 0.9, 10, 0.98, |x| x);
 	
 	//let scale_factor = stream.normalize_factor_peak()*FFT_SIZE_RECIP*7.0;
     
@@ -79,8 +79,8 @@ fn prepare(stream: &mut crate::audio::SampleArr, bar_num: usize, volume_scale: f
     .enumerate()
     .for_each(|(i, (w, r))| {
 		let i_ = i as f64 * bnf;
-		let dynamic_smoothing = 0.1 - 0.05 * i_;
-        *w = math::interpolate::multiplicative_fall(*w, *r, 0.0, dynamic_smoothing);
+		let smoothing = (0.095 - 0.055 * i_) * prog_smoothing;
+        *w = math::interpolate::multiplicative_fall(*w, *r, 0.0, smoothing);
 		
 		// *w = math::interpolate::linearf(*w, *r, dynamic_smoothing+0.25);
 	});
@@ -99,7 +99,7 @@ pub fn draw_bars(
 	let bnf_recip = 1.0 / bnf;
 	let _l = stream.len();
 
-	prepare(stream, bar_num, prog.VOL_SCL);
+	prepare(stream, bar_num, prog.VOL_SCL, prog.SMOOTHING);
 
 	let LOCAL = DATA.write().unwrap();
 
@@ -151,7 +151,7 @@ pub fn draw_bars(
 			),
 			2,
 			bar,
-			u32::from_be_bytes([0xFF, 0xFF, (fade /4 *3).max(peak), 0])
+			u32::from_be_bytes([0xFF, 0xFF, (fade).max(peak), 0])
 		);
 
 		smoothed_smp = 0.0;
@@ -175,7 +175,7 @@ pub fn draw_bars_circle(
 	let wh = prog.pix.width() as i32 / 2;
 	let hh = prog.pix.height() as i32 / 2;
 
-	prepare(stream, bar_num, prog.VOL_SCL);
+	prepare(stream, bar_num, prog.VOL_SCL, prog.SMOOTHING);
 
 	let LOCAL = DATA.write().unwrap();
 

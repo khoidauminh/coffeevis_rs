@@ -69,7 +69,7 @@ pub fn random_float(bound: f64) -> f64 {
 	
 	a = a.sin();
 	
-	a = (a * 12427.0);
+	a *= 12427.0;
 	
 	*VAR.lock().unwrap() = a % 1.5707962;
 	

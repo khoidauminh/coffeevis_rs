@@ -76,24 +76,21 @@ impl<'a> Iterator for AudioBufferIterator<'a> {
 impl std::ops::Index<usize> for AudioBuffer {
     type Output = Cplx;
     fn index(&self, index: usize) -> &Self::Output {
-        // Unsafe allowed because this cannot fail.
-        unsafe{self.buffer.get_unchecked(index.wrapping_add(self.offset)&SIZE_MASK)}
+        &self.buffer[index.wrapping_add(self.offset)&SIZE_MASK]
     }
 }
 
 impl std::ops::IndexMut<usize> for AudioBuffer {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        unsafe{self.buffer.get_unchecked_mut(index.wrapping_add(self.offset)&SIZE_MASK)}
+		&mut self.buffer[index.wrapping_add(self.offset)&SIZE_MASK]
     }
 }
 
 use std::ops::Range;
 
-fn write_sample<T: cpal::Sample<Float = f32>>(smp: &mut Cplx, smp_in: &[T]) {
-    unsafe { 
-		smp.x = smp_in.get_unchecked(0).to_float_sample() as f64;
-		smp.y = smp_in.get_unchecked(1).to_float_sample() as f64;
-	}
+fn write_sample<T: cpal::Sample<Float = f32>>(smp: &mut Cplx, smp_in: &[T]) {	
+	smp.x = smp_in[0].to_float_sample() as f64;
+	smp.y = smp_in[1].to_float_sample() as f64;
 }
 
 impl AudioBuffer {
@@ -235,7 +232,7 @@ impl AudioBuffer {
         .chunks_exact(2)
         .enumerate()
         .for_each(|(_i, chunk)| {
-            let smp = &mut unsafe{self.buffer.get_unchecked_mut(self.write_point)};
+            let smp = &mut self.buffer[self.write_point];
             write_sample(smp, chunk);
 
 			let left  = fast::abs(smp.x);
@@ -260,7 +257,7 @@ impl AudioBuffer {
         .chunks_exact(2)
         .enumerate()
         .for_each(|(_i, chunk)| {
-            let smp = &mut unsafe{self.buffer.get_unchecked_mut(self.write_point)};
+            let smp = &mut self.buffer[self.write_point];
             write_sample(smp, chunk);
 
 			let left  = fast::abs(smp.x);
@@ -308,7 +305,7 @@ impl AudioBuffer {
 		let mut write_point = self.index_sub(self.write_point, self.input_size);
 
         for _ in 0..self.input_size {
-            let smp = unsafe {self.buffer.get_unchecked_mut(write_point)};
+            let smp = &mut self.buffer[write_point];
             *smp = smp.scale(scale_up_factor);
             write_point = self.index_add(write_point, 1);
         }

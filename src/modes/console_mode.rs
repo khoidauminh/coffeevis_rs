@@ -9,6 +9,7 @@ use crossterm::{
         EnterAlternateScreen,
         LeaveAlternateScreen
     },
+    event::{poll, read, Event, KeyCode},
     style::{
 		Stylize, Print, Color, 
 		Attribute, SetAttribute,
@@ -23,7 +24,6 @@ use std::{io::{Stdout, stdout, Write}};
 use crate::{
     graphics::grayb,
     data::*,
-    controls::{control_key_events_con},
     modes::Mode,
 };
 
@@ -130,8 +130,8 @@ trait StyledLine {
 	fn queue_print(&self);
 }
 
-/// WARNING: DO NOT CALL new() ON THIS VEC,
-/// THIS WILL TRIGGER SEGMENTATION FAULT
+/// WARNING: Don't call new on this vec.
+/// This will trigger an unwrap to None panic.
 impl StyledLine for Vec<ColoredString> {
 	fn init() -> Self {
 		vec![ColoredString::new('\0', [0; 3], 4)]
@@ -145,7 +145,7 @@ impl StyledLine for Vec<ColoredString> {
 	fn push_pixel(&mut self, ch: char, fg: [u8; 3]) {
 		
 		if
-			unsafe{self.last_mut().unwrap_unchecked().append(ch, fg)}
+			self.last_mut().unwrap().append(ch, fg)
 		{
 			return
 		}
@@ -156,7 +156,7 @@ impl StyledLine for Vec<ColoredString> {
 	fn push_pixel_bg(&mut self, ch: char, fg: [u8; 3], bg: [u8; 3]) {
 		
 		if
-			unsafe{self.last_mut().unwrap_unchecked().append_bg(ch, fg, bg)}
+			self.last_mut().unwrap().append_bg(ch, fg, bg)
 		{
 			return
 		}
@@ -196,43 +196,7 @@ impl Program {
 		self.CON_MAX_H = self.CON_MAX_W >> 1;
 		self.clear_con();
 	}
-
-	pub fn switch_con_mode(&mut self) {
-		// self.mode.next_con();
-
-		self.mode = match self.mode {
-			Mode::ConAlpha => {
-				self.flusher = Program::print_block;
-				Mode::ConBlock
-			},
-			Mode::ConBlock => {
-				self.flusher = Program::print_brail;
-				Mode::ConBrail
-			},
-			Mode::ConBrail => {
-				self.flusher = Program::print_alpha;
-				Mode::ConAlpha
-			},
-
-			Mode::Win       => Mode::Win,
-			Mode::WinLegacy => Mode::WinLegacy,
-		};
-
-		self.refresh_con();
-	}
 	
-	#[allow(dead_code)]
-	pub fn set_con_mode(&mut self, mode: Mode) {
-		match mode {
-			Mode::ConAlpha => self.flusher = Program::print_alpha,
-			Mode::ConBlock => self.flusher = Program::print_block,
-			Mode::ConBrail => self.flusher = Program::print_brail,
-			_ => {},
-		}
-		self.mode = mode;
-		self.refresh_con();
-	}
-
 	pub fn refresh_con(&mut self) {
 		self.update_size((self.CON_W, self.CON_H));
 	}
@@ -379,7 +343,7 @@ impl Program {
 						// be used to increase performance
 					}) as u32;
 
-				line.push_pixel(unsafe { char::from_u32_unchecked(bx) }, [r, g, b]);
+				line.push_pixel(char::from_u32(bx).unwrap(), [r, g, b]);
 			}
 			
 			line.queue_print();
@@ -403,7 +367,7 @@ impl Program {
 
 fn to_ascii_art<T>(table: &[u8], x: T) -> char
 where usize: From<T> {
-    unsafe{*table.get_unchecked((usize::from(x) * table.len()) >> 8) as char}
+    table[(usize::from(x) * table.len()) >> 8] as char
 }
 
 #[allow(dead_code)]
@@ -415,7 +379,7 @@ pub fn rescale(mut s: (u16, u16), prog: &Program) -> (u16, u16) {
 	s.0 = s.0.min(prog.CON_MAX_W);
     s.1 = s.1.min(prog.CON_MAX_H);
 
-	match prog.mode {
+	match prog.mode() {
 		Mode::ConBrail => {
 			s.0 *= 2;
 			s.1 *= 4;
@@ -427,6 +391,72 @@ pub fn rescale(mut s: (u16, u16), prog: &Program) -> (u16, u16) {
 	}
 
     s
+}
+
+pub fn control_key_events_con(
+    prog: &mut Program,
+    exit: &mut bool
+) -> std::io::Result<()> {
+	prog.update_vis();
+
+	let refresh_rates = [prog.REFRESH_RATE, prog.REFRESH_RATE*10, prog.REFRESH_RATE*50];
+	let no_sample = crate::audio::get_no_sample();
+	let inactive = (no_sample > 64) as u8 + (no_sample > 192) as u8; 
+
+    if poll(refresh_rates[inactive as usize])? {
+        match read()? {
+            Event::Key(event) => match event.code {
+                KeyCode::Char(' ') if event.modifiers == crossterm::event::KeyModifiers::CONTROL
+                                   =>   prog.change_visualizer(false),
+
+                KeyCode::Char(' ') =>   prog.change_visualizer(true),
+
+                KeyCode::Char('q') =>   *exit = true,
+
+                KeyCode::Char('1') =>   prog.change_fps(10, true),
+                KeyCode::Char('2') =>   prog.change_fps(20, true),
+                KeyCode::Char('3') =>   prog.change_fps(30, true),
+                KeyCode::Char('4') =>   prog.change_fps(40, true),
+                KeyCode::Char('5') =>   prog.change_fps(50, true),
+                KeyCode::Char('6') =>   prog.change_fps(60, true),
+
+                KeyCode::Char('7') =>   prog.change_fps(-5, false),
+                KeyCode::Char('8') =>   prog.change_fps( 5, false),
+                KeyCode::Char('9') =>   prog.change_con_max(-1, false),
+                KeyCode::Char('0') =>   prog.change_con_max(1, false),
+
+                KeyCode::Char('-') =>   prog.VOL_SCL = (prog.VOL_SCL / 1.2).clamp(0.0, 10.0),
+                KeyCode::Char('=') =>   prog.VOL_SCL = (prog.VOL_SCL * 1.2).clamp(0.0, 10.0),
+
+                KeyCode::Char('[') =>   prog.SMOOTHING = (prog.SMOOTHING - 0.05).clamp(0.0, 0.95),
+                KeyCode::Char(']') =>   prog.SMOOTHING = (prog.SMOOTHING + 0.05).clamp(0.0, 0.95),
+
+                KeyCode::Char(';') =>   prog.WAV_WIN = (prog.WAV_WIN - 3).clamp(3, 50),
+                KeyCode::Char('\'') =>  prog.WAV_WIN = (prog.WAV_WIN + 3).clamp(3, 50),
+
+                KeyCode::Char('\\') =>  prog.toggle_auto_switch(),
+
+                KeyCode::Char('.') => prog.switch_con_mode(),
+                // KeyCode::Char(',') => change_charset(prog),
+
+                KeyCode::Char('/') => {
+					prog.VOL_SCL = DEFAULT_VOL_SCL;
+					prog.SMOOTHING = DEFAULT_SMOOTHING;
+					prog.WAV_WIN = DEFAULT_WAV_WIN;
+                    prog.change_con_max(50, true);
+                    prog.change_fps(DEFAULT_FPS as i16, true);
+                }
+
+                _ => {},
+            },
+            Event::Resize(w, h) => {
+  				prog.update_size((w, h));
+                prog.clear_con();
+            },
+            _ => {},
+        }
+    }
+    Ok(())
 }
 
 pub fn con_main(mut prog: Program) -> std::io::Result<()> {
@@ -441,10 +471,10 @@ pub fn con_main(mut prog: Program) -> std::io::Result<()> {
     prog.update_size(size);
 
 
-	if !prog.DISPLAY {
+	if !prog.is_display_enabled() {
 		while !EXIT {
 			control_key_events_con(&mut prog, &mut EXIT)?;
-			prog.render();
+			prog.force_render();
 		}
 	} else {
 		let _ = queue!(
@@ -454,9 +484,9 @@ pub fn con_main(mut prog: Program) -> std::io::Result<()> {
 		);
 		while !EXIT {
 			control_key_events_con(&mut prog, &mut EXIT)?;
-			prog.render();
+			prog.force_render();
 			prog.print_con();
-			prog.print_err_con();
+			// prog.print_err_con();
 
 			let _ = stdout.flush();
 		}

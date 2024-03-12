@@ -19,7 +19,22 @@ Windows, MacOS and BSD support is not available.
 ## Installation
 Run `cargo install coffeevis`
 
-## Usage
+## Configuration
+
+Coffeevis does not remember settings and does not generate config files 
+(feature won't be implemented unless requested).
+
+To get around this, make a user script that runs coffeevis with flags
+
+E.g:
+```
+#!/bin/bash
+
+/path/to/coffeevis --fps 60 --no-auto-switch --size 40x40
+
+``` 
+
+## Flags 
 Coffeevis supports temporary options at launch
 
 | Option | Value (example) | Description |
@@ -27,7 +42,7 @@ Coffeevis supports temporary options at launch
 | --win-legacy |  | opens window with minifb (coffeevis now runs with winit by default) |
 | --x11 | | runs in X11 (Wayland is the default) |
 | --ascii<br />--block<br />--braille | | runs in the terminal |
-| --transparent | 192 | sets transparency, no value indicates full transparency (value currently ignored for now) |
+| --transparent | 192 | sets transparency, no value indicates full transparency. Currently does not work properly |
 | --no-auto-switch | | disables automatic visualizer switching |
 | --size | 80x80 | sets resolution in window mode |
 | --scale | 2 | upscales in window mode |
@@ -38,6 +53,14 @@ Coffeevis supports temporary options at launch
 Currently reading from a file is not supported. It is recommended to launch coffeevis in a script.
 
 ## Notes
+
+Upon launch coffeevis will grab your default audio source, use an audio 
+config tool to direct your desired source to coffeevis (e.g. `pavucontrol`). I don't know how to fix this yet.
+
+On Wayland, coffeevis cannot set itself on top so you will have to rely on external tool. For example, on KDE Plasma, you can use the window rules feature to do that. 
+
+When input is quiet, the visualizer will try to amplify the input so that the visualizers don't become boring.
+
 Coffeevis prints text directly to stdout, rendering may be heavy depending on your terminal.
 
 A terminal with GPU-accelerated support is recommended (i.e Alacritty, Kitty, Wezterm, ...)

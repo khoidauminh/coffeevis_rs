@@ -13,7 +13,7 @@ pub const PIH: f64 = PI*0.5;
 pub const TAU_RECIP: f64 = 1.0 / TAU;
 pub const ZERO: Cplx = Cplx { x: 0.0, y: 0.0 };
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct Vec2<T: Copy + Clone> {
 	pub x: T,
 	pub y: T
@@ -323,7 +323,7 @@ pub fn fft_scale_up(i: usize, bound: usize) -> f64 {
 	const PAD_HIGH: usize = 4;
 	((((i + PAD_LOW) * (bound+PAD_HIGH - i)) >> 7) +1) as f64
 }
-
+/*
 pub mod blackmannuttall {
 	use crate::FFT_SIZE;
 	use super::Cplx;
@@ -382,3 +382,4 @@ pub mod blackmannuttall {
 		a0 + a1* (2.0 * x).cos() + a2 * (4.0 * x).cos() + a3 * (6.0 * x).cos()
 	}
 }
+*/

@@ -1,5 +1,3 @@
-use super::*;
-
 // Now, before you make a judgement that these extreme optimizations 
 // are a waste of time, this my personal audio visualizer, in which 
 // accuracy is the least concern. The visualizer operates at low 
@@ -36,23 +34,6 @@ pub fn copysign(x: f64, sign: u64) -> f64 {
 #[inline]
 pub fn sign(x: f64) -> u64 {
 	to_bits(x) & 0x8000_0000_0000_0000
-}
-
-pub fn twiddle(depth: usize) -> Cplx {
-	// 0, 1, 2, 3, 4
-	// 1, 2, 4, 8, 16
-	pub static mut TWIDDLES_: [Cplx; 16] = [Cplx::zero(); 16];
-	static ONCE: std::sync::Once = std::sync::Once::new();
-
-	unsafe {
-		ONCE.call_once(|| {
-			for i in 0..16 {
-				let x = -std::f64::consts::TAU / (1 << i) as f64;
-				TWIDDLES_[i] = super::fft::twiddle(x);
-			}
-		});
-		*TWIDDLES_.get_unchecked(depth)
-	}
 }
 
 pub fn sin_norm(x: f64) -> f64 {

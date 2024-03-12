@@ -46,19 +46,9 @@ pub fn prepare_image(file: &[u8]) -> Image {
 	)
 }*/
 
-use std::iter::{Iterator};
-
 impl Program {
-	pub fn write_err<E: std::error::Error>(&mut self, l: usize, err: E) {
-		self.msg = Err(format!("{} {}: {}", crate::data::ERR_MSG, l, err));
-	}
 
-	pub fn write_err_msg(&mut self, l: usize, err: &str) {
-		self.msg = Err(format!("{} {}: {}", crate::data::ERR_MSG, l, err));
-	}
-
-	pub fn eval_args(mut self, args: &mut dyn Iterator<Item = &String>) -> Self
-	{
+	pub fn eval_args(mut self, args: &mut dyn Iterator<Item = &String>) -> Self {
 		use crate::{
 			modes::Mode::*,
 			data::*
@@ -186,47 +176,17 @@ impl Program {
 		self.pix.background |= u32::from_be_bytes(color);
 		self.pix.background = self.pix.background.set_alpha(self.transparency).premultiply();
 		
-		if !self.WAYLAND {
+		if std::env::var("WAYLAND_DISPLAY").is_err() {
+			
+			self.WAYLAND = false;
+			
+		} else if !self.WAYLAND {
 			std::env::set_var("WAYLAND_DISPLAY", "");
 		}
 		
 		// println!("Backround: {:x}", self.pix.background);
 
 		self
-	}
-
-	pub fn print_err_con(&mut self) {
-		use crossterm::{
-			queue,
-			cursor::{self},
-			style::{Colors, SetColors, Print, Color},
-		};
-
-
-		let mut stdout = std::io::stdout();
-
-		match &self.msg {
-			Ok(()) => {},
-
-			Err(string) => {
-				let _ = queue!(
-					stdout,
-					cursor::MoveTo(0, 0),
-						SetColors(Colors::new(
-						Color::White,
-						Color::Reset
-					)),
-					Print(string)
-				);
-				if (self.msg_timeout >> 2) > self.FPS {
-					self.msg = Ok(());
-					self.clear_con();
-					self.msg_timeout = 0;
-				} else {
-					self.msg_timeout += 1;
-				}
-			}
-		}
 	}
 
 	pub fn print_startup_info(&self) {

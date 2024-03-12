@@ -1,7 +1,7 @@
 pub mod console_mode;
 pub mod windowed_mode;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Mode {
 	Win,
     WinLegacy,

@@ -1,24 +1,94 @@
-use minifb::{self};
 
 use std::{
 	thread,
 	sync::{Arc, atomic::{Ordering::Relaxed, AtomicBool}}
 };
 
-use crate::{
-	data::*,
-	controls,
-};
+use crate::data::*;
 
-//~ use fps_clock;
+use minifb::{Window, WindowOptions};
 
+pub fn init_window(prog: &Program) -> Result<Window, minifb::Error> {
+	std::env::set_var("GDK_BACKEND", "x11");
+
+	let mut win = Window::new(
+        "kvis",
+        prog.pix.width()*prog.scale() as usize,
+        prog.pix.height()*prog.scale() as usize,
+        WindowOptions {
+            // resize: prog.RESIZE,
+            topmost: true,
+            borderless: false,
+            transparency: false,
+            scale_mode: minifb::ScaleMode::UpperLeft,
+            ..WindowOptions::default()
+        },
+    )?;
+
+	if cfg!(not(feature = "benchmark")) {
+	    win.limit_update_rate(Some(prog.REFRESH_RATE));
+	}
+
+    Ok(win)
+}
+
+pub fn control_key_events_win_legacy(
+    win: &mut minifb::Window,
+    prog: &mut Program,
+) {
+	use minifb::{Key, KeyRepeat};
+	
+    let fps_change = false;
+
+    prog.update_vis();
+    
+    win.get_keys_pressed(KeyRepeat::No).iter().for_each(|key|
+        match key {
+            Key::Space => prog.change_visualizer(true),
+
+            //~ Key::Key1 =>  { change_fps(prog, 10, true); fps_change = true; },
+            //~ Key::Key2 =>  { change_fps(prog, 20, true); fps_change = true; },
+            //~ Key::Key3 =>  { change_fps(prog, 30, true); fps_change = true; },
+            //~ Key::Key4 =>  { change_fps(prog, 40, true); fps_change = true; },
+            //~ Key::Key5 =>  { change_fps(prog, 50, true); fps_change = true; },
+            //~ Key::Key6 =>  { change_fps(prog, 60, true); fps_change = true; },
+
+            //~ Key::Key7 =>  { change_fps(prog, -5, false); fps_change = true; },
+            //~ Key::Key8 =>  { change_fps(prog,  5, false); fps_change = true; },
+
+            Key::Minus =>   prog.VOL_SCL = (prog.VOL_SCL / 1.2).clamp(0.0, 10.0),
+            Key::Equal =>   prog.VOL_SCL = (prog.VOL_SCL * 1.2).clamp(0.0, 10.0),
+
+            Key::LeftBracket =>   prog.SMOOTHING = (prog.SMOOTHING - 0.05).clamp(0.0, 0.95),
+            Key::RightBracket =>   prog.SMOOTHING = (prog.SMOOTHING + 0.05).clamp(0.0, 0.95),
+
+            Key::Semicolon =>   prog.WAV_WIN = (prog.WAV_WIN - 3).clamp(3, 50),
+            Key::Apostrophe =>  prog.WAV_WIN = (prog.WAV_WIN + 3).clamp(3, 50),
+
+            Key::Backslash =>  prog.toggle_auto_switch(),
+
+            Key::Slash => {
+                prog.VOL_SCL = DEFAULT_VOL_SCL;
+                prog.SMOOTHING = DEFAULT_SMOOTHING;
+                prog.WAV_WIN = DEFAULT_WAV_WIN;
+                // change_fps(prog, 144, true);
+            }
+
+            _ => {},
+        }
+    );
+
+    if fps_change {
+        win.limit_update_rate(Some(prog.REFRESH_RATE));
+    }
+}
 
 pub fn win_legacy_main(mut prog: Program) -> Result<(), minifb::Error> {
 
-    let mut win = controls::init_window(&prog)?;
+    let mut win = init_window(&prog)?;
     win.topmost(true);
 
-    let scale = prog.SCALE as usize;
+    let scale = prog.scale() as usize;
 
     while win.is_open() && !win.is_key_down(minifb::Key::Q) {
         let s = win.get_size();
@@ -30,13 +100,13 @@ pub fn win_legacy_main(mut prog: Program) -> Result<(), minifb::Error> {
             prog.update_size_win(s);
         }
 
-        controls::control_key_events_win(&mut win, &mut prog);
+        control_key_events_win_legacy(&mut win, &mut prog);
 
-        prog.update_timer();
+        // prog.update_timer();
 
-        prog.update_state();
+        // prog.update_state();
 
-        if !prog.render_trigger() {
+        if crate::audio::get_no_sample() > 64 {
             win.update();
             continue;
         }
@@ -71,13 +141,15 @@ use winit::{
 		WindowEvent,
 	},
 	platform::modifier_supplement::KeyEventExtModifierSupplement,
-	keyboard::{Key, ModifiersState, NamedKey::{Escape, Space}},
+	keyboard::{Key, /*ModifiersState,*/ NamedKey::{Escape, Space}},
 	event_loop::EventLoop,
 	window::WindowBuilder,
 	dpi::LogicalSize
 };
 
 use std::num::NonZeroU32;
+
+// static VID_BUFFER: RefCell<Option<&mut [u32]>> = RefCell::new(None);
 
 pub fn win_main_winit(mut prog: Program) -> Result<(), &'static str> {
 
@@ -86,12 +158,12 @@ pub fn win_main_winit(mut prog: Program) -> Result<(), &'static str> {
 		prog.pix.height() as u32
 	);
 
-	if prog.WAYLAND {
-		size.0 *= prog.SCALE as u32;
-		size.1 *= prog.SCALE as u32;
+	if prog.is_wayland() {
+		size.0 *= prog.scale() as u32;
+		size.1 *= prog.scale() as u32;
 	}
 
-	std::env::set_var("WINIT_X11_SCALE_FACTOR", prog.SCALE.to_string());
+	std::env::set_var("WINIT_X11_SCALE_FACTOR", prog.scale().to_string());
 
 	let event_loop = EventLoop::new().unwrap();
 
@@ -110,6 +182,7 @@ pub fn win_main_winit(mut prog: Program) -> Result<(), &'static str> {
 
     let context 	= softbuffer::Context::new(window.clone()).unwrap();
     let mut surface = softbuffer::Surface::new(&context, window.clone()).unwrap();
+   
 
 	surface
 	.resize(
@@ -157,6 +230,8 @@ pub fn win_main_winit(mut prog: Program) -> Result<(), &'static str> {
 	fn set_exit(b: Arc<AtomicBool>) {
 		b.store(false, Relaxed);
 	}
+	
+	// let mut modifiers = ModifiersState::default();
 
 	event_loop.run(move |event, elwt| {
 		prog.update_vis();
@@ -166,13 +241,11 @@ pub fn win_main_winit(mut prog: Program) -> Result<(), &'static str> {
 
 			prog.force_render();
 
-			prog.pix.scale_to(&mut buffer, prog.SCALE as usize);
+			prog.pix.scale_to(&mut buffer, prog.scale() as usize);
 
 			let _ = buffer.present();
 		};
-
-        let mut modifiers = ModifiersState::default();
-
+		
         if let Event::WindowEvent { event, .. } = event {
 		    match event {
 			    WindowEvent::CloseRequested => {
@@ -187,9 +260,9 @@ pub fn win_main_winit(mut prog: Program) -> Result<(), &'static str> {
 				    window.request_redraw();
 			    }
 
-			    WindowEvent::ModifiersChanged(new) => {
-                    modifiers = new.state();
-                }
+			    //~ WindowEvent::ModifiersChanged(new) => {
+                    //~ modifiers = new.state();
+                //~ }
 
 			    WindowEvent::KeyboardInput {event, ..} => {
 
@@ -213,12 +286,8 @@ pub fn win_main_winit(mut prog: Program) -> Result<(), &'static str> {
 							
 							Key::Character("n") => {
 								prog.change_vislist();
-							}
-
-							Key::Character("b") => {
-								prog.change_visualizer(false);
 								perform_draw(&mut prog);
-							},
+							}
 
 							Key::Character("-")		=>  prog.decrease_vol_scl(),
 							Key::Character("=")	=>  prog.increase_vol_scl(),

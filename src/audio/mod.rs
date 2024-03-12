@@ -305,35 +305,37 @@ where
 	}
 }
 
+use crate::math::{fast::abs, interpolate::smooth_step};
+
+struct PeakPoint {
+	amp: f64,
+	pos: usize
+}
+
+fn peak(amp: f64, pos: usize) -> PeakPoint {
+	PeakPoint {amp, pos}
+}
+
 pub fn limiter<T>(
 	a: &mut [T],
 	limit: f64,
 	hold_samples: usize,
-	gain: f64
+	gain: f64,
+	flattener: fn(T) -> f64 
 )
 where T: Into<f64> + std::ops::Mul<f64, Output = T> + std::marker::Copy 
 {
-	use crate::math::{fast::abs, interpolate::smooth_step};
-	
-	struct PeakPoint {
-		amp: f64,
-		pos: usize
-	}
-	
-	fn peak(amp: f64, pos: usize) -> PeakPoint {
-		PeakPoint {amp, pos}
-	}
-	
+		
 	let mut peaks: Vec<PeakPoint> = Vec::with_capacity(12);
 	
-	peaks.push(peak(limit.max(abs((a[0]).into())), 0));
+	peaks.push(peak(limit.max(abs(flattener(a[0]))), 0));
 	
 	let mut expo_amp = limit;
 	
 	let fall_factor = 1.0 - 1.0 / hold_samples as f64;
 	
 	for (i, ele) in a.iter().enumerate().skip(1) {
-		let smp = abs((*ele).into());
+		let smp = abs(flattener(*ele));
 		
 		if expo_amp > limit {
 			expo_amp = limit.max(expo_amp * fall_factor);

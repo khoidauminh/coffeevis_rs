@@ -1,8 +1,9 @@
 pub mod blend;
 pub mod draw;
+pub mod draw_raw;
 // pub mod space;
 
-use blend::Blend;
+use blend::{Blend, Mixer};
 pub const COLOR_BLANK: u32 = 0x00_00_00_00;
 pub const COLOR_BLACK: u32 = 0xFF_00_00_00;
 pub const COLOR_WHITE: u32 = 0xFF_FF_FF_FF;
@@ -11,9 +12,90 @@ const SIZE_DEFAULT: (usize, usize) = (50, 50);
 
 pub(crate) type P2 = crate::math::Vec2<i32>;
 
+#[derive(Debug, Clone)]
+enum DrawCommand {
+	Rect(P2, P2, u32, Mixer),
+	RectWh(P2, usize, usize, u32, Mixer),
+	Line(P2, P2, u32, Mixer),
+	Plot(P2, u32, Mixer),
+	PlotIdx(usize, u32, Mixer),
+	Fill(u32),
+	Fade(u8, u32)
+}
+
+trait CommandBuffer {
+	fn rect(&mut self, ps: P2, pe: P2, c: u32, b: Mixer);
+	fn rect_wh(&mut self, ps: P2, w: usize, h: usize, c: u32, b: Mixer);
+	fn line(&mut self, ps: P2, pe: P2, c: u32, b: Mixer);
+	fn plot(&mut self, p: P2, c: u32, b: Mixer);
+	fn plot_index(&mut self, i: usize, c: u32, b: Mixer); 
+	fn fill(&mut self, c: u32);
+	fn fade(&mut self, al: u8, background: u32);
+	fn execute(&mut self, canvas: &mut [u32], cwidth: usize, cheight: usize);
+}
+
+impl CommandBuffer for Vec<DrawCommand> {
+	fn rect(&mut self, ps: P2, pe: P2, c: u32, b: Mixer) {
+		self.push(DrawCommand::Rect(ps, pe, c, b)); 
+	}
+	
+	fn rect_wh(&mut self, ps: P2, w: usize, h: usize, c: u32, b: Mixer) {
+		self.push(DrawCommand::RectWh(ps, w, h, c, b)); 
+	}
+	
+	fn line(&mut self, ps: P2, pe: P2, c: u32, b: Mixer) {
+		self.push(DrawCommand::Line(ps, pe, c, b)); 
+	}
+	
+	fn plot(&mut self, p: P2, c: u32, b: Mixer) {
+		self.push(DrawCommand::Plot(p, c, b));
+	}
+	
+	fn plot_index(&mut self, i: usize, c: u32, b: Mixer) {
+		self.push(DrawCommand::PlotIdx(i, c, b));
+	}
+	
+	fn fill(&mut self, c: u32) {
+		// Discards all previous commands since this 
+		// fill overwrites the entire buffer.
+		self.clear();
+		self.push(DrawCommand::Fill(c));
+	}
+	
+	fn fade(&mut self, al: u8, background: u32) {
+		self.push(DrawCommand::Fade(al, background));
+	}
+	
+	fn execute(&mut self, canvas: &mut [u32], cwidth: usize, cheight: usize) {
+		use DrawCommand as C;
+		
+		self.iter().for_each(|command| {
+			match command.clone() {
+				C::Rect(ps, pe, c, b) => draw_raw::draw_rect_xy_by(canvas, cwidth, cheight, ps, pe, c, b),
+				
+				C::RectWh(ps, w, h, c, b) => draw_raw::draw_rect_wh_by(canvas, cwidth, cheight, ps, w, h, c, b),
+				
+				C::Line(ps, pe, c, b) => draw_raw::draw_line_by(canvas, cwidth, cheight, ps, pe, c, b),
+				
+				C::Plot(p, c, b) => draw_raw::set_pixel_xy_by(canvas, cwidth, cheight, p, c, b),
+				
+				C::PlotIdx(i, c, b) => draw_raw::set_pixel_by(canvas, i, c, b),
+				
+				C::Fill(c) => draw_raw::fill(canvas, c),
+				
+				C::Fade(al, background) => draw_raw::fade(canvas, al, background),
+				
+				// _ => {}
+			}
+		});
+		
+		self.clear();
+	}
+}
+
 pub struct Canvas {
 	pix: Vec<u32>,
-	//~ pix: crate::mem::StackVec<u32, 20>,
+	command_buffer: Vec<DrawCommand>,
 	len: usize,
 	mask: usize,
 	width: usize,
@@ -30,7 +112,7 @@ pub fn grayb(r: u8, g: u8, b: u8) -> u8
 }
 
 impl Canvas {
-	pub fn from_buffer(vec: Vec<u32>, w: usize, h: usize, background: u32) -> Self {
+	/*pub fn from_buffer(vec: Vec<u32>, w: usize, h: usize, background: u32) -> Self {
 		let padded = vec.len().next_power_of_two();
 		let mut newvec = vec![0u32; padded];
 		newvec[0..vec.len()].copy_from_slice(&vec);
@@ -44,9 +126,22 @@ impl Canvas {
 			
 			background,
 		}
-	}
+	}*/
 
 	pub fn new(w: usize, h: usize, background: u32) -> Self {
+		let padded = (w*h).next_power_of_two();
+		Self {
+			pix: vec![0u32; padded],
+			command_buffer: Vec::new(),
+			mask: padded-1,
+			len: w*h,
+			width: w,
+			height: h,
+			background,
+		}
+	}
+	
+	/*pub fn new(surface: &mut softbuffer::Surface, background: u32) -> Self {
 		let padded = (w*h).next_power_of_two();
 		Self {
 			pix: vec![0u32; padded],
@@ -56,8 +151,18 @@ impl Canvas {
 			height: h,
 			background,
 		}
-	}
+	}*/
 	
+	pub fn draw_to_self(&mut self) {
+		// println!("{:?}", self.command_buffer);
+		
+		self.command_buffer.execute(
+			&mut self.pix,
+			self.width,
+			self.height,
+		);
+	}
+		
 	pub fn width(&self) -> usize {
 	    self.width
 	}
@@ -144,7 +249,7 @@ impl Canvas {
 
 	pub fn pixel(&self, i: usize) -> u32 {
 		let iw = self.wrap(i);
-		*unsafe{self.pix.get_unchecked(iw)}
+		self.pix[iw]
 	}
 	
 	fn wrap(&self, i: usize) -> usize {
@@ -153,16 +258,16 @@ impl Canvas {
 
 	pub fn pixel_mut(&mut self, i: usize) -> &mut u32 {
 		let iw = self.wrap(i);
-		unsafe{self.pix.get_unchecked_mut(iw)}
+		&mut self.pix[iw]
 	}
 
 	pub fn pixel_xy(&self, p: P2) -> u32 {
-		*unsafe{self.pix.get_unchecked(self.get_idx_wrap(p))}
+		self.pix[self.get_idx_wrap(p)]
 	}
 
 	pub fn pixel_xy_mut(&mut self, p: P2) -> &mut u32 {
 		let i = self.get_idx_wrap(p);
-		unsafe{self.pix.get_unchecked_mut(i)}
+		&mut self.pix[i]
 	}
 	
 	pub fn scale_to2(&self, dest: &mut [u32], scale: usize) {

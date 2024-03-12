@@ -60,7 +60,7 @@ fn prepare(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr
 		fft[i] = fft[i]*scalef;
 	}
 	
-	crate::audio::limiter(&mut fft[0..RANGE1], 1.35, 20, 1.);
+	crate::audio::limiter(&mut fft[0..RANGE1], 1.35, 20, 1., |x| x.max());
 
     LOCAL
     .iter_mut()
