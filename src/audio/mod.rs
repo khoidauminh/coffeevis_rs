@@ -82,9 +82,7 @@ pub fn read_samples<T: cpal::Sample<Float = f32>>(data: &[T]) {
 	} else {
 	    ns *= b.read_from_input_quiet(data) as u8;
 	}
-
-	// dbg!(b.input_size());
-
+	
     NO_SAMPLE.store(ns, Ordering::Relaxed);
 }
 
@@ -99,152 +97,7 @@ pub fn get_no_sample() -> u8 {
 pub fn is_silent() -> bool {
 	get_no_sample() > 0
 }
-/*
-pub fn limiter<T>(
-	a: &mut [T],
-	limit: f64,
-	hold_samples: usize,
-	gain: f64
-)
-where T: Into<f64> + std::ops::Mul<f64, Output = T> + std::marker::Copy
-{
-	let mut replay_gain;
-	let mut index = 0usize;
-	let _hold_index = 0;
-	let _amp = 0.0;
-	let l = a.len();
 
-    let hold_samples_double = hold_samples*2;
-
-	let full_delay = hold_samples;
-
-	let mut peak = Peak::init(limit, hold_samples_double);
-	let mut moving_average = MovingAverage::init(limit, full_delay);
-
-	let bound = l + full_delay;
-
-	let mut getrg = |smp| {
-		gain / moving_average.update(peak.update(smp))
-	};
-
-	while index < full_delay {
-		let _ = getrg(a[index].into());
-		index += 1;
-	}
-
-	while index < l {
-		replay_gain = getrg(a[index].into());
-
-		let smp = &mut a[index-full_delay];
-
-		*smp = *smp *replay_gain;
-
-		index += 1;
-	}
-	
-	let smp = a[l-1].into();
-
-	while index < bound {
-		replay_gain = getrg(smp);
-
-		let smp = &mut a[index-full_delay];
-		*smp = *smp *replay_gain;
-		
-		index += 1;
-	}
-}
-
-pub fn limiter_hard<T>(
-	a: &mut [T],
-	limit: f64,
-	hold_samples: usize,
-	gain: f64
-) 
-where T: Into<f64> + std::ops::Mul<f64, Output = T> + std::marker::Copy
-{	
-	let mut index = 0usize;
-	let mut replay_gain;
-	let _hold_index = 0;
-	let _amp = 0.0;
-	let l = a.len();
-
-    let hold_samples_double = hold_samples;
-		
-	let full_delay = hold_samples;
-		
-	let mut peak = Peak::init(limit, hold_samples_double);
-
-	let _bound = l + full_delay;
-	
-	let mut getrg = |smp| {
-		gain / peak.update(smp)
-	};
-
-	while index < l {
-		replay_gain = getrg(a[index].into());
-		
-		let smp = &mut a[index];
-		
-		*smp = *smp *replay_gain;
-		
-		index += 1;
-	}
-	
-}
-
-struct Peak {
-    peak: f64,
-	amp: f64,
-	limit: f64,
-	hold_for: usize,
-	hold: usize,
-}
-
-impl Peak {
-	pub fn init(
-		limit: f64,
-		hold_for: usize
-	) -> Self {
-		Self {
-		    peak: limit,
-			amp: limit,
-			limit,
-			hold_for,
-			hold: 0
-		}
-	}
-	
-	pub fn update(&mut self, inp: f64) -> f64 {
-		use crate::math::{
-			fast::abs
-		};
-		
-		let inp = f64::max(abs(inp), self.limit);
-		
-		if self.peak < inp || self.hold >= self.hold_for {
-			self.peak = inp;
-			self.hold = 0;
-	    } else {
-			self.hold += 1;
-		}
-		
-		self.amp = self.peak;
-		
-	    // self.amp = interpolate::multiplicative_fall(self.amp, self.peak, self.limit, 1.0 / self.hold_for as f64);
-		
-		self.amp
-	}
-	
-	// freeze the peakholder
-	pub fn stall(&self) -> f64 {
-		self.amp
-	}
-	
-	pub fn update_and_get_gain(&mut self, new_amp: f64) -> f64 {
-		1.0 / self.update(new_amp)
-	}
-}
-*/
 use crate::misc::stackvec::StackVec;
 
 pub struct MovingAverage<T> {
@@ -305,7 +158,7 @@ where
 	}
 }
 
-use crate::math::{fast::abs, interpolate::smooth_step};
+use crate::math::interpolate::smooth_step;
 
 struct PeakPoint {
 	amp: f64,
@@ -325,19 +178,16 @@ pub fn limiter<T>(
 )
 where T: Into<f64> + std::ops::Mul<f64, Output = T> + std::marker::Copy 
 {
-		
 	let mut peaks: Vec<PeakPoint> = Vec::with_capacity(12);
 	
-	peaks.push(peak(limit.max(abs(flattener(a[0]))), 0));
+	peaks.push(peak(limit.max( flattener(a[0]).abs() ), 0));
 	
 	let mut expo_amp = limit;
 	
 	let fall_factor = 1.0 - 1.0 / hold_samples as f64;
 
-	//~ let current_peak = peak(0.0, pos);
-	
 	for (i, ele) in a.iter().enumerate().skip(1) {
-		let smp = abs(flattener(*ele));
+		let smp = flattener(*ele).abs();
 		
 		if expo_amp > limit {
 			expo_amp = limit.max(expo_amp * fall_factor);
@@ -377,70 +227,3 @@ where T: Into<f64> + std::ops::Mul<f64, Output = T> + std::marker::Copy
 		});
 	});
 }
-/*
-pub fn simple_limiter<T>(
-	a: &mut [T],
-	limit: f64,
-	_hold_samples: usize,
-	gain: f64,
-	flattener: fn(T) -> f64 
-)
-where T: Into<f64> + std::ops::Mul<f64, Output = T> + std::marker::Copy 
-{
-	const CHUNK_SIZE: usize = 8;
-	
-	let mut peaks = Vec::with_capacity(a.len() / 8 + 1);
-	
-	let mut chunk_bound = CHUNK_SIZE;
-	
-	let mut amp = 0.0;
-	let mut max_i = 0;
-	
-	for (i, ele) in a.iter().enumerate() {
-		let smp = abs(flattener(*ele));
-		
-		if smp > amp {
-			amp = smp;
-			max_i = i;
-		}
-		
-		if i >= chunk_bound {
-			amp = f64::max(amp, limit);
-			
-			peaks.push(peak(amp, max_i));
-			
-			amp = smp;
-			max_i = i;
-			
-			chunk_bound += CHUNK_SIZE;
-		}
-	}
-	
-	match peaks.last() {
-		Some(p) if p.pos < a.len() 
-			=> peaks.push(peak(limit, a.len())),
-		_ 	=> {}
-	}
-	
-	peaks.iter_mut().for_each(|peak| {
-		peak.amp = 1.0 / peak.amp;
-	});
-	
-	peaks.windows(2).for_each(|window| {
-		let head = &window[0];
-		let tail = &window[1];
-		
-		let range = tail.pos - head.pos +1;
-		let rangef = range as f64;
-		let range_recip = 1.0 / rangef;
-		
-		a[head.pos..tail.pos]
-		.iter_mut()
-		.enumerate()
-		.for_each(|(i, smp)| {
-			let t = i as f64 * range_recip;
-			let scale = smooth_step(head.amp, tail.amp, t);
-			*smp = *smp *scale * gain;
-		});
-	});
-}*/

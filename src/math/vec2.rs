@@ -1,6 +1,5 @@
 use std::ops::*;
 
-use super::fast;
 use super::Vec2;
 
 impl<T> Neg for Vec2<T> 
@@ -31,18 +30,9 @@ impl<T> Mul<Vec2<T>> for Vec2<T>
 where T:  Add<Output = T> + Sub<Output = T> + Mul<Output = T> + Copy {
 	type Output = Vec2<T>;
 	fn mul(self, other: Vec2<T>) -> Vec2<T> {
-		/*Vec2::<T> {
+		Vec2::<T> {
 			x: self.x*other.x - self.y*other.y,
 			y: self.x*other.y + self.y*other.x
-		}*/
-		
-		let k1 = other.x * (self.x + self.y);
-		let k2 = self.x  * (other.y - other.x);
-		let k3 = self.y  * (other.x + other.y);
-		
-		Vec2::<T> {
-			x: k1 - k3,
-			y: k1 + k2
 		}
 	}
 }
@@ -149,17 +139,17 @@ impl Vec2<f64> {
 	}
 
 	pub fn l1_norm(&self) -> f64 {
-		fast::abs(self.x) + fast::abs(self.y)
+		self.x.abs() + self.y.abs()
 	}
 
 	pub fn abs(&self) -> Vec2<f64> {
-		Vec2::<f64> {x: fast::abs(self.x), y: fast::abs(self.y)}
+		Vec2::<f64> {x: self.x.abs(), y: self.y.abs()}
 	}
 	
 	pub fn max(&self) -> f64 {
 		f64::max(
-			fast::abs(self.x),
-			fast::abs(self.y)
+			self.x.abs(),
+			self.y.abs()
 		)
 	}
 	

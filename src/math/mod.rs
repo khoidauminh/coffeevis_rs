@@ -269,7 +269,7 @@ pub mod interpolate {
 	pub fn smooth_step(a: f64, b: f64, t: f64) -> f64 {
 	    // a + (b-a)*(t*t*(3.0-2.0*t))
 		let t = t - 0.5;
-		let t = t * (2.0 - 2.0*super::fast::abs(t)) + 0.5;
+		let t = t * (2.0 - 2.0*t.abs()) + 0.5;
 		
 		a + (b-a)*t
 	}

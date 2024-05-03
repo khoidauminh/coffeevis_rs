@@ -364,8 +364,7 @@ impl Program {
 
 		self.refresh_con();
 	}
-	
-	#[allow(dead_code)]
+
 	pub fn set_con_mode(&mut self, mode: Mode) {
 		match mode {
 			Mode::ConAlpha => self.flusher = Program::print_alpha,

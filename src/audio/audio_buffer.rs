@@ -1,7 +1,5 @@
-
-use crate::math::{Cplx, fast};
-use crate::data::{DEFAULT_ROTATE_SIZE};
-
+use crate::math::Cplx;
+use crate::data::DEFAULT_ROTATE_SIZE;
 
 const SILENCE_LIMIT: f64 = 0.01;
 const AMP_PERSIST_LIMIT: f64 = 0.05;
@@ -15,8 +13,6 @@ const SIZE_MASK: usize = BUFFER_SIZE - 1;
 const REACT_SPEED: f64 = 0.025;
 
 type BufferArray = [Cplx; BUFFER_SIZE];
-
-// pub static EXPANDER:
 
 /// This is a struct that acts like a regular buffer
 /// but uses an offset index.
@@ -202,25 +198,6 @@ impl AudioBuffer {
         self.offset = self.write_point;
     }
     
-	/*
-    /// Ignores `write_point`. Rotates the buffer and writes to the start.
-    /// Returns boolean indicating silence.
-    pub fn read_from_input<T: cpal::Sample<Float = f64>>(&mut self, data: &[T]) -> bool {
-        let input_size = data.len();
-        let mut silence = true;
-        self.buffer.rotate_right(input_size);
-
-        data
-        .chunks_exact(2)
-        .zip(self.buffer.iter_mut())
-        .for_each(|(inp, smp)| {
-            write_sample(smp, inp);
-            silence = silence && (smp.x < 1e-2) && (smp.y < 1e-2);
-        });
-        self.reset_offset();
-        silence
-    }*/
-
     /// Returns boolean indicating silence,
     /// Doesn't compute max and average.
     pub fn read_from_input_quiet<T: cpal::Sample<Float = f32>>(&mut self, data: &[T]) -> bool {
@@ -235,8 +212,8 @@ impl AudioBuffer {
             let smp = &mut self.buffer[self.write_point];
             write_sample(smp, chunk);
 
-			let left  = fast::abs(smp.x);
-			let right = fast::abs(smp.y);
+			let left  = smp.x.abs();
+			let right = smp.y.abs();
 			
             silence_index += ((left > SILENCE_LIMIT) || (right > SILENCE_LIMIT)) as u32;
 	        self.write_point = self.index_add(self.write_point, 1);
@@ -260,8 +237,8 @@ impl AudioBuffer {
             let smp = &mut self.buffer[self.write_point];
             write_sample(smp, chunk);
 
-			let left  = fast::abs(smp.x);
-			let right = fast::abs(smp.y);
+			let left  = smp.x.abs();
+			let right = smp.y.abs();
 			
             max_l = max_l.max(left);
             max_r = max_r.max(right);
@@ -309,8 +286,6 @@ impl AudioBuffer {
             *smp = smp.scale(scale_up_factor);
             write_point = self.index_add(write_point, 1);
         }
-
-        // self.scale_up_factor = 0.0;
 	}
 
     #[doc(hidden)]
