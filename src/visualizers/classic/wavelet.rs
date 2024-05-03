@@ -96,13 +96,34 @@ pub fn draw_wavelet(
 	//w.copy_from_slice(stream.iter().take(WT_SIZE).map(|x| *x).collect::<Vec<_>>().as_slice());
 	
 	//w.copy_from_slice(&stream[..WT_SIZE.min(stream.len())]);
-	hwt(&mut w);
+	haar_wavelet_fast(&mut w);
 	
 	let _wl = WT_SIZE;
 	let _pl = prog.pix.sizel();
 	let (pw, ph) = (prog.pix.width(), prog.pix.height());
 	
-	let power = WT_SIZE.ilog2() as usize;
+	// let power = WT_SIZE.ilog2() as usize;
+	
+	/*for y in 0..ph {
+		let p = (ph - y - 1) * WT_POWER / ph;
+		
+		let end   = (1 << p);
+		let start = end / 2;
+		let ww = end - start;
+		
+		let y = (WT_POWER - p - 1) * ph / WT_POWER; 
+		
+		for x in 0..pw {
+			let i = start + x * ww / pw;
+			
+			let f: f64 = w[i].into();
+			let c = ( (f) * 255.9 ) as u8; 
+			let c = u32::from_be_bytes([0xff, c, c, c]);
+			
+			prog.pix.set_pixel_xy(P2::new(x, y), c);
+		}
+	}*/
+	
 	/*
 	prog.pix.
 	as_mut_slice()
@@ -143,7 +164,7 @@ pub fn draw_wavelet(
 			let smp = wavelet_xy_interpolated(
 						&mut w, 
 						Cplx::new(xt, yt), 
-						power, 
+						WT_POWER, 
 					);
 			
 			let r = crate::math::squish(smp.x, 0.25, 255.9) as u8;
@@ -229,6 +250,21 @@ fn hwt_recursive(a: &mut [Cplx])
 }
 */
 
+fn haar_wavelet_fast(a: &mut [Cplx]) {
+	let mut b = vec![Cplx::zero(); a.len()];
+	let mut l = a.len()/2;
+	
+	while l > 1 {
+		for i in 0..l {
+			let i2 = i*2;
+			b[i] = a[i2];
+			b[i+l] = a[i2+1]-a[i2];
+		}
+		
+		a[0..l*2].copy_from_slice(&b[0..l*2]);
+		l >>= 1;
+	}
+}
 
 fn convole(a: &[Cplx], b: &[Cplx], mult: usize, shift: usize) -> Cplx
 {

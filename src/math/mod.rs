@@ -40,12 +40,12 @@ impl ToUsize<i32> for usize {
 	}
 }
 
-pub fn fft_stereo_small(a: &mut [Cplx], up_to: usize, scale_factor: u8, normalize: bool) {
-	fft::compute_fft_stereo_small(a, up_to, scale_factor, normalize);
+pub fn fft_stereo_small(a: &mut [Cplx], up_to: usize, norm: bool) {
+	fft::compute_fft_stereo_small(a, up_to, norm);
 }
 
-pub fn fft_stereo(a: &mut [Cplx], up_to: usize, normalize: bool) {
-	fft::compute_fft_stereo(a, up_to, normalize);
+pub fn fft_stereo(a: &mut [Cplx], up_to: usize, norm: bool) {
+	fft::compute_fft_stereo(a, up_to, norm);
 }
 
 pub fn fft(a: &mut [Cplx]) {

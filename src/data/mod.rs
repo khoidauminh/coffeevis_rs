@@ -303,11 +303,11 @@ impl Program {
 	}
 
 	pub fn increase_vol_scl(&mut self) {
-		self.VOL_SCL = (self.VOL_SCL / 1.2).clamp(0.0, 10.0);
+		self.VOL_SCL = (self.VOL_SCL * 1.2).clamp(0.0, 10.0);
 	}
 	
 	pub fn decrease_vol_scl(&mut self) {
-		self.VOL_SCL = (self.VOL_SCL * 1.2).clamp(0.0, 10.0);
+		self.VOL_SCL = (self.VOL_SCL / 1.2).clamp(0.0, 10.0);
 	}
 	
 	pub fn increase_smoothing(&mut self) {

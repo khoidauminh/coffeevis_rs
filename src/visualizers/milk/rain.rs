@@ -120,6 +120,17 @@ pub fn draw(prog: &mut Program, stream: &mut SampleArr) {
 	
     let mut list = LIST_OF_DROPS.lock().unwrap();
     
+    let size = prog.pix.size();
+		
+	if !list.first().unwrap().is_bounds_match(size) {
+		list
+		.iter_mut()
+		.for_each(|drop| { 
+			drop.set_bound(size);
+			drop.randomize_start();
+		});
+	}
+    
     for drop in list.iter_mut() {
 		let size = prog.pix.size();
 		

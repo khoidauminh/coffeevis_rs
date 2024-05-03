@@ -21,10 +21,20 @@ pub fn set_pixel_xy(
 	set_pixel(canvas, i, c);
 }
 
+#[inline]
 pub fn set_pixel_by(canvas: &mut [u32], i: usize, c: u32, b: Mixer) {
-	if let Some(p) = canvas.get_mut(i) {
+	/*if let Some(p) = canvas.get_mut(i) {
 		*p = b(*p, c);
-	}
+	}*/
+	
+	if i >= canvas.len() { return; }
+	
+	set_pixel_by_raw(canvas, i, c, b);
+}
+
+#[inline]
+pub fn set_pixel_by_raw(canvas: &mut [u32], i: usize, c: u32, b: Mixer) {
+	canvas[i] = b(canvas[i], c);
 }
 
 pub fn set_pixel_xy_by(canvas: &mut [u32], cwidth: usize, _cheight: usize, p: P2, c: u32, b: Mixer) {
@@ -55,8 +65,10 @@ pub fn draw_rect_xy_by(canvas: &mut [u32], cwidth: usize, cheight: usize, ps: P2
 
 	(i..=iend).step_by(cwidth).for_each(|i| {
 		let iw = i.wrapping_add(w);
-		for p in canvas[i..iw].iter_mut() {
-			*p = b(*p, c);
+		
+		for p in i..iw {
+			// *p = b(*p, c);
+			set_pixel_by_raw(canvas, p, c, b);
 		}
 	});
 }

@@ -96,9 +96,6 @@ where T: Copy + Clone
 {
 	type Output = T;
 	fn index(&self, i: usize) -> &Self::Output {
-		if i >= self.length {
-			Self::panic_out_of_bounds();
-		}
 		&self.buffer[i]
 	}
 }
@@ -107,9 +104,6 @@ impl<T: Copy + Clone, const N: usize> std::ops::IndexMut<usize> for StackVec<T, 
 where T: Copy + Clone
 {
 	fn index_mut(&mut self, i: usize) -> &mut Self::Output {
-		if i >= self.length {
-			Self::panic_out_of_bounds();
-		}
 		&mut self.buffer[i]
 	}
 }

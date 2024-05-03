@@ -47,7 +47,7 @@ pub fn cos_norm(x: f64) -> f64 {
 }
 
 pub fn bit_reverse(n: usize, power: usize) -> usize {
-	n.reverse_bits() >> usize::BITS.saturating_sub(power as u32) as usize
+	n.reverse_bits() >> usize::BITS.wrapping_sub(power as u32) as usize
 }
 /*
 pub fn twiddle_norm(x: f64) -> Cplx {
@@ -104,4 +104,8 @@ pub fn isqrt(val: usize) -> usize {
     return a;*/
     
     (val as f64).sqrt() as usize
+}
+
+pub fn ilog2(x: usize) -> usize {
+	( usize::BITS.wrapping_sub(x.leading_zeros()).wrapping_sub(1) ) as usize
 }

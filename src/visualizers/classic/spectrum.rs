@@ -38,29 +38,27 @@ fn volume_scale(x: f64) -> f64 {
 
 fn prepare(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
     const WINDOW: usize = 2*FFT_SIZE/3;
-    const NORMALIZE: f64 = 1.0 / FFT_SIZE as f64;
 	let fall_factor = 0.5*prog.SMOOTHING.powi(2) * prog.FPS as f64 * 0.006944444;
 	let mut LOCAL = DATA.write().unwrap();
     let mut fft = [Cplx::zero(); FFT_SIZE];
-
+	
     fft.iter_mut()
     .take(WINDOW)
     .enumerate()
     .for_each(|(i, smp)| {
-        let idx = i*2;
-        *smp = stream[idx];
+        *smp = stream[i * WINDOW / RANGE];
     });
-
-    math::fft_stereo(&mut fft, RANGE, true);
     
-    let RANGE1 = RANGE+1;
+	// let RANGE1 = RANGE+1;
+    
+    math::fft_stereo_small(&mut fft, RANGE, true);
     	
-	for i in 0..RANGE1 {
+	fft.iter_mut().take(RANGE).enumerate().for_each(|(i, smp)| {
 		let scalef = math::fft_scale_up(i, RANGE);
-		fft[i] = fft[i]*scalef;
-	}
+		*smp = *smp * scalef;
+	});
 	
-	crate::audio::limiter(&mut fft[0..RANGE1], 1.35, 20, 1., |x| x.max());
+	crate::audio::limiter(&mut fft[0..RANGE], 1.5, 20, prog.VOL_SCL, |x| x.max());
 
     LOCAL
     .iter_mut()
@@ -69,7 +67,6 @@ fn prepare(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr
 		|(smp, si)| {
     	    smp.x = multiplicative_fall(smp.x, si.x, 0.0, fall_factor);
 			smp.y = multiplicative_fall(smp.y, si.y, 0.0, fall_factor);
-
 		}
 	);
 
@@ -106,13 +103,11 @@ pub fn draw_spectrum(
 
     // prog.pix.clear();
 
-    let _winlog = wf.log2();
+    //~ let _winlog = wf.log2();
 
-    let _if64: f64 = 0.0;
+    //~ let _if64: f64 = 0.0;
 
-    const INTERVAL: f64 = 1.0;
-
-    let height_prescale = wf * prog.VOL_SCL;
+    //~ const INTERVAL: f64 = 1.0;
     
     prog.pix.clear();
 
@@ -126,16 +121,16 @@ pub fn draw_spectrum(
         let idxf = slide_output * RANGEF;
 
 	    let idx = idxf.floor() as usize;
+	    
 	    let idx_next = idxf.ceil() as usize;
+	    let idx_next = idx_next.min(RANGE-1);
+	    
 	    let t = idxf.fract();
 
-        let scale = /*(math::fast::fsqrt(idxf) + 0.5)*2.0**/ height_prescale;
+        let scale = wf;
 
-        let bar_temp1 = smooth_step(normalized[idx].x, normalized[idx_next].x, t)*scale;
-        let bar_temp2 = smooth_step(normalized[idx].y, normalized[idx_next].y, t)*scale;
-
-        let bar_width_l = bar_temp1;
-        let bar_width_r = bar_temp2;
+        let bar_width_l = smooth_step(normalized[idx].x, normalized[idx_next].x, t)*scale;
+        let bar_width_r = smooth_step(normalized[idx].y, normalized[idx_next].y, t)*scale;
 
 		let channel_l = (255.0 *bar_width_l.min(wf) * wf_recip) as u32;
 		let channel_r = (255.0 *bar_width_r.min(wf) * wf_recip) as u32;

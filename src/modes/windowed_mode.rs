@@ -290,7 +290,7 @@ pub fn win_main_winit(mut prog: Program) -> Result<(), &'static str> {
 							}
 
 							Key::Character("-")		=>  prog.decrease_vol_scl(),
-							Key::Character("=")	=>  prog.increase_vol_scl(),
+							Key::Character("=")		=>  prog.increase_vol_scl(),
 
 							Key::Character("[") 	=>  prog.decrease_smoothing(),
 							Key::Character("]") 	=>  prog.increase_smoothing(),

@@ -105,7 +105,7 @@ pub fn compute_fft_iterative(a: &mut [Cplx]) {
     let mut window = 16usize;
 	let mut depth = 4;
 
-	use std::sync::RwLock;
+	/*use std::sync::RwLock;
 	
 	// 0, 1, 2, 3, 4
 	// 1, 2, 4, 8, 16
@@ -119,13 +119,41 @@ pub fn compute_fft_iterative(a: &mut [Cplx]) {
 			twiddles[i] = super::fft::twiddle(x);
 		}
 	});
-	let fast_twiddle = FAST_TWIDDLES.read().unwrap();
+	let fast_twiddle = FAST_TWIDDLES.read().unwrap();*/
+	
+	const TWIDDLE_FACTORS: [Cplx; 24] = 
+	[
+		Cplx { x:  1.0, y:  0.0 },
+		Cplx { x: -1.0, y: -0.0 },
+		Cplx { x:  0.0, y: -1.0 },
+		Cplx { x: 0.7071067811865476, y: -0.7071067811865475 },
+		Cplx { x: 0.9238795325112867, y: -0.3826834323650898 },
+		Cplx { x: 0.9807852804032304, y: -0.19509032201612825 },
+		Cplx { x: 0.9951847266721969, y: -0.0980171403295606 },
+		Cplx { x: 0.9987954562051724, y: -0.049067674327418015 },
+		Cplx { x: 0.9996988186962042, y: -0.024541228522912288 },
+		Cplx { x: 0.9999247018391445, y: -0.012271538285719925 },
+		Cplx { x: 0.9999811752826011, y: -0.006135884649154475 },
+		Cplx { x: 0.9999952938095762, y: -0.003067956762965976 },
+		Cplx { x: 0.9999988234517019, y: -0.0015339801862847655 },
+		Cplx { x: 0.9999997058628822, y: -0.0007669903187427045 },
+		Cplx { x: 0.9999999264657179, y: -0.00038349518757139556 },
+		Cplx { x: 0.9999999816164293, y: -0.0001917475973107033 },
+		Cplx { x: 0.9999999954041073, y: -0.00009587379909597734 },
+		Cplx { x: 0.9999999988510269, y: -0.00004793689960306688 },
+		Cplx { x: 0.9999999997127567, y: -0.00002396844980841822 },
+		Cplx { x: 0.9999999999281892, y: -0.000011984224905069705 },
+		Cplx { x: 0.9999999999820472, y: -0.0000059921124526424275 },
+		Cplx { x: 0.9999999999955118, y: -0.000002996056226334661 },
+		Cplx { x: 0.999999999998878,  y: -0.0000014980281131690111 },
+		Cplx { x: 0.9999999999997194, y: -0.0000007490140565847157 },
+	];
 
 
     while window <= length {
 
         //~ let root = twiddle(root_angle);
-		let root = fast_twiddle[depth];
+		let root = TWIDDLE_FACTORS[depth];
 
         a.chunks_exact_mut(window).for_each(|chunk| {
             let (left, right) = chunk.split_at_mut(window / 2);
@@ -160,76 +188,36 @@ pub fn compute_fft_iterative(a: &mut [Cplx]) {
 //
 // This leverages the the linear and symetric
 // property of the FFT.
-pub fn compute_fft_stereo_small(a: &mut [Cplx], up_to: usize, scale_factor: u8, normalize: bool) {
-	let up_to = up_to * scale_factor as usize;
-	
-	let bound = up_to.next_power_of_two();
-	let power = bound.ilog2() as usize + 1;
-	
-	let l = a.len();
-	
-	let norm = if normalize { 0.666 / bound as f64 } else { 1.0 };
-	
-	if bound >= l / 2 {
-		super::fft(a);
-	} else {
-		butterfly(&mut a[0..bound], power);
-		butterfly(&mut a[l-bound..l], power);
-		
-		compute_fft(&mut a[0..bound]);
-		compute_fft(&mut a[l-bound..l]);
-	}
-	
-	let mut extract = |i: usize, rev_i: usize| {
-		
-		let fft_1 = a[i];
-		let fft_2 = a[rev_i].conj();
-		
-		let x = (fft_1 + fft_2).l1_norm();
-		let y = (fft_1 - fft_2).l1_norm();
-		
-		// let scalef = math::fft_scale_up(i, RANGE)* NORMALIZE;
-		a[i] = Cplx::new(x, y) * norm;
-	};
-	
-	extract(0, l-1);
-	
-	for i in 1..up_to {
-		
-		let rev_i = l-i;
-		
-		extract(i, rev_i);
-	}
-}
-
 pub fn compute_fft_stereo(a: &mut [Cplx], up_to: usize, normalize: bool) {
 	let l = a.len();
-	let _power = l.ilog2() as usize;
+	let _power = super::fast::ilog2(l) as usize;
 	
-	let norm = if normalize { 1.0 / l as f64 } else { 1.0 };
+	let norm =  if normalize { 1.0 / l as f64 } else { 1.0 };
 	
 	super::fft(a);
 	
 	let mut extract = |i: usize, rev_i: usize| {
-		
 		let fft_1 = a[i];
 		let fft_2 = a[rev_i].conj();
 		
-		let x = (fft_1 + fft_2).l1_norm();
-		let y = (fft_1 - fft_2).l1_norm();
-		
-		// let scalef = math::fft_scale_up(i, RANGE)* NORMALIZE;
+		let x: f64 = (fft_1 + fft_2).l1_norm();
+		let y: f64 = (fft_1 - fft_2).l1_norm();
+
 		a[i] = Cplx::new(x, y) * norm;
 	};
 	
 	extract(0, l-1);
 	
-	for i in 1..(up_to+1).min(l-1) {
-		
+	for i in 1..up_to.min(l) {
 		let rev_i = l-i;
-		
 		extract(i, rev_i);
 	}
+}
+
+pub fn compute_fft_stereo_small(a: &mut [Cplx], up_to: usize, normalize: bool) {
+	let bound = if up_to.is_power_of_two() { up_to * 2 } else { up_to.next_power_of_two()*2 };
+	let bound = bound.min(a.len());
+	compute_fft_stereo(&mut a[0..bound], up_to, normalize);
 }
 
 pub fn compute_fft(a: &mut [Cplx]) {

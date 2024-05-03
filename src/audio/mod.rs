@@ -333,6 +333,8 @@ where T: Into<f64> + std::ops::Mul<f64, Output = T> + std::marker::Copy
 	let mut expo_amp = limit;
 	
 	let fall_factor = 1.0 - 1.0 / hold_samples as f64;
+
+	//~ let current_peak = peak(0.0, pos);
 	
 	for (i, ele) in a.iter().enumerate().skip(1) {
 		let smp = abs(flattener(*ele));
@@ -375,3 +377,70 @@ where T: Into<f64> + std::ops::Mul<f64, Output = T> + std::marker::Copy
 		});
 	});
 }
+/*
+pub fn simple_limiter<T>(
+	a: &mut [T],
+	limit: f64,
+	_hold_samples: usize,
+	gain: f64,
+	flattener: fn(T) -> f64 
+)
+where T: Into<f64> + std::ops::Mul<f64, Output = T> + std::marker::Copy 
+{
+	const CHUNK_SIZE: usize = 8;
+	
+	let mut peaks = Vec::with_capacity(a.len() / 8 + 1);
+	
+	let mut chunk_bound = CHUNK_SIZE;
+	
+	let mut amp = 0.0;
+	let mut max_i = 0;
+	
+	for (i, ele) in a.iter().enumerate() {
+		let smp = abs(flattener(*ele));
+		
+		if smp > amp {
+			amp = smp;
+			max_i = i;
+		}
+		
+		if i >= chunk_bound {
+			amp = f64::max(amp, limit);
+			
+			peaks.push(peak(amp, max_i));
+			
+			amp = smp;
+			max_i = i;
+			
+			chunk_bound += CHUNK_SIZE;
+		}
+	}
+	
+	match peaks.last() {
+		Some(p) if p.pos < a.len() 
+			=> peaks.push(peak(limit, a.len())),
+		_ 	=> {}
+	}
+	
+	peaks.iter_mut().for_each(|peak| {
+		peak.amp = 1.0 / peak.amp;
+	});
+	
+	peaks.windows(2).for_each(|window| {
+		let head = &window[0];
+		let tail = &window[1];
+		
+		let range = tail.pos - head.pos +1;
+		let rangef = range as f64;
+		let range_recip = 1.0 / rangef;
+		
+		a[head.pos..tail.pos]
+		.iter_mut()
+		.enumerate()
+		.for_each(|(i, smp)| {
+			let t = i as f64 * range_recip;
+			let scale = smooth_step(head.amp, tail.amp, t);
+			*smp = *smp *scale * gain;
+		});
+	});
+}*/

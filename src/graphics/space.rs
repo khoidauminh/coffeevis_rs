@@ -5,7 +5,7 @@
 impl Quaternion {
 
 }*/
-
+/*
 trait QuaternionBounds:
     Clone +
     Copy +
@@ -47,3 +47,13 @@ impl Quaternion<f64> for &[f64]
 
 
 impl Quaternion<f64> for [f64] {}
+*/
+
+
+struct Qnion {
+	pub x: f64,
+	pub y: f64,
+	pub z: f64,
+	pub w: f64,
+}
+
