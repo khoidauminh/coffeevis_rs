@@ -289,13 +289,13 @@ pub fn win_main_winit(mut prog: Program) -> Result<(), &'static str> {
 								perform_draw(&mut prog);
 							}
 
-							Key::Character("-")		=>  prog.decrease_vol_scl(),
-							Key::Character("=")		=>  prog.increase_vol_scl(),
+							Key::Character("-")		=> prog.decrease_vol_scl(),
+							Key::Character("=")		=> prog.increase_vol_scl(),
 
-							Key::Character("[") 	=>  prog.decrease_smoothing(),
-							Key::Character("]") 	=>  prog.increase_smoothing(),
+							Key::Character("[") 	=> prog.decrease_smoothing(),
+							Key::Character("]") 	=> prog.increase_smoothing(),
 
-							Key::Character(";")		=>  prog.decrease_smoothing(),
+							Key::Character(";")		=> prog.decrease_smoothing(),
 							Key::Character("\'")	=> prog.increase_smoothing(),
 
 							Key::Character("\\")	=> prog.toggle_auto_switch(),
