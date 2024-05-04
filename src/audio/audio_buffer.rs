@@ -44,6 +44,9 @@ pub struct AudioBuffer {
     write_point: usize,
     
     rotate_size: usize,
+    
+    rotates_since_write: usize,
+	average_rotates_since_write: usize,
 
     input_size: usize,
 
@@ -101,6 +104,8 @@ impl AudioBuffer {
             size_mask: SIZE_MASK,
             
             rotate_size: DEFAULT_ROTATE_SIZE,
+            rotates_since_write: 0,
+            average_rotates_since_write: 1,
             
             max: 0.0,
             average: 0.0,
@@ -187,6 +192,7 @@ impl AudioBuffer {
     
     pub fn auto_rotate(&mut self) {
 		self.rotate_left(self.rotate_size);
+		self.rotates_since_write += 1;
 	}
 
     #[doc(hidden)]
@@ -267,9 +273,14 @@ impl AudioBuffer {
             self.offset = self.index_sub(self.write_point, self.input_size*2);
         }
 
-		self.rotate_size = self.input_size / 6 + 1;
-
         self.silent = silent;
+        
+        self.average_rotates_since_write = 
+        	(self.average_rotates_since_write + self.rotates_since_write).max(2) / 2;
+                
+        self.rotates_since_write = 0;
+                
+		self.rotate_size = self.input_size / self.average_rotates_since_write + 1; 
 
         self.silent
 	}
