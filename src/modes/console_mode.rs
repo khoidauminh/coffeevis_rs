@@ -406,8 +406,7 @@ pub fn control_key_events_con(
     if poll(refresh_rates[inactive as usize])? {
         match read()? {
             Event::Key(event) => match event.code {
-                KeyCode::Char(' ') if event.modifiers == crossterm::event::KeyModifiers::CONTROL
-                                   =>   prog.change_visualizer(false),
+                KeyCode::Char('b') =>   prog.change_visualizer(false),
 
                 KeyCode::Char(' ') =>   prog.change_visualizer(true),
 
@@ -436,8 +435,9 @@ pub fn control_key_events_con(
 
                 KeyCode::Char('\\') =>  prog.toggle_auto_switch(),
 
-                KeyCode::Char('.') => prog.switch_con_mode(),
-                // KeyCode::Char(',') => change_charset(prog),
+                KeyCode::Char('.') => 	prog.switch_con_mode(),
+                
+                KeyCode::Char('n') => 	prog.change_vislist(),
 
                 KeyCode::Char('/') => {
 					prog.VOL_SCL = DEFAULT_VOL_SCL;
