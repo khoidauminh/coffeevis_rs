@@ -32,7 +32,7 @@ impl RainDrop {
 	pub fn randomize_start(&mut self) {
 		let wf = self.bound_width as f64;
 		self.position.x = random_float(wf);
-		self.fall_amount = (random_int(7) + 3) as f64 * 0.175;
+		self.fall_amount = 0.5 + random_int(128) as f64 * 0.02;
 		self.position.y = 0.0;
 	}
 	
@@ -113,9 +113,9 @@ pub fn draw(prog: &mut Program, stream: &mut SampleArr) {
 	}
 	
 	let mut old = OLD_VOLUME.lock().unwrap();
-	*old = f64::max(*old * 0.95, new_volume);
+	*old = crate::math::interpolate::linearf(*old, new_volume, 0.2);
 	
-	let blue = 0.7 - new_volume * 0.005;
+	let blue = 0.7 - *old * 0.005;
 	prog.pix.fill(u32::from_be_bytes([0xFF, 0, (119.0 * blue) as u8, (255.0 * blue) as u8]));
 	
     let mut list = LIST_OF_DROPS.lock().unwrap();
