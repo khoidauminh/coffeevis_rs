@@ -62,6 +62,16 @@ pub fn random_int(bound: u32) -> u32 {
 	a % bound
 }
 
+pub fn faster_random_int(seed: usize, i: usize, bound: usize) -> usize {
+	let num = seed.wrapping_add(i.wrapping_mul(349323)) as f64 * 0.5707962;
+	
+	let mut num = num.to_bits();
+	num ^= num.wrapping_shr(32);
+	
+	num as usize % bound
+}
+
+
 pub fn random_float(bound: f64) -> f64 {
 	static VAR: Mutex<f32> = Mutex::new(0.2132454);
 	

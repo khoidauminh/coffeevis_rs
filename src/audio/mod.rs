@@ -227,3 +227,40 @@ where T: Into<f64> + std::ops::Mul<f64, Output = T> + std::marker::Copy
 		});
 	});
 }
+
+
+pub fn limiter_pong<T>(
+	a: &mut [T],
+	limit: f64,
+	hold_samples: usize,
+	gain: f64,
+	flattener: fn(T) -> f64 
+)
+where T: Into<f64> + std::ops::Mul<f64, Output = T> + std::marker::Copy 
+{
+	let fall_factor = 1.0 - 1.0 / hold_samples as f64;
+
+	let mut multiplier = vec![0f64; a.len()];
+	
+	let mut expo_amp = limit;
+	
+	for (ele, m) in a.iter().zip(multiplier.iter_mut()) {
+		
+		let smp = flattener(*ele).abs();
+		
+		expo_amp = smp.max( limit.max(expo_amp * fall_factor) );
+		
+		*m = expo_amp;
+	}
+	
+	for (ele, m) in a.iter_mut().zip(multiplier.iter_mut()).rev() {
+		
+		let smp = flattener(*ele).abs();
+		
+		expo_amp = smp.max( limit.max(expo_amp * fall_factor) );
+		
+		*m = m.max(expo_amp);
+		
+		*ele = *ele * (gain / *m);
+	}
+}

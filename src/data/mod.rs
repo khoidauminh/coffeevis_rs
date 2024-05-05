@@ -40,7 +40,7 @@ pub const DEFAULT_WIN_SCALE: u8 = 3;
 /// Console mode reolution are stored in `CON_W` and `CON_H`,
 /// with special fields: `CON_MAX_W` and `CON_MAX_H` for maximum
 /// console resolution allowed.
-pub struct Program
+pub(crate) struct Program
 {
     /// for experimental purposes. Console mode only.
 	DISPLAY: bool,

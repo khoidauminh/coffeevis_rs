@@ -40,17 +40,30 @@ impl ToUsize<i32> for usize {
 	}
 }
 
-pub fn fft_stereo_small(a: &mut [Cplx], up_to: usize, norm: bool) {
-	fft::compute_fft_stereo_small(a, up_to, norm);
+pub const fn ideal_fft_bound(up_to: usize) -> usize {
+	(up_to *3/2).next_power_of_two()*2
 }
 
 pub fn fft_stereo(a: &mut [Cplx], up_to: usize, norm: bool) {
 	fft::compute_fft_stereo(a, up_to, norm);
 }
 
+pub fn fft_stereo_small(a: &mut [Cplx], up_to: usize, normalize: bool) {
+	let bound = ideal_fft_bound(up_to);
+	let bound = bound.min(a.len());
+		
+	fft::compute_fft_stereo(&mut a[0..bound], up_to, normalize);
+}
+
+pub fn fft_small(a: &mut [Cplx], up_to: usize) {
+	let bound = ideal_fft_bound(up_to);
+	let bound = bound.min(a.len());
+	fft(&mut a[0..bound]);
+}
+
 pub fn fft(a: &mut [Cplx]) {
 	let l = a.len();
-	let power = l.ilog2() as usize;
+	let power = fast::ilog2(l);
 
 	fft::butterfly(a, power);
 	fft::compute_fft(a);
@@ -98,6 +111,37 @@ pub fn inverse_factorial(i: usize) -> usize {
 
 	o
 }
+
+pub fn upscale(a: &mut [Cplx], small_bound: usize, up_bound: usize) {
+	let l = a.len();
+	let bound = l.min(up_bound);
+
+	for i in (0..bound).rev() {
+		
+		let small_i = i * small_bound / up_bound;
+		
+		a[i] = a[small_i];
+	}
+}
+
+pub fn upscale_linear(a: &mut [Cplx], small_bound: usize, up_bound: usize) {
+	let ratio = small_bound as f64 / up_bound as f64;
+	let l = a.len();
+	let bound = l.min(up_bound);
+	
+	for i in (0..bound).rev() {
+		
+		let small_i_f = i as f64 * ratio;
+
+		let small_i = small_i_f as usize;
+		let small_i_next = small_i + 1;
+		
+		let t = small_i_f.fract();
+		
+		a[i] = interpolate::linearfc(a[small_i], a[small_i_next], t);
+	}
+}
+
 /*
 pub fn derivative<T>(a: &mut [Vec2<T>], amount: f64)
 where T: std::marker::Copy + ops::Sub<Output = T>

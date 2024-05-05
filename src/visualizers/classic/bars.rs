@@ -11,7 +11,7 @@ const FFT_SIZE_HALF: usize = FFT_SIZE / 2;
 static DATA: RwLock<Vec<f64>> = RwLock::new(Vec::new());
 static MAX: RwLock<f64> = RwLock::new(0.0);
 
-const FFT_SIZE_RECIP: f64 = 2.0 / FFT_SIZE as f64;
+const FFT_SIZE_RECIP: f64 = 1.4 / FFT_SIZE as f64;
 const NORMALIZE_FACTOR: f64 = FFT_SIZE_RECIP;
 const BARS: usize = 48;
 
@@ -36,17 +36,21 @@ fn prepare(stream: &mut crate::audio::SampleArr, bar_num: usize, volume_scale: f
 	}
 
     let mut data_f = [Cplx::zero(); FFT_SIZE];
-    data_f
-    .iter_mut()
-    .take(FFT_SIZE_HALF)
-    .enumerate()
-    .for_each(|(i, smp)| 
-        *smp = stream[i*2].scale(FFT_SIZE_RECIP)
-    );
+    
+    {
+		const UP: usize = FFT_SIZE / (BARS * 3/2);
+		data_f
+		.iter_mut()
+		.take(FFT_SIZE_HALF)
+		.enumerate()
+		.for_each(|(i, smp)| 
+		    *smp = stream[i*UP]
+		);
+    }
     
     //~ math::blackmannuttall::perform_window(&mut data_f);
     
-    math::fft_half(&mut data_f);
+    math::fft_small(&mut data_f, BARS);
     
     let _max = MAX.write().unwrap();
     
@@ -60,13 +64,14 @@ fn prepare(stream: &mut crate::audio::SampleArr, bar_num: usize, volume_scale: f
         .map(|(i, smp)| {
 		    let scl = ((i+2) as f64).log2().powi(2);
 		    let smp_f64: f64 = (*smp).mag();
-		    smp_f64 * (volume_scale * scl)
+		    
+		    smp_f64 * volume_scale * scl * FFT_SIZE_RECIP
 	    })
 	    .collect::<Vec<f64>>();
 	
 	//*max = math::normalize_max_cplx(&mut data_f, 0.01, 0.7, *max, 0.0035);
 	
-	crate::audio::limiter(&mut data_f[..bar_num], 0.9, 10, 0.98, |x| x);
+	crate::audio::limiter_pong(&mut data_f[..bar_num], 0.9, 20, 0.98, |x| x);
 	
 	//let scale_factor = stream.normalize_factor_peak()*FFT_SIZE_RECIP*7.0;
     

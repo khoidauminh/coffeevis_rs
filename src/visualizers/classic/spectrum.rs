@@ -2,7 +2,7 @@
 
 use std::sync::RwLock;
 
-use crate::math::{self, Cplx, interpolate::*};
+use crate::math::{self, Cplx, interpolate::*, rng::faster_random_int};
 use crate::data::{FFT_SIZE};
 use crate::graphics::{P2, blend::Blend};
 
@@ -38,27 +38,33 @@ fn volume_scale(x: f64) -> f64 {
 
 fn prepare(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
     const WINDOW: usize = 2*FFT_SIZE/3;
-	let fall_factor = 0.5*prog.SMOOTHING.powi(2) * prog.FPS as f64 * 0.006944444;
+	let fall_factor = 0.4*prog.SMOOTHING.powi(2) * prog.FPS as f64 * 0.006944444;
 	let mut LOCAL = DATA.write().unwrap();
     let mut fft = [Cplx::zero(); FFT_SIZE];
 	
-    fft.iter_mut()
-    .take(WINDOW)
-    .enumerate()
-    .for_each(|(i, smp)| {
-        *smp = stream[i * WINDOW / RANGE];
-    });
-    
-	// let RANGE1 = RANGE+1;
+	{
+		const UP: usize = FFT_SIZE / (RANGE * 3/2);
+		
+		fft.iter_mut()
+		.take(WINDOW)
+		.enumerate()
+		.for_each(|(i, smp)| {
+			let idx = i * UP;
+		    *smp = stream[idx];
+		});
+   	}
     
     math::fft_stereo_small(&mut fft, RANGE, true);
-    	
+    
+   // math::upscale(&mut fft, RANGE, RANGE*2);
+    
 	fft.iter_mut().take(RANGE).enumerate().for_each(|(i, smp)| {
-		let scalef = math::fft_scale_up(i, RANGE);
+		//let scalef = math::fft_scale_up(i, RANGE+1);
+		let scalef = math::fast::ilog2(i+1) as f64 * (1.5 - i as f64 / RANGEF) * 1.75;
 		*smp = *smp * scalef;
 	});
 	
-	crate::audio::limiter(&mut fft[0..RANGE], 1.5, 20, prog.VOL_SCL, |x| x.max());
+	crate::audio::limiter_pong(&mut fft[0..RANGE], 1.5, 15, prog.VOL_SCL, |x| x.max());
 
     LOCAL
     .iter_mut()
