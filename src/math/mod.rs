@@ -264,36 +264,10 @@ pub fn normalize_average(a: &mut [Cplx], limit: f64, prev_ave: f64, smooth_facto
     ave
 }
 
-/*
-pub fn remove_offset<T>(a: &mut [T])
-where T: ops::Sub<Output = T> + ops::Add<Output = T>
-{
-    let l = a.len();
-    for i in 1..l {
-        let il = i-1;
-        a[il] = a[i] - a[il];
-    }
-
-    for i in 1..l {
-        let il = i-1;
-        a[i] = a[i] + a[il];
-    }
-}
-*/
 pub fn cos_sin(x: f64) -> Cplx {
-    if cfg!(any(feature = "wtf", feature = "approx_trig")) { 
-		
-		use fast::{sin_norm, cos_norm, wrap};
-		let x2 = wrap(x);
-		Cplx::new(cos_norm(x2), sin_norm(x2))
-		
-	} else {
-		
-		let x = x*std::f64::consts::TAU;
-		let y = x.sin_cos();
-		Cplx::new(y.1, y.0)
-	
-	}
+	let x = x*std::f64::consts::TAU;
+	let y = x.sin_cos();
+	Cplx::new(y.1, y.0)
 }
 
 pub mod interpolate {

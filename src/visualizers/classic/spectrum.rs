@@ -1,8 +1,6 @@
-
-
 use std::sync::RwLock;
 
-use crate::math::{self, Cplx, interpolate::*, rng::faster_random_int};
+use crate::math::{self, Cplx, interpolate::*};
 use crate::data::{FFT_SIZE};
 use crate::graphics::{P2, blend::Blend};
 
@@ -19,7 +17,6 @@ static MAX: RwLock<f64> = RwLock::new(1.0);
 fn l1_norm_slide(a: Cplx, t: f64) -> f64 {
 	a.x.abs()*t + a.y.abs()*(1.0-t)
 }
-
 
 fn index_scale(x: f64) -> f64 {
     //math::fast::fsqrt(x)*x
