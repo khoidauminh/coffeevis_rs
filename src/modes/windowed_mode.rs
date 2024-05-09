@@ -167,19 +167,25 @@ pub fn win_main_winit(mut prog: Program) -> Result<(), &'static str> {
 
 	let event_loop = EventLoop::new().unwrap();
 
+	if prog.transparency < 255 {
+		eprintln!(
+		"WARNING: transparency doesn't work for now.
+		\rSee https://github.com/rust-windowing/softbuffer/issues/215\n"
+		);
+	}
+
 	let window = Arc::new(
 			WindowBuilder::new()
-			.with_title("kvis")
+			.with_title("cvis")
 			.with_inner_size(LogicalSize::<u32>::new(size.0, size.1))
 			.with_window_level(winit::window::WindowLevel::AlwaysOnTop)
-			.with_transparent(prog.transparency < 255)
+			.with_transparent(false)
 			.with_resizable(false)
 			.build(&event_loop)
 			.expect("Failed to init window")
 	);
 
-	let inner_size = window.clone().inner_size();
-
+	let inner_size 	= window.clone().inner_size();
     let context 	= softbuffer::Context::new(window.clone()).unwrap();
     let mut surface = softbuffer::Surface::new(&context, window.clone()).unwrap();
    
