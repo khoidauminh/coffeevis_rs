@@ -1,10 +1,10 @@
 use crate::math::Cplx;
 use crate::data::DEFAULT_ROTATE_SIZE;
 
-const SILENCE_LIMIT: f64 = 0.01;
+const SILENCE_LIMIT: f64 = 0.001;
 const AMP_PERSIST_LIMIT: f64 = 0.05;
 const AMP_TRIGGER_THRESHOLD: f64 = 0.85;
-const SILENCE_INDEX: u32 = 7;
+const SILENCE_INDEX: u16 = 24;
 
 const BUFFER_SIZE_POWER: usize = crate::data::POWER;
 const BUFFER_SIZE: usize = 1 << BUFFER_SIZE_POWER;
@@ -52,24 +52,7 @@ pub struct AudioBuffer {
 
     max: f64,
     average: f64,
-    silent: bool
-}
-
-pub struct AudioBufferIterator<'a> {
-    reference: &'a AudioBuffer,
-    index: usize,
-    take: usize
-}
-
-impl<'a> Iterator for AudioBufferIterator<'a> {
-    type Item = Cplx;
-
-    fn next(&mut self) -> Option<Cplx> {
-        if self.index >= self.take {return None}
-        let o = self.reference[self.index];
-        self.index = self.index.wrapping_add(1);
-        Some(o)
-    }
+    silent: u8
 }
 
 impl std::ops::Index<usize> for AudioBuffer {
@@ -109,15 +92,7 @@ impl AudioBuffer {
             
             max: 0.0,
             average: 0.0,
-            silent: true
-        }
-    }
-
-    pub fn iter(&self) -> AudioBufferIterator<'_> {
-        AudioBufferIterator {
-            reference: self,
-            index: 0,
-            take: self.buffer.len()
+            silent: 0
         }
     }
     
@@ -138,7 +113,6 @@ impl AudioBuffer {
 	}
 	
 	pub fn index_sub(&self, a: usize, b: usize) -> usize {
-		// let c = if b > BUFFER_SIZE { (b/BUFFER_SIZE) * BUFFER_SIZE } else { 0 };
 		a.wrapping_sub(b) & self.size_mask
 	}
 
@@ -160,6 +134,14 @@ impl AudioBuffer {
     
     pub fn readpoint(&self) -> usize {
 		self.offset
+	}
+	
+	pub fn is_silent(&self, x: u8) -> bool {
+		self.silent > x
+	}
+	
+	pub fn silent(&self) -> u8 {
+		self.silent
 	}
     
     pub fn normalize_factor_peak(&self) -> f64 {
@@ -203,58 +185,47 @@ impl AudioBuffer {
     pub fn set_to_writepoint(&mut self) {
         self.offset = self.write_point;
     }
-    
-    /// Returns boolean indicating silence,
-    /// Doesn't compute max and average.
-    pub fn read_from_input_quiet<T: cpal::Sample<Float = f32>>(&mut self, data: &[T]) -> bool {
-        let input_size = data.len();
-        self.input_size = input_size /2;
-        let mut silence_index: u32 = 0;
-
-        data
-        .chunks_exact(2)
-        .enumerate()
-        .for_each(|(_i, chunk)| {
-            let smp = &mut self.buffer[self.write_point];
-            write_sample(smp, chunk);
-
-			let left  = smp.x.abs();
-			let right = smp.y.abs();
-			
-            silence_index += ((left > SILENCE_LIMIT) || (right > SILENCE_LIMIT)) as u32;
-	        self.write_point = self.index_add(self.write_point, 1);
-        });
         
-        self.post_process(silence_index < SILENCE_INDEX)
-    }
-
-    /// With `normalizer`
-    pub fn read_from_input<T: cpal::Sample<Float = f32>>(&mut self, data: &[T]) -> bool {
+    pub fn read_from_input<T: cpal::Sample<Float = f32>>(&mut self, data: &[T]) {
+    
         let input_size = data.len();
         self.input_size = input_size /2;
 
         let mut max_l = 0.0f64;
         let mut max_r = 0.0f64;
-
-        data
-        .chunks_exact(2)
-        .enumerate()
-        .for_each(|(_i, chunk)| {
-            let smp = &mut self.buffer[self.write_point];
+                
+        self.write_point = self.index_add(self.write_point, self.input_size);
+        let mut write_point = self.write_point;
+        
+        let mut silent_samples = 0u16;
+        
+        // Stop reading once the input is quiet enough to fill the buffer with "zeros".
+        let stop_reading = self.is_silent( (BUFFER_SIZE / self.input_size).min(255) as u8 );
+        
+        for chunk in data.chunks_exact(2) {
+            let smp = &mut self.buffer[write_point];
             write_sample(smp, chunk);
 
 			let left  = smp.x.abs();
 			let right = smp.y.abs();
 			
+			silent_samples += (left < SILENCE_LIMIT && right < SILENCE_LIMIT) as u16;
+			
+			// Only check the first SILENCE_INDEX samples
+			if silent_samples >= SILENCE_INDEX && stop_reading {
+				self.post_process(true);
+				return;
+			}
+			
             max_l = max_l.max(left);
             max_r = max_r.max(right);
-
-	        self.write_point = self.index_add(self.write_point, 1);
-        });
+            
+	        write_point = self.index_sub(write_point, 1);
+        }
         
-        let max = max_r.max(max_l);
-
-	  self.max =
+		let max = max_r.max(max_l);
+	
+		self.max =
 		crate::math::interpolate::multiplicative_fall(
 			self.max,
 			max,
@@ -265,30 +236,33 @@ impl AudioBuffer {
 		self.post_process(max < SILENCE_LIMIT)
     }
 
-    pub fn post_process(&mut self, silent: bool) -> bool {
+    pub fn post_process(&mut self, silent: bool) {
 		 const BSIZE_HALF: usize = BUFFER_SIZE / 2;
+		 
 		 if self.input_size >= BSIZE_HALF {
             self.offset = self.write_point;
         } else {
             self.offset = self.index_sub(self.write_point, self.input_size*2);
         }
 
-        self.silent = silent;
-        
+		if silent {
+        	self.silent = self.silent.saturating_add(1);
+        } else {
+        	self.silent = 0;
+        }
+                
         self.average_rotates_since_write = 
         	(self.average_rotates_since_write + self.rotates_since_write).max(2) / 2;
                 
         self.rotates_since_write = 0;
                 
 		self.rotate_size = self.input_size / self.average_rotates_since_write + 1; 
-
-        self.silent
 	}
 
-    pub fn normalize(&mut self) {
+    pub fn checked_normalize(&mut self) {
 		let scale_up_factor = self.normalize_factor_peak();
 
-		if self.silent || scale_up_factor <= 1.0 {return}
+		if self.is_silent(0) || scale_up_factor <= 1.0 {return}
 
 		let mut write_point = self.index_sub(self.write_point, self.input_size);
 
@@ -297,6 +271,10 @@ impl AudioBuffer {
             *smp = smp.scale(scale_up_factor);
             write_point = self.index_add(write_point, 1);
         }
+	}
+	
+	pub fn checked_fill_zero(&mut self) {
+		if self.is_silent(3) {self.buffer.fill(Cplx::zero())}
 	}
 
     #[doc(hidden)]

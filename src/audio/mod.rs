@@ -19,9 +19,23 @@ use crate::{
 };
 
 /// Global sample array
-pub type GSA = Mutex<AudioBuffer>;
+type GSA = Mutex<AudioBuffer>;
 
-pub type SampleArr<'a> = MutexGuard<'a, AudioBuffer>;
+pub(crate) struct SampleArr<'a>(MutexGuard<'a, AudioBuffer>);
+
+impl<'a> std::ops::Deref for SampleArr<'a> {
+	type Target = MutexGuard<'a, AudioBuffer>;
+	
+	fn deref(&self) -> &Self::Target {
+		&self.0
+	}
+}
+
+impl<'a> std::ops::DerefMut for SampleArr<'a> {
+	fn deref_mut(&mut self) -> &mut Self::Target {
+		&mut self.0
+	}
+}
 
 static BUFFER: GSA = Mutex::new(AudioBuffer::new());
 
@@ -73,21 +87,15 @@ pub fn read_samples<T: cpal::Sample<Float = f32>>(data: &[T]) {
     let _s = 0usize;
 
     let mut b = BUFFER.lock().unwrap();
-
-    let mut ns = get_no_sample().saturating_add(1);
-
-    if get_normalizer() && ns < 2 {
-        ns *= b.read_from_input(data) as u8;
-        b.normalize();
-	} else {
-	    ns *= b.read_from_input_quiet(data) as u8;
-	}
 	
+	b.read_from_input(data);
+	b.checked_normalize();
+	let ns = b.silent();
     NO_SAMPLE.store(ns, Ordering::Relaxed);
 }
 
 pub fn get_buf() -> SampleArr<'static> {
-    BUFFER.lock().unwrap()
+    SampleArr(BUFFER.lock().unwrap())
 }
 
 pub fn get_no_sample() -> u8 {
