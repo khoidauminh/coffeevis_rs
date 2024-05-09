@@ -200,7 +200,7 @@ impl Program {
 	    };
 
 	    println!(
-	        "Welcome to Coffeevis!\n\
+	        "\nWelcome to Coffeevis!\n\
 	        Audio visualizer by khoidauminh (Cas Pascal on github)"
         );
 
