@@ -7,6 +7,15 @@ Some too slow, some didn't have the visualizer I like, some take up too much cpu
 
 This project also serves as my playground, so you'll see a lot of weird implementations in the source files.
 
+## What's new in v0.5.0
+v0.5.0 introduces Winit as the default window backend for Coffeevis. Cvis can still be launched 
+with minifb with the --win-legacy flag. It's also Wayland by default.
+
+The app now has a new set of visualizers called Milk. These visualizers look more artistic and colorfull than
+the default set of visualizers (called Classic).
+
+With performance improvements Cvis should now use less CPU usage, and even less when idle.
+
 ## Examples:
 
 ![console mode](./kvis_preview_2.webp)
@@ -42,7 +51,6 @@ Coffeevis supports temporary options at launch
 | --win-legacy |  | opens window with minifb (coffeevis now runs with winit by default) |
 | --x11 | | runs in X11 (Wayland is the default) |
 | --ascii<br />--block<br />--braille | | runs in the terminal |
-| --transparent | 192 | sets transparency, no value indicates full transparency. Currently does not work properly |
 | --no-auto-switch | | disables automatic visualizer switching |
 | --size | 80x80 | sets resolution in window mode |
 | --scale | 2 | upscales in window mode |
@@ -57,7 +65,7 @@ Currently reading from a file is not supported. It is recommended to launch coff
 Upon launch coffeevis will grab your default audio source, use an audio 
 config tool to direct your desired source to coffeevis (e.g. `pavucontrol`). I don't know how to fix this yet.
 
-On Wayland, coffeevis cannot set itself on top so you will have to rely on external tool. For example, on KDE Plasma, you can use the window rules feature to do that. 
+On Wayland, coffeevis cannot set itself on top so you will have to rely on an external tool. For example, on KDE Plasma, you can use the window rules feature.
 
 When input is quiet, the visualizer will try to amplify the input so that the visualizers don't become boring.
 
