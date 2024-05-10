@@ -1,7 +1,7 @@
 use crate::math::Cplx;
 use crate::data::DEFAULT_ROTATE_SIZE;
 
-const SILENCE_LIMIT: f64 = 0.0005;
+const SILENCE_LIMIT: f64 = 0.001;
 const AMP_PERSIST_LIMIT: f64 = 0.05;
 const AMP_TRIGGER_THRESHOLD: f64 = 0.85;
 const SILENCE_INDEX: u16 = 24;
@@ -194,8 +194,8 @@ impl AudioBuffer {
         let mut max_l = 0.0f64;
         let mut max_r = 0.0f64;
                 
-        self.write_point = self.index_add(self.write_point, self.input_size);
-        let mut write_point = self.write_point;
+        //self.write_point = self.index_add(self.write_point, self.input_size);
+        //let mut write_point = self.write_point;
         
         let mut silent_samples = 0u16;
         
@@ -203,25 +203,24 @@ impl AudioBuffer {
         let stop_reading = self.is_silent( (BUFFER_SIZE / self.input_size).min(255) as u8 );
         
         for chunk in data.chunks_exact(2) {
-            let smp = &mut self.buffer[write_point];
+            let smp = &mut self.buffer[self.write_point];
             write_sample(smp, chunk);
 
 			let left  = smp.x.abs();
 			let right = smp.y.abs();
 			
-			silent_samples += (left < SILENCE_LIMIT && right < SILENCE_LIMIT) as u16;
-			
-			// Only check the first SILENCE_INDEX samples
-			if silent_samples >= SILENCE_INDEX && stop_reading {
-				self.post_process(true);
-				return;
-			}
-			
             max_l = max_l.max(left);
             max_r = max_r.max(right);
             
-	        write_point = self.index_sub(write_point, 1);
+            silent_samples += (max_l < SILENCE_LIMIT && max_r < SILENCE_LIMIT) as u16;
+			
+			// Only check the first SILENCE_INDEX samples
+			if silent_samples >= SILENCE_INDEX && stop_reading {break}
+            
+	        self.write_point = self.index_add(self.write_point, 1);
         }
+        
+        // self.write_point = write_point;
         
 		let max = max_r.max(max_l);
 	
