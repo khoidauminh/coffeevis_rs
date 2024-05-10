@@ -40,8 +40,8 @@ fn main() {
 	prog.print_startup_info();
 
 	match prog.mode() {
-		Mode::WinLegacy    => win_legacy_main(prog).unwrap(),
-		Mode::Win          => win_main_winit(prog).unwrap(),
+		Mode::WinLegacy    => minifb_main(prog).unwrap(),
+		Mode::Win          => winit_main(prog).unwrap(),
 		_                  => con_main(prog).unwrap()
 	}
 

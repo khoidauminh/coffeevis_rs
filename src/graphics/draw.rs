@@ -1,4 +1,4 @@
-use super::{Canvas, P2, blend::{Blend, Mixer}, CommandBuffer};
+use super::{Canvas, P2, blend::{Blend, Mixer}, DrawCommandBuffer};
 
 impl Canvas {
 

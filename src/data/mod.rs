@@ -2,6 +2,7 @@ pub mod reader;
 pub mod vislist;
 
 use std::time::{Duration, Instant};
+
 use crate::modes::{Mode, console_mode::Flusher};
 
 use crate::VisFunc;
@@ -21,6 +22,9 @@ pub const DEFAULT_ROTATE_SIZE: usize = 289; // 3539;
 pub const PHASE_OFFSET: usize = SAMPLE_RATE / 50 / 4;
 pub const DEFAULT_VOL_SCL: f64   = 0.86;
 pub const DEFAULT_SMOOTHING: f64 = 0.65;
+
+/// Stop rendering when get_no_sample() exceeds this value;
+pub const STOP_RENDERING: u8 = 192;
 
 /// How long silence has happened to trigger render slow down.
 pub const SILENCE_LIMIT: u8 = 7;
@@ -84,12 +88,32 @@ pub(crate) struct Program
     AUTO_SWITCH_ITVL: Duration,
 }
 
+#[derive(Debug)] 
+pub enum Command {
+	VisualizerNext,
+	VisualizerPrev,
+	SwitchConMode,
+	ConMax(i16, bool),
+	FPS(i16, bool),
+	SwitchVisList,
+	VolUp,
+	VolDown,
+	SmoothUp,
+	SmoothDown,
+	WavUp,
+	WavDown,
+	AutoSwitch,
+	Reset,
+	Blank,
+}
+
 impl Program {
 	pub fn new() -> Self {
 		let vislist_ = vislist::VisNavigator::new();
 		let vis = vislist_.current_vis();
 
 		Self {
+		
 			DISPLAY: true,
 			SCALE: DEFAULT_WIN_SCALE,
 			RESIZE: false,
@@ -144,6 +168,45 @@ impl Program {
 		}
 		self
 	}
+	
+	pub fn eval_command(&mut self, cmd: &Command) -> bool {
+		use Command::*;
+	
+		match cmd {
+			&VisualizerNext 	=> { self.change_visualizer(true); true}
+			&VisualizerPrev 	=> { self.change_visualizer(false); true}
+			&SwitchConMode		=> { self.switch_con_mode(); true}
+			&SwitchVisList 		=> { self.change_vislist(); true}
+			
+			&FPS(fps, replace)	=> { self.change_fps(fps, replace); false}
+			
+			&ConMax(d, replace) => { self.change_con_max(d, replace); true}
+			
+			&VolUp 				=> { self.increase_vol_scl(); false}
+			&VolDown 			=> { self.decrease_vol_scl(); false}
+			
+			&SmoothUp			=> { self.increase_smoothing(); false}
+			&SmoothDown			=> { self.decrease_smoothing(); false}
+			
+			&WavUp				=> { self.increase_wav_win(); false}
+			&WavDown			=> { self.decrease_wav_win(); false}
+			
+			&AutoSwitch			=> { self.toggle_auto_switch(); false}
+			&Reset				=> { self.reset_parameters(); false}
+						
+			&Blank 				=> {false}
+		}
+	}
+	
+	pub fn eval_commands(&mut self, cmds: &mut Vec<Command>) -> bool {
+		let mut redraw = false;
+		for cmd in cmds.iter() {
+			redraw |= self.eval_command(cmd);
+		}
+		cmds.clear();
+		
+		redraw
+	}
 
 	pub fn as_con_force(mut self, mode: Mode) -> Self {
 		 self.set_con_mode(mode);
@@ -164,14 +227,18 @@ impl Program {
 		self.SWITCH = Instant::now() + self.AUTO_SWITCH_ITVL;
 	}
 
-	pub fn update_vis(&mut self) {
+	pub fn update_vis(&mut self) -> bool {
 		let elapsed = Instant::now();
 		if elapsed >= self.SWITCH && self.AUTO_SWITCH
 		{
 			self.SWITCH = elapsed + self.AUTO_SWITCH_ITVL;
 
 			self.change_visualizer(true);
+			
+			return true;
 		}
+		
+		false
 	}
 	
 	pub fn change_fps(&mut self, amount: i16, replace: bool) {
@@ -319,11 +386,11 @@ impl Program {
 	}
 	
 	pub fn increase_wav_win(&mut self) {
-		self.WAV_WIN = (self.WAV_WIN + 3).clamp(3, 50)
+		self.WAV_WIN = (self.WAV_WIN * 5 / 4).clamp(3, 500)
 	}
 	
 	pub fn decrease_wav_win(&mut self) {
-		self.WAV_WIN = (self.WAV_WIN - 3).clamp(3, 50)
+		self.WAV_WIN = (self.WAV_WIN * 4 / 5).clamp(3, 500)
 	}
 	
 	pub fn toggle_auto_switch(&mut self) {
@@ -339,6 +406,8 @@ impl Program {
 		self.VOL_SCL = DEFAULT_VOL_SCL;
 		self.SMOOTHING = DEFAULT_SMOOTHING;
 		self.WAV_WIN = DEFAULT_WAV_WIN;
+        self.change_con_max(50, true);
+        self.change_fps(DEFAULT_FPS as i16, true);
 	}
 	
 	pub fn switch_con_mode(&mut self) {

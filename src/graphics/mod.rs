@@ -23,7 +23,7 @@ enum DrawCommand {
 	Fade(u8, u32)
 }
 
-trait CommandBuffer {
+trait DrawCommandBuffer {
 	fn rect(&mut self, ps: P2, pe: P2, c: u32, b: Mixer);
 	fn rect_wh(&mut self, ps: P2, w: usize, h: usize, c: u32, b: Mixer);
 	fn line(&mut self, ps: P2, pe: P2, c: u32, b: Mixer);
@@ -34,7 +34,7 @@ trait CommandBuffer {
 	fn execute(&mut self, canvas: &mut [u32], cwidth: usize, cheight: usize);
 }
 
-impl CommandBuffer for Vec<DrawCommand> {
+impl DrawCommandBuffer for Vec<DrawCommand> {
 	fn rect(&mut self, ps: P2, pe: P2, c: u32, b: Mixer) {
 		self.push(DrawCommand::Rect(ps, pe, c, b)); 
 	}

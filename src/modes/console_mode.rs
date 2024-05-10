@@ -403,52 +403,49 @@ pub fn control_key_events_con(
 	let no_sample = crate::audio::get_no_sample();
 	let inactive = (no_sample > 64) as u8 + (no_sample > 192) as u8; 
 
+	let mut command = Command::Blank;
+
     if poll(refresh_rates[inactive as usize])? {
         match read()? {
-            Event::Key(event) => match event.code {
-                KeyCode::Char('b') =>   prog.change_visualizer(false),
+            Event::Key(event) => command = match event.code {
+                KeyCode::Char('b') =>   Command::VisualizerPrev,
 
-                KeyCode::Char(' ') =>   prog.change_visualizer(true),
+                KeyCode::Char(' ') =>   Command::VisualizerNext,
 
-                KeyCode::Char('q') =>   *exit = true,
+                KeyCode::Char('q') =>   {*exit = true; Command::Blank}
 
-                KeyCode::Char('1') =>   prog.change_fps(10, true),
-                KeyCode::Char('2') =>   prog.change_fps(20, true),
-                KeyCode::Char('3') =>   prog.change_fps(30, true),
-                KeyCode::Char('4') =>   prog.change_fps(40, true),
-                KeyCode::Char('5') =>   prog.change_fps(50, true),
-                KeyCode::Char('6') =>   prog.change_fps(60, true),
+                KeyCode::Char('1') =>   Command::FPS(10, true),
+                KeyCode::Char('2') =>   Command::FPS(20, true),
+                KeyCode::Char('3') =>   Command::FPS(30, true),
+                KeyCode::Char('4') =>   Command::FPS(40, true),
+                KeyCode::Char('5') =>   Command::FPS(50, true),
+                KeyCode::Char('6') =>   Command::FPS(60, true),
 
-                KeyCode::Char('7') =>   prog.change_fps(-5, false),
-                KeyCode::Char('8') =>   prog.change_fps( 5, false),
-                KeyCode::Char('9') =>   prog.change_con_max(-1, false),
-                KeyCode::Char('0') =>   prog.change_con_max(1, false),
+                KeyCode::Char('7') =>   Command::FPS(-5, false),
+                KeyCode::Char('8') =>   Command::FPS( 5, false),
+                KeyCode::Char('9') =>   Command::ConMax(-1, false),
+                KeyCode::Char('0') =>   Command::ConMax(1, false),
 
-                KeyCode::Char('-') =>   prog.VOL_SCL = (prog.VOL_SCL / 1.2).clamp(0.0, 10.0),
-                KeyCode::Char('=') =>   prog.VOL_SCL = (prog.VOL_SCL * 1.2).clamp(0.0, 10.0),
+                KeyCode::Char('-') =>   Command::VolDown,
+                KeyCode::Char('=') =>  	Command::VolUp,
 
-                KeyCode::Char('[') =>   prog.SMOOTHING = (prog.SMOOTHING - 0.05).clamp(0.0, 0.95),
-                KeyCode::Char(']') =>   prog.SMOOTHING = (prog.SMOOTHING + 0.05).clamp(0.0, 0.95),
+                KeyCode::Char('[') =>   Command::SmoothDown,
+                KeyCode::Char(']') =>   Command::SmoothUp,
 
-                KeyCode::Char(';') =>   prog.WAV_WIN = (prog.WAV_WIN - 3).clamp(3, 50),
-                KeyCode::Char('\'') =>  prog.WAV_WIN = (prog.WAV_WIN + 3).clamp(3, 50),
+                KeyCode::Char(';') =>   Command::WavDown,
+                KeyCode::Char('\'') =>  Command::WavUp,
 
-                KeyCode::Char('\\') =>  prog.toggle_auto_switch(),
+                KeyCode::Char('\\') =>  Command::AutoSwitch,
 
-                KeyCode::Char('.') => 	prog.switch_con_mode(),
+                KeyCode::Char('.') => 	Command::SwitchConMode,
                 
-                KeyCode::Char('n') => 	prog.change_vislist(),
+                KeyCode::Char('n') => 	Command::SwitchVisList,
 
-                KeyCode::Char('/') => {
-					prog.VOL_SCL = DEFAULT_VOL_SCL;
-					prog.SMOOTHING = DEFAULT_SMOOTHING;
-					prog.WAV_WIN = DEFAULT_WAV_WIN;
-                    prog.change_con_max(50, true);
-                    prog.change_fps(DEFAULT_FPS as i16, true);
-                }
+                KeyCode::Char('/') => 	Command::Reset,
 
-                _ => {},
+                _ => Command::Blank,
             },
+            
             Event::Resize(w, h) => {
   				prog.update_size((w, h));
                 prog.clear_con();
@@ -456,6 +453,9 @@ pub fn control_key_events_con(
             _ => {},
         }
     }
+    
+    prog.eval_command(&command);
+    
     Ok(())
 }
 
@@ -484,6 +484,9 @@ pub fn con_main(mut prog: Program) -> std::io::Result<()> {
 		);
 		while !EXIT {
 			control_key_events_con(&mut prog, &mut EXIT)?;
+			
+			if crate::audio::get_no_sample() > crate::data::STOP_RENDERING {continue}
+			
 			prog.force_render();
 			prog.print_con();
 			// prog.print_err_con();
