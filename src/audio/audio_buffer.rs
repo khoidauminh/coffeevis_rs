@@ -1,7 +1,7 @@
 use crate::math::Cplx;
 use crate::data::DEFAULT_ROTATE_SIZE;
 
-const SILENCE_LIMIT: f64 = 0.001;
+const SILENCE_LIMIT: f64 = 0.0005;
 const AMP_PERSIST_LIMIT: f64 = 0.05;
 const AMP_TRIGGER_THRESHOLD: f64 = 0.85;
 const SILENCE_INDEX: u16 = 24;
