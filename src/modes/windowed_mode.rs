@@ -161,6 +161,7 @@ use std::time::Duration;
 use std::sync::RwLock;
 
 use crate::data::Command;
+use crate::graphics::Canvas;
 
 fn set_exit(b: Arc<AtomicBool>) {
 	b.store(false, Relaxed);
@@ -169,7 +170,7 @@ fn set_exit(b: Arc<AtomicBool>) {
 struct WindowState { 
 	pub thread_main_running: Arc<AtomicBool>,
 	pub window: Arc<winit::window::Window>,
-	pub commands: Arc<RwLock< Vec<Command> >>,
+	pub commands: Arc<RwLock<Command>>,
 }
 
 impl ApplicationHandler for WindowState {
@@ -194,9 +195,9 @@ impl ApplicationHandler for WindowState {
 				
 				match self.commands.try_write() {
 
-					Ok(mut cmds) if event.state == ElementState::Pressed && !event.repeat => {
+					Ok(mut cmd) if event.state == ElementState::Pressed && !event.repeat => {
 						
-						let cmd = match event.key_without_modifiers().as_ref() {
+						*cmd = match event.key_without_modifiers().as_ref() {
 							
 							Key::Named(Escape) => {
 								set_exit(self.thread_main_running.clone());
@@ -233,7 +234,6 @@ impl ApplicationHandler for WindowState {
 							_ => Command::Blank ,
 						};
 						
-						cmds.push(cmd);
 					},
 					
 					Ok(_) => {},
@@ -293,7 +293,7 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
 		Duration::from_millis(250)
 	];
 	
-	let mut commands: Arc<RwLock<Vec<Command>>> = Arc::new(RwLock::new(Vec::new()));
+	let mut commands: Arc<RwLock<Command>> = Arc::new(RwLock::new(Command::Blank));
 
 	let mut state = WindowState { 
 		window: window.clone(), 
@@ -306,16 +306,28 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
 	let window = window.clone();
 	
 	let thread = thread::spawn(move || {
-				
-		let context 	= softbuffer::Context::new(window.clone()).unwrap();
-		let mut surface = softbuffer::Surface::new(&context, window.clone()).unwrap();
+		
+		#[cfg(not(feature = "pixels"))]
+		let mut surface = {
+			let context 	= softbuffer::Context::new(window.clone()).unwrap();
+			let mut surface = softbuffer::Surface::new(&context, window.clone()).unwrap();
 
-		surface
-		.resize(
-			NonZeroU32::new(inner_size.width ).unwrap(),
-			NonZeroU32::new(inner_size.height).unwrap()
-		)
-		.unwrap();
+			surface
+			.resize(
+				NonZeroU32::new(inner_size.width ).unwrap(),
+				NonZeroU32::new(inner_size.height).unwrap()
+			)
+			.unwrap();
+			
+			surface
+		};
+		
+		#[cfg(feature = "pixels")]
+		let mut pixels = {
+			let window = window.clone();
+			let surface_texture = pixels::SurfaceTexture::new(inner_size.width, inner_size.height, &window);
+			pixels::Pixels::new(inner_size.width, inner_size.height, surface_texture).unwrap()
+		};
 
 		let _active_frame_duration = prog.REFRESH_RATE;
 		let _idle_frame_duration = Duration::from_millis(333);
@@ -332,6 +344,9 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
 		let commands = commands.clone();
 		
 		let counter: usize = 0;
+		
+		#[cfg(feature = "pixels")]
+		let mut buffer = vec![0u32; (inner_size.width * inner_size.height) as usize];
 	
 		while thread_main_running.load(Relaxed) {
 
@@ -339,15 +354,27 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
 			let mut redraw = false;
 			
 			if let Ok(mut cmd) = commands.try_write() {
-				redraw = prog.eval_commands(&mut cmd);
+				redraw = prog.eval_command(&cmd);
+				*cmd = Command::Blank;
 			}
 
-			if no_sample < 192 || redraw {
+			if no_sample < crate::data::STOP_RENDERING || redraw {
 				
-				let mut buffer = surface.buffer_mut().unwrap();
 				prog.force_render();
-				prog.pix.scale_to(&mut buffer, prog.scale() as usize);
-				let _ = buffer.present();
+				
+				#[cfg(not(feature = "pixels"))] 
+				{
+					let mut buffer = surface.buffer_mut().unwrap();
+					prog.pix.scale_to(&mut buffer, prog.scale() as usize);
+					let _ = buffer.present();
+				}
+				
+				#[cfg(feature = "pixels")] 
+				{
+					prog.pix.scale_to(&mut buffer, prog.scale() as usize);
+					Canvas::to_rgba(&buffer, pixels.frame_mut());
+					pixels.render();
+				}
 				
 				prog.update_vis();
 				
