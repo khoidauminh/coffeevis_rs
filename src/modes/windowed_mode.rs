@@ -153,7 +153,7 @@ use winit::{
 	
 	window::WindowId,
 	
-	dpi::LogicalSize
+	dpi
 };
 
 use std::num::NonZeroU32;
@@ -276,10 +276,11 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
 	let window_attributes = 
 		winit::window::Window::default_attributes()
 			.with_title("cvis")
-			.with_inner_size(LogicalSize::<u32>::new(size.0, size.1))
+			.with_inner_size(dpi::LogicalSize::<u32>::new(size.0, size.1))
 			.with_window_level(winit::window::WindowLevel::AlwaysOnTop)
 			.with_transparent(false)
-			.with_resizable(false)
+			.with_decorations(true)
+			.with_resizable(true)
 	;
 	
 	let window = Arc::new(event_loop.create_window(window_attributes).unwrap());
@@ -304,6 +305,16 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
 	let thread_main_running = state.thread_main_running.clone();
 	
 	let window = window.clone();
+	
+	let window_ = window.clone();
+	
+	// WORKAROUND FOR GNOME 46.2 
+	let thead_size = thread::spawn(move || {
+		thread::sleep(Duration::from_millis(20));
+		let size = window_.inner_size();
+		let _ = window_.request_inner_size(inner_size);
+		window_.set_resizable(false);
+	});
 	
 	let thread = thread::spawn(move || {
 		
@@ -344,6 +355,8 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
 		let commands = commands.clone();
 		
 		let counter: usize = 0;
+		
+		
 		
 		#[cfg(feature = "pixels")]
 		let mut buffer = vec![0u32; (inner_size.width * inner_size.height) as usize];
