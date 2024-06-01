@@ -190,8 +190,16 @@ impl ApplicationHandler for WindowState {
 				
 				// self.window.request_redraw();
 			}
+
+			WindowEvent::MouseInput { button: button, .. } => {
+				if button == winit::event::MouseButton::Left {
+					if let Err(err) = self.window.drag_window() {
+		            	eprintln!("Error starting window drag: {err}");
+		        	}
+				}
+			},
 			
-			 WindowEvent::KeyboardInput {event, ..} => {
+			WindowEvent::KeyboardInput {event, ..} => {
 				
 				match self.commands.try_write() {
 
@@ -364,14 +372,16 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
 		while thread_main_running.load(Relaxed) {
 
 			let no_sample = crate::audio::get_no_sample();			
-			let mut redraw = false;
+			let mut draw = false;
 			
 			if let Ok(mut cmd) = commands.try_write() {
-				redraw = prog.eval_command(&cmd);
+				draw = prog.eval_command(&cmd);
 				*cmd = Command::Blank;
 			}
 
-			if no_sample < crate::data::STOP_RENDERING || redraw {
+			draw |= no_sample < crate::data::STOP_RENDERING;
+
+			if draw {
 				
 				prog.force_render();
 				
@@ -379,7 +389,8 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
 				{
 					let mut buffer = surface.buffer_mut().unwrap();
 					prog.pix.scale_to(&mut buffer, prog.scale() as usize);
-					let _ = buffer.present();
+					window.pre_present_notify();
+					buffer.present().unwrap();
 				}
 				
 				#[cfg(feature = "pixels")] 
@@ -391,7 +402,7 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
 				
 				prog.update_vis();
 				
-				window.request_redraw();
+				//window.request_redraw();
 			}
 
 			thread::sleep(durations[(no_sample >> 6) as usize]);
