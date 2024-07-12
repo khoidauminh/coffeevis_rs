@@ -4,10 +4,10 @@
 
 use std::env;
 
-mod data;
 mod audio;
-mod math;
+mod data;
 mod graphics;
+mod math;
 mod modes;
 mod visualizers;
 
@@ -15,35 +15,36 @@ mod misc;
 
 use data::*;
 
-use modes::{Mode, windowed_mode::*,console_mode::con_main};
+use modes::{console_mode::con_main, windowed_mode::*, Mode};
 
 // Audio lib
-use audio::{get_source};
+use audio::get_source;
 use cpal::traits::StreamTrait;
 use visualizers::VisFunc;
 
 type WriteLock<T> = std::sync::RwLockWriteGuard<'static, T>;
 
 fn main() {
-
     let args = env::args().collect::<Vec<String>>();
 
     let stream = get_source();
     stream.play().unwrap();
 
-	let _conf = "";
+    let _conf = "";
 
-	std::env::set_var("LC_CTYPE", "en_US.utf8");
+    std::env::set_var("LC_CTYPE", "en_US.utf8");
 
-	let prog = Program::new().eval_args(&mut args.iter());
+    let prog = Program::new().eval_args(&mut args.iter());
 
-	prog.print_startup_info();
+    prog.print_startup_info();
 
-	match prog.mode() {
-		Mode::WinLegacy    => minifb_main(prog).unwrap(),
-		Mode::Win          => winit_main(prog).unwrap(),
-		_                  => con_main(prog).unwrap()
-	}
+    match prog.mode() {
+        Mode::WinLegacy => minifb_main(prog).unwrap(),
+
+        Mode::Win => winit_main(prog).unwrap(),
+
+        _ => con_main(prog).unwrap(),
+    }
 
     stream.pause().unwrap();
 }

@@ -1,6 +1,6 @@
 use crate::data::SAMPLE_SIZE;
-use crate::math::{fast::sin_norm};
 use crate::graphics::P2;
+use crate::math::fast::sin_norm;
 
 //static mut _i: usize = 0;
 //static mut _sweep: usize = 0;
@@ -17,20 +17,17 @@ static DATA: std::sync::RwLock<LocalData> = std::sync::RwLock::new(LocalData {
     pong: false,
 });
 
-pub fn draw_vol_sweeper(
-	para: &mut crate::data::Program,
-	stream: &mut crate::audio::SampleArr
-) {
+pub fn draw_vol_sweeper(para: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
     //let w = PIX_W*stream[_sweep].abs() as usize /32768;
     para.pix.fade(3);
 
     let w = {
         /*let sum = stream
-            .iter()
-            .take(SAMPLE_SIZE / 2)
-            .fold(0f64, |s, &x| s + x.mag());*/
+        .iter()
+        .take(SAMPLE_SIZE / 2)
+        .fold(0f64, |s, &x| s + x.mag());*/
         let mut sum = 0.0;
-        for i in 0..SAMPLE_SIZE/2 {
+        for i in 0..SAMPLE_SIZE / 2 {
             sum += stream[i].l1_norm();
         }
         (sum / (SAMPLE_SIZE / 3) as f64 * para.VOL_SCL * para.pix.width() as f64) as usize
@@ -46,8 +43,10 @@ pub fn draw_vol_sweeper(
 
     let mut local = DATA.write().unwrap();
 
-    para.pix.draw_rect_wh(P2::new(2, local.sweepi as i32), para.pix.width(), 1, 0);
-    para.pix.draw_rect_wh(P2::new(2, local.sweepi as i32), w, 1, color);
+    para.pix
+        .draw_rect_wh(P2::new(2, local.sweepi as i32), para.pix.width(), 1, 0);
+    para.pix
+        .draw_rect_wh(P2::new(2, local.sweepi as i32), w, 1, color);
 
     crate::visualizers::classic::dash_line::draw_dash_line(para, stream, false, 0, false);
 
@@ -67,6 +66,6 @@ pub fn draw_vol_sweeper(
             local.pong ^= true;
         }
     }
-    
+
     stream.rotate_left(SAMPLE_SIZE >> 5);
 }

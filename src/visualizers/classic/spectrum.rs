@@ -1,21 +1,21 @@
 use std::sync::RwLock;
 
-use crate::math::{self, Cplx, interpolate::*};
-use crate::data::{FFT_SIZE};
-use crate::graphics::{P2, blend::Blend};
+use crate::data::FFT_SIZE;
+use crate::graphics::{blend::Blend, P2};
+use crate::math::{self, interpolate::*, Cplx};
 
 // const COPY_SIZE: usize = FFT_SIZE / 2;
 
 const RANGE: usize = 64;
-const RANGEF: f64   = RANGE as f64;
+const RANGEF: f64 = RANGE as f64;
 const FFT_SIZEF: f64 = FFT_SIZE as f64;
 const FFT_SIZEF_RECIP: f64 = 1.0 / FFT_SIZEF;
 
-static DATA: RwLock<[Cplx; RANGE+1]> = RwLock::new([Cplx::zero(); RANGE+1]);
+static DATA: RwLock<[Cplx; RANGE + 1]> = RwLock::new([Cplx::zero(); RANGE + 1]);
 static MAX: RwLock<f64> = RwLock::new(1.0);
 
 fn l1_norm_slide(a: Cplx, t: f64) -> f64 {
-	a.x.abs()*t + a.y.abs()*(1.0-t)
+    a.x.abs() * t + a.y.abs() * (1.0 - t)
 }
 
 fn index_scale(x: f64) -> f64 {
@@ -25,84 +25,76 @@ fn index_scale(x: f64) -> f64 {
 }
 
 fn volume_scale(x: f64) -> f64 {
-    2.0*x//crate::math::fast::fsqrt(x)
-    //let x1 = x*0.25 + 0.25;
-    //(x - 2.5).max(0.0)*3.0
-    //(x*3.0).powi(2)
-    //math::fast::fsqrt(math::fast::fsqrt(x))*x
-	//math::fast::unit_exp2_0(2.0*x)
+    2.0 * x //crate::math::fast::fsqrt(x)
+            //let x1 = x*0.25 + 0.25;
+            //(x - 2.5).max(0.0)*3.0
+            //(x*3.0).powi(2)
+            //math::fast::fsqrt(math::fast::fsqrt(x))*x
+            //math::fast::unit_exp2_0(2.0*x)
 }
 
 fn prepare(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
-    const WINDOW: usize = 2*FFT_SIZE/3;
-	let fall_factor = 0.4*prog.SMOOTHING.powi(2) * prog.FPS as f64 * 0.006944444;
-	let mut LOCAL = DATA.write().unwrap();
+    const WINDOW: usize = 2 * FFT_SIZE / 3;
+    let fall_factor = 0.4 * prog.SMOOTHING.powi(2) * prog.FPS as f64 * 0.006944444;
+    let mut LOCAL = DATA.write().unwrap();
     let mut fft = [Cplx::zero(); FFT_SIZE];
-	
-	{
-		const UP: usize = FFT_SIZE / (RANGE * 3/2);
-		
-		fft.iter_mut()
-		.take(WINDOW)
-		.enumerate()
-		.for_each(|(i, smp)| {
-			let idx = i * UP;
-		    *smp = stream[idx];
-		});
-   	}
-    
+
+    {
+        const UP: usize = FFT_SIZE / (RANGE * 3 / 2);
+
+        fft.iter_mut()
+            .take(WINDOW)
+            .enumerate()
+            .for_each(|(i, smp)| {
+                let idx = i * UP;
+                *smp = stream[idx];
+            });
+    }
+
     math::fft_stereo_small(&mut fft, RANGE, true);
-    
-   // math::upscale(&mut fft, RANGE, RANGE*2);
-    
-	fft.iter_mut().take(RANGE).enumerate().for_each(|(i, smp)| {
-		//let scalef = math::fft_scale_up(i, RANGE+1);
-		let scalef = math::fast::ilog2(i+1) as f64 * (1.5 - i as f64 / RANGEF) * 1.75;
-		*smp = *smp * scalef;
-	});
-	
-	crate::audio::limiter_pong(&mut fft[0..RANGE], 1.5, 15, prog.VOL_SCL, |x| x.max());
 
-    LOCAL
-    .iter_mut()
-    .zip(fft.iter())
-	.for_each(
-		|(smp, si)| {
-    	    smp.x = multiplicative_fall(smp.x, si.x, 0.0, fall_factor);
-			smp.y = multiplicative_fall(smp.y, si.y, 0.0, fall_factor);
-		}
-	);
+    // math::upscale(&mut fft, RANGE, RANGE*2);
 
-	stream.auto_rotate();
+    fft.iter_mut().take(RANGE).enumerate().for_each(|(i, smp)| {
+        //let scalef = math::fft_scale_up(i, RANGE+1);
+        let scalef = math::fast::ilog2(i + 1) as f64 * (1.5 - i as f64 / RANGEF) * 1.75;
+        *smp = *smp * scalef;
+    });
+
+    crate::audio::limiter_pong(&mut fft[0..RANGE], 1.5, 15, prog.VOL_SCL, |x| x.max());
+
+    LOCAL.iter_mut().zip(fft.iter()).for_each(|(smp, si)| {
+        smp.x = multiplicative_fall(smp.x, si.x, 0.0, fall_factor);
+        smp.y = multiplicative_fall(smp.y, si.y, 0.0, fall_factor);
+    });
+
+    stream.auto_rotate();
 }
 
-pub fn draw_spectrum(
-	prog: &mut crate::data::Program, 
-	stream: &mut crate::audio::SampleArr
-) {
+pub fn draw_spectrum(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
     let _l = stream.len();
 
     let (w, h) = prog.pix.sizet();
 
     // let scale = FFT_SIZE as f64 * prog.pix.height() as f64 * 0.0625;
     let winwh = w >> 1;
-    
+
     prepare(prog, stream);
-    
+
     let wf = w as f64;
-	let hf = h as f64;
-	
-	let wf_recip = 1.0 / wf;
-	let hf_recip = 1.0 / hf;
-	
-	let binding = DATA.read().unwrap();
+    let hf = h as f64;
+
+    let wf_recip = 1.0 / wf;
+    let hf_recip = 1.0 / hf;
+
+    let binding = DATA.read().unwrap();
     let normalized = binding.as_slice();
 
-//	let mut normalized = [Cplx::zero(); RANGE+1];
-//	normalized.copy_from_slice(LOCAL.as_slice());
-	
-//	let mut current_max = MAX.write().unwrap();
-//	*current_max = math::normalize_max(&mut normalized, 0.01, 1.0, *current_max, 0.002);
+    //	let mut normalized = [Cplx::zero(); RANGE+1];
+    //	normalized.copy_from_slice(LOCAL.as_slice());
+
+    //	let mut current_max = MAX.write().unwrap();
+    //	*current_max = math::normalize_max(&mut normalized, 0.01, 1.0, *current_max, 0.002);
 
     // prog.pix.clear();
 
@@ -111,7 +103,7 @@ pub fn draw_spectrum(
     //~ let _if64: f64 = 0.0;
 
     //~ const INTERVAL: f64 = 1.0;
-    
+
     prog.pix.clear();
 
     for i in 0..h {
@@ -123,23 +115,28 @@ pub fn draw_spectrum(
 
         let idxf = slide_output * RANGEF;
 
-	    let idx = idxf.floor() as usize;
-	    
-	    let idx_next = idxf.ceil() as usize;
-	    let idx_next = idx_next.min(RANGE-1);
-	    
-	    let t = idxf.fract();
+        let idx = idxf.floor() as usize;
+
+        let idx_next = idxf.ceil() as usize;
+        let idx_next = idx_next.min(RANGE - 1);
+
+        let t = idxf.fract();
 
         let scale = wf;
 
-        let bar_width_l = smooth_step(normalized[idx].x, normalized[idx_next].x, t)*scale;
-        let bar_width_r = smooth_step(normalized[idx].y, normalized[idx_next].y, t)*scale;
+        let bar_width_l = smooth_step(normalized[idx].x, normalized[idx_next].x, t) * scale;
+        let bar_width_r = smooth_step(normalized[idx].y, normalized[idx_next].y, t) * scale;
 
-		let channel_l = (255.0 *bar_width_l.min(wf) * wf_recip) as u32;
-		let channel_r = (255.0 *bar_width_r.min(wf) * wf_recip) as u32;
+        let channel_l = (255.0 * bar_width_l.min(wf) * wf_recip) as u32;
+        let channel_r = (255.0 * bar_width_r.min(wf) * wf_recip) as u32;
 
-		let color  = u32::from_be_bytes([0xFF, (255 - 255*i_rev/h) as u8, 0, (128 + 96*i_rev/h) as u8]);
-		
+        let color = u32::from_be_bytes([
+            0xFF,
+            (255 - 255 * i_rev / h) as u8,
+            0,
+            (128 + 96 * i_rev / h) as u8,
+        ]);
+
         let color1 = color | channel_l << 8;
         let color2 = color | channel_r << 8;
 
@@ -148,24 +145,25 @@ pub fn draw_spectrum(
 
         let rect_r = P2::new(((bar_width_r as i32 + 1) / 2 + winwh).min(w), i);
 
-        let middle = P2::new(winwh+1, i);
+        let middle = P2::new(winwh + 1, i);
         // let rect_r_size = (bar_width_r as usize / 2, 1);
-		
-		//prog.pix.clear_row(i as usize);
-		
-		//prog.pix.draw_rect_xy(P2::new(0, i), P2::new(rect_l.x, i), prog.background);
-		//prog.pix.draw_rect_xy(P2::new(w - rect_r.x, i), P2::new(w, i), prog.background);
-		
+
+        //prog.pix.clear_row(i as usize);
+
+        //prog.pix.draw_rect_xy(P2::new(0, i), P2::new(rect_l.x, i), prog.background);
+        //prog.pix.draw_rect_xy(P2::new(w - rect_r.x, i), P2::new(w, i), prog.background);
+
         prog.pix.draw_rect_xy(rect_l, middle, color1);
         prog.pix.draw_rect_xy(middle, rect_r, color2);
 
-		let alpha = (128.0 + stream[i as usize / 2].x*32768.0) as u8;
-		// let bg = prog.pix.background & 0x00_FF_FF_FF | alpha;
+        let alpha = (128.0 + stream[i as usize / 2].x * 32768.0) as u8;
+        // let bg = prog.pix.background & 0x00_FF_FF_FF | alpha;
         prog.pix.draw_rect_wh_by(
-			P2::new(winwh -1, i), 
-			2, 1, 
-			u32::mix(prog.pix.background, color.set_alpha(alpha)).copy_alpha(prog.pix.background), 
-			u32::over
-		);
+            P2::new(winwh - 1, i),
+            2,
+            1,
+            u32::mix(prog.pix.background, color.set_alpha(alpha)).copy_alpha(prog.pix.background),
+            u32::over,
+        );
     }
 }

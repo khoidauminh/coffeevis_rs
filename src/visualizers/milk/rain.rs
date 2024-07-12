@@ -1,89 +1,93 @@
 use std::sync::Mutex;
 
 use crate::{
-	data::{Program, DEFAULT_SIZE_WIN},
-	audio::SampleArr,
-    graphics::{Canvas, P2, blend::Blend},
-    math::{Cplx, rng::{random_int, random_float}}
+    audio::SampleArr,
+    data::{Program, DEFAULT_SIZE_WIN},
+    graphics::{blend::Blend, Canvas, P2},
+    math::{
+        rng::{random_float, random_int},
+        Cplx,
+    },
 };
 
 #[derive(Copy, Clone)]
 struct RainDrop {
-	color: u32,
-	length: u16,
-	bound_width: u16,
-	bound_height: u16,
-	position: Cplx,
-	fall_amount: f64,
+    color: u32,
+    length: u16,
+    bound_width: u16,
+    bound_height: u16,
+    position: Cplx,
+    fall_amount: f64,
 }
 
 impl RainDrop {
-	pub const fn new(color: u32, length: u16, fall: f64, size: P2) -> Self {
-		Self {
-			color,
-			length,
-			bound_width: size.x as u16, 
-			bound_height: size.y as u16 + length,
-			position: Cplx { x: 0.0, y: 0.0 },
-			fall_amount: fall
-		}
-	}
-	
-	pub fn randomize_start(&mut self) {
-		let wf = self.bound_width as f64;
-		self.position.x = random_float(wf);
-		self.fall_amount = 0.5 + random_int(128) as f64 * 0.02;
-		self.position.y = 0.0;
-	}
-	
-	pub fn set_bound(&mut self, size: P2) {
-		self.bound_width  = size.x as u16;
-		self.bound_height = size.y as u16;
-	}
-	
-	pub fn is_bounds_match(&self, size: P2) -> bool {
-		self.bound_width  == size.x as u16 &&
-		self.bound_height == size.y as u16 
-	}
-	
-	pub fn fall(&mut self, factor: f64) -> bool {
-		self.position.y += self.fall_amount*factor;
-		
-		(self.position.y as u16) < self.bound_height
-	}
-	
-	pub fn draw(&mut self, canvas: &mut Canvas) {
-		let _w = canvas.width();
-		let _h = canvas.height();
+    pub const fn new(color: u32, length: u16, fall: f64, size: P2) -> Self {
+        Self {
+            color,
+            length,
+            bound_width: size.x as u16,
+            bound_height: size.y as u16 + length,
+            position: Cplx { x: 0.0, y: 0.0 },
+            fall_amount: fall,
+        }
+    }
 
-		let mut current_length = self.length;
-		
-		if self.position.x as usize >= _w {return}
-		let mut p = self.position.to_p2();
+    pub fn randomize_start(&mut self) {
+        let wf = self.bound_width as f64;
+        self.position.x = random_float(wf);
+        self.fall_amount = 0.5 + random_int(128) as f64 * 0.02;
+        self.position.y = 0.0;
+    }
 
-		while current_length > 0 {
+    pub fn set_bound(&mut self, size: P2) {
+        self.bound_width = size.x as u16;
+        self.bound_height = size.y as u16;
+    }
 
-			let fade = current_length * 256 / self.length;
-			let fade = fade as u8;
-			
-			canvas.set_pixel_xy_by(p, self.color.mul_alpha(fade), u32::mix);
-			
-			if p.y == 0 {break}
-			
-			p.y -= 1;
-			
-			current_length -= 1;
-		}
-	}
+    pub fn is_bounds_match(&self, size: P2) -> bool {
+        self.bound_width == size.x as u16 && self.bound_height == size.y as u16
+    }
+
+    pub fn fall(&mut self, factor: f64) -> bool {
+        self.position.y += self.fall_amount * factor;
+
+        (self.position.y as u16) < self.bound_height
+    }
+
+    pub fn draw(&mut self, canvas: &mut Canvas) {
+        let _w = canvas.width();
+        let _h = canvas.height();
+
+        let mut current_length = self.length;
+
+        if self.position.x as usize >= _w {
+            return;
+        }
+        let mut p = self.position.to_p2();
+
+        while current_length > 0 {
+            let fade = current_length * 256 / self.length;
+            let fade = fade as u8;
+
+            canvas.set_pixel_xy_by(p, self.color.mul_alpha(fade), u32::mix);
+
+            if p.y == 0 {
+                break;
+            }
+
+            p.y -= 1;
+
+            current_length -= 1;
+        }
+    }
 }
 
 const NUM_OF_DROPS: usize = 64;
 
-const DEFAULT_BOUND: P2 = 
-	P2 {
-		x: DEFAULT_SIZE_WIN as i32,
-		y: DEFAULT_SIZE_WIN as i32,
-	};
+const DEFAULT_BOUND: P2 = P2 {
+    x: DEFAULT_SIZE_WIN as i32,
+    y: DEFAULT_SIZE_WIN as i32,
+};
 
 // static mut drop: RainDrop = RainDrop::new(0xFF_FF_FF_FF, 8, 0.2, DEFAULT_SIZE_WIN as usize, DEFAULT_SIZE_WIN as usize);
 
@@ -91,87 +95,87 @@ use std::sync::Once;
 static START: Once = Once::new();
 
 pub fn draw(prog: &mut Program, stream: &mut SampleArr) {
-	static LIST_OF_DROPS: Mutex<[RainDrop; NUM_OF_DROPS]> 
-		= Mutex::new([RainDrop::new(0xFF_FF_FF_FF, 8, 0.2, DEFAULT_BOUND); NUM_OF_DROPS]);
-	
-	static OLD_VOLUME: Mutex<f64> = Mutex::new(0.0);
-	
-	START.call_once(|| {
-		let mut list = LIST_OF_DROPS.lock().unwrap();
-		for drop in list.iter_mut() {
-			drop.randomize_start();
-		}
-	});
-	
-	let mut new_volume: f64 = 0.0; 
-	{
-		let mut y: f64 = stream[0].into();
-		for i in 1..200 {
-			y = y + 0.25*(stream[i].max() - y);
-			new_volume += y;
-		}
-	}
-	
-	let mut old = OLD_VOLUME.lock().unwrap();
-	*old = crate::math::interpolate::linearf(*old, new_volume, 0.2);
-	
-	let blue = 0.7 - *old * 0.005;
-	prog.pix.fill(u32::from_be_bytes([0xFF, 0, (119.0 * blue) as u8, (255.0 * blue) as u8]));
-	
+    static LIST_OF_DROPS: Mutex<[RainDrop; NUM_OF_DROPS]> =
+        Mutex::new([RainDrop::new(0xFF_FF_FF_FF, 8, 0.2, DEFAULT_BOUND); NUM_OF_DROPS]);
+
+    static OLD_VOLUME: Mutex<f64> = Mutex::new(0.0);
+
+    START.call_once(|| {
+        let mut list = LIST_OF_DROPS.lock().unwrap();
+        for drop in list.iter_mut() {
+            drop.randomize_start();
+        }
+    });
+
+    let mut new_volume: f64 = 0.0;
+    {
+        let mut y: f64 = stream[0usize].into();
+        for i in 1..200usize {
+            y = y + 0.25 * (stream[i].max() - y);
+            new_volume += y;
+        }
+    }
+
+    let mut old = OLD_VOLUME.lock().unwrap();
+    *old = crate::math::interpolate::linearf(*old, new_volume, 0.2);
+
+    let blue = 0.7 - *old * 0.005;
+    prog.pix.fill(u32::from_be_bytes([
+        0xFF,
+        0,
+        (119.0 * blue) as u8,
+        (255.0 * blue) as u8,
+    ]));
+
     let mut list = LIST_OF_DROPS.lock().unwrap();
-    
+
     let size = prog.pix.size();
-		
-	if !list.first().unwrap().is_bounds_match(size) {
-		list
-		.iter_mut()
-		.for_each(|drop| { 
-			drop.set_bound(size);
-			drop.randomize_start();
-		});
-	}
-    
+
+    if !list.first().unwrap().is_bounds_match(size) {
+        list.iter_mut().for_each(|drop| {
+            drop.set_bound(size);
+            drop.randomize_start();
+        });
+    }
+
     for drop in list.iter_mut() {
-		let size = prog.pix.size();
-		
-		if drop.is_bounds_match(size) {
-			drop.set_bound(size);
-		}
-		
-		drop.draw(&mut prog.pix);
-		let p = drop.fall(*old * 0.01);
-		if !p {
-			drop.randomize_start();
-		}
-	}
-    
+        let size = prog.pix.size();
+
+        if drop.is_bounds_match(size) {
+            drop.set_bound(size);
+        }
+
+        drop.draw(&mut prog.pix);
+        let p = drop.fall(*old * 0.01);
+        if !p {
+            drop.randomize_start();
+        }
+    }
+
     stream.auto_rotate();
 }
 
-fn draw_rain_drop(
-	canvas: &mut Canvas,
-	mut p: P2,
-	length: usize,
-	_intensity: u8,
-	color: u32
-) {
-	let _w = canvas.width();
-	let _h = canvas.height();
+fn draw_rain_drop(canvas: &mut Canvas, mut p: P2, length: usize, _intensity: u8, color: u32) {
+    let _w = canvas.width();
+    let _h = canvas.height();
 
-	let mut current_length = length;
-	
-	if p.x as usize >= _w {return}
+    let mut current_length = length;
 
-	while current_length > 0 {
+    if p.x as usize >= _w {
+        return;
+    }
 
-		let fade = current_length * 256 / length;
-		let fade = fade as u8;
-		
-		canvas.set_pixel_xy_by(p, color.mul_alpha(fade), u32::mix);
-		
-		if p.y == 0 {break}
-		
-		p.y -= 1;
-		current_length -= 1;
-	}
+    while current_length > 0 {
+        let fade = current_length * 256 / length;
+        let fade = fade as u8;
+
+        canvas.set_pixel_xy_by(p, color.mul_alpha(fade), u32::mix);
+
+        if p.y == 0 {
+            break;
+        }
+
+        p.y -= 1;
+        current_length -= 1;
+    }
 }

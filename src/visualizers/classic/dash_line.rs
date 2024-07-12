@@ -1,6 +1,5 @@
 // THis visualzier is not intended to display on its own.
 
-
 use crate::graphics::P2;
 
 const C: u32 = 0x00_FF_20_C0;

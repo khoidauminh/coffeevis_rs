@@ -11,17 +11,14 @@ static DATA: std::sync::RwLock<LocalData> = std::sync::RwLock::new(LocalData {
     p1: P2 { x: 0, y: 0 },
 });
 
-pub fn draw_lazer(
-	para: &mut crate::data::Program,
-	stream: &mut crate::audio::SampleArr
-) {
-    let w = para.pix.width()  as i32;
+pub fn draw_lazer(para: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
+    let w = para.pix.width() as i32;
     let h = para.pix.height() as i32;
 
     let (ax, ay) = {
         let mut sum = Cplx::zero();
 
-        for i in 0..SAMPLE_SIZE/4 {
+        for i in 0..SAMPLE_SIZE / 4 {
             sum = sum + stream[i]
         }
 
