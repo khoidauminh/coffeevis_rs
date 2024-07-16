@@ -6,6 +6,8 @@ pub trait Blend {
     fn add(self, other: u32) -> u32;
     fn sub(self, other: u32) -> u32;
 
+    fn grayb(self) -> u8;
+
     fn premultiply(self) -> u32;
 
     fn copy_alpha(self, other: u32) -> u32;
@@ -24,6 +26,10 @@ pub trait Blend {
     fn compose(array: [u8; 4]) -> Self;
     // fn mul(&mut self, other: u32) -> u32;
     // fn mul_alpha(&mut self, other: u32) -> u32;
+}
+
+pub fn grayb(r: u8, g: u8, b: u8) -> u8 {
+    ((r as u16 + g as u16 + 2 * b as u16) / 4) as u8
 }
 
 pub fn u8_mul(a: u8, b: u8) -> u8 {
@@ -48,11 +54,6 @@ pub fn alpha_mix(a: u8, b: u8) -> u8 {
 }
 
 pub fn channel_mix(x: u8, y: u8, a: u8) -> u8 {
-    /*if x < y {
-        return x.saturating_add(u8_mul(y - x, a))
-    }
-    y.saturating_add(u8_mul(x - y, a))*/
-
     let x = x as i16;
     let y = y as i16;
     let a = a as i16;
@@ -62,14 +63,6 @@ pub fn channel_mix(x: u8, y: u8, a: u8) -> u8 {
     let o = x + int as i16;
 
     o as u8 + (x < y) as u8
-
-    /*let x = x as u16;
-    let y = y as u16;
-    let a = a as u16;
-
-    let [o, _] = (x*(256 - a) + y*a).to_be_bytes();
-
-    o*/
 }
 
 pub fn channel_add(x: u8, y: u8, a: u8) -> u8 {
@@ -85,18 +78,43 @@ impl Blend for u32 {
         (self & 0x00_FF_FF_FF) | (other & 0xFF_00_00_00)
     }
 
+    fn grayb(self) -> u8 {
+        let [_, r, g, b] = self.to_be_bytes();
+        grayb(r, g, b)
+    }
+
     fn premultiply(self) -> u32 {
         let [a, ar, ag, ab] = self.to_be_bytes();
         u32::from_be_bytes([a, u8_mul(ar, a), u8_mul(ag, a), u8_mul(ab, a)])
     }
 
-    fn over(self, other: u32) -> u32 {
-        other
-    }
-
     fn mul_alpha(self, a: u8) -> u32 {
         let [aa, ar, ag, ab] = self.to_be_bytes();
         u32::from_be_bytes([u8_mul(aa, a), ar, ag, ab])
+    }
+
+    fn set_alpha(self, alpha: u8) -> u32 {
+        self & 0x00_FF_FF_FF | (alpha as u32) << 24
+    }
+
+    fn or(self, other: u32) -> u32 {
+        self | other
+    }
+
+    fn fade(self, alpha: u8) -> u32 {
+        u32_fade(self, alpha)
+    }
+
+    fn decompose(self) -> [u8; 4] {
+        self.to_be_bytes()
+    }
+
+    fn compose(array: [u8; 4]) -> u32 {
+        u32::from_be_bytes(array)
+    }
+
+    fn over(self, other: u32) -> u32 {
+        other
     }
 
     fn mix(self, other: u32) -> u32 {
@@ -109,7 +127,6 @@ impl Blend for u32 {
             channel_mix(ab, bb, ba),
         ])
     }
-
     fn add(self, other: u32) -> u32 {
         let [aa, ar, ag, ab] = self.to_be_bytes();
         let [ba, br, bg, bb] = other.to_be_bytes();
@@ -140,25 +157,5 @@ impl Blend for u32 {
             ag.saturating_sub(other),
             ab.saturating_sub(other),
         ])
-    }
-
-    fn set_alpha(self, alpha: u8) -> u32 {
-        self & 0x00_FF_FF_FF | (alpha as u32) << 24
-    }
-
-    fn or(self, other: u32) -> u32 {
-        self | other
-    }
-
-    fn fade(self, alpha: u8) -> u32 {
-        u32_fade(self, alpha)
-    }
-
-    fn decompose(self) -> [u8; 4] {
-        self.to_be_bytes()
-    }
-
-    fn compose(array: [u8; 4]) -> u32 {
-        u32::from_be_bytes(array)
     }
 }

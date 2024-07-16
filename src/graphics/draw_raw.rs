@@ -23,20 +23,9 @@ pub fn set_pixel_xy(canvas: &mut [u32], cwidth: usize, _cheight: usize, p: P2, c
 
 #[inline]
 pub fn set_pixel_by(canvas: &mut [u32], i: usize, c: u32, b: Mixer) {
-    /*if let Some(p) = canvas.get_mut(i) {
+    if let Some(p) = canvas.get_mut(i) {
         *p = b(*p, c);
-    }*/
-
-    if i >= canvas.len() {
-        return;
     }
-
-    set_pixel_by_raw(canvas, i, c, b);
-}
-
-#[inline]
-pub fn set_pixel_by_raw(canvas: &mut [u32], i: usize, c: u32, b: Mixer) {
-    canvas[i] = b(canvas[i], c);
 }
 
 pub fn set_pixel_xy_by(
@@ -60,28 +49,26 @@ pub fn draw_rect_xy_by(
     c: u32,
     b: Mixer,
 ) {
-    // let xbound = self.width;
-    // let ybound = self.height.wrapping_sub(1);
+    let [xs, ys] = [ps.x as usize, ps.y as usize];
 
-    use crate::math::ToUsize;
+    let [xe, ye] = [pe.x as usize, pe.y as usize];
 
-    let [xs, ys] = [usize::new(ps.x), usize::new(ps.y)];
+    let xe = xe.min(cwidth);
 
-    let [xe, ye] = [usize::new(pe.x), usize::new(pe.y)];
+    let lines = canvas
+        .chunks_exact_mut(cwidth)
+        .skip(ys)
+        .take(ye.saturating_sub(ys).wrapping_add(1));
 
-    let w = xe.min(cwidth).saturating_sub(xs);
+    for line in lines {
+        let Some(chunk) = line.get_mut(xs..xe) else {
+            return;
+        };
 
-    let i = xs + ys * cwidth;
-    let iend = (xs + ye.min(cheight) * cwidth).min(canvas.len());
-
-    (i..=iend).step_by(cwidth).for_each(|i| {
-        let iw = i.wrapping_add(w);
-
-        for p in i..iw {
-            // *p = b(*p, c);
-            set_pixel_by_raw(canvas, p, c, b);
+        for p in chunk {
+            *p = b(*p, c);
         }
-    });
+    }
 }
 
 pub fn draw_rect_xy(canvas: &mut [u32], cwidth: usize, cheight: usize, ps: P2, pe: P2, c: u32) {

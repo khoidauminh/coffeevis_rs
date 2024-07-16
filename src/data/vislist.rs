@@ -165,20 +165,53 @@ impl VisNavigator {
 
         self.current_vis()
     }
-    /*
-    pub fn switch_by_name(&mut self, name: &str) {
-        let current_name = self.current_vis_name();
-
-        if current_vis_name == current_name {return}
-        self.next_vis();
-
-        while {
-            let current = self.current_vis_name();
-
-            if current != current_name && current != name {
-                break;
-            }
-            */
+    
+    pub fn switch_by_name(&mut self, name: &str) -> Visualizer {
+        let name = name.to_lowercase();
+        let mut found = false;
+        let mut selected_vis = VIS_CLASSIC[0];
+        let mut selected_vis_index = 0;
+        
+        let iter = 
+			VIS_CLASSIC
+			.iter()
+			.chain(VIS_MILK.iter())
+		;
+		
+        for (i, vis) in iter.clone().enumerate()
+        {
+			if vis.name().to_lowercase() == name {
+				found = true;
+				selected_vis = *vis;
+				selected_vis_index = i;
+				break;
+			}
+		}
+		
+		if !found {
+			eprintln!("\nCan't find the specified visualizer.\n\
+			Available visualizers (case insensitive):\n\
+			");
+			
+			for vis in iter {
+				eprintln!("{}", vis.name());
+			}
+			
+			eprintln!();
+			
+			return selected_vis;
+		}
+		
+		if selected_vis_index < VIS_CLASSIC.len() {
+			self.index_vis = selected_vis_index;
+			self.index_list = 0;
+		} else {
+			self.index_vis = selected_vis_index - VIS_CLASSIC.len();
+			self.index_list = 1;
+		}
+		
+		return selected_vis;
+    }
 }
 
 pub const VIS_MENU: &[VisList] = &[

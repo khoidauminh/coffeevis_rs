@@ -122,10 +122,12 @@ pub fn is_silent() -> bool {
 
 use crate::misc::stackvec::StackVec;
 
+const MAX_STACK_VEC_SIZE: usize = 15;
+
 pub struct MovingAverage<T> {
     size: usize,
     index: usize,
-    vec: StackVec<T, 15>,
+    vec: StackVec<T, MAX_STACK_VEC_SIZE>,
     sum: T,
     denominator: f64,
     average: T,
@@ -137,6 +139,9 @@ where
     f64: Mul<T, Output = T>,
 {
     pub fn init(val: T, size: usize) -> Self {
+		
+		assert!(size < MAX_STACK_VEC_SIZE);
+		
         Self {
             size,
             index: 0,

@@ -1,6 +1,7 @@
 #![allow(non_snake_case)]
 #![allow(dead_code)]
 #![forbid(unsafe_code)]
+#![allow(unexpected_cfgs)]
 
 use std::env;
 
@@ -15,7 +16,7 @@ mod misc;
 
 use data::*;
 
-use modes::{console_mode::con_main, windowed_mode::*, Mode};
+use modes::{windowed_mode::*, Mode};
 
 // Audio lib
 use audio::get_source;
@@ -39,11 +40,15 @@ fn main() {
     prog.print_startup_info();
 
     match prog.mode() {
+        #[cfg(feature = "minifb")]
         Mode::WinLegacy => minifb_main(prog).unwrap(),
 
         Mode::Win => winit_main(prog).unwrap(),
 
-        _ => con_main(prog).unwrap(),
+        _ => {
+            #[cfg(feature = "terminal")]
+            modes::console_mode::con_main(prog).unwrap();
+        }
     }
 
     stream.pause().unwrap();

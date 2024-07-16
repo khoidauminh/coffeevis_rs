@@ -8,16 +8,16 @@ mod tests {
     use std::ops::Range;
     use std::time::Instant;
 
-    const range: Range<i32> = -10_000_000..10_000_000;
-    const modulo: i32 = 211;
-    const modulo_recip: f32 = 1. / modulo as f32;
+    const RANGE: Range<i32> = -10_000_000..10_000_000;
+    const MODULO: i32 = 211;
+    const MODULO_RECIPE: f32 = 1. / MODULO as f32;
 
     #[test]
     fn trig_sin() {
         let mut a = 0.0;
         let mut j = 1.0;
         let now = Instant::now();
-        for _i in range {
+        for _i in RANGE {
             j *= 0.5;
             a = fast::sin_norm(j);
         }
@@ -29,7 +29,7 @@ mod tests {
         let mut a = 0.0;
         let mut j = 1.0;
         let now = Instant::now();
-        for _i in range {
+        for _i in RANGE {
             j *= 0.5;
             a = fast::cos_norm(j);
         }

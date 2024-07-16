@@ -1,47 +1,64 @@
 use crate::{data::Program, graphics::blend::Blend};
-/*
-pub fn check_path() -> Option<PathBuf> {
 
-    let PATHS: [PathBuf; 2] = [
-        [dirs::home_dir().unwrap_or(PathBuf::new()), PathBuf::from(".coffeevis.conf")].iter().collect(),
-        [dirs::config_dir().unwrap_or(PathBuf::new()), PathBuf::from(".coffeevis.conf")].iter().collect(),
-    ];
+#[cfg(feature = "extended")]
+pub mod image {
+    use image::{io::Reader, GenericImageView, ImageFormat};
+    pub fn prepare_image(file: &[u8]) -> Image {
+        let img = Reader::new(Cursor::new(crate::data::IMAGE))
+            .with_guessed_format()
+            .unwrap()
+            .decode()
+            .unwrap();
 
-    for path in PATHS.iter() {
-        if path.exists() {
-            return Some(path.clone())
-        }
+        let (w, h) = (img.width() as usize, img.height() as usize);
+
+        Image::from_buffer(
+            img.pixels()
+                .map(|pixel| {
+                    let mut pixel_u8 = pixel.2 .0;
+                    pixel_u8.rotate_right(1);
+                    u32::from_be_bytes(pixel_u8)
+                })
+                .collect::<Vec<_>>(),
+            w,
+            h,
+        )
     }
-    return None
 }
-*/
-/*
 
-use image::{
-    ImageFormat,
-    io::Reader,
-    GenericImageView
-};
-pub fn prepare_image(file: &[u8]) -> Image {
+macro_rules! eprintln_red {
+    () => {
+        eprintln!();
+    };
+    ($arg:tt) => {
+        eprintln!("\x1B[31;1m{}\x1B[0m", $arg);
+    };
+}
 
-    let img =
-        Reader::new(Cursor::new(crate::data::IMAGE))
-        .with_guessed_format()
-        .unwrap()
-        .decode().unwrap();
+#[allow(unused_macros)]
+macro_rules! format_red {
+    () => {
+        format!();
+    };
+    ($arg:tt) => {
+        format!("\x1B[31;1m{}\x1B[0m", $arg)
+    };
+}
 
-    let (w, h) = (img.width() as usize, img.height() as usize);
+#[allow(unused_macros)]
+macro_rules! panic_red {
+    () => {
+        format!();
+    };
+    ($arg:tt) => {
+        panic!("\x1B[31;1m{}\x1B[0m", $arg)
+    };
+}
 
-    Image::from_buffer(
-        img.pixels().map(|pixel| {
-            let mut pixel_u8 = pixel.2.0;
-            pixel_u8.rotate_right(1);
-            u32::from_be_bytes(pixel_u8)
-        }).collect::<Vec<_>>(),
-        w,
-        h
-    )
-}*/
+const RESO_WARNING: &str = "\
+	Coffeevis is a CPU program, it is not advised \
+	to run it at large a size.\
+	";
 
 impl Program {
     pub fn eval_args(mut self, args: &mut dyn Iterator<Item = &String>) -> Self {
@@ -64,12 +81,18 @@ impl Program {
             };
 
             match arg {
-                "--win-legacy" => self.mode = WinLegacy,
-
                 "--win" => self.mode = Win,
 
+                #[cfg(feature = "minifb")]
+                "--minifb" => self.mode = WinLegacy,
+
+                #[cfg(feature = "terminal")]
                 "--braille" => (self.mode, self.flusher) = (ConBrail, Program::print_brail),
+
+                #[cfg(feature = "terminal")]
                 "--ascii" => (self.mode, self.flusher) = (ConAlpha, Program::print_alpha),
+
+                #[cfg(feature = "terminal")]
                 "--block" => (self.mode, self.flusher) = (ConBlock, Program::print_block),
 
                 "--no-auto-switch" => self.AUTO_SWITCH = false,
@@ -98,20 +121,40 @@ impl Program {
                 }
 
                 "--fps" => {
-                    let new_fps = args
-                        .next()
-                        .expect("Argument error: Expected value for fps")
-                        .parse::<u64>()
-                        .expect("Argument error: Invalid value.");
+                    let rate = args.next().expect(
+                        "\
+							Argument error: Expected value for refresh rate.\n\
+							Available values: {float} or inf\
+                        ",
+                    );
 
-                    if new_fps > 200 {
-                        panic!("Fps value too high (must be lower than 200)");
+                    let rate = match rate.as_str() {
+                        "inf" => f64::INFINITY,
+
+                        &_ => {
+                            let rate = rate.parse::<f64>().expect("Argument error: Invalid value.");
+
+                            if rate < 0.0 {
+                                panic!("...What?");
+                            }
+
+                            rate
+                        }
+                    };
+
+                    if rate == f64::INFINITY {
+                        self.MILLI_HZ = u32::MAX;
+                        self.REFRESH_RATE = Duration::from_micros(1);
+                        self.REFRESH_RATE_MODE = crate::data::RefreshRateMode::Unlimited;
+                    } else {
+                        let rate = (rate * 1000.0) as u32;
+
+                        self.change_fps_frac(rate);
+                        self.REFRESH_RATE_MODE = RefreshRateMode::Specified;
                     }
-
-                    self.update_fps(new_fps);
                 }
 
-                "--resizeable" => {
+                "--resizable" => {
                     self.RESIZE = true;
                 }
 
@@ -160,7 +203,51 @@ impl Program {
                     //std::env::set_var("LANG", "en_US.UTF-8");
                 }
 
-                &_ => eprintln!("Argument error: Unknown option {}", arg),
+                "--report-fps" => {
+                    self.HZ_REPORT = true;
+                }
+
+                "--vis" => {
+                    let vis_name = args
+                        .next()
+                        .expect("Argument error: Expected name of visualizer");
+
+                    self.visualizer = self.VIS.switch_by_name(vis_name).func();
+                }
+
+                ":3" => {
+                    eprintln_red!("\n:3");
+                }
+
+                &_ => match arg {
+                    #[cfg(not(feature = "terminal"))]
+                    "--braille" | "--block" | "--ascii" => {
+                        panic!(
+                            "\x1B[31;1m\
+								Feature terminal is turned off in \
+								this build of coffeevis.\n\
+								This was to make dependencies of coffeevis \
+								optional and excluded when not needed.\n\
+								Recompile coffeevis with `--features terminal`\
+								to use these flags.\
+							\x1B[0m"
+                        )
+                    }
+
+                    #[cfg(not(feature = "minifb"))]
+                    "--minifb" => {
+                        panic!(
+                            "\x1B[31;1m\
+								Feature minifb is turned off in \
+								this build of coffeevis.\n\
+								Recompile coffeevis with `--features minifb` \
+								to use this flag.\
+							\x1B[0m"
+                        )
+                    }
+
+                    &_ => eprintln!("Argument error: Unknown option {}", arg),
+                },
             }
         }
 
@@ -192,24 +279,26 @@ impl Program {
 	        Audio visualizer by khoidauminh (Cas Pascal on github)"
         );
 
-        println!("Refresh rate is {}", self.FPS);
+        eprintln!("Startup configurations (may change): ");
+
+        println!("Refresh rate: {}hz", self.MILLI_HZ as f64 / 1000.0);
 
         println!(
-            "Auto switch is {}",
+            "Auto switch: {}",
             if self.AUTO_SWITCH { "on" } else { "off" }
         );
 
         match self.mode {
             Win => println!(
-                "Running with Winit, {}",
+                "Running with: Winit, {}",
                 if self.WAYLAND { "Wayland" } else { "X11" }
             ),
 
-            WinLegacy => println!("Running with minifb, X11"),
+            WinLegacy => println!("Running with minifb"),
 
             _ => {
                 println!(
-                    "Running in a terminal, rendering {}",
+                    "Running in a terminal: {} rendering",
                     match self.mode {
                         ConBrail => "braille",
                         ConAlpha => "ascii",
@@ -218,6 +307,27 @@ impl Program {
                     }
                 );
             }
+        }
+
+        if self.RESIZE {
+            eprint!(
+                "\n\
+				Note: resizing is not thoroughly tested and can crash the program or \
+				result in artifacts. "
+            );
+        }
+
+        let w = self.WIN_W as u32 * self.SCALE as u32;
+        let h = self.WIN_H as u32 * self.SCALE as u32;
+
+        if self.RESIZE || w * h > 70000 {
+            eprintln_red!(RESO_WARNING);
+        }
+
+        if self.MILLI_HZ / 1000 >= 300
+            || self.REFRESH_RATE_MODE == crate::RefreshRateMode::Unlimited
+        {
+            eprintln_red!("\nHave fun cooking your CPU");
         }
 
         println!();

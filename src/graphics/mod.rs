@@ -121,10 +121,6 @@ pub struct Canvas {
 
 pub type Image = Canvas;
 
-pub fn grayb(r: u8, g: u8, b: u8) -> u8 {
-    ((r as u16 + g as u16 + 2 * b as u16) / 4) as u8
-}
-
 impl Canvas {
     /*pub fn from_buffer(vec: Vec<u32>, w: usize, h: usize, background: u32) -> Self {
         let padded = vec.len().next_power_of_two();
@@ -288,19 +284,17 @@ impl Canvas {
         }
     }
 
-	// On Winit Wayland, resize increments hasn't been implemented,
-	// So the width parameter is there to ensure that the horizontal 
-	// lines are aligned.
+    // On Winit Wayland, resize increments hasn't been implemented,
+    // So the width parameter is there to ensure that the horizontal
+    // lines are aligned.
     pub fn scale_to(&self, dest: &mut [u32], scale: usize, width: Option<usize>) {
-		let dst_width = width.unwrap_or(self.width * scale);
+        let dst_width = width.unwrap_or(self.width * scale);
 
         let src_rows = self.pix.chunks_exact(self.width);
         let dst_rows = dest.chunks_exact_mut(dst_width).step_by(scale);
 
         for (src_row, dst_row) in src_rows.zip(dst_rows) {
-            for (src_pixel, dst_chunk) 
-            in src_row.iter().zip(dst_row.chunks_exact_mut(scale))
-            {
+            for (src_pixel, dst_chunk) in src_row.iter().zip(dst_row.chunks_exact_mut(scale)) {
                 dst_chunk.fill(*src_pixel);
             }
         }

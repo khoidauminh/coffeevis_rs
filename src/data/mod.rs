@@ -3,7 +3,7 @@ pub mod vislist;
 
 use std::time::{Duration, Instant};
 
-use crate::modes::{console_mode::Flusher, Mode};
+use crate::modes::Mode;
 
 use crate::VisFunc;
 
@@ -16,7 +16,10 @@ pub const SAMPLE_SIZE: usize = 1 << POWER;
 pub const FFT_SIZE: usize = 1 << FFT_POWER;
 
 pub const INCREMENT: usize = 2;
-pub const DEFAULT_FPS: u8 = 144;
+
+pub const DEFAULT_MILLI_HZ: u32 = 144 * 1000;
+pub const DEFAULT_HZ: u64 = DEFAULT_MILLI_HZ as u64 / 1000;
+
 pub const DEFAULT_WAV_WIN: usize = 144 * INCREMENT;
 pub const DEFAULT_ROTATE_SIZE: usize = 289; // 3539;
 pub const PHASE_OFFSET: usize = SAMPLE_RATE / 50 / 4;
@@ -37,6 +40,13 @@ pub const ERR_MSG: &str = "Configration error at line";
 
 pub const DEFAULT_WIN_SCALE: u8 = 3;
 
+#[derive(PartialEq)]
+pub enum RefreshRateMode {
+	Sync,
+	Specified,
+	Unlimited
+}
+
 /// Main program struct
 ///
 /// Notes:
@@ -47,6 +57,8 @@ pub const DEFAULT_WIN_SCALE: u8 = 3;
 pub(crate) struct Program {
     /// for experimental purposes. Console mode only.
     DISPLAY: bool,
+    
+    
     SCALE: u8,
 
     /// Allow for resizing. Windowed mode only.
@@ -57,13 +69,18 @@ pub(crate) struct Program {
 
     pub pix: crate::graphics::Canvas,
 
-    mode: Mode,
+    pub mode: Mode,
 
     pub transparency: u8,
     pub background: u32,
 
-    pub FPS: u64,
+    pub MILLI_HZ: u32,
+    pub REFRESH_RATE_MODE: RefreshRateMode,
+    pub DURATIONS: [std::time::Duration; 4],
     pub REFRESH_RATE: std::time::Duration,
+    
+    pub HZ_REPORT: bool,
+    
     pub WAV_WIN: usize,
     pub VOL_SCL: f64,
     pub SMOOTHING: f64,
@@ -80,20 +97,23 @@ pub(crate) struct Program {
     VIS: vislist::VisNavigator,
 
     visualizer: VisFunc,
-    pub flusher: Flusher,
+    
+    #[cfg(feature = "terminal")]
+    pub flusher: crate::modes::console_mode::Flusher,
 
     SWITCH: Instant,
     AUTO_SWITCH: bool,
     AUTO_SWITCH_ITVL: Duration,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Command {
     VisualizerNext,
     VisualizerPrev,
     SwitchConMode,
     ConMax(i16, bool),
     FPS(i16, bool),
+    FPSFrac(u32),
     SwitchVisList,
     VolUp,
     VolDown,
@@ -110,6 +130,8 @@ impl Program {
     pub fn new() -> Self {
         let vislist_ = vislist::VisNavigator::new();
         let vis = vislist_.current_vis();
+        
+        let rate = std::time::Duration::from_micros(1_000_000 / DEFAULT_HZ);
 
         Self {
             DISPLAY: true,
@@ -129,12 +151,23 @@ impl Program {
                 0x00_00_00_00,
             ),
 
-            FPS: DEFAULT_FPS as u64,
-            REFRESH_RATE: std::time::Duration::from_micros(1_000_000 / DEFAULT_FPS as u64),
+            MILLI_HZ: DEFAULT_MILLI_HZ,
+            REFRESH_RATE_MODE: RefreshRateMode::Sync,
+            REFRESH_RATE: rate,
+            HZ_REPORT: false,
+            
+            DURATIONS: [
+				rate,
+				rate * 4,
+				rate * 16,
+				Duration::from_millis(500),
+			],
 
             VIS: vislist_,
 
             visualizer: vis.func(),
+            
+            #[cfg(feature = "terminal")]
             flusher: Program::print_alpha,
 
             SWITCH: Instant::now() + Duration::from_secs(8),
@@ -167,16 +200,12 @@ impl Program {
         self.WAYLAND
     }
 
-    pub fn as_con(mut self) -> Self {
-        match self.mode {
-            Mode::Win => self.set_con_mode(Mode::ConAlpha),
-            _ => {}
-        }
-        self
-    }
-
     pub fn eval_command(&mut self, cmd: &Command) -> bool {
         use Command::*;
+        
+        if *cmd == Command::Blank {
+			return false;
+		}
 
         match cmd {
             &VisualizerNext => {
@@ -187,8 +216,11 @@ impl Program {
                 self.change_visualizer(false);
                 true
             }
+            
+            #[cfg(feature = "terminal")]
             &SwitchConMode => {
                 self.switch_con_mode();
+                
                 true
             }
             &SwitchVisList => {
@@ -200,7 +232,13 @@ impl Program {
                 self.change_fps(fps, replace);
                 false
             }
+            
+            &FPSFrac(milli_hz) => {
+                self.change_fps_frac(milli_hz);
+                false
+            }
 
+			#[cfg(feature = "terminal")]
             &ConMax(d, replace) => {
                 self.change_con_max(d, replace);
                 true
@@ -242,7 +280,7 @@ impl Program {
                 false
             }
 
-            &Blank => false,
+            &_ => false,
         }
     }
 
@@ -254,11 +292,6 @@ impl Program {
         cmds.clear();
 
         redraw
-    }
-
-    pub fn as_con_force(mut self, mode: Mode) -> Self {
-        self.set_con_mode(mode);
-        self
     }
 
     pub fn as_win(mut self) -> Self {
@@ -287,9 +320,32 @@ impl Program {
     }
 
     pub fn change_fps(&mut self, amount: i16, replace: bool) {
-        self.FPS = ((self.FPS * (!replace) as u64) as i16 + amount).clamp(1, 144_i16) as u64;
-        self.REFRESH_RATE = std::time::Duration::from_micros(1_000_000 / self.FPS);
+        
+        if replace {
+			self.MILLI_HZ = amount as u32 * 1000;
+		} else {
+			self.MILLI_HZ = self.MILLI_HZ.saturating_add_signed(amount as i32 * 1000).clamp(1, 200 * 1000);
+		}
+		
+		self.change_fps_frac(self.MILLI_HZ);
+		
+        //self.FPS = ((self.FPS * (!replace) as u64) as i16 + amount).clamp(1, 144_i16) as u64;
+        //self.REFRESH_RATE = std::time::Duration::from_micros(1_000_000 / self.FPS);
     }
+    
+    pub fn change_fps_frac(&mut self, fps: u32) {
+		let fps_f = (fps / 1000) as f64 + (fps % 1000) as f64;
+		let rate = (1_000_000.0 / fps_f) as u64;
+		self.MILLI_HZ = fps;
+		self.REFRESH_RATE = std::time::Duration::from_micros(rate);
+		
+		self.DURATIONS = [
+			self.REFRESH_RATE,
+			self.REFRESH_RATE * 4,
+			self.REFRESH_RATE * 16,
+			Duration::from_millis(500)
+		];
+	}
 
     pub fn change_visualizer(&mut self, forward: bool) {
         let new_visualizer = if forward {
@@ -341,31 +397,36 @@ impl Program {
     }
 
     pub fn print_message(&self, message: String) {
-        use crossterm::{
-            style::Print,
-            terminal::{EnterAlternateScreen, LeaveAlternateScreen},
-        };
+        
         use std::io::Write;
-
-        let mut stdout = std::io::stdout();
-
+		let mut stdout = std::io::stdout();
+        
         if self.DISPLAY && self.mode.is_con() {
+			
+			#[cfg(feature = "terminal")]
+			use crossterm::{
+				style::Print,
+				terminal::{EnterAlternateScreen, LeaveAlternateScreen},
+			};
+			
+			#[cfg(feature = "terminal")]
             let _ = crossterm::queue!(
                 stdout,
                 LeaveAlternateScreen,
                 Print(message),
                 EnterAlternateScreen
             );
+            
         } else {
             print!("{}", message);
             let _ = stdout.flush();
         }
     }
 
-    pub fn update_fps(&mut self, new_fps: u64) {
-        self.FPS = new_fps;
-        self.REFRESH_RATE = std::time::Duration::from_micros(1_000_000 / new_fps);
-    }
+    //pub fn update_fps(&mut self, new_fps: u64) {
+        //self.MILLI_HZ = new_fps;
+        //self.REFRESH_RATE = std::time::Duration::from_micros(1_000_000 / new_fps);
+    //}
 
     pub fn update_size_win<T>(&mut self, s: (T, T))
     where
@@ -381,18 +442,22 @@ impl Program {
     where
         u16: From<T>,
     {
-        let mut size = (u16::from(s.0), u16::from(s.1));
+        let size = (u16::from(s.0), u16::from(s.1));
 
         match &self.mode {
-            Mode::Win | Mode::WinLegacy => (self.WIN_W, self.WIN_H) = size,
-
+            Mode::Win | Mode::WinLegacy => {
+				(self.WIN_W, self.WIN_H) = size;
+				self.pix.resize(size.0 as usize, size.1 as usize);
+			}
+			
             _ => {
-                (self.CON_W, self.CON_H) = size;
-                size = crate::modes::console_mode::rescale(size, self);
+				#[cfg(feature = "terminal")] {
+					(self.CON_W, self.CON_H) = size;
+					let size = crate::modes::console_mode::rescale(size, self);
+					self.pix.resize(size.0 as usize, size.1 as usize);
+				}
             }
         }
-
-        self.pix.resize(size.0 as usize, size.1 as usize);
     }
 
     pub fn refresh(&mut self) {
@@ -449,43 +514,10 @@ impl Program {
         self.VOL_SCL = DEFAULT_VOL_SCL;
         self.SMOOTHING = DEFAULT_SMOOTHING;
         self.WAV_WIN = DEFAULT_WAV_WIN;
+        
+        #[cfg(feature = "terminal")]
         self.change_con_max(50, true);
-        self.change_fps(DEFAULT_FPS as i16, true);
-    }
-
-    pub fn switch_con_mode(&mut self) {
-        // self.mode.next_con();
-
-        self.mode = match self.mode {
-            Mode::ConAlpha => {
-                self.flusher = Program::print_block;
-                Mode::ConBlock
-            }
-            Mode::ConBlock => {
-                self.flusher = Program::print_brail;
-                Mode::ConBrail
-            }
-            Mode::ConBrail => {
-                self.flusher = Program::print_alpha;
-                Mode::ConAlpha
-            }
-
-            Mode::Win => Mode::Win,
-            Mode::WinLegacy => Mode::WinLegacy,
-        };
-
-        self.refresh_con();
-    }
-
-    pub fn set_con_mode(&mut self, mode: Mode) {
-        match mode {
-            Mode::ConAlpha => self.flusher = Program::print_alpha,
-            Mode::ConBlock => self.flusher = Program::print_block,
-            Mode::ConBrail => self.flusher = Program::print_brail,
-            _ => {}
-        }
-        self.mode = mode;
-        self.refresh_con();
+        self.change_fps_frac(DEFAULT_MILLI_HZ);
     }
 
     pub fn mode(&self) -> Mode {

@@ -1,4 +1,7 @@
+
+#[cfg(feature = "terminal")]
 pub mod console_mode;
+
 pub mod windowed_mode;
 
 #[derive(Debug, PartialEq, Copy, Clone)]

@@ -1,5 +1,5 @@
 # Coffee Music Visualizer
-A small GUI + TUI music visualizer written in Rust.
+A personal GUI + TUI music visualizer written in Rust.
 
 ## About this project
 I decided to write the visualizer because existing projects didn't suit me.
@@ -8,10 +8,14 @@ Some too slow, some didn't have the visualizer I like, some take up too much cpu
 This project also serves as my playground, so you'll see a lot of weird implementations in the source files.
 
 ## What's new in v0.5.0
-v0.5.0 introduces Winit as the default window backend for Coffeevis. Cvis can still be launched 
-with minifb with the --win-legacy flag. It's also Wayland by default.
 
-The app now has a new set of visualizers called Milk. These visualizers look more artistic and colorfull than
+*Terminal and minifb mode have been moved to their own features. You'll need to
+recompile with `--features terminal` and/or `--features minifb` to use them.*
+
+v0.5.0 introduces Winit as the default window backend for Coffeevis. Cvis can still be launched
+with minifb with the --minifb flag. Coffeevis is now also Wayland by default.
+
+The app now has a new set of visualizers called Milk. These visualizers (should) look more artistic and colorful than
 the default set of visualizers (called Classic).
 
 With performance improvements Cvis should now use less CPU usage, and even less when idle.
@@ -30,7 +34,7 @@ Run `cargo install coffeevis`
 
 ## Configuration
 
-Coffeevis does not remember settings and does not generate config files 
+Coffeevis does not remember settings and does not generate config files
 (feature won't be implemented unless requested).
 
 To get around this, make a user script that runs coffeevis with flags
@@ -41,9 +45,9 @@ E.g:
 
 /path/to/coffeevis --fps 60 --no-auto-switch --size 40x40
 
-``` 
+```
 
-## Flags 
+## Flags
 Coffeevis supports temporary options at launch
 
 | Option | Value (example) | Description |
@@ -57,13 +61,14 @@ Coffeevis supports temporary options at launch
 | --fps | 60 | sets refresh rate |
 | --resizable | | allows resizing in window mode (not supported and currently ignored) |
 | --max-con-size | 50x50 | sets maximum resolution in terminal mode |
+| --vis | spectrum | launches coffeevis with the specified visualizer |
 
 Currently reading from a file is not supported. It is recommended to launch coffeevis in a script.
 
 ## Notes
 
-Upon launch coffeevis will grab your default audio source, use an audio 
-config tool to direct your desired source to coffeevis (e.g. `pavucontrol`). I don't know how to fix this yet.
+Upon launch coffeevis will grab your default audio source, use an audio
+config tool to direct your desired source to coffeevis (e.g. `pavucontrol`).
 
 On Wayland, coffeevis cannot set itself on top so you will have to rely on an external tool. For example, on KDE Plasma, you can use the window rules feature.
 
@@ -81,14 +86,14 @@ A maximum resolution is built into the console mode (default: 50x50). Coffeevis 
 |  Key | Description |
 | ------ | ------ |
 | <kbd>Space</kbd> | iterates through visualizers |
-| <kbd>q</kbd> | exits |
+| <kbd>Esc</kbd> | exits |
 | <kbd>/</kbd> | resets all settings |
 | <kbd>-</kbd> / <kbd>+</kbd> | decreases/increases input volume |
 | <kbd>\[</kbd> / <kbd>\]</kbd> | decreases/increases spectrum roughness |
 | <kbd>;</kbd> / <kbd>'</kbd> | decreases/increases amount of samples into input (works for wave-based visualizers only) |
 | <kbd>\\</bkd> | toggles auto switching (default: ON, 8 seconds) |
 
-### Terminal mode
+### Terminal
 |  Key | Description |
 | ------ | ------ |
 | <kbd>.</kbd> | toggles between ascii rendering, block rendering and braille rendering |
@@ -96,3 +101,4 @@ A maximum resolution is built into the console mode (default: 50x50). Coffeevis 
 | <kbd>7</kbd> / <kbd>8</kbd> | decreases/increases fps by 5 (default: 60) |
 | <kbd>1</kbd> ... <kbd>6</kbd> | changes fps to 10 ... 60 respectively |
 
+<sup><sub>Please don't look at my code. No I'm not hiding anything in there it's all garbage code idk how to do gpu programming so it's all cpu code uh uhhh</sub></sup>

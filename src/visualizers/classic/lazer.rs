@@ -1,55 +1,63 @@
 use crate::data::SAMPLE_SIZE;
-use crate::graphics::P2;
-use crate::math::Cplx;
+use crate::math::{Cplx, interpolate::linearf};
 
 struct LocalData {
-    p0: P2,
-    p1: P2,
+    p0: Cplx,
+    p1: Cplx,
 }
+
 static DATA: std::sync::RwLock<LocalData> = std::sync::RwLock::new(LocalData {
-    p0: P2 { x: 0, y: 0 },
-    p1: P2 { x: 0, y: 0 },
+    p0: Cplx { x: 1.0, y: 1.0 },
+    p1: Cplx { x: 1.0, y: 1.0 },
 });
 
 pub fn draw_lazer(para: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
-    let w = para.pix.width() as i32;
-    let h = para.pix.height() as i32;
+    let w = para.pix.width()  as f64;
+    let h = para.pix.height() as f64;
 
-    let (ax, ay) = {
+    let mut a = {
         let mut sum = Cplx::zero();
-
-        for i in 0..SAMPLE_SIZE / 4 {
-            sum = sum + stream[i]
+		
+		let left  = 0..SAMPLE_SIZE/8;
+		let right = SAMPLE_SIZE/8..SAMPLE_SIZE/4;
+		
+		let mut smooth = 0.0;
+	
+        for i in left {
+			smooth = linearf(smooth, stream[i].x, 0.1);
+            sum.x += smooth;
         }
-
-        (
-            (sum.x * para.VOL_SCL * 0.05) as i32,
-            (sum.y * para.VOL_SCL * 0.05) as i32,
+        
+        let mut smooth = 0.0;
+        
+        for i in right {
+			smooth = linearf(smooth, stream[i].y, 0.1);
+            sum.y += smooth;
+        }
+        
+        Cplx::new(
+            sum.x * para.VOL_SCL * 0.0035,
+            sum.y * para.VOL_SCL * 0.0035,
         )
     };
 
-    //~ pos.x = linear_interp(pos.x as f64, (pos.x+ax).clamp(0, w -1) as f64, 0.7) as i32;
-    //~ pos.y = linear_interp(pos.y as f64, (pos.y+ay).clamp(0, h -1) as f64, 0.7) as i32;
-
-    // no smoothing version
-    //~ pos.x = (pos.x+ax).clamp(0, w -1);
-    //~ pos.y = (pos.y+ay).clamp(0, h -1);
-
     let mut LOCAL = DATA.write().unwrap();
+    
+    a = a * LOCAL.p0;
 
-    LOCAL.p0.x = (LOCAL.p0.y + ax + w) % w;
-    LOCAL.p0.y = (LOCAL.p0.x + ay + h) % h;
+    LOCAL.p0.x = (LOCAL.p0.x + a.x + w) % w;
+    LOCAL.p0.y = (LOCAL.p0.y + a.y + h) % h;
 
     let color = u32::from_be_bytes([
         0xff,
-        (48 + LOCAL.p0.x * 255 / w).min(255) as u8,
-        (48 + LOCAL.p0.y * 255 / h).min(255) as u8,
-        ((255 - ax * ay * 2).abs().min(255)) as u8,
+        (48.0 + LOCAL.p0.x * 255.0 / w).min(255.0) as u8,
+        (48.0 + LOCAL.p0.y * 255.0 / h).min(255.0) as u8,
+        ((255.0 - a.x * a.y * 2.0).abs().min(255.0)) as u8,
     ]);
 
     para.pix.fade(3);
 
-    para.pix.draw_line(LOCAL.p1, LOCAL.p0, color);
+    para.pix.draw_line(LOCAL.p1.to_p2(), LOCAL.p0.to_p2(), color);
 
     LOCAL.p1 = LOCAL.p0;
 }

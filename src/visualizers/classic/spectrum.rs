@@ -24,18 +24,9 @@ fn index_scale(x: f64) -> f64 {
     //x.sqrt()*x
 }
 
-fn volume_scale(x: f64) -> f64 {
-    2.0 * x //crate::math::fast::fsqrt(x)
-            //let x1 = x*0.25 + 0.25;
-            //(x - 2.5).max(0.0)*3.0
-            //(x*3.0).powi(2)
-            //math::fast::fsqrt(math::fast::fsqrt(x))*x
-            //math::fast::unit_exp2_0(2.0*x)
-}
-
 fn prepare(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
     const WINDOW: usize = 2 * FFT_SIZE / 3;
-    let fall_factor = 0.4 * prog.SMOOTHING.powi(2) * prog.FPS as f64 * 0.006944444;
+    let fall_factor = 0.4 * prog.SMOOTHING.powi(2) * (prog.MILLI_HZ / 1000) as f64 * 0.006944444;
     let mut LOCAL = DATA.write().unwrap();
     let mut fft = [Cplx::zero(); FFT_SIZE];
 
@@ -76,7 +67,6 @@ pub fn draw_spectrum(prog: &mut crate::data::Program, stream: &mut crate::audio:
 
     let (w, h) = prog.pix.sizet();
 
-    // let scale = FFT_SIZE as f64 * prog.pix.height() as f64 * 0.0625;
     let winwh = w >> 1;
 
     prepare(prog, stream);
@@ -89,20 +79,6 @@ pub fn draw_spectrum(prog: &mut crate::data::Program, stream: &mut crate::audio:
 
     let binding = DATA.read().unwrap();
     let normalized = binding.as_slice();
-
-    //	let mut normalized = [Cplx::zero(); RANGE+1];
-    //	normalized.copy_from_slice(LOCAL.as_slice());
-
-    //	let mut current_max = MAX.write().unwrap();
-    //	*current_max = math::normalize_max(&mut normalized, 0.01, 1.0, *current_max, 0.002);
-
-    // prog.pix.clear();
-
-    //~ let _winlog = wf.log2();
-
-    //~ let _if64: f64 = 0.0;
-
-    //~ const INTERVAL: f64 = 1.0;
 
     prog.pix.clear();
 
@@ -146,24 +122,13 @@ pub fn draw_spectrum(prog: &mut crate::data::Program, stream: &mut crate::audio:
         let rect_r = P2::new(((bar_width_r as i32 + 1) / 2 + winwh).min(w), i);
 
         let middle = P2::new(winwh + 1, i);
-        // let rect_r_size = (bar_width_r as usize / 2, 1);
-
-        //prog.pix.clear_row(i as usize);
-
-        //prog.pix.draw_rect_xy(P2::new(0, i), P2::new(rect_l.x, i), prog.background);
-        //prog.pix.draw_rect_xy(P2::new(w - rect_r.x, i), P2::new(w, i), prog.background);
 
         prog.pix.draw_rect_xy(rect_l, middle, color1);
         prog.pix.draw_rect_xy(middle, rect_r, color2);
 
         let alpha = (128.0 + stream[i as usize / 2].x * 32768.0) as u8;
         // let bg = prog.pix.background & 0x00_FF_FF_FF | alpha;
-        prog.pix.draw_rect_wh_by(
-            P2::new(winwh - 1, i),
-            2,
-            1,
-            u32::mix(prog.pix.background, color.set_alpha(alpha)).copy_alpha(prog.pix.background),
-            u32::over,
-        );
+        prog.pix
+            .draw_rect_wh_by(P2::new(winwh - 1, i), 2, 1, color.fade(alpha), u32::over);
     }
 }

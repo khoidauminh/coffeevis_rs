@@ -17,24 +17,28 @@ use std::io::{stdout, Stdout, Write};
 
 pub type Flusher = fn(&Program, &mut Stdout);
 
+type Rgb = [u8; 3];
+const BLACK: Rgb = [0; 3];
+const ERROR: u8 = 6;
+
 struct ColoredString {
     pub string: String,
-    pub fg: [u8; 3],
-    pub bg: [u8; 3],
+    pub fg: Rgb,
+    pub bg: Rgb,
     error: u8,
 }
 
 impl ColoredString {
-    pub fn new(ch: char, fg: [u8; 3], error: u8) -> Self {
+    pub fn new(ch: char, fg: Rgb, error: u8) -> Self {
         Self {
             string: String::from(ch),
             fg: fg,
-            bg: [0; 3],
+            bg: BLACK,
             error,
         }
     }
 
-    pub fn new_bg(ch: char, fg: [u8; 3], bg: [u8; 3], error: u8) -> Self {
+    pub fn new_bg(ch: char, fg: Rgb, bg: Rgb, error: u8) -> Self {
         Self {
             string: String::from(ch),
             fg: fg,
@@ -43,7 +47,7 @@ impl ColoredString {
         }
     }
 
-    pub fn append(&mut self, ch: char, fg: [u8; 3]) -> bool {
+    pub fn append(&mut self, ch: char, fg: Rgb) -> bool {
         /*if ch == '\0' {
             self.string.push_str("\x1B[1C");
             return true;
@@ -65,7 +69,7 @@ impl ColoredString {
         //return Some(Self::new(ch, r, g, b, self.error));
     }
 
-    pub fn append_bg(&mut self, ch: char, fg: [u8; 3], bg: [u8; 3]) -> bool {
+    pub fn append_bg(&mut self, ch: char, fg: Rgb, bg: Rgb) -> bool {
         /*if ch == '\0' {
             self.string.push_str("\x1B[1C");
             return true;
@@ -105,37 +109,41 @@ impl ColoredString {
 trait StyledLine {
     fn init() -> Self;
     fn clear_line(&mut self);
-    fn push_pixel(&mut self, ch: char, fg: [u8; 3]);
-    fn push_pixel_bg(&mut self, ch: char, fg: [u8; 3], bg: [u8; 3]);
+    fn push_pixel(&mut self, ch: char, fg: Rgb);
+    fn push_pixel_bg(&mut self, ch: char, fg: Rgb, bg: Rgb);
     fn queue_print(&self);
 }
 
-/// WARNING: Don't call new on this vec.
-/// This will trigger an unwrap to None panic.
 impl StyledLine for Vec<ColoredString> {
     fn init() -> Self {
-        vec![ColoredString::new('\0', [0; 3], 4)]
+        vec![ColoredString::new('\0', BLACK, ERROR)]
     }
 
     fn clear_line(&mut self) {
         self.clear();
-        self.push(ColoredString::new('\0', [0; 3], 4));
+        self.push(ColoredString::new('\0', BLACK, ERROR));
     }
 
-    fn push_pixel(&mut self, ch: char, fg: [u8; 3]) {
-        if self.last_mut().unwrap().append(ch, fg) {
-            return;
-        }
-
-        self.push(ColoredString::new(ch, fg, 3));
+    fn push_pixel(&mut self, ch: char, fg: Rgb) {
+        
+        if let Some(last) = self.last_mut() {
+			if last.append(ch, fg) {
+				return;
+			}
+		}
+		
+        self.push(ColoredString::new(ch, fg, ERROR));
     }
 
-    fn push_pixel_bg(&mut self, ch: char, fg: [u8; 3], bg: [u8; 3]) {
-        if self.last_mut().unwrap().append_bg(ch, fg, bg) {
-            return;
-        }
-
-        self.push(ColoredString::new_bg(ch, fg, bg, 3));
+    fn push_pixel_bg(&mut self, ch: char, fg: Rgb, bg: Rgb) {
+		
+		if let Some(last) = self.last_mut() {
+			if last.append_bg(ch, fg, bg) {
+				return;
+			}
+		}
+		
+        self.push(ColoredString::new_bg(ch, fg, bg, ERROR));
     }
 
     fn queue_print(&self) {
@@ -160,7 +168,9 @@ impl StyledLine for Vec<ColoredString> {
 // ASCII ONLY
 // pub const CHARSET_BLOCKOPAC: &str = &[' ', '░', '▒', '▓'];
 const CHARSET_OPAC_EXP: &[u8] =
-    b" `.-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ5Yxjya]2ESwqkP6h9d4VpOGbUAKXHm8RD#$Bg0MNWQ%&@";
+    b" `.-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ\
+    5Yxjya]2ESwqkP6h9d4VpOGbUAKXHm8RD#$Bg0MNWQ%&@"
+;
 
 #[allow(dead_code)]
 pub const CHARSET_SIZEOPAC: &[u8] = b" -~+oiwGW@$";
@@ -168,6 +178,19 @@ pub const CHARSET_SIZEOPAC: &[u8] = b" -~+oiwGW@$";
 impl Program {
     pub fn print_con(&mut self) {
         (self.flusher)(self, &mut std::io::stdout());
+    }
+    
+    pub fn as_con(mut self) -> Self {
+        match self.mode {
+            Mode::Win => self.set_con_mode(Mode::ConAlpha),
+            _ => {}
+        }
+        self
+    }
+    
+    pub fn as_con_force(mut self, mode: Mode) -> Self {
+        self.set_con_mode(mode);
+        self
     }
 
     pub fn change_con_max(&mut self, amount: i16, replace: bool) {
@@ -179,6 +202,41 @@ impl Program {
 
     pub fn refresh_con(&mut self) {
         self.update_size((self.CON_W, self.CON_H));
+    }
+
+	pub fn switch_con_mode(&mut self) {
+	// self.mode.next_con();
+
+	self.mode = match self.mode {
+		Mode::ConAlpha => {
+			self.flusher = Program::print_block;
+			Mode::ConBlock
+		}
+		Mode::ConBlock => {
+			self.flusher = Program::print_brail;
+			Mode::ConBrail
+		}
+		Mode::ConBrail => {
+			self.flusher = Program::print_alpha;
+			Mode::ConAlpha
+		}
+
+		Mode::Win => Mode::Win,
+		Mode::WinLegacy => Mode::WinLegacy,
+	};
+
+        self.refresh_con();
+    }
+	
+    pub fn set_con_mode(&mut self, mode: Mode) {
+        match mode {
+            Mode::ConAlpha => self.flusher = Program::print_alpha,
+            Mode::ConBlock => self.flusher = Program::print_block,
+            Mode::ConBrail => self.flusher = Program::print_brail,
+            _ => {}
+        }
+        self.mode = mode;
+        self.refresh_con();
     }
 
     pub fn clear_con(&mut self) {
@@ -310,8 +368,8 @@ impl Program {
 						b = b.max(pb);
 
 						acc | (((grayb(pr, pg, pb) > 36) as u8) << i)
-						// All braille patterns fit into a u8, so a bitwise or can
-						// be used to increase performance
+						// All braille patterns fit into a u8, so a bitwise OR can
+						// be used to increase performance.
 					}) as u32;
 
                 line.push_pixel(char::from_u32(bx).unwrap(), [r, g, b]);
