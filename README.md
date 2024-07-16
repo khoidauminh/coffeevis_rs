@@ -32,6 +32,14 @@ Windows, MacOS and BSD support is not available.
 ## Installation
 Run `cargo install coffeevis`
 
+To run coffeevis in a terminal, use:
+
+```cargo install coffeevis --features terminal```
+
+If for some reason you want to use minifb, use:
+
+```cargo install coffeevis --features minifb```
+
 ## Configuration
 
 Coffeevis does not remember settings and does not generate config files
@@ -52,18 +60,16 @@ Coffeevis supports temporary options at launch
 
 | Option | Value (example) | Description |
 | ------ | ------ | ------ |
-| --win-legacy |  | opens window with minifb (coffeevis now runs with winit by default) |
+| --minifb |  | opens window with minifb (coffeevis now runs with winit by default) |
 | --x11 | | runs in X11 (Wayland is the default) |
 | --ascii<br />--block<br />--braille | | runs in the terminal |
 | --no-auto-switch | | disables automatic visualizer switching |
 | --size | 80x80 | sets resolution in window mode |
 | --scale | 2 | upscales in window mode |
 | --fps | 60 | sets refresh rate |
-| --resizable | | allows resizing in window mode (not supported and currently ignored) |
+| --resizable | | allows resizing in window mode |
 | --max-con-size | 50x50 | sets maximum resolution in terminal mode |
 | --vis | spectrum | launches coffeevis with the specified visualizer |
-
-Currently reading from a file is not supported. It is recommended to launch coffeevis in a script.
 
 ## Notes
 
