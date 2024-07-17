@@ -13,7 +13,7 @@ pub const PIH: f64 = PI * 0.5;
 pub const TAU_RECIP: f64 = 1.0 / TAU;
 pub const ZERO: Cplx = Cplx { x: 0.0, y: 0.0 };
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Default)]
 pub struct Vec2<T: Copy + Clone> {
     pub x: T,
     pub y: T,
@@ -25,25 +25,6 @@ pub trait ToUsize<T> {
     fn new(value: T) -> Self;
 }
 
-impl ToUsize<i32> for usize {
-    fn new(x: i32) -> usize {
-        if x > 0 {
-            x as usize
-        } else {
-            0
-        }
-
-        /*let b = (x < 0) as i32;
-        let mask = !(-b);
-
-        (x & mask) as usize*/
-
-        //x.max(0) as usize
-        //const MINUS1: usize = -1i32 as usize;
-        //(x as usize) & ((x < 0) as usize).wrapping_add(MINUS1)
-    }
-}
-
 pub const fn ideal_fft_bound(up_to: usize) -> usize {
     (up_to * 3 / 2).next_power_of_two() * 2
 }
@@ -52,41 +33,12 @@ pub fn fft_stereo(a: &mut [Cplx], up_to: usize, norm: bool) {
     fft::compute_fft_stereo(a, up_to, norm);
 }
 
-pub fn fft_stereo_small(a: &mut [Cplx], up_to: usize, normalize: bool) {
-    let bound = ideal_fft_bound(up_to);
-    let bound = bound.min(a.len());
-
-    fft::compute_fft_stereo(&mut a[0..bound], up_to, normalize);
-}
-
-pub fn fft_small(a: &mut [Cplx], up_to: usize) {
-    let bound = ideal_fft_bound(up_to);
-    let bound = bound.min(a.len());
-    fft(&mut a[0..bound]);
-}
-
 pub fn fft(a: &mut [Cplx]) {
     let l = a.len();
     let power = fast::ilog2(l);
 
     fft::butterfly(a, power);
     fft::compute_fft(a);
-}
-
-pub fn fft_out_of_place(a: &[Cplx], b: &mut [Cplx]) {
-    let l = a.len();
-    let power = fast::ilog2(l);
-
-    fft::butterfly_out_of_place(a, b, power);
-    fft::compute_fft(b);
-}
-
-pub fn fft_half(a: &mut [Cplx]) {
-    let l = a.len();
-    let power = l.ilog2() as usize;
-
-    fft::butterfly_half(a, power);
-    fft::compute_fft_half(a);
 }
 
 pub fn increment<T>(a: T, limit: T) -> T

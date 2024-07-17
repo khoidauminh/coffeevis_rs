@@ -42,22 +42,20 @@ fn prepare(
 
     let mut data_f = [Cplx::zero(); FFT_SIZE];
 
-    {
-        const UP: usize = FFT_SIZE / (BARS * 3 / 2);
-        data_f
-            .iter_mut()
-            .take(FFT_SIZE_HALF)
-            .enumerate()
-            .for_each(|(i, smp)| *smp = stream[i * UP]);
-    }
+    const UP: usize = FFT_SIZE / (BARS * 3 / 2);
+    data_f
+        .iter_mut()
+        .take(FFT_SIZE_HALF)
+        .enumerate()
+        .for_each(|(i, smp)| *smp = stream[i * UP]);
 
-    //~ math::blackmannuttall::perform_window(&mut data_f);
+    let bound = data_f.len().min(math::ideal_fft_bound(BARS));
 
-    math::fft_small(&mut data_f, BARS);
+    math::fft(&mut data_f[0..bound]);
 
     let _max = MAX.write().unwrap();
 
-    // crate::math::highpass_inplace(&mut data_f[..bar_num]);
+    const NORM: f64 = FFT_SIZE_RECIP;
 
     let mut data_f = data_f
         .iter_mut()
@@ -67,15 +65,11 @@ fn prepare(
             let scl = ((i + 2) as f64).log2().powi(2);
             let smp_f64: f64 = (*smp).mag();
 
-            smp_f64 * volume_scale * scl * FFT_SIZE_RECIP
+            smp_f64 * volume_scale * scl * NORM
         })
         .collect::<Vec<f64>>();
 
-    //max = math::normalize_max_cplx(&mut data_f, 0.01, 0.7, *max, 0.0035);
-
     crate::audio::limiter_pong(&mut data_f[..bar_num], 0.9, 20, 0.98, |x| x);
-
-    //let scale_factor = stream.normalize_factor_peak()*FFT_SIZE_RECIP*7.0;
 
     let bnf = 1.0 / bnf;
 
@@ -127,9 +121,11 @@ pub fn draw_bars(prog: &mut crate::data::Program, stream: &mut crate::audio::Sam
 
         let t = idxf.fract();
 
-        smoothed_smp = smoothed_smp.max(cubed_sqrt(
-			smooth_step(LOCAL[idx], LOCAL[(idx + 1).min(bar_num)], t)
-		));
+        smoothed_smp = smoothed_smp.max(cubed_sqrt(smooth_step(
+            LOCAL[idx],
+            LOCAL[(idx + 1).min(bar_num)],
+            t,
+        )));
 
         if prev_index == idx {
             continue;

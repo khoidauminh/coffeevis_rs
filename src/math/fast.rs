@@ -37,6 +37,6 @@ pub fn isqrt(val: usize) -> usize {
     (val as f64).sqrt() as usize
 }
 
-pub fn ilog2(x: usize) -> usize {
+pub const fn ilog2(x: usize) -> usize {
     (usize::BITS.wrapping_sub((x >> 1).leading_zeros())) as usize
 }

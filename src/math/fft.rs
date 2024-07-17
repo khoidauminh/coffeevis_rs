@@ -10,33 +10,6 @@ pub fn butterfly<T: std::marker::Copy>(a: &mut [Vec2<T>], power: usize) {
     }
 }
 
-pub fn butterfly_out_of_place<T: std::marker::Copy>(
-    inp: &[Vec2<T>],
-    out: &mut [Vec2<T>],
-    power: usize,
-) {
-    let l = inp.len() - 1;
-    for i in 1..l {
-        let ni = super::fast::bit_reverse(i, power);
-        out[ni] = inp[i];
-    }
-}
-
-pub fn butterfly_half<T: std::marker::Copy>(a: &mut [Vec2<T>], power: usize) {
-    let l = a.len() / 2;
-
-    /*for i in 1..l {
-        a[i] = a[i*2];
-    }*/
-
-    for i in 1..l - 1 {
-        let ni = super::fast::bit_reverse(i, power);
-        if i < ni {
-            a.swap(ni, i)
-        }
-    }
-}
-
 pub fn twiddle_norm(x: f64) -> Cplx {
     let x = x * std::f64::consts::TAU;
     let y = x.sin_cos();
@@ -117,22 +90,6 @@ pub fn compute_fft_iterative(a: &mut [Cplx]) {
 
     let mut window = 16usize;
     let mut depth = 4;
-
-    /*use std::sync::RwLock;
-
-    // 0, 1, 2, 3, 4
-    // 1, 2, 4, 8, 16
-    pub static FAST_TWIDDLES: RwLock<[Cplx; 16]> = RwLock::new([Cplx::zero(); 16]);
-    static ONCE: std::sync::Once = std::sync::Once::new();
-
-    ONCE.call_once(|| {
-        let mut twiddles = FAST_TWIDDLES.write().unwrap();
-        for i in 0..16 {
-            let x = -std::f64::consts::TAU / (1 << i) as f64;
-            twiddles[i] = super::fft::twiddle(x);
-        }
-    });
-    let fast_twiddle = FAST_TWIDDLES.read().unwrap();*/
 
     const TWIDDLE_FACTORS: [Cplx; 24] = [
         Cplx { x: 1.0, y: 0.0 },
@@ -225,7 +182,6 @@ pub fn compute_fft_iterative(a: &mut [Cplx]) {
     ];
 
     while window <= length {
-        //~ let root = twiddle(root_angle);
         let root = TWIDDLE_FACTORS[depth];
 
         a.chunks_exact_mut(window).for_each(|chunk| {
@@ -252,7 +208,6 @@ pub fn compute_fft_iterative(a: &mut [Cplx]) {
 
         window *= 2;
         depth += 1;
-        //~ root_angle *= 0.5;
     }
 }
 
@@ -264,8 +219,6 @@ pub fn compute_fft_stereo(a: &mut [Cplx], up_to: usize, normalize: bool) {
     let l = a.len();
     let _power = super::fast::ilog2(l) as usize;
 
-    let norm = if normalize { 1.0 / l as f64 } else { 1.0 };
-
     super::fft(a);
 
     let mut extract = |i: usize, rev_i: usize| {
@@ -275,14 +228,23 @@ pub fn compute_fft_stereo(a: &mut [Cplx], up_to: usize, normalize: bool) {
         let x: f64 = (fft_1 + fft_2).l1_norm();
         let y: f64 = (fft_1 - fft_2).l1_norm();
 
-        a[i] = Cplx::new(x, y) * norm;
+        a[i] = Cplx::new(x, y);
     };
 
     extract(0, l - 1);
 
-    for i in 1..up_to.min(l) {
+    let bound = up_to.min(l);
+
+    for i in 1..bound {
         let rev_i = l - i;
         extract(i, rev_i);
+    }
+
+    if normalize {
+        let norm = 1.0 / l as f64;
+        for smp in a.iter_mut().take(bound) {
+            *smp = *smp * norm;
+        }
     }
 }
 

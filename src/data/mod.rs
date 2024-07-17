@@ -42,9 +42,9 @@ pub const DEFAULT_WIN_SCALE: u8 = 3;
 
 #[derive(PartialEq)]
 pub enum RefreshRateMode {
-	Sync,
-	Specified,
-	Unlimited
+    Sync,
+    Specified,
+    Unlimited,
 }
 
 /// Main program struct
@@ -57,8 +57,7 @@ pub enum RefreshRateMode {
 pub(crate) struct Program {
     /// for experimental purposes. Console mode only.
     DISPLAY: bool,
-    
-    
+
     SCALE: u8,
 
     /// Allow for resizing. Windowed mode only.
@@ -78,9 +77,9 @@ pub(crate) struct Program {
     pub REFRESH_RATE_MODE: RefreshRateMode,
     pub DURATIONS: [std::time::Duration; 4],
     pub REFRESH_RATE: std::time::Duration,
-    
+
     pub HZ_REPORT: bool,
-    
+
     pub WAV_WIN: usize,
     pub VOL_SCL: f64,
     pub SMOOTHING: f64,
@@ -97,7 +96,7 @@ pub(crate) struct Program {
     VIS: vislist::VisNavigator,
 
     visualizer: VisFunc,
-    
+
     #[cfg(feature = "terminal")]
     pub flusher: crate::modes::console_mode::Flusher,
 
@@ -130,7 +129,7 @@ impl Program {
     pub fn new() -> Self {
         let vislist_ = vislist::VisNavigator::new();
         let vis = vislist_.current_vis();
-        
+
         let rate = std::time::Duration::from_micros(1_000_000 / DEFAULT_HZ);
 
         Self {
@@ -155,18 +154,13 @@ impl Program {
             REFRESH_RATE_MODE: RefreshRateMode::Sync,
             REFRESH_RATE: rate,
             HZ_REPORT: false,
-            
-            DURATIONS: [
-				rate,
-				rate * 4,
-				rate * 16,
-				Duration::from_millis(500),
-			],
+
+            DURATIONS: [rate, rate * 4, rate * 16, Duration::from_millis(500)],
 
             VIS: vislist_,
 
             visualizer: vis.func(),
-            
+
             #[cfg(feature = "terminal")]
             flusher: Program::print_alpha,
 
@@ -202,10 +196,10 @@ impl Program {
 
     pub fn eval_command(&mut self, cmd: &Command) -> bool {
         use Command::*;
-        
+
         if *cmd == Command::Blank {
-			return false;
-		}
+            return false;
+        }
 
         match cmd {
             &VisualizerNext => {
@@ -216,11 +210,11 @@ impl Program {
                 self.change_visualizer(false);
                 true
             }
-            
+
             #[cfg(feature = "terminal")]
             &SwitchConMode => {
                 self.switch_con_mode();
-                
+
                 true
             }
             &SwitchVisList => {
@@ -232,13 +226,13 @@ impl Program {
                 self.change_fps(fps, replace);
                 false
             }
-            
+
             &FPSFrac(milli_hz) => {
                 self.change_fps_frac(milli_hz);
                 false
             }
 
-			#[cfg(feature = "terminal")]
+            #[cfg(feature = "terminal")]
             &ConMax(d, replace) => {
                 self.change_con_max(d, replace);
                 true
@@ -320,32 +314,34 @@ impl Program {
     }
 
     pub fn change_fps(&mut self, amount: i16, replace: bool) {
-        
         if replace {
-			self.MILLI_HZ = amount as u32 * 1000;
-		} else {
-			self.MILLI_HZ = self.MILLI_HZ.saturating_add_signed(amount as i32 * 1000).clamp(1, 200 * 1000);
-		}
-		
-		self.change_fps_frac(self.MILLI_HZ);
-		
+            self.MILLI_HZ = amount as u32 * 1000;
+        } else {
+            self.MILLI_HZ = self
+                .MILLI_HZ
+                .saturating_add_signed(amount as i32 * 1000)
+                .clamp(1, 200 * 1000);
+        }
+
+        self.change_fps_frac(self.MILLI_HZ);
+
         //self.FPS = ((self.FPS * (!replace) as u64) as i16 + amount).clamp(1, 144_i16) as u64;
         //self.REFRESH_RATE = std::time::Duration::from_micros(1_000_000 / self.FPS);
     }
-    
+
     pub fn change_fps_frac(&mut self, fps: u32) {
-		let fps_f = (fps / 1000) as f64 + (fps % 1000) as f64;
-		let rate = (1_000_000.0 / fps_f) as u64;
-		self.MILLI_HZ = fps;
-		self.REFRESH_RATE = std::time::Duration::from_micros(rate);
-		
-		self.DURATIONS = [
-			self.REFRESH_RATE,
-			self.REFRESH_RATE * 4,
-			self.REFRESH_RATE * 16,
-			Duration::from_millis(500)
-		];
-	}
+        let fps_f = (fps / 1000) as f64 + (fps % 1000) as f64;
+        let rate = (1_000_000.0 / fps_f) as u64;
+        self.MILLI_HZ = fps;
+        self.REFRESH_RATE = std::time::Duration::from_micros(rate);
+
+        self.DURATIONS = [
+            self.REFRESH_RATE,
+            self.REFRESH_RATE * 4,
+            self.REFRESH_RATE * 16,
+            Duration::from_millis(500),
+        ];
+    }
 
     pub fn change_visualizer(&mut self, forward: bool) {
         let new_visualizer = if forward {
@@ -397,26 +393,23 @@ impl Program {
     }
 
     pub fn print_message(&self, message: String) {
-        
         use std::io::Write;
-		let mut stdout = std::io::stdout();
-        
+        let mut stdout = std::io::stdout();
+
         if self.DISPLAY && self.mode.is_con() {
-			
-			#[cfg(feature = "terminal")]
-			use crossterm::{
-				style::Print,
-				terminal::{EnterAlternateScreen, LeaveAlternateScreen},
-			};
-			
-			#[cfg(feature = "terminal")]
+            #[cfg(feature = "terminal")]
+            use crossterm::{
+                style::Print,
+                terminal::{EnterAlternateScreen, LeaveAlternateScreen},
+            };
+
+            #[cfg(feature = "terminal")]
             let _ = crossterm::queue!(
                 stdout,
                 LeaveAlternateScreen,
                 Print(message),
                 EnterAlternateScreen
             );
-            
         } else {
             print!("{}", message);
             let _ = stdout.flush();
@@ -424,8 +417,8 @@ impl Program {
     }
 
     //pub fn update_fps(&mut self, new_fps: u64) {
-        //self.MILLI_HZ = new_fps;
-        //self.REFRESH_RATE = std::time::Duration::from_micros(1_000_000 / new_fps);
+    //self.MILLI_HZ = new_fps;
+    //self.REFRESH_RATE = std::time::Duration::from_micros(1_000_000 / new_fps);
     //}
 
     pub fn update_size_win<T>(&mut self, s: (T, T))
@@ -446,16 +439,17 @@ impl Program {
 
         match &self.mode {
             Mode::Win | Mode::WinLegacy => {
-				(self.WIN_W, self.WIN_H) = size;
-				self.pix.resize(size.0 as usize, size.1 as usize);
-			}
-			
+                (self.WIN_W, self.WIN_H) = size;
+                self.pix.resize(size.0 as usize, size.1 as usize);
+            }
+
             _ => {
-				#[cfg(feature = "terminal")] {
-					(self.CON_W, self.CON_H) = size;
-					let size = crate::modes::console_mode::rescale(size, self);
-					self.pix.resize(size.0 as usize, size.1 as usize);
-				}
+                #[cfg(feature = "terminal")]
+                {
+                    (self.CON_W, self.CON_H) = size;
+                    let size = crate::modes::console_mode::rescale(size, self);
+                    self.pix.resize(size.0 as usize, size.1 as usize);
+                }
             }
         }
     }
@@ -514,7 +508,7 @@ impl Program {
         self.VOL_SCL = DEFAULT_VOL_SCL;
         self.SMOOTHING = DEFAULT_SMOOTHING;
         self.WAV_WIN = DEFAULT_WAV_WIN;
-        
+
         #[cfg(feature = "terminal")]
         self.change_con_max(50, true);
         self.change_fps_frac(DEFAULT_MILLI_HZ);
