@@ -1,16 +1,18 @@
 use std::sync::Mutex;
 
 use crate::{
-	data::{Program, DEFAULT_SIZE_WIN},
-	audio::SampleArr,
-    graphics::{Canvas, P2, blend::Blend},
-    math::{Cplx, rng::{random_int, random_float}}
+    audio::SampleArr,
+    data::{Program, DEFAULT_SIZE_WIN},
+    graphics::{blend::Blend, Canvas, P2},
+    math::{
+        rng::{random_float, random_int},
+        Cplx,
+    },
 };
 
 #[derive(Copy, Clone)]
 struct Bubble {
-	pos: Cplx,
-	radius: f64,
-	color: u32,
-	
+    pos: Cplx,
+    radius: f64,
+    color: u32,
 }

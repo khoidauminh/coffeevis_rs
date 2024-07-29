@@ -232,6 +232,24 @@ impl ApplicationHandler for WindowState {
     }
 }
 
+pub fn read_icon() -> (u32, u32, Vec<u8>) {
+    let ICON_FILE = include_bytes!("../../assets/coffeevis_icon_128x128.qoi");
+
+    let mut icon = qoi::Decoder::new(ICON_FILE)
+        .expect("Failed to parse qoi image")
+        .with_channels(qoi::Channels::Rgba);
+
+    let header = icon.header();
+    let width = header.width;
+    let height = header.height;
+
+    let Ok(vec) = icon.decode_to_vec() else {
+        panic!("Failed to decode qoi to vec.")
+    };
+
+    (width, height, vec)
+}
+
 pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
     let event_loop = EventLoop::new().unwrap();
 
@@ -265,6 +283,16 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
         .with_resizable(prog.is_resizable());
 
     let window = Arc::new(event_loop.create_window(window_attributes).unwrap());
+
+    if !prog.is_wayland() {
+        let icon = {
+            let (w, h, v) = read_icon();
+
+            winit::window::Icon::from_rgba(v, w, h).expect("Failed to create window icon.")
+        };
+
+        window.set_window_icon(Some(icon));
+    }
 
     let inner_size = window.clone().inner_size();
 
@@ -372,14 +400,18 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
 
         while thread_main_running_draw.load(Relaxed) {
             let no_sample = crate::audio::get_no_sample();
+            let mut draw = false;
 
             if let Ok(mut cmd) = commands.try_write() {
-                prog.eval_command(&cmd);
+                draw |= prog.eval_command(&cmd);
                 *cmd = Command::Blank;
             }
 
-            if no_sample >= crate::data::STOP_RENDERING {
-                thread::sleep(Duration::from_millis(500));
+            prog.update_vis();
+
+            if no_sample >= crate::data::STOP_RENDERING && !draw {
+                thread::sleep(Duration::from_millis(333));
+                continue;
             }
 
             let render_begin = std::time::Instant::now();
@@ -427,8 +459,6 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
                 let _ = buffer.present();
             }
 
-            prog.update_vis();
-
             let sleep = prog.DURATIONS[(no_sample >> 6) as usize];
 
             if report_fps {
@@ -450,7 +480,6 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
     event_loop.set_control_flow(winit::event_loop::ControlFlow::Wait);
 
     let _ = event_loop.run_app(&mut state);
-
     let _ = thread_updates.join();
     let _ = thread_draw.join();
 

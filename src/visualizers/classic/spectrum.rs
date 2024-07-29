@@ -51,7 +51,7 @@ fn prepare(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr
 
     crate::audio::limiter_pong(&mut fft[0..RANGE], 1.5, 15, prog.VOL_SCL, |x| x.max());
 
-    DATA.with_borrow_mut(|LOCAL| {
+    DATA.with_borrow_mut(move |LOCAL| {
         LOCAL.iter_mut().zip(fft.iter()).for_each(|(smp, si)| {
             smp.x = multiplicative_fall(smp.x, si.x, 0.0, fall_factor);
             smp.y = multiplicative_fall(smp.y, si.y, 0.0, fall_factor);
@@ -76,7 +76,7 @@ pub fn draw_spectrum(prog: &mut crate::data::Program, stream: &mut crate::audio:
     let wf_recip = 1.0 / wf;
     let hf_recip = 1.0 / hf;
 
-    DATA.with_borrow(|normalized| {
+    DATA.with_borrow(move |normalized| {
         prog.pix.clear();
 
         for i in 0..h {

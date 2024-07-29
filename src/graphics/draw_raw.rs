@@ -1,9 +1,6 @@
 #![allow(unused_variables)]
 
-use super::{
-    blend::{Blend, Mixer},
-    P2,
-};
+use super::{blend::Mixer, Pixel, P2};
 
 pub fn get_idx_fast(cwidth: usize, p: P2) -> usize {
     let x = p.x as usize;
@@ -12,42 +9,42 @@ pub fn get_idx_fast(cwidth: usize, p: P2) -> usize {
     y.wrapping_mul(cwidth).wrapping_add(x)
 }
 
-pub fn set_pixel(canvas: &mut [u32], i: usize, c: u32) {
-    set_pixel_by(canvas, i, c, u32::blend);
+pub fn set_pixel<T: Pixel>(canvas: &mut [T], i: usize, c: T) {
+    set_pixel_by(canvas, i, c, T::blend);
 }
 
-pub fn set_pixel_xy(canvas: &mut [u32], cwidth: usize, _cheight: usize, p: P2, c: u32) {
+pub fn set_pixel_xy<T: Pixel>(canvas: &mut [T], cwidth: usize, _cheight: usize, p: P2, c: T) {
     let i = get_idx_fast(cwidth, p);
     set_pixel(canvas, i, c);
 }
 
 #[inline]
-pub fn set_pixel_by(canvas: &mut [u32], i: usize, c: u32, b: Mixer) {
+pub fn set_pixel_by<T: Pixel>(canvas: &mut [T], i: usize, c: T, b: Mixer<T>) {
     if let Some(p) = canvas.get_mut(i) {
         *p = b(*p, c);
     }
 }
 
-pub fn set_pixel_xy_by(
-    canvas: &mut [u32],
+pub fn set_pixel_xy_by<T: Pixel>(
+    canvas: &mut [T],
     cwidth: usize,
     _cheight: usize,
     p: P2,
-    c: u32,
-    b: Mixer,
+    c: T,
+    b: Mixer<T>,
 ) {
     let i = get_idx_fast(cwidth, p);
     set_pixel_by(canvas, i, c, b);
 }
 
-pub fn draw_rect_xy_by(
-    canvas: &mut [u32],
+pub fn draw_rect_xy_by<T: Pixel>(
+    canvas: &mut [T],
     cwidth: usize,
     cheight: usize,
     ps: P2,
     pe: P2,
-    c: u32,
-    b: Mixer,
+    c: T,
+    b: Mixer<T>,
 ) {
     let [xs, ys] = [ps.x as usize, ps.y as usize];
 
@@ -71,41 +68,48 @@ pub fn draw_rect_xy_by(
     }
 }
 
-pub fn draw_rect_xy(canvas: &mut [u32], cwidth: usize, cheight: usize, ps: P2, pe: P2, c: u32) {
-    draw_rect_xy_by(canvas, cwidth, cheight, ps, pe, c, u32::mix);
+pub fn draw_rect_xy<T: Pixel>(
+    canvas: &mut [T],
+    cwidth: usize,
+    cheight: usize,
+    ps: P2,
+    pe: P2,
+    c: T,
+) {
+    draw_rect_xy_by(canvas, cwidth, cheight, ps, pe, c, T::mix);
 }
 
-pub fn fade(canvas: &mut [u32], al: u8, background: u32) {
-    let mut fader = background & 0x00_FF_FF_FF;
-    fader |= (al as u32) << 24;
+pub fn fade<T: Pixel>(canvas: &mut [T], al: u8, background: T) {
+    let mut fader: T = background & T::from(0x00_FF_FF_FFu32);
+    fader = fader | T::from((al as u32) << 24);
     canvas.iter_mut().for_each(|smp| *smp = smp.mix(fader));
 }
 
-pub fn fill(canvas: &mut [u32], c: u32) {
+pub fn fill<T: Pixel>(canvas: &mut [T], c: T) {
     canvas.fill(c);
 }
 
-pub fn draw_rect_wh(
-    canvas: &mut [u32],
+pub fn draw_rect_wh<T: Pixel>(
+    canvas: &mut [T],
     cwidth: usize,
     cheight: usize,
     p: P2,
     w: usize,
     h: usize,
-    c: u32,
+    c: T,
 ) {
-    draw_rect_wh_by(canvas, cwidth, cheight, p, w, h, c, u32::mix);
+    draw_rect_wh_by(canvas, cwidth, cheight, p, w, h, c, T::mix);
 }
 
-pub fn draw_rect_wh_by(
-    canvas: &mut [u32],
+pub fn draw_rect_wh_by<T: Pixel>(
+    canvas: &mut [T],
     cwidth: usize,
     cheight: usize,
     p: P2,
     w: usize,
     h: usize,
-    c: u32,
-    b: Mixer,
+    c: T,
+    b: Mixer<T>,
 ) {
     let ps = p;
     let pe = P2::new(
@@ -117,14 +121,14 @@ pub fn draw_rect_wh_by(
 }
 
 // Using Bresenham's line algorithm.
-pub fn draw_line_by(
-    canvas: &mut [u32],
+pub fn draw_line_by<T: Pixel>(
+    canvas: &mut [T],
     cwidth: usize,
     cheight: usize,
     ps: P2,
     pe: P2,
-    c: u32,
-    b: Mixer,
+    c: T,
+    b: Mixer<T>,
 ) {
     let dx = (pe.x - ps.x).abs();
     let sx = if ps.x < pe.x { 1 } else { -1 };
@@ -160,10 +164,10 @@ pub fn draw_line_by(
     }
 }
 
-pub fn merge(canvas: &mut [u32], canvas_other: std::sync::Arc<[u32]>) {
+pub fn merge<T: Pixel>(canvas: &mut [T], canvas_other: std::sync::Arc<[T]>) {
     assert_eq!(canvas.len(), canvas_other.len());
 
     for (p, p2) in canvas.iter_mut().zip(canvas_other.iter()) {
-        *p = u32::mix(*p, *p2)
+        *p = T::mix(*p, *p2)
     }
 }
