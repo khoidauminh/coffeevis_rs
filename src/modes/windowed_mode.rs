@@ -274,25 +274,22 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
 
     let win_size = dpi::PhysicalSize::<u32>::new(size.0, size.1);
 
+    let icon = {
+        let (w, h, v) = read_icon();
+
+        winit::window::Icon::from_rgba(v, w, h).expect("Failed to create window icon.")
+    };
+
     let window_attributes = winit::window::Window::default_attributes()
         .with_title("cvis")
         .with_inner_size(win_size)
         .with_window_level(winit::window::WindowLevel::AlwaysOnTop)
         .with_transparent(false)
         .with_decorations(true)
-        .with_resizable(prog.is_resizable());
+        .with_resizable(prog.is_resizable())
+        .with_window_icon(Some(icon));
 
     let window = Arc::new(event_loop.create_window(window_attributes).unwrap());
-
-    if !prog.is_wayland() {
-        let icon = {
-            let (w, h, v) = read_icon();
-
-            winit::window::Icon::from_rgba(v, w, h).expect("Failed to create window icon.")
-        };
-
-        window.set_window_icon(Some(icon));
-    }
 
     let inner_size = window.clone().inner_size();
 

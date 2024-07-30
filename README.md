@@ -1,5 +1,4 @@
-![Logo of Coffeevis](./assets/coffeevis_icon_128x128.png)
-
+![Logo of Coffeevis](./assets/coffeevis_icon.svg)
 
 # Coffee Music Visualizer
 A personal GUI + TUI music visualizer written in Rust.
