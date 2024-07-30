@@ -24,8 +24,8 @@ With performance improvements Cvis should now use less CPU usage, and even less 
 
 ## Examples:
 
-![console mode](./kvis_preview_2.webp)
-![windowed mode](./kvis_preview_1.webp)
+![console mode](./assets/kvis_preview_2.webp)
+![windowed mode](./assets/kvis_preview_1.webp)
 
 ## Platform support
 Coffeevis is built for and runs on Linux.
