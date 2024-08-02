@@ -265,6 +265,8 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
 
     let resizeable = prog.is_resizable();
 
+    let de = std::env::var("XDG_CURRENT_DESKTOP").unwrap_or(String::new());
+
     std::env::set_var("WINIT_X11_SCALE_FACTOR", prog.scale().to_string());
 
     if prog.transparency < 255 {
@@ -288,7 +290,7 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
         .with_window_level(winit::window::WindowLevel::AlwaysOnTop)
         .with_transparent(false)
         .with_decorations(true)
-        .with_resizable(true)
+        .with_resizable(prog.is_resizable() || de == "GNOME")
         .with_window_icon(Some(icon));
 
     let window = Arc::new(event_loop.create_window(window_attributes).unwrap());
@@ -315,11 +317,11 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
     // This waits for a little amount of time then sets the window size again.
     let window_size = window.clone();
     let thread_size = thread::spawn(move || {
-        let Ok(de) = std::env::var("XDG_CURRENT_DESKTOP") else {
+        if de.is_empty() {
             return;
-        };
+        }
 
-        eprintln!("Running in {} desktop (XDG_CURRENT_DESKTOP).", de);
+        eprintln!("Running in the {} desktop (XDG_CURRENT_DESKTOP).", de);
 
         if de != "GNOME" {
             return;
