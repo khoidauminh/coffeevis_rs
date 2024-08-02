@@ -136,7 +136,7 @@ pub fn minifb_main(mut prog: Program) -> Result<(), minifb::Error> {
 
 use winit::{
     application::ApplicationHandler,
-    dpi,
+    dpi::{self, LogicalSize},
     event::{DeviceEvent, DeviceId, ElementState, Event, WindowEvent},
     event_loop::{ActiveEventLoop, EventLoop},
     keyboard::{
@@ -263,6 +263,8 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
 
     let report_fps = prog.HZ_REPORT;
 
+    let resizeable = prog.is_resizable();
+
     std::env::set_var("WINIT_X11_SCALE_FACTOR", prog.scale().to_string());
 
     if prog.transparency < 255 {
@@ -286,7 +288,7 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
         .with_window_level(winit::window::WindowLevel::AlwaysOnTop)
         .with_transparent(false)
         .with_decorations(true)
-        .with_resizable(prog.is_resizable())
+        .with_resizable(true)
         .with_window_icon(Some(icon));
 
     let window = Arc::new(event_loop.create_window(window_attributes).unwrap());
@@ -307,6 +309,26 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
     let window = window.clone();
     let thread_main_running_draw = state.thread_main_running.clone();
     let thread_main_running_report = state.thread_main_running.clone();
+
+    // So there this issue on GNOME where,
+    // when the window launches unresizable, the window may appear squished.
+    // This waits for a little amount of time then sets the window size again.
+    let window_size = window.clone();
+    let thread_size = thread::spawn(move || {
+        let Ok(de) = std::env::var("XDG_CURRENT_DESKTOP") else {
+            return;
+        };
+
+        eprintln!("Running in {} desktop (XDG_CURRENT_DESKTOP).", de);
+
+        if de != "GNOME" {
+            return;
+        }
+
+        thread::sleep(Duration::from_millis(50));
+        window_size.request_inner_size(LogicalSize::new(size.0, size.1));
+        window_size.set_resizable(resizeable);
+    });
 
     let window_updates = window.clone();
     let commands_updates = commands.clone();
@@ -477,6 +499,7 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
     event_loop.set_control_flow(winit::event_loop::ControlFlow::Wait);
 
     let _ = event_loop.run_app(&mut state);
+    let _ = thread_size.join();
     let _ = thread_updates.join();
     let _ = thread_draw.join();
 
