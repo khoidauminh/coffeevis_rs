@@ -27,6 +27,7 @@ enum DrawCommand<T: Pixel> {
     PlotIdx(usize, T, Mixer<T>),
     Fill(T),
     Fade(u8, T),
+    Circle(P2, i32, bool, T, Mixer<T>),
     Merge(Arc<[T]>),
 }
 
@@ -38,6 +39,7 @@ trait DrawCommandBuffer<T: Pixel> {
     fn plot_index(&mut self, i: usize, c: T, b: Mixer<T>);
     fn fill(&mut self, c: T);
     fn fade(&mut self, al: u8, background: T);
+    fn circle(&mut self, center: P2, radius: i32, filled: bool, color: T, b: Mixer<T>);
     fn execute(&mut self, canvas: &mut [T], cwidth: usize, cheight: usize);
     fn merge(&mut self, canvas: Arc<[T]>);
 }
@@ -70,6 +72,10 @@ impl<T: Pixel> DrawCommandBuffer<T> for Vec<DrawCommand<T>> {
         self.push(DrawCommand::Fill(c));
     }
 
+    fn circle(&mut self, center: P2, radius: i32, filled: bool, color: T, b: Mixer<T>) {
+        self.push(DrawCommand::Circle(center, radius, filled, color, b));
+    }
+
     fn fade(&mut self, al: u8, background: T) {
         self.push(DrawCommand::Fade(al, background));
     }
@@ -96,6 +102,10 @@ impl<T: Pixel> DrawCommandBuffer<T> for Vec<DrawCommand<T>> {
                 C::PlotIdx(i, c, b) => draw_raw::set_pixel_by(canvas, i, c, b),
 
                 C::Fill(c) => draw_raw::fill(canvas, c),
+
+                C::Circle(center, radius, filled, color, b) => draw_raw::draw_cirle_by(
+                    canvas, cwidth, cheight, center, radius, filled, color, b,
+                ),
 
                 C::Fade(al, background) => draw_raw::fade(canvas, al, background),
 

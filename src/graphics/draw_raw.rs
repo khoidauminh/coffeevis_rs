@@ -164,6 +164,77 @@ pub fn draw_line_by<T: Pixel>(
     }
 }
 
+pub fn draw_cirle_by<T: Pixel>(
+    canvas: &mut [T],
+    cwidth: usize,
+    cheight: usize,
+    center: P2,
+    radius: i32,
+    filled: bool,
+    color: T,
+    b: Mixer<T>,
+) {
+    let mut t1 = radius / 16;
+    let mut t2;
+    let mut x = radius;
+    let mut y = 0;
+
+    let half_center = P2::new(center.x / 2, center.y / 2);
+
+    let mut draw_symmetric = |x: i32, y: i32| {
+        let coords = [
+            (-x, y),
+            (x, y),
+            (-x, -y),
+            (x, -y),
+            (-y, x),
+            (y, x),
+            (-y, -x),
+            (y, -x),
+        ];
+
+        for coord_pair in coords.chunks_exact(2) {
+            let c1 = coord_pair[0];
+            let c2 = coord_pair[1];
+
+            if filled {
+                let ps = P2::new(center.x + c1.0, center.y + c1.1);
+                let pe = P2::new(center.x + c2.0, center.y + c2.1);
+
+                draw_rect_xy_by(canvas, cwidth, cheight, ps, pe, color, b);
+            } else {
+                for c in [c1, c2] {
+                    set_pixel_xy_by(
+                        canvas,
+                        cwidth,
+                        cheight,
+                        P2::new(center.x + c.0, center.y + c.1),
+                        color,
+                        b,
+                    );
+                }
+            }
+        }
+    };
+
+    loop {
+        draw_symmetric(x, y);
+
+        y += 1;
+        t1 += y;
+        t2 = t1 - x;
+
+        if t2 >= 0 {
+            t1 = t2;
+            x -= 1;
+        }
+
+        if x < y {
+            break;
+        }
+    }
+}
+
 pub fn merge<T: Pixel>(canvas: &mut [T], canvas_other: std::sync::Arc<[T]>) {
     assert_eq!(canvas.len(), canvas_other.len());
 

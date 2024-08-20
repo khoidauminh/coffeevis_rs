@@ -28,8 +28,8 @@ fast_color = []
 overflow-checks = false
 
 [profile.release]
-opt-level = 3     # Optimize for size
-# lto = true          # Enable link-time optimization
-codegen-units = 1   # Reduce number of codegen units to increase optimizations
-panic = 'abort'     # Abort on panic
-strip = true     	# Strip symbols from binary
+target-cpu = "native"
+opt-level = 2
+codegen-units = 1     # Reduce number of codegen units to increase optimizations
+panic = 'abort'       # Abort on panic
+strip = true          # Strip symbols from binary

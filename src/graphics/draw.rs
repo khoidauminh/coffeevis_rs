@@ -49,4 +49,8 @@ impl<T: Pixel> PixelBuffer<T> {
     pub fn draw_line_by(&mut self, ps: P2, pe: P2, c: T, b: Mixer<T>) {
         self.command_buffer.line(ps, pe, c, b);
     }
+
+    pub fn draw_circle_by(&mut self, center: P2, radius: i32, filled: bool, color: T, b: Mixer<T>) {
+        self.command_buffer.circle(center, radius, filled, color, b);
+    }
 }

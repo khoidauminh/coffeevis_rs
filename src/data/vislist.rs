@@ -81,7 +81,7 @@ impl VisNavigator {
         Self {
             structure: [
                 VisList::new(VIS_CLASSIC, "Classic"),
-                VisList::new(VIS_MILK, "Milk"),
+                VisList::new(VIS_MILKY, "Milk"),
             ],
             index_vis: 0,
             index_list: 0,
@@ -165,62 +165,53 @@ impl VisNavigator {
 
         self.current_vis()
     }
-    
+
     pub fn switch_by_name(&mut self, name: &str) -> Visualizer {
         let name = name.to_lowercase();
         let mut found = false;
         let mut selected_vis = VIS_CLASSIC[0];
         let mut selected_vis_index = 0;
-        
-        let iter = 
-			VIS_CLASSIC
-			.iter()
-			.chain(VIS_MILK.iter())
-		;
-		
-        for (i, vis) in iter.clone().enumerate()
-        {
-			if vis.name().to_lowercase() == name {
-				found = true;
-				selected_vis = *vis;
-				selected_vis_index = i;
-				break;
-			}
-		}
-		
-		if !found {
-			eprintln!("\nCan't find the specified visualizer.\n\
+
+        let iter = VIS_CLASSIC.iter().chain(VIS_MILKY.iter());
+
+        for (i, vis) in iter.clone().enumerate() {
+            if vis.name().to_lowercase() == name {
+                found = true;
+                selected_vis = *vis;
+                selected_vis_index = i;
+                break;
+            }
+        }
+
+        if !found {
+            eprintln!(
+                "\nCan't find the specified visualizer.\n\
 			Available visualizers (case insensitive):\n\
-			");
-			
-			for vis in iter {
-				eprintln!("{}", vis.name());
-			}
-			
-			eprintln!();
-			
-			return selected_vis;
-		}
-		
-		if selected_vis_index < VIS_CLASSIC.len() {
-			self.index_vis = selected_vis_index;
-			self.index_list = 0;
-		} else {
-			self.index_vis = selected_vis_index - VIS_CLASSIC.len();
-			self.index_list = 1;
-		}
-		
-		return selected_vis;
+			"
+            );
+
+            for vis in iter {
+                eprintln!("{}", vis.name());
+            }
+
+            eprintln!();
+
+            return selected_vis;
+        }
+
+        if selected_vis_index < VIS_CLASSIC.len() {
+            self.index_vis = selected_vis_index;
+            self.index_list = 0;
+        } else {
+            self.index_vis = selected_vis_index - VIS_CLASSIC.len();
+            self.index_list = 1;
+        }
+
+        return selected_vis;
     }
 }
 
-pub const VIS_MENU: &[VisList] = &[
-    VisList::new(VIS_CLASSIC, "Classic"),
-    VisList::new(VIS_MILK, "Milk"),
-];
-
 pub const VIS_CLASSIC: &[Visualizer] = &[
-    //~ define_visualizer_struct!(raw::draw_raw_fft, "Raw FFT", false),
     define_visualizer_struct!(scopes::draw_vectorscope, "Vectorscope", true),
     define_visualizer_struct!(scopes::draw_oscilloscope3, "Oscilloscope", true),
     define_visualizer_struct!(ring::draw_ring, "Ring", true),
@@ -232,6 +223,7 @@ pub const VIS_CLASSIC: &[Visualizer] = &[
     define_visualizer_struct!(lazer::draw_lazer, "Lazer", true),
     define_visualizer_struct!(wave::draw_wave, "Wave", true),
     define_visualizer_struct!(vol_sweeper::draw_vol_sweeper, "Volume sweep", false),
+    define_visualizer_struct!(slice::draw_slice, "Slice", false),
     // define_visualizer_struct!(tests::draw_quick_sort_iter, "Test", true),
     /*	[vol_sweeper::draw_vol_sweeper, "Vol sweeper"],
     [// experiment1::draw_exp1,
@@ -239,4 +231,4 @@ pub const VIS_CLASSIC: &[Visualizer] = &[
     [wave::draw_wave,  */
 ];
 
-pub const VIS_MILK: &[Visualizer] = &[define_visualizer_struct!(milk::rain::draw, "Rain", false)];
+pub const VIS_MILKY: &[Visualizer] = &[define_visualizer_struct!(milk::rain::draw, "Rain", false)];

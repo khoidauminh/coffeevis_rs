@@ -349,9 +349,7 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
                     };
 
                     eprintln!("Detected rate to be {}hz", milli_hz as f64 / 1000.0);
-                    eprintln!(
-                        "Note: Coffeevis relies on Winit to detect rates and it can be wrong."
-                    );
+                    eprintln!("Note: Coffeevis relies on Winit to detect refresh rates.");
                     eprintln!("Refresh rate changed.\n");
                     *cmd = Command::FPSFrac(milli_hz);
 

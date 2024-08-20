@@ -155,29 +155,44 @@ impl Vec2<f64> {
         }
     }
 
-    pub fn mag(&self) -> f64 {
+    pub fn mag(self) -> f64 {
         (self.x.powi(2) + self.y.powi(2)).sqrt()
     }
 
-    pub fn l1_norm(&self) -> f64 {
+    pub fn l1_norm(self) -> f64 {
         self.x.abs() + self.y.abs()
     }
 
-    pub fn abs(&self) -> Vec2<f64> {
+    pub fn abs(self) -> Vec2<f64> {
         Vec2::<f64> {
             x: self.x.abs(),
             y: self.y.abs(),
         }
     }
 
-    pub fn max(&self) -> f64 {
+    pub fn max(self) -> f64 {
         f64::max(self.x.abs(), self.y.abs())
     }
 
-    pub fn to_p2(&self) -> Vec2<i32> {
+    pub fn to_p2(self) -> Vec2<i32> {
         Vec2::<i32> {
             x: self.x as i32,
             y: self.y as i32,
+        }
+    }
+
+    pub fn center(self) -> Vec2<f64> {
+        Vec2::<f64> {
+            x: self.x / 2.0,
+            y: self.y / 2.0,
+        }
+    }
+
+    pub fn normalize(self) -> Vec2<f64> {
+        let r = self.mag().recip();
+        Vec2::<f64> {
+            x: self.x * r,
+            y: self.y * r,
         }
     }
 }
@@ -201,6 +216,13 @@ impl Vec2<i32> {
         Vec2::<f64> {
             x: self.x as f64,
             y: self.y as f64,
+        }
+    }
+
+    pub fn center(&self) -> Vec2<i32> {
+        Vec2::<i32> {
+            x: self.x / 2,
+            y: self.y / 2,
         }
     }
 }
