@@ -35,6 +35,8 @@ macro_rules! eprintln_red {
     };
 }
 
+pub(crate) use eprintln_red;
+
 #[allow(unused_macros)]
 macro_rules! format_red {
     () => {

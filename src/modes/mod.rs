@@ -1,4 +1,3 @@
-
 #[cfg(feature = "terminal")]
 pub mod console_mode;
 

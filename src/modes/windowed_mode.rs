@@ -270,7 +270,7 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
     std::env::set_var("WINIT_X11_SCALE_FACTOR", prog.scale().to_string());
 
     if prog.transparency < 255 {
-        eprintln!(
+        crate::data::reader::eprintln_red!(
             "WARNING: transparency doesn't work for now.
 		\rSee https://github.com/rust-windowing/softbuffer/issues/215\n"
         );

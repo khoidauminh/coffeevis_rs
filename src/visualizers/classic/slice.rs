@@ -1,6 +1,7 @@
 use crate::graphics::{blend::Blend, P2};
 use crate::math::{cos_sin, interpolate::linearf, Cplx, TAU};
 use std::cell::RefCell;
+use std::f64::consts::PI;
 
 thread_local! {
     static ANGLE: RefCell<f64> = const { RefCell::new(0.0f64) };
@@ -54,13 +55,13 @@ pub fn draw_slice(prog: &mut crate::data::Program, stream: &mut crate::audio::Sa
             bin = bin + (stream[i] * j);
         }
 
-        (bin.l1_norm() / sizef * 2.0, high.l1_norm())
+        ((bin.l1_norm() / sizef * 2.).min(TAU), high.l1_norm())
     };
 
     let mut amp = sweep;
 
     AMP.with_borrow_mut(|LOCAL| {
-        amp = 2.0 * (sweep - *LOCAL) + sweep * 0.3 + high * 0.00005;
+        amp = 2.5 * (sweep - *LOCAL).max(0.0) + sweep * 0.3 + high * 0.00005;
         *LOCAL = sweep;
     });
 
@@ -70,7 +71,7 @@ pub fn draw_slice(prog: &mut crate::data::Program, stream: &mut crate::audio::Sa
         let angle = LOCAL;
         let new_angle = *angle + amp;
 
-        let d = (sweep / TAU) / (small_radius as f64);
+        let d = 1.0 / (big_radius_f * PI);
 
         let channel = high as u8 / 2;
         let color = u32::compose([0xFF, channel, channel, channel]);
@@ -92,4 +93,6 @@ pub fn draw_slice(prog: &mut crate::data::Program, stream: &mut crate::audio::Sa
         prog.pix
             .draw_circle_by(center, small_radius, true, 0xFF_FF_FF_FF, u32::over);
     });
+
+    stream.auto_rotate();
 }
