@@ -17,8 +17,8 @@ recompile with `--features terminal` and/or `--features minifb` to use them.*
 v0.5.0 introduces Winit as the default window backend for Coffeevis. Cvis can still be launched
 with minifb with the --minifb flag. Coffeevis is now also Wayland by default.
 
-The app now has a new set of visualizers called Milk. These visualizers (should) look more artistic and colorful than
-the default set of visualizers (called Classic).
+The app now has a new set of visualizers called Milky. These visualizers (should) look more artistic and colorful than
+the default Classic visualizers. Currently there's only 1 visualizer in the set lol. I plan to design some more by 0.6.0.
 
 With performance improvements Cvis should now use less CPU usage, and even less when idle.
 
@@ -93,13 +93,15 @@ A maximum resolution is built into the console mode (default: 50x50). Coffeevis 
 ### Global
 |  Key | Description |
 | ------ | ------ |
-| <kbd>Space</kbd> | iterates through visualizers |
+| <kbd>Space</kbd> | iterates forward through visualizers (wraps around) |
+| <kbd>b</kbd> | iterates backward (wraps around) |
 | <kbd>Esc</kbd> | exits |
 | <kbd>/</kbd> | resets all settings |
 | <kbd>-</kbd> / <kbd>+</kbd> | decreases/increases input volume |
 | <kbd>\[</kbd> / <kbd>\]</kbd> | decreases/increases spectrum roughness |
-| <kbd>;</kbd> / <kbd>'</kbd> | decreases/increases amount of samples into input (works for wave-based visualizers only) |
+| <kbd>;</kbd> / <kbd>'</kbd> | decreases/increases amount of samples into input (works for some wave-based visualizers only) |
 | <kbd>\\</bkd> | toggles auto switching (default: ON, 8 seconds) |
+| <kbd>n<\kbd> | switches through sets of visualizers (wraps around) |
 
 ### Terminal
 |  Key | Description |
