@@ -18,108 +18,86 @@ const SIZE_DEFAULT: (usize, usize) = (50, 50);
 
 pub(crate) type P2 = crate::math::Vec2<i32>;
 
-#[derive(Clone)]
-enum DrawParam {
-    Rect(draw_raw::Rect),
-    RectWh(draw_raw::RectWh),
-    Line(draw_raw::Line),
-    Plot(draw_raw::Plot),
-    PlotIdx(draw_raw::PlotIdx),
-    Fill(draw_raw::Fill),
-    Fade(draw_raw::Fade),
-    Circle(draw_raw::Circle),
-}
+use draw_raw::{DrawParam, DrawFunction};
 
-struct DrawCommand<T: Pixel> {
+pub struct DrawCommand<T: Pixel> {
+	pub func: DrawFunction<T>,
 	pub param: DrawParam,
 	pub color: T,
 	pub blending: Mixer<T>
 }
 
 impl<T: Pixel> DrawCommand<T> {
-	pub fn new(param: DrawParam, color: T, blending: Mixer<T>) -> Self {
-		Self {param, color, blending}
+	pub fn new(func: DrawFunction<T>, param: DrawParam, color: T, blending: Mixer<T>) -> Self {
+		Self {func, param, color, blending}
 	}
 }
 
 macro_rules! make_command {
 	
-	($c:expr, $b:expr, $name:ident) => {
-		DrawCommand::new(DrawParam::$name(draw_raw::$name {}), $c, $b)
+	($c:expr, $b:expr, $func:ident, $name:ident) => {
+		DrawCommand::new($func, DrawParam::$name{}, $c, $b)
 	};
 	
-	($c:expr, $b:expr, $name:ident, $($e:ident),+) => {
-		DrawCommand::new(DrawParam::$name(draw_raw::$name { $($e), + }), $c, $b)
+	($c:expr, $b:expr, $func:ident, $name:ident, $($e:ident),+) => {
+		DrawCommand::new($func, DrawParam::$name{ $($e), + }, $c, $b)
 	}
 }
 
-struct DrawCommandBuffer<T: Pixel> {
+pub struct DrawCommandBuffer<T: Pixel> {
 	buffer: Vec<DrawCommand<T>>
 }
 
-impl<T: Pixel> DrawCommandBuffer<T>  {
+use draw_raw::*;
+
+impl<T: Pixel> DrawCommandBuffer<T> {
 	
 	pub fn new() -> Self {
 		Self { buffer: Vec::new() }
 	}
 	
     pub fn rect(&mut self, ps: P2, pe: P2, c: T, b: Mixer<T>) {
-        self.buffer.push(make_command!(c, b, Rect, ps, pe));
+        self.buffer.push(make_command!(c, b, draw_rect_xy_by, Rect, ps, pe));
     }
 
     pub fn rect_wh(&mut self, ps: P2, w: usize, h: usize, c: T, b: Mixer<T>) {
-        self.buffer.push(make_command!(c, b, RectWh, ps, w, h));
+        self.buffer.push(make_command!(c, b, draw_rect_wh_by, RectWh, ps, w, h));
     }
 
     pub fn line(&mut self, ps: P2, pe: P2, c: T, b: Mixer<T>) {
-        self.buffer.push(make_command!(c, b, Line, ps, pe));
+        self.buffer.push(make_command!(c, b, draw_line_by, Line, ps, pe));
     }
 
     pub fn plot(&mut self, p: P2, c: T, b: Mixer<T>) {
-        self.buffer.push(make_command!(c, b, Plot, p));
+        self.buffer.push(make_command!(c, b, set_pixel_xy_by, Plot, p));
     }
 
     pub fn plot_index(&mut self, i: usize, c: T, b: Mixer<T>) {
-        self.buffer.push(make_command!(c, b, PlotIdx, i));
+        self.buffer.push(make_command!(c, b, set_pixel_by, PlotIdx, i));
     }
 
     pub fn fill(&mut self, c: T) {
         // Discards all previous commands since this
         // fill overwrites the entire buffer.
         self.buffer.clear();
-        self.buffer.push(make_command!(c, Blend::over, Fill));
+        self.buffer.push(make_command!(c, Blend::over, fill, Fill));
     }
 
     pub fn circle(&mut self, p: P2, r: i32, f: bool, c: T, b: Mixer<T>) {
-        self.buffer.push(make_command!(c, b, Circle, p, r, f));
+        self.buffer.push(make_command!(c, b, draw_cirle_by, Circle, p, r, f));
     }
 
     pub fn fade(&mut self, a: u8, c: T) {
-        self.buffer.push(make_command!(c, Blend::over, Fade, a));
+        self.buffer.push(make_command!(c, Blend::over, fade, Fade, a));
     }
 
     pub fn execute(&mut self, canvas: &mut [T], cwidth: usize, cheight: usize) {
-        self.buffer.iter().for_each(|command| {
-            
-            macro_rules! exec {
-				($s:ident) => {
-					$s.exec(canvas, cwidth, cheight, command.color, command.blending)
-				}
-			}
-            
-            match command.param.clone() {
-				DrawParam::Rect(s) 		=> exec!(s),
-				DrawParam::RectWh(s) 	=> exec!(s),
-				DrawParam::Line(s) 		=> exec!(s),
-				DrawParam::Plot(s) 		=> exec!(s),
-				DrawParam::PlotIdx(s) 	=> exec!(s),
-				DrawParam::Fill(s) 		=> exec!(s),
-				DrawParam::Circle(s) 	=> exec!(s),
-				DrawParam::Fade(s) 		=> exec!(s)
-			};
-			
+        self.buffer.iter().for_each(|command| {			
+			(command.func)(
+				canvas, cwidth, cheight, 
+				command.color, command.blending, command.param
+			);
         });
-
         self.buffer.clear();
     }
 }
@@ -130,8 +108,7 @@ pub struct PixelBuffer<T: Pixel> {
     mask: usize,
     width: usize,
     height: usize,
-    command_buffer: DrawCommandBuffer<T>,
-
+    pub command: DrawCommandBuffer<T>,
     pub background: T,
 }
 
@@ -144,7 +121,7 @@ impl<T: Pixel> PixelBuffer<T> {
         let padded = (w * h).next_power_of_two();
         Self {
             pix: Arc::new(Mutex::new(vec![T::from(0u8); padded])),
-            command_buffer: DrawCommandBuffer::new(),
+            command: DrawCommandBuffer::new(),
             mask: padded - 1,
             len: w * h,
             width: w,
@@ -157,7 +134,7 @@ impl<T: Pixel> PixelBuffer<T> {
         // println!("{:?}", self.command_buffer);
 
 		if let Ok(ref mut canvas) = self.pix.try_lock() {
-			self.command_buffer
+			self.command
             .execute(canvas, self.width, self.height);
 		}
     }

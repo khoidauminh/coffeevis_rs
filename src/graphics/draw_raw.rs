@@ -2,40 +2,19 @@
 
 use super::{blend::Mixer, Pixel, P2};
 
-macro_rules! make_struct {
-	($i:item) => {
-		#[derive(Clone)]
-		$i
-	}
+#[derive(Copy, Clone)]
+pub enum DrawParam {
+	Rect {ps: P2, pe: P2},
+	RectWh {ps: P2, w: usize, h: usize},
+	Line {ps: P2, pe: P2},
+	Plot {p: P2},
+	PlotIdx {i: usize},
+	Fill {},
+	Fade {a: u8},
+	Circle {p: P2, r: i32, f: bool},
 }
 
-make_struct!(pub struct Rect {pub ps: P2, pub pe: P2});
-make_struct!(pub struct RectWh {pub ps: P2, pub w: usize, pub h: usize});
-make_struct!(pub struct Line {pub ps: P2, pub pe: P2});
-make_struct!(pub struct Plot {pub p: P2});
-make_struct!(pub struct PlotIdx {pub i: usize});
-make_struct!(pub struct Fill {});
-make_struct!(pub struct Fade {pub a: u8});
-make_struct!(pub struct Circle {pub p: P2, pub r: i32, pub f: bool});
-
-macro_rules! impl_param {
-	($name:ty, $func:ident) => {
-		impl $name {
-			pub fn exec<T: Pixel>(self, canvas: &mut[T], cwidth: usize, cheight: usize, c: T, b: Mixer<T>) {
-				$func(canvas, cwidth, cheight, c, b, self);
-			}
-		}
-	}
-}
-
-impl_param!(Rect, draw_rect_xy_by);
-impl_param!(RectWh, draw_rect_wh_by);
-impl_param!(Line, draw_line_by);
-impl_param!(Plot, set_pixel_xy_by);
-impl_param!(PlotIdx, set_pixel_by);
-impl_param!(Fill, fill);
-impl_param!(Fade, fade);
-impl_param!(Circle, draw_cirle_by);
+pub type DrawFunction<T> = fn(&mut[T], usize, usize, T, Mixer<T>, DrawParam);
 
 pub fn get_idx_fast(cwidth: usize, p: P2) -> usize {
     let x = p.x as u32;
@@ -45,199 +24,220 @@ pub fn get_idx_fast(cwidth: usize, p: P2) -> usize {
 
 pub fn set_pixel_by<T: Pixel>(
 	canvas: &mut [T], 
-	_cwidth: usize, 
-	_cheight: usize, 
-	c: T, 
-	b: Mixer<T>, 
-	param: PlotIdx
+	_cwidth: usize,
+	_cheight: usize,
+	c: T,
+	b: Mixer<T>,
+	param: DrawParam
 ) {
-    if let Some(p) = canvas.get_mut(param.i) {
-        *p = b(*p, c);
-    }
+	let DrawParam::PlotIdx{i} = param else {
+		return
+	};
+	
+	if let Some(p) = canvas.get_mut(i) {
+		*p = b(*p, c);
+	}
 }
 
 pub fn set_pixel_xy_by<T: Pixel>(
-    canvas: &mut [T],
-    cwidth: usize,
-    cheight: usize,
-    c: T,
-    b: Mixer<T>,
-    param: Plot
+	canvas: &mut [T],
+	cwidth: usize,
+	cheight: usize,
+	c: T,
+	b: Mixer<T>,
+	param: DrawParam
 ) {
-    let i = get_idx_fast(cwidth, param.p);
-    set_pixel_by(canvas, cwidth, cheight, c, b, PlotIdx{i});
+	let DrawParam::Plot{p} = param else {
+		return
+	};
+	
+	let i = get_idx_fast(cwidth, p);
+	set_pixel_by(canvas, cwidth, cheight, c, b, DrawParam::PlotIdx{i});
 }
 
 pub fn draw_rect_xy_by<T: Pixel>(
-    canvas: &mut [T],
-    cwidth: usize,
-    cheight: usize,
-    c: T,
-    b: Mixer<T>,
-    param: Rect
+	canvas: &mut [T],
+	cwidth: usize,
+	cheight: usize,
+	c: T,
+	b: Mixer<T>,
+	param: DrawParam
 ) {
-    let [xs, ys] = [param.ps.x as usize, param.ps.y as usize];
+	let DrawParam::Rect{ps, pe} = param else {
+		return
+	};
+	
+	let [xs, ys] = [ps.x as usize, ps.y as usize];
 
-    let [xe, ye] = [param.pe.x as usize, param.pe.y as usize];
+	let [xe, ye] = [pe.x as usize, pe.y as usize];
 
-    let xe = xe.min(cwidth);
+	let xe = xe.min(cwidth);
 
-    let lines = canvas
-        .chunks_exact_mut(cwidth)
-        .skip(ys)
-        .take(ye.saturating_sub(ys).wrapping_add(1));
+	let lines = canvas
+		.chunks_exact_mut(cwidth)
+		.skip(ys)
+		.take(ye.saturating_sub(ys).wrapping_add(1));
 
-    for line in lines {
-        let Some(chunk) = line.get_mut(xs..xe) else {
-            return;
-        };
+	for line in lines {
+		let Some(chunk) = line.get_mut(xs..xe) else {
+			return;
+		};
 
-        for p in chunk {
-            *p = b(*p, c);
-        }
-    }
+		for p in chunk {
+			*p = b(*p, c);
+		}
+	}
 }
 
-pub fn fade<T: Pixel>(canvas: &mut [T], _cwidth: usize, _cheight: usize, c: T, b: Mixer<T>, param: Fade) {
-    let mut fader: T = c & T::from(0x00_FF_FF_FFu32);
-    fader = fader | T::from((param.a as u32) << 24);
-    canvas.iter_mut().for_each(|smp| *smp = smp.mix(fader));
+pub fn fade<T: Pixel>(canvas: &mut [T], _cwidth: usize, _cheight: usize, c: T, b: Mixer<T>, param: DrawParam) {
+	let DrawParam::Fade{a} = param else {
+		return
+	};
+	
+	let mut fader: T = c & T::from(0x00_FF_FF_FFu32);
+	fader = fader | T::from((a as u32) << 24);
+	canvas.iter_mut().for_each(|smp| *smp = smp.mix(fader));
 }
 
-pub fn fill<T: Pixel>(canvas: &mut [T], _cwidth: usize, _cheight: usize, c: T, _b: Mixer<T>, param: Fill) {
-    canvas.fill(c);
+pub fn fill<T: Pixel>(canvas: &mut [T], _cwidth: usize, _cheight: usize, c: T, _b: Mixer<T>, _param: DrawParam) {		
+	canvas.fill(c);
 }
 
 pub fn draw_rect_wh_by<T: Pixel>(
-    canvas: &mut [T],
-    cwidth: usize,
-    cheight: usize,
-    c: T,
-    b: Mixer<T>,
-    param: RectWh
+	canvas: &mut [T],
+	cwidth: usize,
+	cheight: usize,
+	c: T,
+	b: Mixer<T>,
+	param: DrawParam
 ) {
-    let pe = P2::new(
-        param.ps.x.wrapping_add(param.w as i32),
-        param.ps.y.wrapping_add(param.h as i32).wrapping_sub(1),
-    );
-    draw_rect_xy_by(canvas, cwidth, cheight, c, b, Rect{ps: param.ps, pe});
+	let DrawParam::RectWh{ps, w, h} = param else {
+		return
+	};
+	
+	let pe = P2::new(
+		ps.x.wrapping_add(w as i32),
+		ps.y.wrapping_add(h as i32).wrapping_sub(1),
+	);
+	draw_rect_xy_by(canvas, cwidth, cheight, c, b, DrawParam::Rect{ps, pe});
 }
 
 // Using Bresenham's line algorithm.
 pub fn draw_line_by<T: Pixel>(
-    canvas: &mut [T],
-    cwidth: usize,
-    cheight: usize,
-    c: T,
-    b: Mixer<T>,
-    param: Line
+	canvas: &mut [T],
+	cwidth: usize,
+	cheight: usize,
+	c: T,
+	b: Mixer<T>,
+	param: DrawParam
 ) {
-	let ps = param.ps;
-	let pe = param.pe;
-	
-    let dx = (pe.x - ps.x).abs();
-    let sx = if ps.x < pe.x { 1 } else { -1 };
-    let dy = -(pe.y - ps.y).abs();
-    let sy = if ps.y < pe.y { 1 } else { -1 };
-    let mut error = dx + dy;
+	let DrawParam::Line{ps, pe} = param else {
+		return
+	};
+		
+	let dx = (pe.x - ps.x).abs();
+	let sx = if ps.x < pe.x { 1 } else { -1 };
+	let dy = -(pe.y - ps.y).abs();
+	let sy = if ps.y < pe.y { 1 } else { -1 };
+	let mut error = dx + dy;
 
-    let mut p = ps;
+	let mut p = ps;
 
-    loop {
-        set_pixel_xy_by(canvas, cwidth, cheight, c, b, Plot{p});
+	loop {
+		set_pixel_xy_by(canvas, cwidth, cheight, c, b, DrawParam::Plot{p});
 
-        if p.x == pe.x && p.y == pe.y {
-            return;
-        }
-        let e2 = error * 2;
+		if p.x == pe.x && p.y == pe.y {
+			return;
+		}
+		let e2 = error * 2;
 
-        if e2 >= dy {
-            if p.x == pe.x {
-                return;
-            }
-            error += dy;
-            p.x += sx;
-        }
+		if e2 >= dy {
+			if p.x == pe.x {
+				return;
+			}
+			error += dy;
+			p.x += sx;
+		}
 
-        if e2 <= dx {
-            if p.y == pe.y {
-                return;
-            }
-            error += dx;
-            p.y += sy;
-        }
-    }
+		if e2 <= dx {
+			if p.y == pe.y {
+				return;
+			}
+			error += dx;
+			p.y += sy;
+		}
+	}
 }
 
 pub fn draw_cirle_by<T: Pixel>(
-    canvas: &mut [T],
-    cwidth: usize,
-    cheight: usize,
-    color: T,
-    b: Mixer<T>,
-    param: Circle
+	canvas: &mut [T],
+	cwidth: usize,
+	cheight: usize,
+	color: T,
+	b: Mixer<T>,
+	param: DrawParam
 ) {
-	let center = param.p;
-	let radius = param.r;
-	let filled = param.f;
-	
-    let mut t1 = radius / 16;
-    let mut t2;
-    let mut x = radius;
-    let mut y = 0;
+	let DrawParam::Circle{p: center, r: radius, f: filled} = param else {
+		return
+	};
+		
+	let mut t1 = radius / 16;
+	let mut t2;
+	let mut x = radius;
+	let mut y = 0;
 
-    let half_center = P2::new(center.x / 2, center.y / 2);
+	let half_center = P2::new(center.x / 2, center.y / 2);
 
-    let mut draw_symmetric = |x: i32, y: i32| {
-        let coords = [
-            (-x, y),
-            (x, y),
-            (-x, -y),
-            (x, -y),
-            (-y, x),
-            (y, x),
-            (-y, -x),
-            (y, -x),
-        ];
+	let mut draw_symmetric = |x: i32, y: i32| {
+		let coords = [
+			(-x, y),
+			(x, y),
+			(-x, -y),
+			(x, -y),
+			(-y, x),
+			(y, x),
+			(-y, -x),
+			(y, -x),
+		];
 
-        for coord_pair in coords.chunks_exact(2) {
-            let c1 = coord_pair[0];
-            let c2 = coord_pair[1];
+		for coord_pair in coords.chunks_exact(2) {
+			let c1 = coord_pair[0];
+			let c2 = coord_pair[1];
 
-            if filled {
-                let ps = P2::new(center.x + c1.0, center.y + c1.1);
-                let pe = P2::new(center.x + c2.0, center.y + c2.1);
+			if filled {
+				let ps = P2::new(center.x + c1.0, center.y + c1.1);
+				let pe = P2::new(center.x + c2.0, center.y + c2.1);
 
-                draw_rect_xy_by(canvas, cwidth, cheight, color, b, Rect{ps, pe});
-            } else {
-                for c in [c1, c2] {
-                    set_pixel_xy_by(
-                        canvas,
-                        cwidth,
-                        cheight,
-                        color,
-                        b,
-                        Plot{p: P2::new(center.x + c.0, center.y + c.1)}
-                    );
-                }
-            }
-        }
-    };
+				draw_rect_xy_by(canvas, cwidth, cheight, color, b, DrawParam::Rect{ps, pe});
+			} else {
+				for c in [c1, c2] {
+					set_pixel_xy_by(
+						canvas,
+						cwidth,
+						cheight,
+						color,
+						b,
+						DrawParam::Plot{p: P2::new(center.x + c.0, center.y + c.1)}
+					);
+				}
+			}
+		}
+	};
 
-    loop {
-        draw_symmetric(x, y);
+	loop {
+		draw_symmetric(x, y);
 
-        y += 1;
-        t1 += y;
-        t2 = t1 - x;
+		y += 1;
+		t1 += y;
+		t2 = t1 - x;
 
-        if t2 >= 0 {
-            t1 = t2;
-            x -= 1;
-        }
+		if t2 >= 0 {
+			t1 = t2;
+			x -= 1;
+		}
 
-        if x < y {
-            break;
-        }
-    }
+		if x < y {
+			break;
+		}
+	}
 }
