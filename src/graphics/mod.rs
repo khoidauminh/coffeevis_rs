@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 pub mod blend;
 pub mod draw;
@@ -18,117 +18,119 @@ const SIZE_DEFAULT: (usize, usize) = (50, 50);
 
 pub(crate) type P2 = crate::math::Vec2<i32>;
 
-#[derive(Debug, Clone)]
-enum DrawCommand<T: Pixel> {
-    Rect(P2, P2, T, Mixer<T>),
-    RectWh(P2, usize, usize, T, Mixer<T>),
-    Line(P2, P2, T, Mixer<T>),
-    Plot(P2, T, Mixer<T>),
-    PlotIdx(usize, T, Mixer<T>),
-    Fill(T),
-    Fade(u8, T),
-    Circle(P2, i32, bool, T, Mixer<T>),
-    Merge(Arc<[T]>),
+#[derive(Clone)]
+enum DrawParam {
+    Rect(draw_raw::Rect),
+    RectWh(draw_raw::RectWh),
+    Line(draw_raw::Line),
+    Plot(draw_raw::Plot),
+    PlotIdx(draw_raw::PlotIdx),
+    Fill(draw_raw::Fill),
+    Fade(draw_raw::Fade),
+    Circle(draw_raw::Circle),
 }
 
-trait DrawCommandBuffer<T: Pixel> {
-    fn rect(&mut self, ps: P2, pe: P2, c: T, b: Mixer<T>);
-    fn rect_wh(&mut self, ps: P2, w: usize, h: usize, c: T, b: Mixer<T>);
-    fn line(&mut self, ps: P2, pe: P2, c: T, b: Mixer<T>);
-    fn plot(&mut self, p: P2, c: T, b: Mixer<T>);
-    fn plot_index(&mut self, i: usize, c: T, b: Mixer<T>);
-    fn fill(&mut self, c: T);
-    fn fade(&mut self, al: u8, background: T);
-    fn circle(&mut self, center: P2, radius: i32, filled: bool, color: T, b: Mixer<T>);
-    fn execute(&mut self, canvas: &mut [T], cwidth: usize, cheight: usize);
-    fn merge(&mut self, canvas: Arc<[T]>);
+struct DrawCommand<T: Pixel> {
+	pub param: DrawParam,
+	pub color: T,
+	pub blending: Mixer<T>
 }
 
-impl<T: Pixel> DrawCommandBuffer<T> for Vec<DrawCommand<T>> {
-    fn rect(&mut self, ps: P2, pe: P2, c: T, b: Mixer<T>) {
-        self.push(DrawCommand::Rect(ps, pe, c, b));
+impl<T: Pixel> DrawCommand<T> {
+	pub fn new(param: DrawParam, color: T, blending: Mixer<T>) -> Self {
+		Self {param, color, blending}
+	}
+}
+
+macro_rules! make_command {
+	
+	($c:expr, $b:expr, $name:ident) => {
+		DrawCommand::new(DrawParam::$name(draw_raw::$name {}), $c, $b)
+	};
+	
+	($c:expr, $b:expr, $name:ident, $($e:ident),+) => {
+		DrawCommand::new(DrawParam::$name(draw_raw::$name { $($e), + }), $c, $b)
+	}
+}
+
+struct DrawCommandBuffer<T: Pixel> {
+	buffer: Vec<DrawCommand<T>>
+}
+
+impl<T: Pixel> DrawCommandBuffer<T>  {
+	
+	pub fn new() -> Self {
+		Self { buffer: Vec::new() }
+	}
+	
+    pub fn rect(&mut self, ps: P2, pe: P2, c: T, b: Mixer<T>) {
+        self.buffer.push(make_command!(c, b, Rect, ps, pe));
     }
 
-    fn rect_wh(&mut self, ps: P2, w: usize, h: usize, c: T, b: Mixer<T>) {
-        self.push(DrawCommand::RectWh(ps, w, h, c, b));
+    pub fn rect_wh(&mut self, ps: P2, w: usize, h: usize, c: T, b: Mixer<T>) {
+        self.buffer.push(make_command!(c, b, RectWh, ps, w, h));
     }
 
-    fn line(&mut self, ps: P2, pe: P2, c: T, b: Mixer<T>) {
-        self.push(DrawCommand::Line(ps, pe, c, b));
+    pub fn line(&mut self, ps: P2, pe: P2, c: T, b: Mixer<T>) {
+        self.buffer.push(make_command!(c, b, Line, ps, pe));
     }
 
-    fn plot(&mut self, p: P2, c: T, b: Mixer<T>) {
-        self.push(DrawCommand::Plot(p, c, b));
+    pub fn plot(&mut self, p: P2, c: T, b: Mixer<T>) {
+        self.buffer.push(make_command!(c, b, Plot, p));
     }
 
-    fn plot_index(&mut self, i: usize, c: T, b: Mixer<T>) {
-        self.push(DrawCommand::PlotIdx(i, c, b));
+    pub fn plot_index(&mut self, i: usize, c: T, b: Mixer<T>) {
+        self.buffer.push(make_command!(c, b, PlotIdx, i));
     }
 
-    fn fill(&mut self, c: T) {
+    pub fn fill(&mut self, c: T) {
         // Discards all previous commands since this
         // fill overwrites the entire buffer.
-        self.clear();
-        self.push(DrawCommand::Fill(c));
+        self.buffer.clear();
+        self.buffer.push(make_command!(c, Blend::over, Fill));
     }
 
-    fn circle(&mut self, center: P2, radius: i32, filled: bool, color: T, b: Mixer<T>) {
-        self.push(DrawCommand::Circle(center, radius, filled, color, b));
+    pub fn circle(&mut self, p: P2, r: i32, f: bool, c: T, b: Mixer<T>) {
+        self.buffer.push(make_command!(c, b, Circle, p, r, f));
     }
 
-    fn fade(&mut self, al: u8, background: T) {
-        self.push(DrawCommand::Fade(al, background));
+    pub fn fade(&mut self, a: u8, c: T) {
+        self.buffer.push(make_command!(c, Blend::over, Fade, a));
     }
 
-    fn execute(&mut self, canvas: &mut [T], cwidth: usize, cheight: usize) {
-        use DrawCommand as C;
-
-        self.iter().for_each(|command| {
-            match command.clone() {
-                C::Rect(ps, pe, c, b) => {
-                    draw_raw::draw_rect_xy_by(canvas, cwidth, cheight, ps, pe, c, b)
-                }
-
-                C::RectWh(ps, w, h, c, b) => {
-                    draw_raw::draw_rect_wh_by(canvas, cwidth, cheight, ps, w, h, c, b)
-                }
-
-                C::Line(ps, pe, c, b) => {
-                    draw_raw::draw_line_by(canvas, cwidth, cheight, ps, pe, c, b)
-                }
-
-                C::Plot(p, c, b) => draw_raw::set_pixel_xy_by(canvas, cwidth, cheight, p, c, b),
-
-                C::PlotIdx(i, c, b) => draw_raw::set_pixel_by(canvas, i, c, b),
-
-                C::Fill(c) => draw_raw::fill(canvas, c),
-
-                C::Circle(center, radius, filled, color, b) => draw_raw::draw_cirle_by(
-                    canvas, cwidth, cheight, center, radius, filled, color, b,
-                ),
-
-                C::Fade(al, background) => draw_raw::fade(canvas, al, background),
-
-                C::Merge(canvas_other) => draw_raw::merge(canvas, canvas_other),
-                // _ => {}
-            }
+    pub fn execute(&mut self, canvas: &mut [T], cwidth: usize, cheight: usize) {
+        self.buffer.iter().for_each(|command| {
+            
+            macro_rules! exec {
+				($s:ident) => {
+					$s.exec(canvas, cwidth, cheight, command.color, command.blending)
+				}
+			}
+            
+            match command.param.clone() {
+				DrawParam::Rect(s) 		=> exec!(s),
+				DrawParam::RectWh(s) 	=> exec!(s),
+				DrawParam::Line(s) 		=> exec!(s),
+				DrawParam::Plot(s) 		=> exec!(s),
+				DrawParam::PlotIdx(s) 	=> exec!(s),
+				DrawParam::Fill(s) 		=> exec!(s),
+				DrawParam::Circle(s) 	=> exec!(s),
+				DrawParam::Fade(s) 		=> exec!(s)
+			};
+			
         });
 
-        self.clear();
-    }
-
-    fn merge(&mut self, canvas: Arc<[T]>) {
-        self.push(DrawCommand::Merge(canvas));
+        self.buffer.clear();
     }
 }
 
 pub struct PixelBuffer<T: Pixel> {
-    pix: Vec<T>,
+    pix: Arc<Mutex<Vec<T>>>,
     len: usize,
     mask: usize,
     width: usize,
     height: usize,
-    command_buffer: Vec<DrawCommand<T>>,
+    command_buffer: DrawCommandBuffer<T>,
 
     pub background: T,
 }
@@ -141,8 +143,8 @@ impl<T: Pixel> PixelBuffer<T> {
     pub fn new(w: usize, h: usize, background: T) -> Self {
         let padded = (w * h).next_power_of_two();
         Self {
-            pix: vec![T::from(0u8); padded],
-            command_buffer: Vec::new(),
+            pix: Arc::new(Mutex::new(vec![T::from(0u8); padded])),
+            command_buffer: DrawCommandBuffer::new(),
             mask: padded - 1,
             len: w * h,
             width: w,
@@ -154,8 +156,10 @@ impl<T: Pixel> PixelBuffer<T> {
     pub fn draw_to_self(&mut self) {
         // println!("{:?}", self.command_buffer);
 
-        self.command_buffer
-            .execute(&mut self.pix, self.width, self.height);
+		if let Ok(ref mut canvas) = self.pix.try_lock() {
+			self.command_buffer
+            .execute(canvas, self.width, self.height);
+		}
     }
 
     pub fn width(&self) -> usize {
@@ -179,27 +183,27 @@ impl<T: Pixel> PixelBuffer<T> {
     }
 
     pub fn clear(&mut self) {
-        self.pix.fill(self.background);
+		if let Ok(ref mut canvas) = self.pix.try_lock() {
+			canvas.fill(self.background);
+		}
     }
 
-    pub fn as_slice(&self) -> &[T] {
-        &self.pix[0..self.len]
-    }
-
-    pub fn as_mut_slice(&mut self) -> &mut [T] {
-        &mut self.pix[0..self.len]
-    }
+    pub fn get_arc(&self) -> Arc<Mutex<Vec<T>>> {
+		self.pix.clone()
+	}
 
     pub fn resize(&mut self, w: usize, h: usize) {
         let len = w * h;
         let padded = len.next_power_of_two();
 
-        self.pix.resize(padded, T::from(0u8));
+		if let Ok(ref mut canvas) = self.pix.try_lock() {
+			canvas.resize(padded, T::from(0u8));
 
-        self.mask = padded - 1;
-        self.width = w;
-        self.height = h;
-        self.len = len;
+			self.mask = padded - 1;
+			self.width = w;
+			self.height = h;
+			self.len = len;
+		}
     }
 
     pub fn update(&mut self) {
@@ -211,15 +215,11 @@ impl<T: Pixel> PixelBuffer<T> {
     }
 
     pub fn get_idx_fast(&self, p: P2) -> usize {
-        // if p.x < 0 || p.y < 0 {return usize::MAX}
-        let x = p.x as usize;
-        let y = p.y as usize;
 
-        /*let out_of_bounds = (!(
-            x >= self.width
-        ) as usize).wrapping_sub(1);*/
-
-        y.wrapping_mul(self.width).wrapping_add(x)
+        let x = p.x as u32;
+        let y = p.y as u32;
+        
+        y.wrapping_mul(self.width as u32).wrapping_add(x) as usize
     }
 
     pub fn get_idx_wrap(&self, p: P2) -> usize {
@@ -228,25 +228,11 @@ impl<T: Pixel> PixelBuffer<T> {
 
     pub fn pixel(&self, i: usize) -> T {
         let iw = self.wrap(i);
-        self.pix[iw]
+        self.pix.lock().unwrap()[iw]
     }
 
     fn wrap(&self, i: usize) -> usize {
         i & self.mask
-    }
-
-    pub fn pixel_mut(&mut self, i: usize) -> &mut T {
-        let iw = self.wrap(i);
-        &mut self.pix[iw]
-    }
-
-    pub fn pixel_xy(&self, p: P2) -> T {
-        self.pix[self.get_idx_wrap(p)]
-    }
-
-    pub fn pixel_xy_mut(&mut self, p: P2) -> &mut T {
-        let i = self.get_idx_wrap(p);
-        &mut self.pix[i]
     }
 
     pub fn to_rgba(i: &[u32], o: &mut [u8]) {
@@ -263,9 +249,14 @@ impl<T: Pixel> PixelBuffer<T> {
     // So the width parameter is there to ensure that the horizontal
     // lines are aligned.
     pub fn scale_to(&self, dest: &mut [T], scale: usize, width: Option<usize>) {
+        
+        let Ok(ref mut canvas) = self.pix.try_lock() else {
+			return
+		};
+        
         let dst_width = width.unwrap_or(self.width * scale);
 
-        let src_rows = self.pix.chunks_exact(self.width);
+        let src_rows = canvas.chunks_exact(self.width);
         let dst_rows = dest.chunks_exact_mut(dst_width).step_by(scale);
 
         for (src_row, dst_row) in src_rows.zip(dst_rows) {
@@ -287,13 +278,22 @@ impl<T: Pixel> PixelBuffer<T> {
 impl Canvas {
     pub fn clear_row(&mut self, y: usize) {
         // if y >= self.height {return}
+        
+        let Ok(ref mut canvas) = self.pix.try_lock() else {
+			return
+		};
 
         let i = y * self.width;
-        self.pix[i..i + self.width].fill(COLOR_BLANK);
+        canvas[i..i + self.width].fill(COLOR_BLANK);
     }
 
     pub fn subtract_clear(&mut self, amount: u8) {
-        self.pix.iter_mut().take(self.len).for_each(|pixel| {
+        
+        let Ok(ref mut canvas) = self.pix.try_lock() else {
+			return
+		};
+        
+        canvas.iter_mut().take(self.len).for_each(|pixel| {
             *pixel = pixel.sub_by_alpha(amount);
         });
     }

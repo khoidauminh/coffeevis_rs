@@ -464,9 +464,7 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
             if let Ok(mut buffer) = surface.buffer_mut() {
                 prog.force_render();
 
-                let slice = prog.pix.as_slice();
-
-                let len = buffer.len().min(slice.len());
+                let len = buffer.len().min(prog.pix.sizel());
 
                 prog.pix.scale_to(
                     &mut buffer,

@@ -1,4 +1,4 @@
-use super::{blend::Mixer, DrawCommandBuffer, Pixel, PixelBuffer, P2};
+use super::{blend::Mixer, Pixel, PixelBuffer, P2};
 
 impl<T: Pixel> PixelBuffer<T> {
     pub fn set_pixel_xy(&mut self, p: P2, c: T) {
