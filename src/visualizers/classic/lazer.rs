@@ -1,5 +1,5 @@
 use crate::data::SAMPLE_SIZE;
-use crate::math::{Cplx, interpolate::linearf};
+use crate::math::{interpolate::linearf, Cplx};
 
 struct LocalData {
     p0: Cplx,
@@ -12,37 +12,34 @@ static DATA: std::sync::RwLock<LocalData> = std::sync::RwLock::new(LocalData {
 });
 
 pub fn draw_lazer(para: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
-    let w = para.pix.width()  as f64;
+    let w = para.pix.width() as f64;
     let h = para.pix.height() as f64;
 
     let mut a = {
         let mut sum = Cplx::zero();
-		
-		let left  = 0..SAMPLE_SIZE/8;
-		let right = SAMPLE_SIZE/8..SAMPLE_SIZE/4;
-		
-		let mut smooth = 0.0;
-	
+
+        let left = 0..SAMPLE_SIZE / 8;
+        let right = SAMPLE_SIZE / 8..SAMPLE_SIZE / 4;
+
+        let mut smooth = 0.0;
+
         for i in left {
-			smooth = linearf(smooth, stream[i].x, 0.1);
+            smooth = linearf(smooth, stream[i].x, 0.1);
             sum.x += smooth;
         }
-        
+
         let mut smooth = 0.0;
-        
+
         for i in right {
-			smooth = linearf(smooth, stream[i].y, 0.1);
+            smooth = linearf(smooth, stream[i].y, 0.1);
             sum.y += smooth;
         }
-        
-        Cplx::new(
-            sum.x * para.VOL_SCL * 0.0035,
-            sum.y * para.VOL_SCL * 0.0035,
-        )
+
+        Cplx::new(sum.x * para.VOL_SCL * 0.0035, sum.y * para.VOL_SCL * 0.0035)
     };
 
     let mut LOCAL = DATA.write().unwrap();
-    
+
     a = a * LOCAL.p0;
 
     LOCAL.p0.x = (LOCAL.p0.x + a.x + w) % w;
@@ -57,7 +54,8 @@ pub fn draw_lazer(para: &mut crate::data::Program, stream: &mut crate::audio::Sa
 
     para.pix.fade(3);
 
-    para.pix.draw_line(LOCAL.p1.to_p2(), LOCAL.p0.to_p2(), color);
+    para.pix
+        .draw_line(LOCAL.p1.to_p2(), LOCAL.p0.to_p2(), color);
 
     LOCAL.p1 = LOCAL.p0;
 }

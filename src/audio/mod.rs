@@ -139,9 +139,8 @@ where
     f64: Mul<T, Output = T>,
 {
     pub fn init(val: T, size: usize) -> Self {
-		
-		assert!(size < MAX_STACK_VEC_SIZE);
-		
+        assert!(size < MAX_STACK_VEC_SIZE);
+
         Self {
             size,
             index: 0,

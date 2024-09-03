@@ -125,24 +125,22 @@ impl StyledLine for Vec<ColoredString> {
     }
 
     fn push_pixel(&mut self, ch: char, fg: Rgb) {
-        
         if let Some(last) = self.last_mut() {
-			if last.append(ch, fg) {
-				return;
-			}
-		}
-		
+            if last.append(ch, fg) {
+                return;
+            }
+        }
+
         self.push(ColoredString::new(ch, fg, ERROR));
     }
 
     fn push_pixel_bg(&mut self, ch: char, fg: Rgb, bg: Rgb) {
-		
-		if let Some(last) = self.last_mut() {
-			if last.append_bg(ch, fg, bg) {
-				return;
-			}
-		}
-		
+        if let Some(last) = self.last_mut() {
+            if last.append_bg(ch, fg, bg) {
+                return;
+            }
+        }
+
         self.push(ColoredString::new_bg(ch, fg, bg, ERROR));
     }
 
@@ -167,10 +165,8 @@ impl StyledLine for Vec<ColoredString> {
 
 // ASCII ONLY
 // pub const CHARSET_BLOCKOPAC: &str = &[' ', '░', '▒', '▓'];
-const CHARSET_OPAC_EXP: &[u8] =
-    b" `.-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ\
-    5Yxjya]2ESwqkP6h9d4VpOGbUAKXHm8RD#$Bg0MNWQ%&@"
-;
+const CHARSET_OPAC_EXP: &[u8] = b" `.-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ\
+    5Yxjya]2ESwqkP6h9d4VpOGbUAKXHm8RD#$Bg0MNWQ%&@";
 
 #[allow(dead_code)]
 pub const CHARSET_SIZEOPAC: &[u8] = b" -~+oiwGW@$";
@@ -179,7 +175,7 @@ impl Program {
     pub fn print_con(&mut self) {
         (self.flusher)(self, &mut std::io::stdout());
     }
-    
+
     pub fn as_con(mut self) -> Self {
         match self.mode {
             Mode::Win => self.set_con_mode(Mode::ConAlpha),
@@ -187,7 +183,7 @@ impl Program {
         }
         self
     }
-    
+
     pub fn as_con_force(mut self, mode: Mode) -> Self {
         self.set_con_mode(mode);
         self
@@ -204,30 +200,30 @@ impl Program {
         self.update_size((self.CON_W, self.CON_H));
     }
 
-	pub fn switch_con_mode(&mut self) {
-	// self.mode.next_con();
+    pub fn switch_con_mode(&mut self) {
+        // self.mode.next_con();
 
-	self.mode = match self.mode {
-		Mode::ConAlpha => {
-			self.flusher = Program::print_block;
-			Mode::ConBlock
-		}
-		Mode::ConBlock => {
-			self.flusher = Program::print_brail;
-			Mode::ConBrail
-		}
-		Mode::ConBrail => {
-			self.flusher = Program::print_alpha;
-			Mode::ConAlpha
-		}
+        self.mode = match self.mode {
+            Mode::ConAlpha => {
+                self.flusher = Program::print_block;
+                Mode::ConBlock
+            }
+            Mode::ConBlock => {
+                self.flusher = Program::print_brail;
+                Mode::ConBrail
+            }
+            Mode::ConBrail => {
+                self.flusher = Program::print_alpha;
+                Mode::ConAlpha
+            }
 
-		Mode::Win => Mode::Win,
-		Mode::WinLegacy => Mode::WinLegacy,
-	};
+            Mode::Win => Mode::Win,
+            Mode::WinLegacy => Mode::WinLegacy,
+        };
 
         self.refresh_con();
     }
-	
+
     pub fn set_con_mode(&mut self, mode: Mode) {
         match mode {
             Mode::ConAlpha => self.flusher = Program::print_alpha,

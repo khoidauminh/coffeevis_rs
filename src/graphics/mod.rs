@@ -18,62 +18,70 @@ const SIZE_DEFAULT: (usize, usize) = (50, 50);
 
 pub(crate) type P2 = crate::math::Vec2<i32>;
 
-use draw_raw::{DrawParam, DrawFunction};
+use draw_raw::{DrawFunction, DrawParam};
 
 pub struct DrawCommand<T: Pixel> {
-	pub func: DrawFunction<T>,
-	pub param: DrawParam,
-	pub color: T,
-	pub blending: Mixer<T>
+    pub func: DrawFunction<T>,
+    pub param: DrawParam,
+    pub color: T,
+    pub blending: Mixer<T>,
 }
 
 impl<T: Pixel> DrawCommand<T> {
-	pub fn new(func: DrawFunction<T>, param: DrawParam, color: T, blending: Mixer<T>) -> Self {
-		Self {func, param, color, blending}
-	}
+    pub fn new(func: DrawFunction<T>, param: DrawParam, color: T, blending: Mixer<T>) -> Self {
+        Self {
+            func,
+            param,
+            color,
+            blending,
+        }
+    }
 }
 
 macro_rules! make_command {
-	
 	($c:expr, $b:expr, $func:ident, $name:ident) => {
 		DrawCommand::new($func, DrawParam::$name{}, $c, $b)
 	};
-	
+
 	($c:expr, $b:expr, $func:ident, $name:ident, $($e:ident),+) => {
 		DrawCommand::new($func, DrawParam::$name{ $($e), + }, $c, $b)
 	}
 }
 
 pub struct DrawCommandBuffer<T: Pixel> {
-	buffer: Vec<DrawCommand<T>>
+    buffer: Vec<DrawCommand<T>>,
 }
 
 use draw_raw::*;
 
 impl<T: Pixel> DrawCommandBuffer<T> {
-	
-	pub fn new() -> Self {
-		Self { buffer: Vec::new() }
-	}
-	
+    pub fn new() -> Self {
+        Self { buffer: Vec::new() }
+    }
+
     pub fn rect(&mut self, ps: P2, pe: P2, c: T, b: Mixer<T>) {
-        self.buffer.push(make_command!(c, b, draw_rect_xy_by, Rect, ps, pe));
+        self.buffer
+            .push(make_command!(c, b, draw_rect_xy_by, Rect, ps, pe));
     }
 
     pub fn rect_wh(&mut self, ps: P2, w: usize, h: usize, c: T, b: Mixer<T>) {
-        self.buffer.push(make_command!(c, b, draw_rect_wh_by, RectWh, ps, w, h));
+        self.buffer
+            .push(make_command!(c, b, draw_rect_wh_by, RectWh, ps, w, h));
     }
 
     pub fn line(&mut self, ps: P2, pe: P2, c: T, b: Mixer<T>) {
-        self.buffer.push(make_command!(c, b, draw_line_by, Line, ps, pe));
+        self.buffer
+            .push(make_command!(c, b, draw_line_by, Line, ps, pe));
     }
 
     pub fn plot(&mut self, p: P2, c: T, b: Mixer<T>) {
-        self.buffer.push(make_command!(c, b, set_pixel_xy_by, Plot, p));
+        self.buffer
+            .push(make_command!(c, b, set_pixel_xy_by, Plot, p));
     }
 
     pub fn plot_index(&mut self, i: usize, c: T, b: Mixer<T>) {
-        self.buffer.push(make_command!(c, b, set_pixel_by, PlotIdx, i));
+        self.buffer
+            .push(make_command!(c, b, set_pixel_by, PlotIdx, i));
     }
 
     pub fn fill(&mut self, c: T) {
@@ -84,19 +92,25 @@ impl<T: Pixel> DrawCommandBuffer<T> {
     }
 
     pub fn circle(&mut self, p: P2, r: i32, f: bool, c: T, b: Mixer<T>) {
-        self.buffer.push(make_command!(c, b, draw_cirle_by, Circle, p, r, f));
+        self.buffer
+            .push(make_command!(c, b, draw_cirle_by, Circle, p, r, f));
     }
 
     pub fn fade(&mut self, a: u8, c: T) {
-        self.buffer.push(make_command!(c, Blend::over, fade, Fade, a));
+        self.buffer
+            .push(make_command!(c, Blend::over, fade, Fade, a));
     }
 
     pub fn execute(&mut self, canvas: &mut [T], cwidth: usize, cheight: usize) {
-        self.buffer.iter().for_each(|command| {			
-			(command.func)(
-				canvas, cwidth, cheight, 
-				command.color, command.blending, command.param
-			);
+        self.buffer.iter().for_each(|command| {
+            (command.func)(
+                canvas,
+                cwidth,
+                cheight,
+                command.color,
+                command.blending,
+                command.param,
+            );
         });
         self.buffer.clear();
     }
@@ -133,10 +147,9 @@ impl<T: Pixel> PixelBuffer<T> {
     pub fn draw_to_self(&mut self) {
         // println!("{:?}", self.command_buffer);
 
-		if let Ok(ref mut canvas) = self.pix.try_lock() {
-			self.command
-            .execute(canvas, self.width, self.height);
-		}
+        if let Ok(ref mut canvas) = self.pix.try_lock() {
+            self.command.execute(canvas, self.width, self.height);
+        }
     }
 
     pub fn width(&self) -> usize {
@@ -160,27 +173,27 @@ impl<T: Pixel> PixelBuffer<T> {
     }
 
     pub fn clear(&mut self) {
-		if let Ok(ref mut canvas) = self.pix.try_lock() {
-			canvas.fill(self.background);
-		}
+        if let Ok(ref mut canvas) = self.pix.try_lock() {
+            canvas.fill(self.background);
+        }
     }
 
     pub fn get_arc(&self) -> Arc<Mutex<Vec<T>>> {
-		self.pix.clone()
-	}
+        self.pix.clone()
+    }
 
     pub fn resize(&mut self, w: usize, h: usize) {
         let len = w * h;
         let padded = len.next_power_of_two();
 
-		if let Ok(ref mut canvas) = self.pix.try_lock() {
-			canvas.resize(padded, T::from(0u8));
+        if let Ok(ref mut canvas) = self.pix.try_lock() {
+            canvas.resize(padded, T::from(0u8));
 
-			self.mask = padded - 1;
-			self.width = w;
-			self.height = h;
-			self.len = len;
-		}
+            self.mask = padded - 1;
+            self.width = w;
+            self.height = h;
+            self.len = len;
+        }
     }
 
     pub fn update(&mut self) {
@@ -192,10 +205,9 @@ impl<T: Pixel> PixelBuffer<T> {
     }
 
     pub fn get_idx_fast(&self, p: P2) -> usize {
-
         let x = p.x as u32;
         let y = p.y as u32;
-        
+
         y.wrapping_mul(self.width as u32).wrapping_add(x) as usize
     }
 
@@ -226,11 +238,10 @@ impl<T: Pixel> PixelBuffer<T> {
     // So the width parameter is there to ensure that the horizontal
     // lines are aligned.
     pub fn scale_to(&self, dest: &mut [T], scale: usize, width: Option<usize>) {
-        
         let Ok(ref mut canvas) = self.pix.try_lock() else {
-			return
-		};
-        
+            return;
+        };
+
         let dst_width = width.unwrap_or(self.width * scale);
 
         let src_rows = canvas.chunks_exact(self.width);
@@ -254,22 +265,19 @@ impl<T: Pixel> PixelBuffer<T> {
 
 impl Canvas {
     pub fn clear_row(&mut self, y: usize) {
-        // if y >= self.height {return}
-        
         let Ok(ref mut canvas) = self.pix.try_lock() else {
-			return
-		};
+            return;
+        };
 
         let i = y * self.width;
         canvas[i..i + self.width].fill(COLOR_BLANK);
     }
 
     pub fn subtract_clear(&mut self, amount: u8) {
-        
         let Ok(ref mut canvas) = self.pix.try_lock() else {
-			return
-		};
-        
+            return;
+        };
+
         canvas.iter_mut().take(self.len).for_each(|pixel| {
             *pixel = pixel.sub_by_alpha(amount);
         });
