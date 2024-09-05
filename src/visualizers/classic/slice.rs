@@ -12,14 +12,6 @@ fn blend(c1: u32, c2: u32) -> u32 {
     let rgb = c1.add(c2);
     let rgb = rgb.wrapping_shl(4);
     rgb
-
-    // if c1 == 0xFF_00_00_00 {
-    //     0x00_11_22_77
-    // } else {
-    //     let rgb = c1 & 0x00_FF_FF_FF;
-    //     let rgb = rgb.rotate_left(1);
-    //     rgb | (rgb >> 24)
-    // }
 }
 
 const GREEN: u32 = 0xFF_00_FF_00;
@@ -64,8 +56,6 @@ pub fn draw_slice(prog: &mut crate::data::Program, stream: &mut crate::audio::Sa
         amp = 2.5 * (sweep - *LOCAL).max(0.0) + sweep * 0.3 + high * 0.00005;
         *LOCAL = sweep;
     });
-
-    //prog.pix.clear();
 
     ANGLE.with_borrow_mut(move |LOCAL| {
         let angle = LOCAL;

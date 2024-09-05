@@ -9,6 +9,5 @@ pub mod spectrum;
 pub mod vol_sweeper;
 pub mod wave;
 pub mod wavelet;
-// pub mod tests;
-// pub mod raw;
+
 mod cross;

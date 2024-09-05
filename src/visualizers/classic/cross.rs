@@ -1,6 +1,5 @@
 use crate::{data::Program, graphics::P2};
 
-//static mut grid: bool = false;
 pub const CROSS_COL: u32 = 0xFF_44_44_44;
 
 static CROSS: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);

@@ -2,10 +2,6 @@ pub fn wrap(x: f64) -> f64 {
     x - x.round()
 }
 
-pub fn radian_wrap(x: f64) -> f64 {
-    x % std::f64::consts::PI
-}
-
 pub fn sin_norm(x: f64) -> f64 {
     let x = x * std::f64::consts::TAU;
     x.sin()

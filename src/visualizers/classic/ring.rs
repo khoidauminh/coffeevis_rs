@@ -1,13 +1,8 @@
 use crate::graphics::P2;
 use crate::math::Cplx;
 
-//static mut prog._i: usize = 0;
-//static mut wrap_rate.incremeter: f64 = 0.0;
-
 pub fn draw_ring(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
     let range = prog.WAV_WIN;
-
-    // if range < prog.pix.height()+prog.pix.width() { return (); }
 
     let size = prog.pix.height().min(prog.pix.width()) as i32;
 
@@ -19,21 +14,12 @@ pub fn draw_ring(prog: &mut crate::data::Program, stream: &mut crate::audio::Sam
 
     prog.pix.clear();
 
-    let rate = -1.0 /* (1.5 + crate::math::fast_sin(wrap_rateprog._incremeter)) */ / range as f64;
-
-    //let mut data = stream[..range].to_vec();
-    //crate::math::highpass_array(&mut data, 0.995);
+    let rate = -1.0 / range as f64;
 
     let loop_range = size as usize * 2;
 
-    //~ let start_smp = stream[0];
-    //~ let end_smp = stream[range-1];
-
     for i in 1..loop_range {
         let di = i * range / loop_range;
-
-        //~ let t = 1.0 * di as f64 / range as f64;
-        //~ let shift = crate::math::interpolate::linearfc(end_smp, start_smp, t);
 
         let smp = stream[di] - stream[di.saturating_sub(1)].scale(0.7);
 
@@ -54,13 +40,6 @@ pub fn draw_ring(prog: &mut crate::data::Program, stream: &mut crate::audio::Sam
             ]),
         );
     }
-
-    //~ wrap_rateprog._incremeter += 0.001;
-    //~ if (wrap_rateprog._incremeter > pi2) {
-    //~ wrap_rateprog._incremeter = 0.0;
-    //~ }
-
-    //crate::graphics::visualizers::cross::draw_cross(buf);
 
     stream.auto_rotate();
 }

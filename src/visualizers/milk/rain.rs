@@ -20,25 +20,25 @@ struct RainDrop {
     fall_amount: f64,
 }
 
-//struct Thunder {
-//	color: u32,
-//	sheer: u8,
-//	branching: u8,
-//	max_branches: u8
-//}
+struct Thunder {
+    color: u32,
+    sheer: u8,
+    branching: u8,
+    max_branches: u8
+}
 
-//impl Thunder {
-//	pub const fn new(color: u32, sheer: u8, branching: u8, max_branches: u8) -> Self {
-//		Self {
-//			color,
-//			sheer,
-//			branching,
-//			max_branches
-//		}
-//	}
+impl Thunder {
+    pub const fn new(color: u32, sheer: u8, branching: u8, max_branches: u8) -> Self {
+        Self {
+            color,
+            sheer,
+            branching,
+            max_branches
+        }
+    }
 
-//	pub const draw<T: Pixel>(canvas: &mut[T]
-//}
+    //pub const draw<T: Pixel>(canvas: &mut[T]
+}
 
 impl RainDrop {
     pub const fn new(color: u32, length: u16, fall: f64, size: P2) -> Self {

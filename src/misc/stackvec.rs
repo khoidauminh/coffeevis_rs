@@ -15,9 +15,6 @@ impl<T: Copy + Clone, const N: usize> StackVec<T, N> {
 
     #[doc(hidden)]
     pub const fn init(v: T, len: usize) -> Self {
-        // if len > N {panic!("Length exceeds maximum capacity")}
-        //if len > N {Self::panic_init(depth, len)}
-
         if len > N {
             panic!("Init size larger than capacity");
         }
@@ -77,14 +74,6 @@ impl<T: Copy + Clone, const N: usize> StackVec<T, N> {
             None
         }
     }
-    /*
-    pub unsafe fn get_unchecked(&self, i: usize) -> &T {
-        self.buffer.get_unchecked(i)
-    }
-
-    pub unsafe fn get_unchecked_mut<'a>(&'a mut self, i: usize) -> &'a mut T {
-        self.buffer.get_unchecked_mut(i)
-    }*/
 
     pub fn fill(&mut self, v: T) {
         self.buffer[0..self.length].fill(v)

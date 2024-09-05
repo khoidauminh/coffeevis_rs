@@ -217,6 +217,7 @@ impl Program {
 
                 true
             }
+
             &SwitchVisList => {
                 self.change_vislist();
                 true

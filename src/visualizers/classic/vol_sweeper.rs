@@ -2,9 +2,6 @@ use crate::data::SAMPLE_SIZE;
 use crate::graphics::P2;
 use crate::math::fast::sin_norm;
 
-//static mut _i: usize = 0;
-//static mut _sweep: usize = 0;
-
 const C: u32 = 16720064;
 
 struct LocalData {
@@ -18,14 +15,9 @@ static DATA: std::sync::RwLock<LocalData> = std::sync::RwLock::new(LocalData {
 });
 
 pub fn draw_vol_sweeper(para: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
-    //let w = PIX_W*stream[_sweep].abs() as usize /32768;
     para.pix.fade(3);
 
     let w = {
-        /*let sum = stream
-        .iter()
-        .take(SAMPLE_SIZE / 2)
-        .fold(0f64, |s, &x| s + x.mag());*/
         let mut sum = 0.0;
         for i in 0..SAMPLE_SIZE / 2 {
             sum += stream[i].l1_norm();
@@ -49,8 +41,6 @@ pub fn draw_vol_sweeper(para: &mut crate::data::Program, stream: &mut crate::aud
         .draw_rect_wh(P2::new(2, local.sweepi as i32), w, 1, color);
 
     crate::visualizers::classic::dash_line::draw_dash_line(para, stream, false, 0, false);
-
-    // para.vol_sweeper.1 = math::advance_with_limit(para.vol_sweeper.1, para.pix.height());
 
     match (local.sweepi >= para.pix.height(), local.pong) {
         (false, true) => local.sweepi = local.sweepi.wrapping_add(1),

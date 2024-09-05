@@ -1,4 +1,4 @@
-pub struct Rng {
+struct Rng {
     a: f64,
     b: f64,
     c: f64,
@@ -6,34 +6,6 @@ pub struct Rng {
 }
 
 use std::sync::Mutex;
-// static E: RwLock<f64> = RwLock::new(12.0);
-/*
-impl Rng {
-    pub const fn new(bound: f64) -> Self {
-        Self {
-            a: 0.0,
-            b: 12321.0,
-            c: 1424124.0,
-            d: bound
-        }
-    }
-
-    pub fn advance(&mut self) -> f64 {
-        let mut e = E.write().unwrap();
-
-        self.a = *e;
-
-        self.a = self.a.mul_add(self.b, self.c + 3.0) % self.d;
-        self.b = (self.a * self.b).max(self.d);
-        self.c = (self.b + self.a) % (self.b + 1.0);
-        *e = self.a;
-        self.a
-    }
-
-    pub fn set_bound(&mut self, bound: f64) {
-        self.d = bound;
-    }
-}*/
 
 pub fn random_int(bound: u32) -> u32 {
     static VARS: Mutex<(u32, u32, u32)> = Mutex::new((131, 1242, 391));

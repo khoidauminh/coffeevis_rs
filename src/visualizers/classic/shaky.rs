@@ -43,15 +43,12 @@ pub fn draw_shaky(prog: &mut crate::data::Program, stream: &mut crate::audio::Sa
     let sizef = prog.pix.width().min(prog.pix.height()) as f64;
 
     data_f.iter_mut().enumerate().for_each(
-        |(i, x)| *x = stream[i], //.scale(prog.VOL_SCL)
+        |(i, x)| *x = stream[i],
     );
     math::integrate_inplace(&mut data_f, 128, false);
 
     let amplitude = data_f.iter().fold(0f64, |acc, x| acc + x.l1_norm()) * sizef;
 
-    // let mut LOCALDATA = DATA.write().unwrap();
-
-    //smooth_amplitude = graphical_fn::linear_interp(smooth_amplitude, amplitude.min(1024.0), 0.5);
     let smooth_amplitude = amplitude * 0.00003;
     let amplitude_scaled = amplitude * 0.00000002;
 
@@ -60,8 +57,6 @@ pub fn draw_shaky(prog: &mut crate::data::Program, stream: &mut crate::audio::Sa
 
     LOCALDATA.xshake = (smooth_amplitude) * fast::cos_norm(fast::wrap(LOCALDATA.jc));
     LOCALDATA.yshake = (smooth_amplitude) * fast::sin_norm(fast::wrap(LOCALDATA.js));
-
-    // println!("{:.2} {:.2}", LOCALDATA.xshake, LOCALDATA.yshake);
 
     LOCALDATA.x = math::interpolate::linearf(LOCALDATA.x as f64, LOCALDATA.xshake, 0.1) as i32;
     LOCALDATA.y = math::interpolate::linearf(LOCALDATA.y as f64, LOCALDATA.yshake, 0.1) as i32;
@@ -83,15 +78,6 @@ pub fn draw_shaky(prog: &mut crate::data::Program, stream: &mut crate::audio::Sa
     let red = 255i32.saturating_sub(final_x.abs() * 5) as u8;
     let blue = 255i32.saturating_sub(final_y.abs() * 5) as u8;
     let green = (amplitude * 0.0001) as u8;
-
-    /*prog.pix.draw_image(
-        &prog.IMG,
-        crate::graphics::P2::new(
-            x_soft_shake + LOCALDATA.x,
-            y_soft_shake + LOCALDATA.y,
-        ),
-        150
-    );*/
 
     prog.pix.draw_rect_wh(
         crate::graphics::P2::new(final_x + width / 2 - 1, final_y + height / 2 - 1),

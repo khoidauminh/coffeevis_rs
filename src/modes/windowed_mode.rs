@@ -99,15 +99,10 @@ pub fn minifb_main(mut prog: Program) -> Result<(), minifb::Error> {
         let s = (s.0 / scale, s.1 / scale);
 
         if s.0 != prog.pix.width() || s.1 != prog.pix.height() {
-            //let s = (s.0 / WIN_SCALE, s.1 / WIN_SCALE);
             prog.update_size_win(s);
         }
 
         control_key_events_win_legacy(&mut win, &mut prog);
-
-        // prog.update_timer();
-
-        // prog.update_state();
 
         if crate::audio::get_no_sample() > 64 {
             win.update();
@@ -266,6 +261,7 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
     let resizeable = prog.is_resizable();
 
     let de = std::env::var("XDG_CURRENT_DESKTOP").unwrap_or(String::new());
+    let is_gnome = de == "GNOME";
 
     std::env::set_var("WINIT_X11_SCALE_FACTOR", prog.scale().to_string());
 
@@ -290,7 +286,7 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
         .with_window_level(winit::window::WindowLevel::AlwaysOnTop)
         .with_transparent(false)
         .with_decorations(true)
-        .with_resizable(prog.is_resizable() || de == "GNOME")
+        .with_resizable(prog.is_resizable() || is_gnome)
         .with_window_icon(Some(icon));
 
     let window = Arc::new(event_loop.create_window(window_attributes).unwrap());
@@ -323,7 +319,7 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
 
         eprintln!("Running in the {} desktop (XDG_CURRENT_DESKTOP).", de);
 
-        if de != "GNOME" {
+        if !is_gnome {
             return;
         }
 

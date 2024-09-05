@@ -1,4 +1,4 @@
-// THis visualzier is not intended to display on its own.
+// This visualizer is not intended to display on its own.
 
 use crate::graphics::P2;
 

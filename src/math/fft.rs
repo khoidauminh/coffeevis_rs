@@ -1,6 +1,6 @@
-use super::{Cplx, Vec2};
+use super::Cplx;
 
-pub fn butterfly<T: std::marker::Copy>(a: &mut [Vec2<T>], power: usize) {
+pub fn butterfly<T>(a: &mut [T], power: usize) {
     for i in 1..a.len() - 1 {
         // first and last element stays in place
         let ni = super::fast::bit_reverse(i, power);
@@ -19,34 +19,6 @@ pub fn twiddle_norm(x: f64) -> Cplx {
 pub fn twiddle(x: f64) -> Cplx {
     let y = x.sin_cos();
     Cplx::new(y.1, y.0)
-}
-
-pub fn compute_fft_recursive(a: &mut [Cplx]) {
-    let l = a.len();
-
-    if l == 2 {
-        let q = a[1];
-        a[1] = a[0] - q;
-        a[0] = a[0] + q;
-        return;
-    }
-
-    let lh = l / 2;
-    compute_fft_recursive(&mut a[..lh]);
-    compute_fft_recursive(&mut a[lh..]);
-
-    let twiddle = twiddle_norm(1.0 / l as f64);
-    let mut w = Cplx::one();
-    for i in 0..lh {
-        let il = i + lh;
-
-        let q = a[il] * w;
-
-        a[il] = a[i] - q;
-        a[i] = a[i] + q;
-
-        w = w * twiddle;
-    }
 }
 
 pub fn compute_fft_iterative(a: &mut [Cplx]) {
@@ -68,30 +40,7 @@ pub fn compute_fft_iterative(a: &mut [Cplx]) {
         four[1] = four[1] + q;
     }
 
-    for eight in a.chunks_exact_mut(8) {
-        let mut q = eight[4];
-        eight[4] = eight[0] - q;
-        eight[0] = eight[0] + q;
-
-        q = eight[5].times_twiddle_8th();
-        eight[5] = eight[1] - q;
-        eight[1] = eight[1] + q;
-
-        q = eight[6].times_minus_i();
-        eight[6] = eight[2] - q;
-        eight[2] = eight[2] + q;
-
-        q = eight[7].times_twiddle_3_8th();
-        eight[7] = eight[3] - q;
-        eight[3] = eight[3] + q;
-    }
-
-    //~ const FIST_ROOT_ANGLE: f64 = -0.0625 * std::f64::consts::TAU;
-
-    let mut window = 16usize;
-    let mut depth = 4;
-
-    const TWIDDLE_FACTORS: [Cplx; 24] = [
+    const TWIDDLE_FACTORS: [Cplx; 16] = [
         Cplx { x: 1.0, y: 0.0 },
         Cplx { x: -1.0, y: -0.0 },
         Cplx { x: 0.0, y: -1.0 },
@@ -147,39 +96,10 @@ pub fn compute_fft_iterative(a: &mut [Cplx]) {
             x: 0.9999999816164293,
             y: -0.0001917475973107033,
         },
-        Cplx {
-            x: 0.9999999954041073,
-            y: -0.00009587379909597734,
-        },
-        Cplx {
-            x: 0.9999999988510269,
-            y: -0.00004793689960306688,
-        },
-        Cplx {
-            x: 0.9999999997127567,
-            y: -0.00002396844980841822,
-        },
-        Cplx {
-            x: 0.9999999999281892,
-            y: -0.000011984224905069705,
-        },
-        Cplx {
-            x: 0.9999999999820472,
-            y: -0.0000059921124526424275,
-        },
-        Cplx {
-            x: 0.9999999999955118,
-            y: -0.000002996056226334661,
-        },
-        Cplx {
-            x: 0.999999999998878,
-            y: -0.0000014980281131690111,
-        },
-        Cplx {
-            x: 0.9999999999997194,
-            y: -0.0000007490140565847157,
-        },
     ];
+    
+    let mut depth  = 3;
+    let mut window = 8usize;
 
     while window <= length {
         let root = TWIDDLE_FACTORS[depth];
@@ -250,10 +170,4 @@ pub fn compute_fft_stereo(a: &mut [Cplx], up_to: usize, normalize: bool) {
 
 pub fn compute_fft(a: &mut [Cplx]) {
     compute_fft_iterative(a);
-}
-
-// Discards the other half of the fft.
-pub fn compute_fft_half(a: &mut [Cplx]) {
-    let lh = a.len() / 2;
-    compute_fft(&mut a[..lh]);
 }

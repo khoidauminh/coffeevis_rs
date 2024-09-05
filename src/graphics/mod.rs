@@ -1,9 +1,6 @@
-use std::sync::{Arc, Mutex};
-
 pub mod blend;
 pub mod draw;
 pub mod draw_raw;
-// pub mod space;
 
 use blend::{Blend, Mixer};
 pub const COLOR_BLANK: u32 = 0x00_00_00_00;
@@ -13,8 +10,6 @@ pub const COLOR_WHITE: u32 = 0xFF_FF_FF_FF;
 pub trait Pixel: Copy + Clone + Blend + From<u32> + TryFrom<u32> + From<u8> + TryFrom<u8> {}
 
 impl Pixel for u32 {}
-
-const SIZE_DEFAULT: (usize, usize) = (50, 50);
 
 pub(crate) type P2 = crate::math::Vec2<i32>;
 
@@ -117,12 +112,12 @@ impl<T: Pixel> DrawCommandBuffer<T> {
 }
 
 pub struct PixelBuffer<T: Pixel> {
-    pix: Arc<Mutex<Vec<T>>>,
+    buffer: Vec<T>,
     len: usize,
     mask: usize,
     width: usize,
     height: usize,
-    pub command: DrawCommandBuffer<T>,
+    command: DrawCommandBuffer<T>,
     pub background: T,
 }
 
@@ -132,9 +127,9 @@ pub type AlphaMask = PixelBuffer<u8>;
 
 impl<T: Pixel> PixelBuffer<T> {
     pub fn new(w: usize, h: usize, background: T) -> Self {
-        let padded = (w * h).next_power_of_two();
+        let padded = crate::math::larger_or_equal_pw2(w * h);
         Self {
-            pix: Arc::new(Mutex::new(vec![T::from(0u8); padded])),
+            buffer: vec![T::from(0u8); padded],
             command: DrawCommandBuffer::new(),
             mask: padded - 1,
             len: w * h,
@@ -145,11 +140,8 @@ impl<T: Pixel> PixelBuffer<T> {
     }
 
     pub fn draw_to_self(&mut self) {
-        // println!("{:?}", self.command_buffer);
-
-        if let Ok(ref mut canvas) = self.pix.try_lock() {
-            self.command.execute(canvas, self.width, self.height);
-        }
+        self.command
+            .execute(&mut self.buffer, self.width, self.height);
     }
 
     pub fn width(&self) -> usize {
@@ -173,27 +165,19 @@ impl<T: Pixel> PixelBuffer<T> {
     }
 
     pub fn clear(&mut self) {
-        if let Ok(ref mut canvas) = self.pix.try_lock() {
-            canvas.fill(self.background);
-        }
-    }
-
-    pub fn get_arc(&self) -> Arc<Mutex<Vec<T>>> {
-        self.pix.clone()
+        self.buffer.fill(self.background);
     }
 
     pub fn resize(&mut self, w: usize, h: usize) {
         let len = w * h;
-        let padded = len.next_power_of_two();
+        let padded = crate::math::larger_or_equal_pw2(len);
 
-        if let Ok(ref mut canvas) = self.pix.try_lock() {
-            canvas.resize(padded, T::from(0u8));
+        self.buffer.resize(padded, T::from(0u8));
 
-            self.mask = padded - 1;
-            self.width = w;
-            self.height = h;
-            self.len = len;
-        }
+        self.mask = padded - 1;
+        self.width = w;
+        self.height = h;
+        self.len = len;
     }
 
     pub fn update(&mut self) {
@@ -217,7 +201,7 @@ impl<T: Pixel> PixelBuffer<T> {
 
     pub fn pixel(&self, i: usize) -> T {
         let iw = self.wrap(i);
-        self.pix.lock().unwrap()[iw]
+        self.buffer[iw]
     }
 
     fn wrap(&self, i: usize) -> usize {
@@ -238,13 +222,9 @@ impl<T: Pixel> PixelBuffer<T> {
     // So the width parameter is there to ensure that the horizontal
     // lines are aligned.
     pub fn scale_to(&self, dest: &mut [T], scale: usize, width: Option<usize>) {
-        let Ok(ref mut canvas) = self.pix.try_lock() else {
-            return;
-        };
-
         let dst_width = width.unwrap_or(self.width * scale);
 
-        let src_rows = canvas.chunks_exact(self.width);
+        let src_rows = self.buffer.chunks_exact(self.width);
         let dst_rows = dest.chunks_exact_mut(dst_width).step_by(scale);
 
         for (src_row, dst_row) in src_rows.zip(dst_rows) {
@@ -265,20 +245,12 @@ impl<T: Pixel> PixelBuffer<T> {
 
 impl Canvas {
     pub fn clear_row(&mut self, y: usize) {
-        let Ok(ref mut canvas) = self.pix.try_lock() else {
-            return;
-        };
-
         let i = y * self.width;
-        canvas[i..i + self.width].fill(COLOR_BLANK);
+        self.buffer[i..i + self.width].fill(COLOR_BLANK);
     }
 
     pub fn subtract_clear(&mut self, amount: u8) {
-        let Ok(ref mut canvas) = self.pix.try_lock() else {
-            return;
-        };
-
-        canvas.iter_mut().take(self.len).for_each(|pixel| {
+        self.buffer.iter_mut().take(self.len).for_each(|pixel| {
             *pixel = pixel.sub_by_alpha(amount);
         });
     }

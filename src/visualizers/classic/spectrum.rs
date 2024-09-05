@@ -130,7 +130,6 @@ pub fn draw_spectrum(prog: &mut crate::data::Program, stream: &mut crate::audio:
             prog.pix.draw_rect_xy(middle, rect_r, color2);
 
             let alpha = (128.0 + stream[i as usize / 2].x * 32768.0) as u8;
-            // let bg = prog.pix.background & 0x00_FF_FF_FF | alpha;
             prog.pix
                 .draw_rect_wh_by(P2::new(winwh - 1, i), 2, 1, color.fade(alpha), u32::over);
         }
