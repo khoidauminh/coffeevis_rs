@@ -9,18 +9,16 @@ Some too slow, some didn't have the visualizer I like, some take up too much cpu
 
 This project also serves as my playground, so you'll see a lot of weird implementations in the source files.
 
-## What's new in v0.5.0
+## What's new in v0.6.0
 
+New visualizers: TODO!
+Configuration changes: TODO!
+
+Users who want to see GNOME-style decorations will now have to recompile coffeevis with `--features gnome_decor`.
+
+### Important change since v0.5.0
 *Terminal and minifb mode have been moved to their own features. You'll need to
 recompile with `--features terminal` and/or `--features minifb` to use them.*
-
-v0.5.0 introduces Winit as the default window backend for Coffeevis. Cvis can still be launched
-with minifb with the --minifb flag. Coffeevis is now also Wayland by default.
-
-The app now has a new set of visualizers called Milky. These visualizers (should) look more artistic and colorful than
-the default Classic visualizers. Currently there's only 1 visualizer in the set lol. I plan to design some more by 0.6.0.
-
-With performance improvements Cvis should now use less CPU usage, and even less when idle.
 
 ## Examples:
 

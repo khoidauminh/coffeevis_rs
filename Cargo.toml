@@ -14,21 +14,19 @@ readme = "README.md"
 [dependencies]
 cpal = "0.15"
 softbuffer = "0.4"
-winit = "0.30"
+winit = { version =  "0.30", default-features = false }
 qoi = "0.4.1"
 minifb = { version = "0.27", optional = true }
 crossterm = { version = "0.27", optional = true }
 
 [features]
+default = ["winit/rwh_06", "winit/wayland", "winit/x11"]
+gnome_decor = ["winit/wayland-csd-adwaita"]
 terminal = ["dep:crossterm"]
 minifb = ["dep:minifb"]
 fast_color = []
 
-[profile.dev]
-overflow-checks = false
-
 [profile.release]
-opt-level = 2
 codegen-units = 1     # Reduce number of codegen units to increase optimizations
 panic = 'abort'       # Abort on panic
 strip = true          # Strip symbols from binary
