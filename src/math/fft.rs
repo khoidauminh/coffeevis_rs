@@ -136,28 +136,20 @@ pub fn compute_fft_iterative(a: &mut [Cplx]) {
 // This leverages the the linear and symetric
 // property of the FFT.
 pub fn compute_fft_stereo(a: &mut [Cplx], up_to: usize, normalize: bool) {
-    let l = a.len();
-    let _power = super::fast::ilog2(l) as usize;
 
     super::fft(a);
 
-    let mut extract = |i: usize, rev_i: usize| {
-        let fft_1 = a[i];
-        let fft_2 = a[rev_i].conj();
-
-        let x: f64 = (fft_1 + fft_2).l1_norm();
-        let y: f64 = (fft_1 - fft_2).l1_norm();
-
-        a[i] = Cplx::new(x, y);
-    };
-
-    extract(0, l - 1);
-
+    let l = a.len();
     let bound = up_to.min(l);
 
     for i in 1..bound {
-        let rev_i = l - i;
-        extract(i, rev_i);
+        let bin1 = a[i  ];
+        let bin2 = a[l-i].conj();
+
+        a[i] = Cplx::new(
+            (bin1 + bin2).l1_norm(),
+            (bin1 - bin2).l1_norm()
+        );
     }
 
     if normalize {
