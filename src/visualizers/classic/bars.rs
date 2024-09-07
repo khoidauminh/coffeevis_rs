@@ -69,7 +69,7 @@ fn prepare(
         })
         .collect::<Vec<f64>>();
 
-    crate::audio::limiter_pong(&mut data_f[..bar_num], 0.9, 20, 0.98, |x| x);
+    crate::audio::limiter(&mut data_f[..bar_num], 0.9, 7, 0.98, |x| x);
 
     let bnf = 1.0 / bnf;
 
@@ -141,7 +141,7 @@ pub fn draw_bars(prog: &mut crate::data::Program, stream: &mut crate::audio::Sam
 
         let fade = (128.0 + stream[idx * 3 / 2].x * 256.0) as u8;
         let peak = (bar * 255 / prog.pix.height()) as u8;
-        let _red = (fade * 2 / 3).saturating_add(128).max(peak);
+        let _red = (fade.wrapping_mul(2) / 3).saturating_add(128).max(peak);
 
         prog.pix.draw_rect_wh(
             P2::new(

@@ -29,7 +29,7 @@ macro_rules! define_visualizer {
 
 #[macro_export]
 macro_rules! vis_para {
-	() => { prog: &mut $crate::data::Program, stream: &mut $crate::audio::SampleArr };
+    () => { prog: &mut $crate::data::Program, stream: &mut $crate::audio::SampleArr };
 }
 
 impl Visualizer {
@@ -81,7 +81,7 @@ impl VisNavigator {
         Self {
             structure: [
                 VisList::new(VIS_CLASSIC, "Classic"),
-                VisList::new(VIS_MILKY, "Milk"),
+                VisList::new(VIS_MILKY, "Milky"),
             ],
             index_vis: 0,
             index_list: 0,
@@ -186,8 +186,8 @@ impl VisNavigator {
         if !found {
             eprintln!(
                 "\nCan't find the specified visualizer.\n\
-			Available visualizers (case insensitive):\n\
-			"
+            Available visualizers (case insensitive):\n\
+            "
             );
 
             for vis in iter {
@@ -225,7 +225,7 @@ pub const VIS_CLASSIC: &[Visualizer] = &[
     define_visualizer_struct!(vol_sweeper::draw_vol_sweeper, "Volume sweep", false),
     define_visualizer_struct!(slice::draw_slice, "Slice", false),
     // define_visualizer_struct!(tests::draw_quick_sort_iter, "Test", true),
-    /*	[vol_sweeper::draw_vol_sweeper, "Vol sweeper"],
+    /*  [vol_sweeper::draw_vol_sweeper, "Vol sweeper"],
     [// experiment1::draw_exp1,
     [// experiment1::draw_f64,
     [wave::draw_wave,  */

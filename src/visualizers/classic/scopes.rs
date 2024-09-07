@@ -36,7 +36,7 @@ pub fn draw_vectorscope(prog: &mut crate::data::Program, stream: &mut crate::aud
 
     const SMOOTH_SIZE: usize = 7;
 
-    let mut smoothed_sample = MovingAverage::init(Cplx::zero(), SMOOTH_SIZE);
+    let mut smoothed_sample = MovingAverage::<Cplx, 15>::init(Cplx::zero(), SMOOTH_SIZE);
 
     for _ in 0..SMOOTH_SIZE {
         let sample = Cplx::new(stream[di].x, stream[di + PHASE_OFFSET].y);

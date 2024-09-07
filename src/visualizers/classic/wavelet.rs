@@ -87,7 +87,6 @@ pub fn draw_wavelet(prog: &mut crate::data::Program, stream: &mut crate::audio::
     let (pw, ph) = (prog.pix.width(), prog.pix.height());
 
     for y in 0..ph {
-
         let yt = WT_SIZE as f64 * (ph - y - 1) as f64 / ph as f64;
 
         for x in 0..pw {
@@ -140,11 +139,7 @@ fn haar_wavelet_fast(a: &mut [Cplx]) {
 }
 
 // p ranges in 0..w.len()
-fn wavelet_xy_interpolated(
-    w: &[Cplx],
-    p: Cplx,
-    pow: usize,
-) -> Cplx {
+fn wavelet_xy_interpolated(w: &[Cplx], p: Cplx, pow: usize) -> Cplx {
     let pf = pow as f64;
     let l = w.len();
     let lf = l as f64;

@@ -43,6 +43,10 @@ impl<T: Copy + Clone, const N: usize> StackVec<T, N> {
         }
     }
 
+    pub fn slice<'a>(&'a self) -> &'a [T] {
+        &self.buffer
+    }
+
     pub fn push(&mut self, v: T) {
         if self.length >= self.buffer.len() {
             Self::panic_overflow();

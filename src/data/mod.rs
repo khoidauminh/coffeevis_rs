@@ -467,10 +467,9 @@ impl Program {
     pub fn force_render(&mut self) {
         let mut buf = crate::audio::get_buf();
 
-        // if self.render_trigger == 0 {
         (self.visualizer)(self, &mut buf);
+
         self.pix.draw_to_self();
-        //}
     }
 
     pub fn increase_vol_scl(&mut self) {
@@ -499,10 +498,11 @@ impl Program {
 
     pub fn toggle_auto_switch(&mut self) {
         self.AUTO_SWITCH ^= true;
+
         self.print_message(format!(
             "Auto switch is now {}\n",
             if self.AUTO_SWITCH { "on" } else { "off" }
-        ))
+        ));
     }
 
     pub fn reset_parameters(&mut self) {
@@ -512,6 +512,7 @@ impl Program {
 
         #[cfg(feature = "terminal")]
         self.change_con_max(50, true);
+
         self.change_fps_frac(DEFAULT_MILLI_HZ);
     }
 

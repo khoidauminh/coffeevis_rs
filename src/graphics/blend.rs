@@ -69,7 +69,7 @@ pub fn channel_mix(x: u8, y: u8, a: u8) -> u8 {
     let y = y as i16;
     let a = a as i16;
 
-    let [int, _] = ((y - x) * a).to_be_bytes();
+    let [int, _] = y.wrapping_sub(x).wrapping_mul(a).to_be_bytes();
 
     let o = x + int as i16;
 

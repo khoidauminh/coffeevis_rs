@@ -49,7 +49,7 @@ fn prepare(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr
         *smp = *smp * scalef;
     });
 
-    crate::audio::limiter_pong(&mut fft[0..RANGE], 1.5, 15, prog.VOL_SCL, |x| x.max());
+    crate::audio::limiter(&mut fft[0..RANGE], 1.5, 7, prog.VOL_SCL * 2.0, |x| x.max());
 
     DATA.with_borrow_mut(move |LOCAL| {
         LOCAL.iter_mut().zip(fft.iter()).for_each(|(smp, si)| {
@@ -72,6 +72,8 @@ pub fn draw_spectrum(prog: &mut crate::data::Program, stream: &mut crate::audio:
 
     let wf = w as f64;
     let hf = h as f64;
+
+    let whf = wf * 0.5;
 
     let wf_recip = 1.0 / wf;
     let hf_recip = 1.0 / hf;
@@ -103,8 +105,8 @@ pub fn draw_spectrum(prog: &mut crate::data::Program, stream: &mut crate::audio:
                 bar_width_r = normalized[LAST].y;
             }
 
-            let bar_width_l = bar_width_l * wf;
-            let bar_width_r = bar_width_r * wf;
+            let bar_width_l = bar_width_l * whf;
+            let bar_width_r = bar_width_r * whf;
 
             let channel_l = (255.0 * bar_width_l.min(wf) * wf_recip) as u32;
             let channel_r = (255.0 * bar_width_r.min(wf) * wf_recip) as u32;

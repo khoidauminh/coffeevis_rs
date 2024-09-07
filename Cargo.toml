@@ -26,6 +26,9 @@ terminal = ["dep:crossterm"]
 minifb = ["dep:minifb"]
 fast_color = []
 
+[profile.dev]
+overflow-checks = false
+
 [profile.release]
 codegen-units = 1     # Reduce number of codegen units to increase optimizations
 panic = 'abort'       # Abort on panic

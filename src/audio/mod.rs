@@ -124,22 +124,22 @@ use crate::misc::stackvec::StackVec;
 
 const MAX_STACK_VEC_SIZE: usize = 15;
 
-pub struct MovingAverage<T> {
+pub struct MovingAverage<T, const N: usize> {
     size: usize,
     index: usize,
-    vec: StackVec<T, MAX_STACK_VEC_SIZE>,
+    vec: StackVec<T, N>,
     sum: T,
     denominator: f64,
     average: T,
 }
 
-impl<T> MovingAverage<T>
+impl<T, const N: usize> MovingAverage<T, N>
 where
     T: Add<Output = T> + Sub<Output = T> + Mul<f64, Output = T> + std::marker::Copy,
     f64: Mul<T, Output = T>,
 {
     pub fn init(val: T, size: usize) -> Self {
-        assert!(size < MAX_STACK_VEC_SIZE);
+        assert!(size < N);
 
         Self {
             size,
@@ -164,9 +164,9 @@ where
     pub fn update(&mut self, val: T) -> T {
         let old = self.pop(val);
 
-        self.average = self.denominator * self.sum;
-
         self.sum = self.sum - old + val;
+
+        self.average = self.denominator * self.sum;
 
         self.average
     }
@@ -174,102 +174,88 @@ where
     pub fn current(&self) -> T {
         self.average
     }
+
+    pub fn force_compute_average(&self) -> T {
+        let mut sum = self.vec[0];
+        for i in 1..self.size {
+            sum = sum + self.vec[i]
+        }
+        return sum * self.denominator;
+    }
 }
 
-use crate::math::interpolate::smooth_step;
-
-struct PeakPoint {
-    amp: f64,
-    pos: usize,
+struct MovingMaximum<const N: usize> {
+    buffer: StackVec<f64, N>,
+    size: usize,
+    index: usize,
+    max: f64,
 }
 
-fn peak(amp: f64, pos: usize) -> PeakPoint {
-    PeakPoint { amp, pos }
+impl<const N: usize> MovingMaximum<N> {
+    pub fn init(val: f64, size: usize) -> Self {
+        assert!(size < N);
+
+        Self {
+            buffer: StackVec::init(val, size),
+            size,
+            index: 0,
+            max: val,
+        }
+    }
+
+    fn pop(&mut self, new: f64) -> f64 {
+        let old = self.buffer[self.index];
+        self.buffer[self.index] = new;
+
+        self.index = crate::math::increment(self.index, self.size);
+
+        old
+    }
+
+    pub fn update(&mut self, new: f64) -> f64 {
+        let old = self.pop(new);
+
+        if new > self.max {
+            self.max = new;
+            return self.max;
+        }
+
+        if old == self.max {
+            self.max = self.buffer.slice().iter().fold(new, |acc, x| acc.max(*x));
+        }
+
+        return self.max;
+    }
+
+    pub fn current(&self) -> f64 {
+        self.max
+    }
 }
 
-pub fn limiter<T>(a: &mut [T], limit: f64, hold_samples: usize, gain: f64, flattener: fn(T) -> f64)
+pub fn limiter<T>(a: &mut [T], limit: f64, window: usize, gain: f64, flattener: fn(T) -> f64)
 where
     T: Into<f64> + std::ops::Mul<f64, Output = T> + std::marker::Copy,
 {
-    let mut peaks: Vec<PeakPoint> = Vec::with_capacity(12);
+    let smoothing = window * 3 / 4;
 
-    peaks.push(peak(limit.max(flattener(a[0]).abs()), 0));
+    let mut mave = MovingAverage::<f64, 32>::init(limit, smoothing);
+    let mut mmax = MovingMaximum::<32>::init(limit, window);
 
-    let mut expo_amp = limit;
+    for i in 0..a.len() + smoothing {
+        let smp = if let Some(ele) = a.get(i) {
+            flattener(*ele).abs().max(limit)
+        } else {
+            limit
+        };
 
-    let fall_factor = 1.0 - 1.0 / hold_samples as f64;
+        mave.update(mmax.update(smp));
 
-    for (i, ele) in a.iter().enumerate().skip(1) {
-        let smp = flattener(*ele).abs();
+        let j = i.wrapping_sub(smoothing);
 
-        if expo_amp > limit {
-            expo_amp = limit.max(expo_amp * fall_factor);
+        if let Some(ele) = a.get_mut(j) {
+            let mult = gain / mave.current();
+
+            *ele = *ele * mult;
         }
-
-        if smp > expo_amp {
-            expo_amp = smp;
-            peaks.push(peak(smp, i));
-        }
-    }
-
-    match peaks.last() {
-        Some(p) if p.pos < a.len() => peaks.push(peak(expo_amp, a.len())),
-        _ => {}
-    }
-
-    peaks.iter_mut().for_each(|peak| {
-        peak.amp = 1.0 / peak.amp;
-    });
-
-    peaks.windows(2).for_each(|window| {
-        let head = &window[0];
-        let tail = &window[1];
-
-        let range = tail.pos - head.pos + 1;
-        let rangef = range as f64;
-        let range_recip = 1.0 / rangef;
-
-        a[head.pos..tail.pos]
-            .iter_mut()
-            .enumerate()
-            .for_each(|(i, smp)| {
-                let t = i as f64 * range_recip;
-                let scale = smooth_step(head.amp, tail.amp, t);
-                *smp = *smp * scale * gain;
-            });
-    });
-}
-
-pub fn limiter_pong<T>(
-    a: &mut [T],
-    limit: f64,
-    hold_samples: usize,
-    gain: f64,
-    flattener: fn(T) -> f64,
-) where
-    T: Into<f64> + std::ops::Mul<f64, Output = T> + std::marker::Copy,
-{
-    let fall_factor = 1.0 - 1.0 / hold_samples as f64;
-
-    let mut multiplier = vec![0f64; a.len()];
-
-    let mut expo_amp = limit;
-
-    for (ele, m) in a.iter().zip(multiplier.iter_mut()) {
-        let smp = flattener(*ele).abs();
-
-        expo_amp = smp.max(limit.max(expo_amp * fall_factor));
-
-        *m = expo_amp;
-    }
-
-    for (ele, m) in a.iter_mut().zip(multiplier.iter_mut()).rev() {
-        let smp = flattener(*ele).abs();
-
-        expo_amp = smp.max(limit.max(expo_amp * fall_factor));
-
-        *m = m.max(expo_amp);
-
-        *ele = *ele * (gain / *m);
     }
 }

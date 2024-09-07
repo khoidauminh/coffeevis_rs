@@ -1,8 +1,8 @@
 use super::Cplx;
 
 pub fn butterfly<T>(a: &mut [T], power: usize) {
+    // first and last element stays in place
     for i in 1..a.len() - 1 {
-        // first and last element stays in place
         let ni = super::fast::bit_reverse(i, power);
         if i < ni {
             a.swap(ni, i)
@@ -97,8 +97,8 @@ pub fn compute_fft_iterative(a: &mut [Cplx]) {
             y: -0.0001917475973107033,
         },
     ];
-    
-    let mut depth  = 3;
+
+    let mut depth = 3;
     let mut window = 8usize;
 
     while window <= length {
@@ -136,20 +136,16 @@ pub fn compute_fft_iterative(a: &mut [Cplx]) {
 // This leverages the the linear and symetric
 // property of the FFT.
 pub fn compute_fft_stereo(a: &mut [Cplx], up_to: usize, normalize: bool) {
-
     super::fft(a);
 
     let l = a.len();
     let bound = up_to.min(l);
 
     for i in 1..bound {
-        let bin1 = a[i  ];
-        let bin2 = a[l-i].conj();
+        let bin1 = a[i];
+        let bin2 = a[l - i].conj();
 
-        a[i] = Cplx::new(
-            (bin1 + bin2).l1_norm(),
-            (bin1 - bin2).l1_norm()
-        );
+        a[i] = Cplx::new((bin1 + bin2).l1_norm(), (bin1 - bin2).l1_norm());
     }
 
     if normalize {

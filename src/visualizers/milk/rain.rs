@@ -24,7 +24,7 @@ struct Thunder {
     color: u32,
     sheer: u8,
     branching: u8,
-    max_branches: u8
+    max_branches: u8,
 }
 
 impl Thunder {
@@ -33,7 +33,7 @@ impl Thunder {
             color,
             sheer,
             branching,
-            max_branches
+            max_branches,
         }
     }
 

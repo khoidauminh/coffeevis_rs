@@ -1,12 +1,12 @@
-mod fft;
-mod vec2;
 pub mod fast;
+mod fft;
 pub mod rng;
+mod vec2;
 
 use std::ops;
 
-pub use std::f64::consts::TAU;
 pub use std::f64::consts::FRAC_PI_2 as PIH;
+pub use std::f64::consts::TAU;
 
 pub const TAU_RECIP: f64 = 1.0 / TAU;
 pub const ZERO: Cplx = Cplx { x: 0.0, y: 0.0 };
@@ -49,7 +49,7 @@ pub fn fft(a: &mut [Cplx]) {
 
 pub fn increment<T>(a: T, limit: T) -> T
 where
-    T: ops::Add<Output = T> + std::cmp::PartialEq + From<u8>
+    T: ops::Add<Output = T> + std::cmp::PartialEq + From<u8>,
 {
     let b = a + 1.into();
     if b == limit {
@@ -60,7 +60,7 @@ where
 
 pub fn decrement<T>(a: T, limit: T) -> T
 where
-    T: ops::Sub<Output = T> + std::cmp::PartialEq + From<u8>
+    T: ops::Sub<Output = T> + std::cmp::PartialEq + From<u8>,
 {
     if a == T::from(0) {
         return limit - 1.into();
@@ -197,5 +197,15 @@ pub mod interpolate {
             return now;
         }
         new
+    }
+
+    pub fn step(mut a: f64, b: f64, ladder_step: f64) -> f64 {
+        if a < b {
+            a += ladder_step;
+            a.min(b)
+        } else {
+            a -= ladder_step;
+            a.max(b)
+        }
     }
 }

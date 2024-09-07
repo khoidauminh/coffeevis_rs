@@ -42,9 +42,10 @@ pub fn draw_shaky(prog: &mut crate::data::Program, stream: &mut crate::audio::Sa
 
     let sizef = prog.pix.width().min(prog.pix.height()) as f64;
 
-    data_f.iter_mut().enumerate().for_each(
-        |(i, x)| *x = stream[i],
-    );
+    data_f
+        .iter_mut()
+        .enumerate()
+        .for_each(|(i, x)| *x = stream[i]);
     math::integrate_inplace(&mut data_f, 128, false);
 
     let amplitude = data_f.iter().fold(0f64, |acc, x| acc + x.l1_norm()) * sizef;
