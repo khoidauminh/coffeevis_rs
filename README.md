@@ -9,6 +9,10 @@ Some too slow, some didn't have the visualizer I like, some take up too much cpu
 
 This project also serves as my playground, so you'll see a lot of weird implementations in the source files.
 
+## v0.5.1 Hot fix
+
+Fix compilation failure in terminal mode
+
 ## What's new in v0.5.0
 
 *Terminal and minifb mode have been moved to their own features. You'll need to

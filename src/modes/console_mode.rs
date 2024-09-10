@@ -12,7 +12,7 @@ use crossterm::{
 use sixel_rs;
 use sixel_sys;
 */
-use crate::{data::*, graphics::grayb, modes::Mode};
+use crate::{data::*, graphics::blend::grayb, modes::Mode};
 use std::io::{stdout, Stdout, Write};
 
 pub type Flusher = fn(&Program, &mut Stdout);
