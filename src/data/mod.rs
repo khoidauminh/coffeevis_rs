@@ -7,7 +7,6 @@ use crate::modes::Mode;
 
 use crate::VisFunc;
 
-pub const SAMPLE_RATE_MAX: usize = 384000;
 pub const SAMPLE_RATE: usize = 44100;
 
 pub const POWER: usize = 13;
@@ -30,13 +29,8 @@ pub const DEFAULT_SMOOTHING: f64 = 0.65;
 pub const STOP_RENDERING: u8 = 192;
 
 /// How long silence has happened to trigger render slow down.
-pub const SILENCE_LIMIT: u8 = 7;
-#[doc(hidden)]
-pub const IDLE_REFRESH_RATE: Duration = Duration::from_millis(1000 / 24);
 
 pub const DEFAULT_SIZE_WIN: u16 = 60;
-#[doc(hidden)]
-pub const ERR_MSG: &str = "Configration error at line";
 
 pub const DEFAULT_WIN_SCALE: u8 = 3;
 
@@ -71,7 +65,6 @@ pub(crate) struct Program {
     pub mode: Mode,
 
     pub transparency: u8,
-    pub background: u32,
 
     pub MILLI_HZ: u32,
     pub REFRESH_RATE_MODE: RefreshRateMode,
@@ -83,13 +76,15 @@ pub(crate) struct Program {
     pub WAV_WIN: usize,
     pub VOL_SCL: f64,
     pub SMOOTHING: f64,
-    pub ROTATE_SIZE: usize,
 
     WIN_W: u16,
     WIN_H: u16,
 
+    #[cfg(feature = "terminal")]
     pub CON_W: u16,
+    #[cfg(feature = "terminal")]
     pub CON_H: u16,
+
     pub CON_MAX_W: u16,
     pub CON_MAX_H: u16,
 
@@ -142,7 +137,6 @@ impl Program {
             WAYLAND: true,
 
             transparency: 255,
-            background: 0x00_00_00_00,
 
             pix: crate::graphics::Canvas::new(
                 DEFAULT_SIZE_WIN as usize,
@@ -171,12 +165,15 @@ impl Program {
             WAV_WIN: DEFAULT_WAV_WIN,
             VOL_SCL: DEFAULT_VOL_SCL,
             SMOOTHING: DEFAULT_SMOOTHING,
-            ROTATE_SIZE: DEFAULT_ROTATE_SIZE,
 
             WIN_W: DEFAULT_SIZE_WIN,
             WIN_H: DEFAULT_SIZE_WIN,
+            
+            #[cfg(feature = "terminal")]
             CON_W: 50,
+            #[cfg(feature = "terminal")]
             CON_H: 25,
+
             CON_MAX_W: 50,
             CON_MAX_H: 25,
         }
@@ -439,7 +436,13 @@ impl Program {
         let size = (u16::from(s.0), u16::from(s.1));
 
         match &self.mode {
-            Mode::Win | Mode::WinLegacy => {
+            Mode::Win => {
+                (self.WIN_W, self.WIN_H) = size;
+                self.pix.resize(size.0 as usize, size.1 as usize);
+            }
+            
+            #[cfg(feature = "minifb")]
+            Mode::WinLegacy => {
                 (self.WIN_W, self.WIN_H) = size;
                 self.pix.resize(size.0 as usize, size.1 as usize);
             }
@@ -460,7 +463,10 @@ impl Program {
             Mode::Win | Mode::WinLegacy => {
                 self.pix.resize(self.WIN_W as usize, self.WIN_H as usize)
             }
-            _ => self.pix.resize(self.CON_W as usize, self.CON_H as usize),
+            _ => {
+                #[cfg(feature = "terminal")]
+                self.pix.resize(self.CON_W as usize, self.CON_H as usize);
+            }
         }
     }
 

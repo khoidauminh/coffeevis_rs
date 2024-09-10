@@ -1,31 +1,5 @@
 use crate::{data::Program, graphics::blend::Blend};
 
-#[cfg(feature = "extended")]
-pub mod image {
-    use image::{io::Reader, GenericImageView, ImageFormat};
-    pub fn prepare_image(file: &[u8]) -> Image {
-        let img = Reader::new(Cursor::new(crate::data::IMAGE))
-            .with_guessed_format()
-            .unwrap()
-            .decode()
-            .unwrap();
-
-        let (w, h) = (img.width() as usize, img.height() as usize);
-
-        Image::from_buffer(
-            img.pixels()
-                .map(|pixel| {
-                    let mut pixel_u8 = pixel.2 .0;
-                    pixel_u8.rotate_right(1);
-                    u32::from_be_bytes(pixel_u8)
-                })
-                .collect::<Vec<_>>(),
-            w,
-            h,
-        )
-    }
-}
-
 macro_rules! eprintln_red {
     () => {
         eprintln!();

@@ -33,7 +33,6 @@ type BufferArray = [Cplx; BUFFER_SIZE];
 pub struct AudioBuffer {
     buffer: BufferArray,
 
-    size: usize,
     size_mask: usize,
     /// Where offset [0] starts
     offset: usize,
@@ -96,7 +95,6 @@ impl AudioBuffer {
             write_point: 0,
             input_size: 1000,
 
-            size: BUFFER_SIZE,
             size_mask: SIZE_MASK,
 
             rotate_size: DEFAULT_ROTATE_SIZE,

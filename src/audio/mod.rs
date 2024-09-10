@@ -3,6 +3,7 @@ use cpal::SampleFormat;
 
 mod audio_buffer;
 use audio_buffer::AudioBuffer;
+use crate::math::increment;
 
 use std::ops::*;
 use std::sync::{
@@ -39,10 +40,6 @@ pub static NORMALIZE: RwLock<bool> = RwLock::new(true);
 
 pub fn set_normalizer(b: bool) {
     *NORMALIZE.write().unwrap() = b;
-}
-
-pub fn get_normalizer() -> bool {
-    *NORMALIZE.read().unwrap()
 }
 
 pub fn get_source() -> cpal::Stream {
@@ -116,18 +113,10 @@ pub fn get_no_sample() -> u8 {
     NO_SAMPLE.load(Ordering::Relaxed)
 }
 
-pub fn is_silent() -> bool {
-    get_no_sample() > 0
-}
-
-use crate::misc::stackvec::StackVec;
-
-const MAX_STACK_VEC_SIZE: usize = 15;
-
 pub struct MovingAverage<T, const N: usize> {
     size: usize,
     index: usize,
-    vec: StackVec<T, N>,
+    vec: [T; N],
     sum: T,
     denominator: f64,
     average: T,
@@ -144,7 +133,7 @@ where
         Self {
             size,
             index: 0,
-            vec: StackVec::init(val, size),
+            vec: [val; N],
             denominator: (size as f64).recip(),
             sum: size as f64 * val,
             average: val,
@@ -156,7 +145,7 @@ where
 
         self.vec[self.index] = val;
 
-        self.index = crate::math::increment(self.index, self.size);
+        self.index = increment(self.index, self.size);
 
         out
     }
@@ -170,22 +159,10 @@ where
 
         self.average
     }
-
-    pub fn current(&self) -> T {
-        self.average
-    }
-
-    pub fn force_compute_average(&self) -> T {
-        let mut sum = self.vec[0];
-        for i in 1..self.size {
-            sum = sum + self.vec[i]
-        }
-        return sum * self.denominator;
-    }
 }
 
 struct MovingMaximum<const N: usize> {
-    buffer: StackVec<f64, N>,
+    buffer: [f64; N],
     size: usize,
     index: usize,
     max: f64,
@@ -196,7 +173,7 @@ impl<const N: usize> MovingMaximum<N> {
         assert!(size < N);
 
         Self {
-            buffer: StackVec::init(val, size),
+            buffer: [val; N],
             size,
             index: 0,
             max: val,
@@ -207,7 +184,7 @@ impl<const N: usize> MovingMaximum<N> {
         let old = self.buffer[self.index];
         self.buffer[self.index] = new;
 
-        self.index = crate::math::increment(self.index, self.size);
+        self.index = increment(self.index, self.size);
 
         old
     }
@@ -221,14 +198,10 @@ impl<const N: usize> MovingMaximum<N> {
         }
 
         if old == self.max {
-            self.max = self.buffer.slice().iter().fold(new, |acc, x| acc.max(*x));
+            self.max = self.buffer.iter().take(self.size).fold(new, |acc, x| acc.max(*x));
         }
 
         return self.max;
-    }
-
-    pub fn current(&self) -> f64 {
-        self.max
     }
 }
 
@@ -248,12 +221,12 @@ where
             limit
         };
 
-        mave.update(mmax.update(smp));
+        let mult = mave.update(mmax.update(smp));
 
         let j = i.wrapping_sub(smoothing);
 
         if let Some(ele) = a.get_mut(j) {
-            let mult = gain / mave.current();
+            let mult = gain / mult;
 
             *ele = *ele * mult;
         }
