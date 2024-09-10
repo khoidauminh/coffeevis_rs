@@ -1,6 +1,6 @@
 [package]
 name = "coffeevis"
-version = "0.5.0"
+version = "0.5.1"
 edition = "2021"
 authors = ["Cas Pascal <casboi86@gmail.com"]
 description = "Personal graphical/console music visualizer for Linux."
