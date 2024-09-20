@@ -492,10 +492,10 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
 
     event_loop.set_control_flow(winit::event_loop::ControlFlow::Wait);
 
-    let _ = event_loop.run_app(&mut state);
+    event_loop.run_app(&mut state).unwrap();
     let _ = thread_size.join();
     let _ = thread_updates.join();
-    let _ = thread_draw.join();
+    thread_draw.join().unwrap();
 
     Ok(())
 }
