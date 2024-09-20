@@ -3,13 +3,49 @@ pub mod draw;
 pub mod draw_raw;
 
 use blend::{Blend, Mixer};
-pub const COLOR_BLANK: u32 = 0x00_00_00_00;
-pub const COLOR_BLACK: u32 = 0xFF_00_00_00;
-pub const COLOR_WHITE: u32 = 0xFF_FF_FF_FF;
 
-pub trait Pixel: Copy + Clone + Blend + From<u32> + TryFrom<u32> + From<u8> + TryFrom<u8> {}
+pub trait Pixel: Copy + Clone + Blend + Sized {
+    fn black() -> Self;
+    fn white() -> Self;
+    fn trans() -> Self;
+    fn new(x: u32) -> Self;
+}
 
-impl Pixel for u32 {}
+impl Pixel for u32 {
+    fn black() -> Self {
+        return 0xFF_00_00_00;
+    }
+
+    fn white() -> Self {
+        return 0xFF_FF_FF_FF;
+    }
+
+    fn trans() -> Self {
+        return 0x0;
+    }
+
+    fn new(x: u32) -> Self {
+        return x;
+    }
+}
+
+impl Pixel for u8 {
+    fn black() -> Self {
+        return 0;
+    }
+
+    fn white() -> Self {
+        return 0xFF;
+    }
+
+    fn trans() -> Self {
+        return 0;
+    }
+
+    fn new(x: u32) -> Self {
+        return x as u8;
+    }
+}
 
 pub(crate) type P2 = crate::math::Vec2<i32>;
 
@@ -129,7 +165,7 @@ impl<T: Pixel> PixelBuffer<T> {
     pub fn new(w: usize, h: usize, background: T) -> Self {
         let padded = crate::math::larger_or_equal_pw2(w * h);
         Self {
-            buffer: vec![T::from(0u8); padded],
+            buffer: vec![T::black(); padded],
             command: DrawCommandBuffer::new(),
             mask: padded - 1,
             len: w * h,
@@ -172,7 +208,7 @@ impl<T: Pixel> PixelBuffer<T> {
         let len = w * h;
         let padded = crate::math::larger_or_equal_pw2(len);
 
-        self.buffer.resize(padded, T::from(0u8));
+        self.buffer.resize(padded, T::new(0));
 
         self.mask = padded - 1;
         self.width = w;
@@ -246,7 +282,7 @@ impl<T: Pixel> PixelBuffer<T> {
 impl Canvas {
     pub fn clear_row(&mut self, y: usize) {
         let i = y * self.width;
-        self.buffer[i..i + self.width].fill(COLOR_BLANK);
+        self.buffer[i..i + self.width].fill(u32::trans());
     }
 
     pub fn subtract_clear(&mut self, amount: u8) {
