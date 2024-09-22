@@ -8,7 +8,7 @@ pub trait Pixel: Copy + Clone + Blend + Sized {
     fn black() -> Self;
     fn white() -> Self;
     fn trans() -> Self;
-    fn new(x: u32) -> Self;
+    fn from(x: u32) -> Self;
 }
 
 impl Pixel for u32 {
@@ -24,7 +24,7 @@ impl Pixel for u32 {
         return 0x0;
     }
 
-    fn new(x: u32) -> Self {
+    fn from(x: u32) -> Self {
         return x;
     }
 }
@@ -42,7 +42,7 @@ impl Pixel for u8 {
         return 0;
     }
 
-    fn new(x: u32) -> Self {
+    fn from(x: u32) -> Self {
         return x as u8;
     }
 }
@@ -208,7 +208,7 @@ impl<T: Pixel> PixelBuffer<T> {
         let len = w * h;
         let padded = crate::math::larger_or_equal_pw2(len);
 
-        self.buffer.resize(padded, T::new(0));
+        self.buffer.resize(padded, T::from(0));
 
         self.mask = padded - 1;
         self.width = w;
