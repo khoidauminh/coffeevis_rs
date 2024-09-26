@@ -17,7 +17,7 @@ struct RainDrop {
     bound_width: u16,
     bound_height: u16,
     position: Cplx,
-    fall_amount: f64,
+    fall_amount: f32,
 }
 
 struct Thunder {
@@ -41,7 +41,7 @@ impl Thunder {
 }
 
 impl RainDrop {
-    pub const fn new(color: u32, length: u16, fall: f64, size: P2) -> Self {
+    pub const fn new(color: u32, length: u16, fall: f32, size: P2) -> Self {
         Self {
             color,
             length,
@@ -53,9 +53,9 @@ impl RainDrop {
     }
 
     pub fn randomize_start(&mut self) {
-        let wf = self.bound_width as f64;
+        let wf = self.bound_width as f32;
         self.position.x = random_float(wf);
-        self.fall_amount = 0.5 + random_int(128) as f64 * 0.02;
+        self.fall_amount = 0.5 + random_int(128) as f32 * 0.02;
         self.position.y = 0.0;
     }
 
@@ -68,7 +68,7 @@ impl RainDrop {
         self.bound_width == size.x as u16 && self.bound_height == size.y as u16
     }
 
-    pub fn fall(&mut self, factor: f64) -> bool {
+    pub fn fall(&mut self, factor: f32) -> bool {
         self.position.y += self.fall_amount * factor;
 
         (self.position.y as u16) < self.bound_height
@@ -118,7 +118,7 @@ pub fn draw(prog: &mut Program, stream: &mut SampleArr) {
     static LIST_OF_DROPS: Mutex<[RainDrop; NUM_OF_DROPS]> =
         Mutex::new([RainDrop::new(0xFF_FF_FF_FF, 8, 0.2, DEFAULT_BOUND); NUM_OF_DROPS]);
 
-    static OLD_VOLUME: Mutex<f64> = Mutex::new(0.0);
+    static OLD_VOLUME: Mutex<f32> = Mutex::new(0.0);
 
     START.call_once(|| {
         let mut list = LIST_OF_DROPS.lock().unwrap();
@@ -127,9 +127,9 @@ pub fn draw(prog: &mut Program, stream: &mut SampleArr) {
         }
     });
 
-    let mut new_volume: f64 = 0.0;
+    let mut new_volume: f32 = 0.0;
     {
-        let mut y: f64 = stream[0usize].into();
+        let mut y: f32 = stream[0usize].into();
         for i in 1..200usize {
             y = y + 0.25 * (stream[i].max() - y);
             new_volume += y;

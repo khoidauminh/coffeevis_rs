@@ -1,16 +1,16 @@
 use crate::data::DEFAULT_ROTATE_SIZE;
 use crate::math::Cplx;
 
-const SILENCE_LIMIT: f64 = 0.001;
-const AMP_PERSIST_LIMIT: f64 = 0.05;
-const AMP_TRIGGER_THRESHOLD: f64 = 0.85;
+const SILENCE_LIMIT: f32 = 0.001;
+const AMP_PERSIST_LIMIT: f32 = 0.05;
+const AMP_TRIGGER_THRESHOLD: f32 = 0.85;
 const SILENCE_INDEX: u16 = 24;
 
 const BUFFER_SIZE_POWER: usize = crate::data::POWER;
 const BUFFER_SIZE: usize = 1 << BUFFER_SIZE_POWER;
 const SIZE_MASK: usize = BUFFER_SIZE - 1;
 
-const REACT_SPEED: f64 = 0.025;
+const REACT_SPEED: f32 = 0.025;
 
 type BufferArray = [Cplx; BUFFER_SIZE];
 
@@ -49,8 +49,8 @@ pub struct AudioBuffer {
 
     input_size: usize,
 
-    max: f64,
-    average: f64,
+    max: f32,
+    average: f32,
     silent: u8,
 }
 
@@ -83,8 +83,8 @@ impl std::ops::IndexMut<isize> for AudioBuffer {
 use std::ops::Range;
 
 fn write_sample<T: cpal::Sample<Float = f32>>(smp: &mut Cplx, smp_in: &[T]) {
-    smp.x = smp_in[0].to_float_sample() as f64;
-    smp.y = smp_in[1].to_float_sample() as f64;
+    smp.x = smp_in[0].to_float_sample() as f32;
+    smp.y = smp_in[1].to_float_sample() as f32;
 }
 
 impl AudioBuffer {
@@ -135,11 +135,11 @@ impl AudioBuffer {
         self.offset = self.index_sub(self.offset, n);
     }
 
-    pub fn peak(&self) -> f64 {
+    pub fn peak(&self) -> f32 {
         self.max
     }
 
-    pub fn average(&self) -> f64 {
+    pub fn average(&self) -> f32 {
         self.average
     }
 
@@ -155,8 +155,8 @@ impl AudioBuffer {
         self.silent
     }
 
-    pub fn normalize_factor_peak(&self) -> f64 {
-        const MAX_FACTOR: f64 = AMP_TRIGGER_THRESHOLD / AMP_PERSIST_LIMIT;
+    pub fn normalize_factor_peak(&self) -> f32 {
+        const MAX_FACTOR: f32 = AMP_TRIGGER_THRESHOLD / AMP_PERSIST_LIMIT;
 
         if self.max > AMP_TRIGGER_THRESHOLD {
             1.0
@@ -167,7 +167,7 @@ impl AudioBuffer {
         }
     }
 
-    pub fn normalize_factor_average(&self) -> f64 {
+    pub fn normalize_factor_average(&self) -> f32 {
         AMP_TRIGGER_THRESHOLD
             / self
                 .average
@@ -201,8 +201,8 @@ impl AudioBuffer {
         let input_size = data.len();
         self.input_size = input_size / 2;
 
-        let mut max_l = 0.0f64;
-        let mut max_r = 0.0f64;
+        let mut max_l = 0.0f32;
+        let mut max_r = 0.0f32;
 
         let mut silent_samples = 0u16;
 

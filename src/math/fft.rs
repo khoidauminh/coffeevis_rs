@@ -10,13 +10,13 @@ pub fn butterfly<T>(a: &mut [T], power: usize) {
     }
 }
 
-pub fn twiddle_norm(x: f64) -> Cplx {
-    let x = x * std::f64::consts::TAU;
+pub fn twiddle_norm(x: f32) -> Cplx {
+    let x = x * std::f32::consts::TAU;
     let y = x.sin_cos();
     Cplx::new(y.1, y.0)
 }
 
-pub fn twiddle(x: f64) -> Cplx {
+pub fn twiddle(x: f32) -> Cplx {
     let y = x.sin_cos();
     Cplx::new(y.1, y.0)
 }
@@ -149,7 +149,7 @@ pub fn compute_fft_stereo(a: &mut [Cplx], up_to: usize, normalize: bool) {
     }
 
     if normalize {
-        let norm = 1.0 / l as f64;
+        let norm = 1.0 / l as f32;
         for smp in a.iter_mut().take(bound) {
             *smp = *smp * norm;
         }

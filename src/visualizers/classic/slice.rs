@@ -1,11 +1,11 @@
 use crate::graphics::{blend::Blend, P2};
 use crate::math::{cos_sin, interpolate::linearf, Cplx, TAU};
 use std::cell::RefCell;
-use std::f64::consts::PI;
+use std::f32::consts::PI;
 
 thread_local! {
-    static ANGLE: RefCell<f64> = const { RefCell::new(0.0f64) };
-    static AMP: RefCell<f64> = const { RefCell::new(0.0f64) };
+    static ANGLE: RefCell<f32> = const { RefCell::new(0.0f32) };
+    static AMP: RefCell<f32> = const { RefCell::new(0.0f32) };
 }
 
 fn blend(c1: u32, c2: u32) -> u32 {
@@ -21,9 +21,9 @@ pub fn draw_slice(prog: &mut crate::data::Program, stream: &mut crate::audio::Sa
     let radius = prog.pix.width().min(prog.pix.height());
     let small_radius = radius as i32 / 16;
     let big_radius = (radius as i32 / 2) * 9 / 10;
-    let big_radius_f = big_radius as f64;
+    let big_radius_f = big_radius as f32;
 
-    let sizef = stream.input_size() as f64;
+    let sizef = stream.input_size() as f32;
     let bass_low = 1.0 / sizef * 0.5;
     let bass_high = 1.0 / sizef * 2.0;
     // Dear god
@@ -35,7 +35,7 @@ pub fn draw_slice(prog: &mut crate::data::Program, stream: &mut crate::audio::Sa
         let mut bin = Cplx::zero();
         for i in 0..stream.input_size() {
             let (j, j_high) = {
-                let i = i as f64;
+                let i = i as f32;
                 let t = i / sizef;
                 (
                     cos_sin(i * linearf(bass_low, bass_high, t)),

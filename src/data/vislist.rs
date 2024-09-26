@@ -227,7 +227,7 @@ pub const VIS_CLASSIC: &[Visualizer] = &[
     // define_visualizer_struct!(tests::draw_quick_sort_iter, "Test", true),
     /*  [vol_sweeper::draw_vol_sweeper, "Vol sweeper"],
     [// experiment1::draw_exp1,
-    [// experiment1::draw_f64,
+    [// experiment1::draw_f32,
     [wave::draw_wave,  */
 ];
 

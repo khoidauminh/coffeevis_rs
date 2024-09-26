@@ -12,8 +12,8 @@ static DATA: std::sync::RwLock<LocalData> = std::sync::RwLock::new(LocalData {
 });
 
 pub fn draw_lazer(para: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
-    let w = para.pix.width() as f64;
-    let h = para.pix.height() as f64;
+    let w = para.pix.width() as f32;
+    let h = para.pix.height() as f32;
 
     let mut a = {
         let mut sum = Cplx::zero();

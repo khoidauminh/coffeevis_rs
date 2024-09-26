@@ -1,8 +1,8 @@
 struct Rng {
-    a: f64,
-    b: f64,
-    c: f64,
-    d: f64,
+    a: f32,
+    b: f32,
+    c: f32,
+    d: f32,
 }
 
 use std::sync::Mutex;
@@ -33,7 +33,7 @@ pub fn random_int(bound: u32) -> u32 {
 }
 
 pub fn faster_random_int(seed: usize, i: usize, bound: usize) -> usize {
-    let num = seed.wrapping_add(i.wrapping_mul(349323)) as f64 * 0.5707962;
+    let num = seed.wrapping_add(i.wrapping_mul(349323)) as f32 * 0.5707962;
 
     let mut num = num.to_bits();
     num ^= num.wrapping_shr(32);
@@ -41,7 +41,7 @@ pub fn faster_random_int(seed: usize, i: usize, bound: usize) -> usize {
     num as usize % bound
 }
 
-pub fn random_float(bound: f64) -> f64 {
+pub fn random_float(bound: f32) -> f32 {
     static VAR: Mutex<f32> = Mutex::new(0.2132454);
 
     let mut a = *VAR.lock().unwrap();
@@ -52,5 +52,5 @@ pub fn random_float(bound: f64) -> f64 {
 
     *VAR.lock().unwrap() = a % 1.5707962;
 
-    (a % bound as f32) as f64
+    (a % bound as f32) as f32
 }

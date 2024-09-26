@@ -118,14 +118,14 @@ pub struct MovingAverage<T, const N: usize> {
     index: usize,
     vec: [T; N],
     sum: T,
-    denominator: f64,
+    denominator: f32,
     average: T,
 }
 
 impl<T, const N: usize> MovingAverage<T, N>
 where
-    T: Add<Output = T> + Sub<Output = T> + Mul<f64, Output = T> + std::marker::Copy,
-    f64: Mul<T, Output = T>,
+    T: Add<Output = T> + Sub<Output = T> + Mul<f32, Output = T> + std::marker::Copy,
+    f32: Mul<T, Output = T>,
 {
     pub fn init(val: T, size: usize) -> Self {
         assert!(size < N);
@@ -134,8 +134,8 @@ where
             size,
             index: 0,
             vec: [val; N],
-            denominator: (size as f64).recip(),
-            sum: size as f64 * val,
+            denominator: (size as f32).recip(),
+            sum: size as f32 * val,
             average: val,
         }
     }
@@ -162,14 +162,14 @@ where
 }
 
 struct MovingMaximum<const N: usize> {
-    buffer: [f64; N],
+    buffer: [f32; N],
     size: usize,
     index: usize,
-    max: f64,
+    max: f32,
 }
 
 impl<const N: usize> MovingMaximum<N> {
-    pub fn init(val: f64, size: usize) -> Self {
+    pub fn init(val: f32, size: usize) -> Self {
         assert!(size < N);
 
         Self {
@@ -180,7 +180,7 @@ impl<const N: usize> MovingMaximum<N> {
         }
     }
 
-    fn pop(&mut self, new: f64) -> f64 {
+    fn pop(&mut self, new: f32) -> f32 {
         let old = self.buffer[self.index];
         self.buffer[self.index] = new;
 
@@ -189,7 +189,7 @@ impl<const N: usize> MovingMaximum<N> {
         old
     }
 
-    pub fn update(&mut self, new: f64) -> f64 {
+    pub fn update(&mut self, new: f32) -> f32 {
         let old = self.pop(new);
 
         if new > self.max {
@@ -205,13 +205,13 @@ impl<const N: usize> MovingMaximum<N> {
     }
 }
 
-pub fn limiter<T>(a: &mut [T], limit: f64, window: usize, gain: f64, flattener: fn(T) -> f64)
+pub fn limiter<T>(a: &mut [T], limit: f32, window: usize, gain: f32, flattener: fn(T) -> f32)
 where
-    T: Into<f64> + std::ops::Mul<f64, Output = T> + std::marker::Copy,
+    T: Into<f32> + std::ops::Mul<f32, Output = T> + std::marker::Copy,
 {
     let smoothing = window * 3 / 4;
 
-    let mut mave = MovingAverage::<f64, 32>::init(limit, smoothing);
+    let mut mave = MovingAverage::<f32, 32>::init(limit, smoothing);
     let mut mmax = MovingMaximum::<32>::init(limit, window);
 
     for i in 0..a.len() + smoothing {

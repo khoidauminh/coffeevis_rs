@@ -72,7 +72,7 @@ pub fn draw_wavelet(prog: &mut crate::data::Program, stream: &mut crate::audio::
         let copy_size = l >> 2;
         let start = 0;
 
-        let inew = copy_size as f64 * i as f64 / WT_SIZE as f64;
+        let inew = copy_size as f32 * i as f32 / WT_SIZE as f32;
         let ifloor = start + inew as usize;
         let iceil = start + inew.ceil() as usize;
 
@@ -87,10 +87,10 @@ pub fn draw_wavelet(prog: &mut crate::data::Program, stream: &mut crate::audio::
     let (pw, ph) = (prog.pix.width(), prog.pix.height());
 
     for y in 0..ph {
-        let yt = WT_SIZE as f64 * (ph - y - 1) as f64 / ph as f64;
+        let yt = WT_SIZE as f32 * (ph - y - 1) as f32 / ph as f32;
 
         for x in 0..pw {
-            let xt = WT_SIZE as f64 * x as f64 / pw as f64;
+            let xt = WT_SIZE as f32 * x as f32 / pw as f32;
 
             let smp = wavelet_xy_interpolated(&mut w, Cplx::new(xt, yt), WT_POWER);
 
@@ -140,13 +140,13 @@ fn haar_wavelet_fast(a: &mut [Cplx]) {
 
 // p ranges in 0..w.len()
 fn wavelet_xy_interpolated(w: &[Cplx], p: Cplx, pow: usize) -> Cplx {
-    let pf = pow as f64;
+    let pf = pow as f32;
     let l = w.len();
-    let lf = l as f64;
+    let lf = l as f32;
     let ll = l - 1;
 
-    let idx = |x: f64, h: f64| -> f64 {
-        let iy = ((1 << (h as u32)) - 1) as f64;
+    let idx = |x: f32, h: f32| -> f32 {
+        let iy = ((1 << (h as u32)) - 1) as f32;
         let ix = iy * x / lf;
         iy + ix
     };

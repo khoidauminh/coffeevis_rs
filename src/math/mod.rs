@@ -5,10 +5,10 @@ mod vec2;
 
 use std::ops;
 
-pub use std::f64::consts::FRAC_PI_2 as PIH;
-pub use std::f64::consts::TAU;
+pub use std::f32::consts::FRAC_PI_2 as PIH;
+pub use std::f32::consts::TAU;
 
-pub const TAU_RECIP: f64 = 1.0 / TAU;
+pub const TAU_RECIP: f32 = 1.0 / TAU;
 pub const ZERO: Cplx = Cplx { x: 0.0, y: 0.0 };
 
 #[derive(Copy, Clone, Debug, Default)]
@@ -17,7 +17,7 @@ pub struct Vec2<T: Copy + Clone> {
     pub y: T,
 }
 
-pub type Cplx = Vec2<f64>;
+pub type Cplx = Vec2<f32>;
 
 pub trait ToUsize<T> {
     fn new(value: T) -> Self;
@@ -68,7 +68,7 @@ where
     a - 1.into()
 }
 
-pub fn squish(x: f64, scale: f64, limit: f64) -> f64 {
+pub fn squish(x: f32, scale: f32, limit: f32) -> f32 {
     (-scale * (x.abs() + scale).recip() + 1.0) * limit * x.signum()
 }
 
@@ -118,10 +118,10 @@ pub fn integrate_inplace(a: &mut [Cplx], factor: usize, norm: bool) {
     }
 
     if norm {
-        let div = 1.0 / factor as f64;
+        let div = 1.0 / factor as f32;
         let mut i = 0;
         while i < first_iter {
-            a[i] = a[i].scale(1.0 / i as f64);
+            a[i] = a[i].scale(1.0 / i as f32);
             i += 1
         }
         while i < bound {
@@ -129,33 +129,33 @@ pub fn integrate_inplace(a: &mut [Cplx], factor: usize, norm: bool) {
             i += 1
         }
         while i < l {
-            a[i] = a[i].scale(1.0 / (l - i) as f64);
+            a[i] = a[i].scale(1.0 / (l - i) as f32);
             i += 1
         }
     }
 }
 
-pub fn cos_sin(x: f64) -> Cplx {
-    let x = x * std::f64::consts::TAU;
+pub fn cos_sin(x: f32) -> Cplx {
+    let x = x * std::f32::consts::TAU;
     let y = x.sin_cos();
     Cplx::new(y.1, y.0)
 }
 
 pub mod interpolate {
     use super::Cplx;
-    pub fn linearfc(a: Cplx, b: Cplx, t: f64) -> Cplx {
+    pub fn linearfc(a: Cplx, b: Cplx, t: f32) -> Cplx {
         a + (b - a).scale(t)
     }
 
-    pub fn linearf(a: f64, b: f64, t: f64) -> f64 {
+    pub fn linearf(a: f32, b: f32, t: f32) -> f32 {
         a + (b - a) * t
     }
 
-    pub fn cosf(a: f64, b: f64, t: f64) -> f64 {
+    pub fn cosf(a: f32, b: f32, t: f32) -> f32 {
         a + (b - a) * (0.5 - 0.5 * super::fast::cos_norm(t * 0.5))
     }
 
-    pub fn smooth_step(a: f64, b: f64, t: f64) -> f64 {
+    pub fn smooth_step(a: f32, b: f32, t: f32) -> f32 {
         // a + (b-a)*(t*t*(3.0-2.0*t))
         let t = t - 0.5;
         let t = t * (2.0 - 2.0 * t.abs()) + 0.5;
@@ -163,14 +163,14 @@ pub mod interpolate {
         a + (b - a) * t
     }
 
-    pub fn nearest<T>(a: T, b: T, t: f64) -> T {
+    pub fn nearest<T>(a: T, b: T, t: f32) -> T {
         if t < 0.5 {
             return a;
         }
         b
     }
 
-    pub fn subtractive_fall(prev: f64, now: f64, min: f64, amount: f64) -> f64 {
+    pub fn subtractive_fall(prev: f32, now: f32, min: f32, amount: f32) -> f32 {
         //(now - (prev/now.max(min))*amount).max(min)
         if now > prev {
             return now;
@@ -185,7 +185,7 @@ pub mod interpolate {
         new
     }
 
-    pub fn multiplicative_fall(prev: f64, now: f64, min: f64, factor: f64) -> f64 {
+    pub fn multiplicative_fall(prev: f32, now: f32, min: f32, factor: f32) -> f32 {
         if now > prev {
             return now;
         }
@@ -199,7 +199,7 @@ pub mod interpolate {
         new
     }
 
-    pub fn step(mut a: f64, b: f64, ladder_step: f64) -> f64 {
+    pub fn step(mut a: f32, b: f32, ladder_step: f32) -> f32 {
         if a < b {
             a += ladder_step;
             a.min(b)

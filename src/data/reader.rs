@@ -105,10 +105,10 @@ impl Program {
                     );
 
                     let rate = match rate.as_str() {
-                        "inf" => f64::INFINITY,
+                        "inf" => f32::INFINITY,
 
                         &_ => {
-                            let rate = rate.parse::<f64>().expect("Argument error: Invalid value.");
+                            let rate = rate.parse::<f32>().expect("Argument error: Invalid value.");
 
                             if rate < 0.0 {
                                 panic!("...What?");
@@ -118,7 +118,7 @@ impl Program {
                         }
                     };
 
-                    if rate == f64::INFINITY {
+                    if rate == f32::INFINITY {
                         self.MILLI_HZ = u32::MAX;
                         self.REFRESH_RATE = Duration::from_micros(1);
                         self.REFRESH_RATE_MODE = crate::data::RefreshRateMode::Unlimited;
@@ -257,7 +257,7 @@ impl Program {
 
         eprintln!("Startup configurations (may change): ");
 
-        println!("Refresh rate: {}hz", self.MILLI_HZ as f64 / 1000.0);
+        println!("Refresh rate: {}hz", self.MILLI_HZ as f32 / 1000.0);
 
         println!(
             "Auto switch: {}",

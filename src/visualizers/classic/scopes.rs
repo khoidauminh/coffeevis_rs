@@ -11,7 +11,7 @@ use crate::visualizers::classic::cross::{draw_cross, CROSS_COL};
 use crate::math::{self, Cplx};
 
 static LOCALI: AtomicUsize = AtomicUsize::new(0);
-static WAVE_SCALE_FACTOR: RwLock<f64> = RwLock::new(1.0);
+static WAVE_SCALE_FACTOR: RwLock<f32> = RwLock::new(1.0);
 
 fn to_color(s: i32, size: i32) -> u8 {
     (s.abs() * 256 / size).min(255) as u8
@@ -23,7 +23,7 @@ pub fn draw_vectorscope(prog: &mut crate::data::Program, stream: &mut crate::aud
 
     let size = prog.pix.height().min(prog.pix.width()) as i32;
     let sizei = size;
-    let scale = size as f64 * prog.VOL_SCL * 0.5;
+    let scale = size as f32 * prog.VOL_SCL * 0.5;
 
     let (width, height) = prog.pix.sizet();
 
@@ -75,7 +75,7 @@ pub fn draw_oscilloscope(prog: &mut crate::data::Program, stream: &mut crate::au
     let _width_top_h = width >> 1;
     let height_top_h = height >> 1;
 
-    let scale = prog.pix.height() as f64 * prog.VOL_SCL * 0.45;
+    let scale = prog.pix.height() as f32 * prog.VOL_SCL * 0.45;
 
     prog.pix.clear();
 
@@ -121,7 +121,7 @@ pub fn draw_oscilloscope(prog: &mut crate::data::Program, stream: &mut crate::au
         }
     }
 
-    let wave_scale_factor = (bass / (stream_.len() as f64)) * 13.0 + 2.0;
+    let wave_scale_factor = (bass / (stream_.len() as f32)) * 13.0 + 2.0;
 
     let wave_scale_factor_old = *WAVE_SCALE_FACTOR.read().unwrap();
 
@@ -180,7 +180,7 @@ pub fn draw_oscilloscope2(prog: &mut crate::data::Program, stream: &mut crate::a
     let _width_top_h = width >> 1;
     let height_top_h = height >> 1;
 
-    let scale = prog.pix.height() as f64 * prog.VOL_SCL * 0.45;
+    let scale = prog.pix.height() as f32 * prog.VOL_SCL * 0.45;
 
     prog.pix.clear();
 
@@ -210,7 +210,7 @@ pub fn draw_oscilloscope2(prog: &mut crate::data::Program, stream: &mut crate::a
 
     let zeroi = if zero_x > 5 { zero_x } else { zero_y };
 
-    let bass = (sum / l as f64).sqrt();
+    let bass = (sum / l as f32).sqrt();
 
     let wave_scale_factor = bass * 13.0 + 2.0;
 
@@ -281,7 +281,7 @@ pub fn draw_oscilloscope3(prog: &mut crate::data::Program, stream: &mut crate::a
     let width_top_h = width as i32 / 2;
     let height_top_h = height as i32 / 2;
 
-    let scale = prog.pix.height() as f64 * prog.VOL_SCL * 0.45;
+    let scale = prog.pix.height() as f32 * prog.VOL_SCL * 0.45;
 
     let mut bass_sum = 0.0;
 
@@ -310,7 +310,7 @@ pub fn draw_oscilloscope3(prog: &mut crate::data::Program, stream: &mut crate::a
 
     let zeroi = if zero_x > 5 { zero_x } else { zero_y } - 50;
 
-    let bass = (bass_sum / l as f64).sqrt();
+    let bass = (bass_sum / l as f32).sqrt();
 
     let wave_scale_factor = bass * 15.0 + 2.0;
 

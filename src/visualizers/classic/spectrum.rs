@@ -1,14 +1,14 @@
 use std::cell::RefCell;
-use std::f64::consts::LN_2;
+use std::f32::consts::LN_2;
 
 use crate::graphics::{blend::Blend, P2};
 use crate::math::{self, interpolate::*, Cplx};
 
 const FFT_SIZE: usize = crate::data::FFT_SIZE / 2;
 const RANGE: usize = 64;
-const RANGEF: f64 = RANGE as f64;
-const FFT_SIZEF: f64 = FFT_SIZE as f64;
-const FFT_SIZEF_RECIP: f64 = 1.0 / FFT_SIZEF;
+const RANGEF: f32 = RANGE as f32;
+const FFT_SIZEF: f32 = FFT_SIZE as f32;
+const FFT_SIZEF_RECIP: f32 = 1.0 / FFT_SIZEF;
 
 // static DATA: RwLock<[Cplx; RANGE + 1]> = RwLock::new([Cplx::zero(); RANGE + 1]);
 // I'm not sure if this has any improvement, but I'm trying it anyway.
@@ -16,21 +16,21 @@ thread_local! {
     static DATA: RefCell<[Cplx; RANGE + 1]> = const { RefCell::new([Cplx::zero(); RANGE + 1]) };
 }
 
-fn l1_norm_slide(a: Cplx, t: f64) -> f64 {
+fn l1_norm_slide(a: Cplx, t: f32) -> f32 {
     a.x.abs() * t + a.y.abs() * (1.0 - t)
 }
 
-fn index_scale(x: f64) -> f64 {
+fn index_scale(x: f32) -> f32 {
     math::fast::unit_exp2_0(x)
 }
 
-fn index_scale_derivative(x: f64) -> f64 {
+fn index_scale_derivative(x: f32) -> f32 {
     (math::fast::unit_exp2_0(x) + 1.0) * LN_2
 }
 
 fn prepare(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
     // const WINDOW: usize = 2 * FFT_SIZE / 3;
-    let fall_factor = 0.4 * prog.SMOOTHING.powi(2) * (prog.MILLI_HZ / 1000) as f64 * 0.006944444;
+    let fall_factor = 0.4 * prog.SMOOTHING.powi(2) * (prog.MILLI_HZ / 1000) as f32 * 0.006944444;
     let mut fft = [Cplx::zero(); FFT_SIZE];
     const UP: usize = 2 * FFT_SIZE / (RANGE * 3 / 2);
 
@@ -45,7 +45,7 @@ fn prepare(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr
     math::fft_stereo(&mut fft, RANGE, true);
 
     fft.iter_mut().take(RANGE).enumerate().for_each(|(i, smp)| {
-        let scalef = math::fast::ilog2(i + 1) as f64 * (1.5 - i as f64 / RANGEF) * 1.621;
+        let scalef = math::fast::ilog2(i + 1) as f32 * (1.5 - i as f32 / RANGEF) * 1.621;
         *smp = *smp * scalef;
     });
 
@@ -70,8 +70,8 @@ pub fn draw_spectrum(prog: &mut crate::data::Program, stream: &mut crate::audio:
 
     prepare(prog, stream);
 
-    let wf = w as f64;
-    let hf = h as f64;
+    let wf = w as f32;
+    let hf = h as f32;
 
     let whf = wf * 0.5;
 
@@ -84,7 +84,7 @@ pub fn draw_spectrum(prog: &mut crate::data::Program, stream: &mut crate::audio:
         for i in 0..h {
             let i_rev = h - i;
 
-            let i_ratio = i_rev as f64 * hf_recip;
+            let i_ratio = i_rev as f32 * hf_recip;
 
             let slide_output = index_scale(i_ratio);
             let idxf = slide_output * RANGEF;

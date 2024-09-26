@@ -68,11 +68,11 @@ where
     }
 }
 
-impl Mul<Vec2<f64>> for f64 {
-    type Output = Vec2<f64>;
+impl Mul<Vec2<f32>> for f32 {
+    type Output = Vec2<f32>;
 
-    fn mul(self, other: Vec2<f64>) -> Vec2<f64> {
-        Vec2::<f64> {
+    fn mul(self, other: Vec2<f32>) -> Vec2<f32> {
+        Vec2::<f32> {
             x: self * other.y,
             y: self * other.x,
         }
@@ -83,12 +83,12 @@ impl<T> Vec2<T>
 where
     T: std::default::Default + Copy + Mul<Output = T> + Add<Output = T> + Neg<Output = T>,
 {
-    pub fn one() -> Vec2<f64> {
-        Vec2::<f64> { x: 1.0, y: 0.0 }
+    pub fn one() -> Vec2<f32> {
+        Vec2::<f32> { x: 1.0, y: 0.0 }
     }
 
-    pub fn i() -> Vec2<f64> {
-        Vec2::<f64> { x: 0.0, y: 1.0 }
+    pub fn i() -> Vec2<f32> {
+        Vec2::<f32> { x: 0.0, y: 1.0 }
     }
 
     pub fn times_i(self) -> Vec2<T> {
@@ -124,54 +124,54 @@ where
     }
 }
 
-impl From<Vec2<f64>> for f64 {
-    fn from(val: Vec2<f64>) -> Self {
+impl From<Vec2<f32>> for f32 {
+    fn from(val: Vec2<f32>) -> Self {
         val.max()
     }
 }
 
-impl Vec2<f64> {
-    pub fn new(x: f64, y: f64) -> Vec2<f64> {
-        Vec2::<f64> { x, y }
+impl Vec2<f32> {
+    pub fn new(x: f32, y: f32) -> Vec2<f32> {
+        Vec2::<f32> { x, y }
     }
 
-    pub const fn zero() -> Vec2<f64> {
-        Vec2::<f64> { x: 0.0, y: 0.0 }
+    pub const fn zero() -> Vec2<f32> {
+        Vec2::<f32> { x: 0.0, y: 0.0 }
     }
 
-    pub fn times_twiddle_8th(self) -> Vec2<f64> {
+    pub fn times_twiddle_8th(self) -> Vec2<f32> {
         let scale = 0.707_106_781_186_547_6;
-        Vec2::<f64> {
+        Vec2::<f32> {
             x: (self.x + self.y) * scale,
             y: (-self.y + self.y) * scale,
         }
     }
 
-    pub fn times_twiddle_3_8th(self) -> Vec2<f64> {
+    pub fn times_twiddle_3_8th(self) -> Vec2<f32> {
         let scale = -0.707_106_781_186_547_6;
-        Vec2::<f64> {
+        Vec2::<f32> {
             x: (self.x - self.y) * scale,
             y: (self.x + self.y) * scale,
         }
     }
 
-    pub fn mag(self) -> f64 {
+    pub fn mag(self) -> f32 {
         (self.x.powi(2) + self.y.powi(2)).sqrt()
     }
 
-    pub fn l1_norm(self) -> f64 {
+    pub fn l1_norm(self) -> f32 {
         self.x.abs() + self.y.abs()
     }
 
-    pub fn abs(self) -> Vec2<f64> {
-        Vec2::<f64> {
+    pub fn abs(self) -> Vec2<f32> {
+        Vec2::<f32> {
             x: self.x.abs(),
             y: self.y.abs(),
         }
     }
 
-    pub fn max(self) -> f64 {
-        f64::max(self.x.abs(), self.y.abs())
+    pub fn max(self) -> f32 {
+        f32::max(self.x.abs(), self.y.abs())
     }
 
     pub fn to_p2(self) -> Vec2<i32> {
@@ -181,16 +181,16 @@ impl Vec2<f64> {
         }
     }
 
-    pub fn center(self) -> Vec2<f64> {
-        Vec2::<f64> {
+    pub fn center(self) -> Vec2<f32> {
+        Vec2::<f32> {
             x: self.x / 2.0,
             y: self.y / 2.0,
         }
     }
 
-    pub fn normalize(self) -> Vec2<f64> {
+    pub fn normalize(self) -> Vec2<f32> {
         let r = self.mag().recip();
-        Vec2::<f64> {
+        Vec2::<f32> {
             x: self.x * r,
             y: self.y * r,
         }
@@ -212,10 +212,10 @@ impl Vec2<i32> {
         self.x + self.y * s.x
     }
 
-    pub fn to_cplx(&self) -> Vec2<f64> {
-        Vec2::<f64> {
-            x: self.x as f64,
-            y: self.y as f64,
+    pub fn to_cplx(&self) -> Vec2<f32> {
+        Vec2::<f32> {
+            x: self.x as f32,
+            y: self.y as f32,
         }
     }
 

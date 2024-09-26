@@ -13,6 +13,6 @@ use crate::{
 #[derive(Copy, Clone)]
 struct Bubble {
     pos: Cplx,
-    radius: f64,
+    radius: f32,
     color: u32,
 }

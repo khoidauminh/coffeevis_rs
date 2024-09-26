@@ -14,7 +14,7 @@ pub fn draw_ring(prog: &mut crate::data::Program, stream: &mut crate::audio::Sam
 
     prog.pix.clear();
 
-    let rate = -1.0 / range as f64;
+    let rate = -1.0 / range as f32;
 
     let loop_range = size as usize * 2;
 
@@ -24,9 +24,9 @@ pub fn draw_ring(prog: &mut crate::data::Program, stream: &mut crate::audio::Sam
         let smp = stream[di] - stream[di.saturating_sub(1)].scale(0.7);
 
         let p = (smp * Cplx::new(prog.VOL_SCL * 0.65, 0.0) + Cplx::new(0.4, 0.4))
-            * crate::math::cos_sin(di as f64 * rate);
-        let x = (p.x * size as f64) as i32;
-        let y = (p.y * size as f64) as i32;
+            * crate::math::cos_sin(di as f32 * rate);
+        let x = (p.x * size as f32) as i32;
+        let y = (p.y * size as f32) as i32;
 
         let int = (smp.l1_norm() * 128.0) as u8;
 

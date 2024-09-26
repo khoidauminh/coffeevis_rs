@@ -1,8 +1,8 @@
 use crate::graphics::P2;
 
 enum GradientType {
-    Raidal(P2, f64),
-    Linear(P2, f64),
+    Raidal(P2, f32),
+    Linear(P2, f32),
 }
 
 struct Gradient {

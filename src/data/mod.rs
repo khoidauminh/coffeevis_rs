@@ -22,8 +22,8 @@ pub const DEFAULT_HZ: u64 = DEFAULT_MILLI_HZ as u64 / 1000;
 pub const DEFAULT_WAV_WIN: usize = 144 * INCREMENT;
 pub const DEFAULT_ROTATE_SIZE: usize = 289; // 3539;
 pub const PHASE_OFFSET: usize = SAMPLE_RATE / 50 / 4;
-pub const DEFAULT_VOL_SCL: f64 = 0.86;
-pub const DEFAULT_SMOOTHING: f64 = 0.65;
+pub const DEFAULT_VOL_SCL: f32 = 0.86;
+pub const DEFAULT_SMOOTHING: f32 = 0.65;
 
 /// Stop rendering when get_no_sample() exceeds this value;
 pub const STOP_RENDERING: u8 = 192;
@@ -74,8 +74,8 @@ pub(crate) struct Program {
     pub HZ_REPORT: bool,
 
     pub WAV_WIN: usize,
-    pub VOL_SCL: f64,
-    pub SMOOTHING: f64,
+    pub VOL_SCL: f32,
+    pub SMOOTHING: f32,
 
     WIN_W: u16,
     WIN_H: u16,
@@ -328,7 +328,7 @@ impl Program {
     }
 
     pub fn change_fps_frac(&mut self, fps: u32) {
-        let fps_f = (fps / 1000) as f64 + (fps % 1000) as f64;
+        let fps_f = (fps / 1000) as f32 + (fps % 1000) as f32;
         let rate = (1_000_000.0 / fps_f) as u64;
         self.MILLI_HZ = fps;
         self.REFRESH_RATE = std::time::Duration::from_micros(rate);

@@ -8,30 +8,30 @@ const COLOR: [u32; 3] = [0x66ff66, 0xaaffff, 0xaaaaff];
 
 const FFT_SIZE_HALF: usize = FFT_SIZE / 2;
 
-static DATA: RwLock<Vec<f64>> = RwLock::new(Vec::new());
-static MAX: RwLock<f64> = RwLock::new(0.0);
+static DATA: RwLock<Vec<f32>> = RwLock::new(Vec::new());
+static MAX: RwLock<f32> = RwLock::new(0.0);
 
-const FFT_SIZE_RECIP: f64 = 1.4 / FFT_SIZE as f64;
-const NORMALIZE_FACTOR: f64 = FFT_SIZE_RECIP;
+const FFT_SIZE_RECIP: f32 = 1.4 / FFT_SIZE as f32;
+const NORMALIZE_FACTOR: f32 = FFT_SIZE_RECIP;
 const BARS: usize = 48;
 
-fn dynamic_smooth(t: f64, a: f64) -> f64 {
+fn dynamic_smooth(t: f32, a: f32) -> f32 {
     ((t - a) / a).powi(2)
 }
 
-fn dynamic_smooth2(t: f64, b: f64) -> f64 {
+fn dynamic_smooth2(t: f32, b: f32) -> f32 {
     (b * t + 1.3).recip()
 }
 
 fn prepare(
     stream: &mut crate::audio::SampleArr,
     bar_num: usize,
-    volume_scale: f64,
-    prog_smoothing: f64,
+    volume_scale: f32,
+    prog_smoothing: f32,
 ) {
     let bar_num = bar_num + 1;
 
-    let bnf = bar_num as f64;
+    let bnf = bar_num as f32;
     let _l = stream.len();
 
     let mut LOCAL = DATA.write().unwrap();
@@ -55,19 +55,19 @@ fn prepare(
 
     let _max = MAX.write().unwrap();
 
-    const NORM: f64 = FFT_SIZE_RECIP;
+    const NORM: f32 = FFT_SIZE_RECIP;
 
     let mut data_f = data_f
         .iter_mut()
         .take(bar_num)
         .enumerate()
         .map(|(i, smp)| {
-            let scl = ((i + 2) as f64).log2().powi(2);
-            let smp_f64: f64 = (*smp).mag();
+            let scl = ((i + 2) as f32).log2().powi(2);
+            let smp_f32: f32 = (*smp).mag();
 
-            smp_f64 * volume_scale * scl * NORM
+            smp_f32 * volume_scale * scl * NORM
         })
-        .collect::<Vec<f64>>();
+        .collect::<Vec<f32>>();
 
     crate::audio::limiter(&mut data_f[..bar_num], 0.9, 7, 0.98, |x| x);
 
@@ -79,7 +79,7 @@ fn prepare(
         .take(bar_num)
         .enumerate()
         .for_each(|(i, (w, r))| {
-            let i_ = i as f64 * bnf;
+            let i_ = i as f32 * bnf;
             let smoothing = (0.095 - 0.055 * i_) * prog_smoothing;
             *w = math::interpolate::multiplicative_fall(*w, *r, 0.0, smoothing);
 
@@ -93,7 +93,7 @@ pub fn draw_bars(prog: &mut crate::data::Program, stream: &mut crate::audio::Sam
     use crate::math::{fast::cubed_sqrt, interpolate::smooth_step};
 
     let bar_num = prog.pix.width() / 2;
-    let bnf = bar_num as f64;
+    let bnf = bar_num as f32;
     let bnf_recip = 1.0 / bnf;
     let _l = stream.len();
 
@@ -102,14 +102,14 @@ pub fn draw_bars(prog: &mut crate::data::Program, stream: &mut crate::audio::Sam
     let LOCAL = DATA.write().unwrap();
 
     prog.pix.clear();
-    let sizef = Cplx::new(prog.pix.width() as f64, prog.pix.height() as f64);
+    let sizef = Cplx::new(prog.pix.width() as f32, prog.pix.height() as f32);
 
     let _bnfh = bnf * 0.5;
 
-    let mut iter: f64 = 0.4;
+    let mut iter: f32 = 0.4;
 
     let mut prev_index = 0;
-    let mut smoothed_smp = 0f64;
+    let mut smoothed_smp = 0f32;
 
     loop {
         let i_ = iter * bnf_recip;
@@ -163,10 +163,10 @@ pub fn draw_bars(prog: &mut crate::data::Program, stream: &mut crate::audio::Sam
 
 pub fn draw_bars_circle(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
     let size = prog.pix.height().min(prog.pix.width()) as i32;
-    let sizef = size as f64;
+    let sizef = size as f32;
 
     let bar_num = math::fast::isqrt(prog.pix.sizel());
-    let bnf = bar_num as f64;
+    let bnf = bar_num as f32;
     let bnf_recip = 1.0 / bnf;
     let _l = stream.len();
 
@@ -181,10 +181,10 @@ pub fn draw_bars_circle(prog: &mut crate::data::Program, stream: &mut crate::aud
 
     //let base_angle = math::cos_sin(1.0 / bnf);
 
-    const FFT_WINDOW: f64 = (FFT_SIZE >> 6) as f64 * 1.5;
+    const FFT_WINDOW: f32 = (FFT_SIZE >> 6) as f32 * 1.5;
 
     for i in 0..bar_num {
-        let i_ = i as f64 * bnf_recip;
+        let i_ = i as f32 * bnf_recip;
 
         let idxf = i_ * FFT_WINDOW;
         let _idx = idxf as usize;
@@ -203,8 +203,8 @@ pub fn draw_bars_circle(prog: &mut crate::data::Program, stream: &mut crate::aud
             hh + (sizef * angle.y) as i32 / 2,
         );
         let p2 = P2::new(
-            wh + ((size - bar) as f64 * angle.x) as i32 / 2,
-            hh + ((size - bar) as f64 * angle.y) as i32 / 2,
+            wh + ((size - bar) as f32 * angle.x) as i32 / 2,
+            hh + ((size - bar) as f32 * angle.y) as i32 / 2,
         );
 
         let _i2 = i << 2;
