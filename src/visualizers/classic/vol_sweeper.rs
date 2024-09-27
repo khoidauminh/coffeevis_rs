@@ -19,7 +19,7 @@ pub fn draw_vol_sweeper(para: &mut crate::data::Program, stream: &mut crate::aud
 
     let w = {
         let mut sum = 0.0;
-        for i in 0..SAMPLE_SIZE / 2 {
+        for i in 0..SAMPLE_SIZE / 4 {
             sum += stream[i].l1_norm();
         }
         (sum / (SAMPLE_SIZE / 3) as f32 * para.VOL_SCL * para.pix.width() as f32) as usize
@@ -36,11 +36,9 @@ pub fn draw_vol_sweeper(para: &mut crate::data::Program, stream: &mut crate::aud
     let mut local = DATA.write().unwrap();
 
     para.pix
-        .draw_rect_wh(P2::new(2, local.sweepi as i32), para.pix.width(), 1, 0);
+        .draw_rect_wh(P2::new(0, local.sweepi as i32), para.pix.width(), 1, 0);
     para.pix
-        .draw_rect_wh(P2::new(2, local.sweepi as i32), w, 1, color);
-
-    crate::visualizers::classic::dash_line::draw_dash_line(para, stream, false, 0, false);
+        .draw_rect_wh(P2::new(0, local.sweepi as i32), w, 1, color);
 
     match (local.sweepi >= para.pix.height(), local.pong) {
         (false, true) => local.sweepi = local.sweepi.wrapping_add(1),
@@ -57,5 +55,5 @@ pub fn draw_vol_sweeper(para: &mut crate::data::Program, stream: &mut crate::aud
         }
     }
 
-    stream.rotate_left(SAMPLE_SIZE >> 5);
+    stream.auto_rotate();
 }

@@ -2,8 +2,8 @@ use cpal::traits::{DeviceTrait, HostTrait};
 use cpal::SampleFormat;
 
 mod audio_buffer;
-use audio_buffer::AudioBuffer;
 use crate::math::increment;
+use audio_buffer::AudioBuffer;
 
 use std::ops::*;
 use std::sync::{
@@ -32,7 +32,7 @@ impl<'a> std::ops::DerefMut for SampleArr<'a> {
     }
 }
 
-static BUFFER: GSA = Mutex::new(AudioBuffer::new());
+static BUFFER: GSA = Mutex::new(AudioBuffer::new::<{ audio_buffer::BUFFER_SIZE }>());
 
 static NO_SAMPLE: AtomicU8 = AtomicU8::new(0);
 
@@ -198,7 +198,11 @@ impl<const N: usize> MovingMaximum<N> {
         }
 
         if old == self.max {
-            self.max = self.buffer.iter().take(self.size).fold(new, |acc, x| acc.max(*x));
+            self.max = self
+                .buffer
+                .iter()
+                .take(self.size)
+                .fold(new, |acc, x| acc.max(*x));
         }
 
         return self.max;

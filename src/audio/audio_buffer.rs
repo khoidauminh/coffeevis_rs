@@ -6,13 +6,10 @@ const AMP_PERSIST_LIMIT: f32 = 0.05;
 const AMP_TRIGGER_THRESHOLD: f32 = 0.85;
 const SILENCE_INDEX: u16 = 24;
 
-const BUFFER_SIZE_POWER: usize = crate::data::POWER;
-const BUFFER_SIZE: usize = 1 << BUFFER_SIZE_POWER;
-const SIZE_MASK: usize = BUFFER_SIZE - 1;
+pub const BUFFER_SIZE_POWER: usize = crate::data::POWER;
+pub const BUFFER_SIZE: usize = 1 << BUFFER_SIZE_POWER;
 
 const REACT_SPEED: f32 = 0.025;
-
-type BufferArray = [Cplx; BUFFER_SIZE];
 
 /// This is a struct that acts like a regular buffer
 /// but uses an offset index.
@@ -21,17 +18,17 @@ type BufferArray = [Cplx; BUFFER_SIZE];
 /// send input data that quickly between each rendering.
 /// Moreover, the visualizers don't use all of the
 /// data sent in in one rendering. Therefore, one
-/// solution was to use one slice of then rotate
+/// solution is to use one slice of then rotate
 /// it to get to the next one.
 ///
-/// AudioBuffer used the mentioned the offset index to
+/// AudioBuffer used the mentioned offset index to
 /// simulate rotating and bypass having to move elemenents.
 ///
 ///
 /// To index as performantly as possible, AudioBuffer only allows
 /// powers of 2 lengths.
 pub struct AudioBuffer {
-    buffer: BufferArray,
+    buffer: [Cplx; BUFFER_SIZE],
 
     size_mask: usize,
     /// Where offset [0] starts
@@ -57,45 +54,32 @@ pub struct AudioBuffer {
 impl std::ops::Index<usize> for AudioBuffer {
     type Output = Cplx;
     fn index(&self, index: usize) -> &Self::Output {
-        &self.buffer[index.wrapping_add(self.offset) & SIZE_MASK]
+        &self.buffer[index.wrapping_add(self.offset) & self.size_mask]
     }
 }
 
 impl std::ops::IndexMut<usize> for AudioBuffer {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        &mut self.buffer[index.wrapping_add(self.offset) & SIZE_MASK]
+        &mut self.buffer[index.wrapping_add(self.offset) & self.size_mask]
     }
 }
-
-impl std::ops::Index<isize> for AudioBuffer {
-    type Output = Cplx;
-    fn index(&self, index: isize) -> &Self::Output {
-        &self.buffer[self.offset.wrapping_add_signed(index) & SIZE_MASK]
-    }
-}
-
-impl std::ops::IndexMut<isize> for AudioBuffer {
-    fn index_mut(&mut self, index: isize) -> &mut Self::Output {
-        &mut self.buffer[self.offset.wrapping_add_signed(index) & SIZE_MASK]
-    }
-}
-
-use std::ops::Range;
 
 fn write_sample<T: cpal::Sample<Float = f32>>(smp: &mut Cplx, smp_in: &[T]) {
-    smp.x = smp_in[0].to_float_sample() as f32;
-    smp.y = smp_in[1].to_float_sample() as f32;
+    smp.x = smp_in[0].to_float_sample();
+    smp.y = smp_in[1].to_float_sample();
 }
 
 impl AudioBuffer {
-    pub const fn new() -> Self {
+    pub const fn new<const BSIZE: usize>() -> Self {
+        let size_mask = (BSIZE.next_power_of_two() / 2) - 1;
+
         Self {
             buffer: [Cplx::zero(); BUFFER_SIZE],
             offset: 0,
             write_point: 0,
             input_size: 1000,
 
-            size_mask: SIZE_MASK,
+            size_mask,
 
             rotate_size: DEFAULT_ROTATE_SIZE,
             rotates_since_write: 0,
@@ -159,24 +143,18 @@ impl AudioBuffer {
         const MAX_FACTOR: f32 = AMP_TRIGGER_THRESHOLD / AMP_PERSIST_LIMIT;
 
         if self.max > AMP_TRIGGER_THRESHOLD {
-            1.0
-        } else if self.max < AMP_PERSIST_LIMIT {
-            MAX_FACTOR
-        } else {
-            AMP_TRIGGER_THRESHOLD / self.max
+            return 1.0;
         }
-    }
 
-    pub fn normalize_factor_average(&self) -> f32 {
-        AMP_TRIGGER_THRESHOLD
-            / self
-                .average
-                .min(AMP_TRIGGER_THRESHOLD)
-                .max(AMP_PERSIST_LIMIT)
+        if self.max < AMP_PERSIST_LIMIT {
+            return MAX_FACTOR;
+        }
+
+        AMP_TRIGGER_THRESHOLD / self.max
     }
 
     pub fn to_vec(&mut self) -> Vec<Cplx> {
-        let mut o = vec![Cplx::zero(); BUFFER_SIZE];
+        let mut o = vec![Cplx::zero(); self.buffer.len()];
         o.iter_mut()
             .zip(self.buffer.iter().cycle().skip(self.offset))
             .for_each(|(out, inp)| *out = *inp);
@@ -201,26 +179,20 @@ impl AudioBuffer {
         let input_size = data.len();
         self.input_size = input_size / 2;
 
-        let mut max_l = 0.0f32;
-        let mut max_r = 0.0f32;
+        let mut max = 0.0f32;
 
         let mut silent_samples = 0u16;
 
         // Stop reading once the input is quiet enough to fill the buffer with "zeros".
-        let stop_reading =
-            self.is_silent((BUFFER_SIZE / self.input_size).try_into().unwrap_or(255u8));
+        let stop_reading = self.is_silent((self.buffer.len() / self.input_size).min(255) as u8);
 
         for chunk in data.chunks_exact(2) {
             let smp = &mut self.buffer[self.write_point];
             write_sample(smp, chunk);
 
-            let left = smp.x.abs();
-            let right = smp.y.abs();
+            max = max.max(smp.x.abs()).max(smp.y.abs());
 
-            max_l = max_l.max(left);
-            max_r = max_r.max(right);
-
-            if max_l < SILENCE_LIMIT && max_r < SILENCE_LIMIT {
+            if max < SILENCE_LIMIT {
                 silent_samples += 1;
 
                 // Only check the first SILENCE_INDEX samples
@@ -231,8 +203,6 @@ impl AudioBuffer {
 
             self.write_point = self.index_add(self.write_point, 1);
         }
-
-        let max = max_r.max(max_l);
 
         self.max = crate::math::interpolate::multiplicative_fall(
             self.max,
@@ -253,11 +223,11 @@ impl AudioBuffer {
             self.offset = self.index_sub(self.write_point, self.input_size * 2);
         }
 
-        if silent {
-            self.silent = self.silent.saturating_add(1);
+        self.silent = if silent {
+            self.silent.saturating_add(1)
         } else {
-            self.silent = 0;
-        }
+            0
+        };
 
         self.average_rotates_since_write =
             (self.average_rotates_since_write + self.rotates_since_write).max(2) / 2;
@@ -281,26 +251,5 @@ impl AudioBuffer {
             *smp = smp.scale(scale_up_factor);
             write_point = self.index_add(write_point, 1);
         }
-    }
-
-    pub fn checked_fill_zero(&mut self) {
-        if self.is_silent(3) {
-            self.buffer.fill(Cplx::zero())
-        }
-    }
-
-    #[doc(hidden)]
-    pub fn range(&self, index: Range<usize>) -> Vec<Cplx> {
-        let range_ = index.start - index.end;
-        let mut o = vec![Cplx::zero(); range_];
-        self.buffer
-            .iter()
-            .cycle()
-            .skip(if index.start == 0 { 0 } else { index.end - 1 })
-            .take(range_)
-            .zip(o.iter_mut())
-            .for_each(|(inp, out)| *out = *inp);
-
-        o
     }
 }

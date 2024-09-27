@@ -185,7 +185,7 @@ pub fn draw_oscilloscope2(prog: &mut crate::data::Program, stream: &mut crate::a
     prog.pix.clear();
 
     let mut sum = 0.0;
-    let mut smp = stream[0isize];
+    let mut smp = stream[0];
 
     let mut zero_x = 0;
     let mut zero_y = 0;
@@ -273,7 +273,7 @@ pub fn draw_oscilloscope3(prog: &mut crate::data::Program, stream: &mut crate::a
     let mut zero_x = 0;
     let mut zero_y = 0;
 
-    let mut ssmp = stream[-5isize];
+    let mut ssmp = stream[-5isize as usize];
     let mut old = ssmp;
     let mut old2 = old;
 
@@ -286,7 +286,7 @@ pub fn draw_oscilloscope3(prog: &mut crate::data::Program, stream: &mut crate::a
     let mut bass_sum = 0.0;
 
     for i in -4isize..0 {
-        ssmp = linearfc(ssmp, stream[i], 0.01);
+        ssmp = linearfc(ssmp, stream[i as usize], 0.01);
         old2 = old;
         old = ssmp;
     }
@@ -332,7 +332,7 @@ pub fn draw_oscilloscope3(prog: &mut crate::data::Program, stream: &mut crate::a
         let mut smp_min = Cplx::new(1.0, 1.0);
 
         for i in (di..di + wave_scale_factor).step_by(2) {
-            let smp = &stream[i];
+            let smp = &stream[i as usize];
 
             smp_max.x = smp_max.x.max(smp.x);
             smp_min.x = smp_min.x.min(smp.x);
