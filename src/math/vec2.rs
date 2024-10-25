@@ -28,6 +28,16 @@ where
     }
 }
 
+impl<T> AddAssign for Vec2<T>
+where
+    T: Add<Output = T> + Copy,
+{
+    fn add_assign(&mut self, other: Vec2<T>) {
+        self.x = self.x + other.x;
+        self.y = self.y + other.y;
+    }
+}
+
 impl<T> Sub for Vec2<T>
 where
     T: Sub<Output = T> + Copy,
@@ -54,6 +64,15 @@ where
     }
 }
 
+impl<T> MulAssign for Vec2<T>
+where
+    T: Add<Output = T> + Sub<Output = T> + Mul<Output = T> + Copy,
+{
+    fn mul_assign(&mut self, other: Vec2<T>) {
+        *self = *self * other;
+    }
+}
+
 impl<T> Mul<T> for Vec2<T>
 where
     T: Mul<Output = T> + Copy,
@@ -65,6 +84,16 @@ where
             x: self.x * other,
             y: self.y * other,
         }
+    }
+}
+
+impl<T> MulAssign<T> for Vec2<T>
+where
+    T: Mul<Output = T> + Copy,
+{
+    fn mul_assign(&mut self, f: T) {
+        self.x = self.x * f;
+        self.y = self.y * f;
     }
 }
 

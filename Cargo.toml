@@ -13,14 +13,15 @@ readme = "README.md"
 
 [dependencies]
 cpal = "0.15"
-softbuffer = "0.4"
+softbuffer = { version = "0.4", default-features = false }
 winit = { version =  "0.30", default-features = false }
 qoi = "0.4.1"
 minifb = { version = "0.27", optional = true }
 crossterm = { version = "0.27", optional = true }
 
 [features]
-default = ["winit/rwh_06", "winit/wayland", "winit/x11"]
+default = ["winit/rwh_06", "winit/wayland", "winit/x11", "softbuffer/wayland", "softbuffer/x11"]
+pure_wayland = ["winit/rwh_06", "winit/wayland", "softbuffer/wayland"]
 gnome_decor = ["winit/wayland-csd-adwaita"]
 terminal = ["dep:crossterm"]
 minifb = ["dep:minifb"]

@@ -270,8 +270,8 @@ use crate::math::interpolate::linearfc;
 pub fn draw_oscilloscope3(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
     let l = stream.input_size() / 2;
 
-    let mut zero_x = 0;
-    let mut zero_y = 0;
+    let mut zero_x = 0usize;
+    let mut zero_y = 0usize;
 
     let mut ssmp = stream[-5isize as usize];
     let mut old = ssmp;
@@ -298,6 +298,7 @@ pub fn draw_oscilloscope3(prog: &mut crate::data::Program, stream: &mut crate::a
         if zero_x == 0 && old2.x > 0.0 && ssmp.x < 0.0 {
             zero_x = i
         }
+
         if zero_y == 0 && old2.y > 0.0 && ssmp.y < 0.0 {
             zero_y = i
         }

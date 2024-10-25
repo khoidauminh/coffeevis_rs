@@ -23,7 +23,7 @@ pub fn draw_slice(prog: &mut crate::data::Program, stream: &mut crate::audio::Sa
     let big_radius = (radius as i32 / 2) * 9 / 10;
     let big_radius_f = big_radius as f32;
 
-    let sizef = stream.input_size() as f32;
+    let sizef = (stream.input_size()+1) as f32;
     let bass_low = 1.0 / sizef * 0.5;
     let bass_high = 1.0 / sizef * 2.0;
     // Dear god

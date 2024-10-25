@@ -46,7 +46,7 @@ fn prepare(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr
 
     fft.iter_mut().take(RANGE).enumerate().for_each(|(i, smp)| {
         let scalef = math::fast::ilog2(i + 1) as f32 * (1.5 - i as f32 / RANGEF) * 1.621;
-        *smp = *smp * scalef;
+        *smp *= scalef;
     });
 
     crate::audio::limiter(&mut fft[0..RANGE], 1.5, 7, prog.VOL_SCL * 2.0, |x| x.max());

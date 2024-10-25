@@ -102,7 +102,7 @@ pub fn compute_fft_iterative(a: &mut [Cplx]) {
     let mut window = 8usize;
 
     while window <= length {
-        let root = TWIDDLE_FACTORS[depth];
+        let root = unsafe { *TWIDDLE_FACTORS.get_unchecked(depth) };
 
         a.chunks_exact_mut(window).for_each(|chunk| {
             let (left, right) = chunk.split_at_mut(window / 2);
@@ -122,7 +122,7 @@ pub fn compute_fft_iterative(a: &mut [Cplx]) {
                     *smpr = *smpl - q;
                     *smpl = *smpl + q;
 
-                    factor = factor * root;
+                    factor *= root;
                 });
         });
 
