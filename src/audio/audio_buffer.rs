@@ -182,7 +182,7 @@ impl AudioBuffer {
         let mut max = 0.0f32;
 
         let mut silent_samples = 0u16;
-
+        
         // Stop reading once the input is quiet enough to fill the buffer with "zeros".
         let stop_reading = self.is_silent((self.buffer.len() / self.input_size).min(255) as u8);
 

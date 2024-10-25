@@ -63,7 +63,7 @@ pub fn draw_vectorscope(prog: &mut crate::data::Program, stream: &mut crate::aud
 
     draw_cross(prog);
 
-    stream.auto_rotate();
+    stream.rotate_left(prog.WAV_WIN);
 }
 
 pub fn draw_oscilloscope(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
