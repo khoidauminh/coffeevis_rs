@@ -168,7 +168,7 @@ impl Program {
 
             WIN_W: DEFAULT_SIZE_WIN,
             WIN_H: DEFAULT_SIZE_WIN,
-            
+
             #[cfg(feature = "terminal")]
             CON_W: 50,
             #[cfg(feature = "terminal")]
@@ -440,7 +440,7 @@ impl Program {
                 (self.WIN_W, self.WIN_H) = size;
                 self.pix.resize(size.0 as usize, size.1 as usize);
             }
-            
+
             #[cfg(feature = "minifb")]
             Mode::WinLegacy => {
                 (self.WIN_W, self.WIN_H) = size;

@@ -4,7 +4,7 @@ use crate::math::Cplx;
 const SILENCE_LIMIT: f32 = 0.001;
 const AMP_PERSIST_LIMIT: f32 = 0.05;
 const AMP_TRIGGER_THRESHOLD: f32 = 0.85;
-const SILENCE_INDEX: u16 = 24;
+const SILENCE_INDEX: u8 = 24;
 
 pub const BUFFER_SIZE_POWER: usize = crate::data::POWER;
 pub const BUFFER_SIZE: usize = 1 << BUFFER_SIZE_POWER;
@@ -54,13 +54,19 @@ pub struct AudioBuffer {
 impl std::ops::Index<usize> for AudioBuffer {
     type Output = Cplx;
     fn index(&self, index: usize) -> &Self::Output {
-        &self.buffer[index.wrapping_add(self.offset) & self.size_mask]
+        unsafe {
+            self.buffer
+                .get_unchecked(index.wrapping_add(self.offset) & self.size_mask)
+        }
     }
 }
 
 impl std::ops::IndexMut<usize> for AudioBuffer {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        &mut self.buffer[index.wrapping_add(self.offset) & self.size_mask]
+        unsafe {
+            self.buffer
+                .get_unchecked_mut(index.wrapping_add(self.offset) & self.size_mask)
+        }
     }
 }
 
@@ -70,8 +76,8 @@ fn write_sample<T: cpal::Sample<Float = f32>>(smp: &mut Cplx, smp_in: &[T]) {
 }
 
 impl AudioBuffer {
-    pub const fn new<const BSIZE: usize>() -> Self {
-        let size_mask = (BSIZE.next_power_of_two() / 2) - 1;
+    pub const fn new() -> Self {
+        let size_mask = (BUFFER_SIZE.next_power_of_two() / 2) - 1;
 
         Self {
             buffer: [Cplx::zero(); BUFFER_SIZE],
@@ -181,24 +187,22 @@ impl AudioBuffer {
 
         let mut max = 0.0f32;
 
-        let mut silent_samples = 0u16;
-        
         // Stop reading once the input is quiet enough to fill the buffer with "zeros".
         let stop_reading = self.is_silent((self.buffer.len() / self.input_size).min(255) as u8);
 
+        let mut silent_samples = 0;
+
         for chunk in data.chunks_exact(2) {
-            let smp = &mut self.buffer[self.write_point];
+            let smp = unsafe { self.buffer.get_unchecked_mut(self.write_point) };
             write_sample(smp, chunk);
 
             max = max.max(smp.x.abs()).max(smp.y.abs());
 
-            if max < SILENCE_LIMIT {
-                silent_samples += 1;
+            silent_samples += (max < SILENCE_LIMIT) as u8;
 
-                // Only check the first SILENCE_INDEX samples
-                if silent_samples >= SILENCE_INDEX && stop_reading {
-                    break;
-                }
+            // Only check the first SILENCE_INDEX samples
+            if silent_samples >= SILENCE_INDEX && stop_reading {
+                break;
             }
 
             self.write_point = self.index_add(self.write_point, 1);
@@ -247,7 +251,7 @@ impl AudioBuffer {
         let mut write_point = self.index_sub(self.write_point, self.input_size);
 
         for _ in 0..self.input_size {
-            let smp = &mut self.buffer[write_point];
+            let smp = unsafe { self.buffer.get_unchecked_mut(write_point) };
             *smp = smp.scale(scale_up_factor);
             write_point = self.index_add(write_point, 1);
         }

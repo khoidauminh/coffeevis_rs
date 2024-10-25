@@ -115,7 +115,7 @@ impl VisNavigator {
 
         let current = self.current_vis();
 
-        *crate::audio::NORMALIZE.write().unwrap() = current.request();
+        crate::audio::set_normalizer(current.request());
 
         current
     }
@@ -127,7 +127,7 @@ impl VisNavigator {
 
         let current = self.current_vis();
 
-        *crate::audio::NORMALIZE.write().unwrap() = current.request();
+        crate::audio::set_normalizer(current.request());
 
         current
     }

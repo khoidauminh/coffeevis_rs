@@ -7,8 +7,8 @@ use audio_buffer::AudioBuffer;
 
 use std::ops::*;
 use std::sync::{
-    atomic::{AtomicU8, Ordering},
-    Mutex, MutexGuard, RwLock,
+    atomic::{AtomicBool, AtomicU8, Ordering::Relaxed},
+    Mutex, MutexGuard,
 };
 
 use crate::data::SAMPLE_RATE;
@@ -16,30 +16,27 @@ use crate::data::SAMPLE_RATE;
 /// Global sample array
 type GSA = Mutex<AudioBuffer>;
 
-pub(crate) struct SampleArr<'a>(MutexGuard<'a, AudioBuffer>);
-
-impl<'a> std::ops::Deref for SampleArr<'a> {
-    type Target = MutexGuard<'a, AudioBuffer>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl<'a> std::ops::DerefMut for SampleArr<'a> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-static BUFFER: GSA = Mutex::new(AudioBuffer::new::<{ audio_buffer::BUFFER_SIZE }>());
+pub(crate) type SampleArr<'a> = MutexGuard<'a, AudioBuffer>;
 
 static NO_SAMPLE: AtomicU8 = AtomicU8::new(0);
 
-pub static NORMALIZE: RwLock<bool> = RwLock::new(true);
+pub fn get_buf() -> SampleArr<'static> {
+    static BUFFER: GSA = Mutex::new(AudioBuffer::new());
+    BUFFER.lock().unwrap()
+}
+
+pub fn get_no_sample() -> u8 {
+    NO_SAMPLE.load(Relaxed)
+}
+
+pub fn set_no_sample(ns: u8) {
+    NO_SAMPLE.store(ns, Relaxed);
+}
+
+pub static NORMALIZE: AtomicBool = AtomicBool::new(true);
 
 pub fn set_normalizer(b: bool) {
-    *NORMALIZE.write().unwrap() = b;
+    NORMALIZE.store(b, Relaxed);
 }
 
 pub fn get_source() -> cpal::Stream {
@@ -92,25 +89,12 @@ pub fn get_source() -> cpal::Stream {
 }
 
 pub fn read_samples<T: cpal::Sample<Float = f32>>(data: &[T]) {
-    let _l = data.len();
-
-    let _i = 0usize;
-    let _s = 0usize;
-
-    let mut b = BUFFER.lock().unwrap();
+    let mut b = get_buf();
 
     b.read_from_input(data);
     b.checked_normalize();
-    let ns = b.silent();
-    NO_SAMPLE.store(ns, Ordering::Relaxed);
-}
 
-pub fn get_buf() -> SampleArr<'static> {
-    SampleArr(BUFFER.lock().unwrap())
-}
-
-pub fn get_no_sample() -> u8 {
-    NO_SAMPLE.load(Ordering::Relaxed)
+    set_no_sample(b.silent());
 }
 
 pub struct MovingAverage<T, const N: usize> {
