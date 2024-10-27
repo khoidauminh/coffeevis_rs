@@ -14,18 +14,18 @@ use std::sync::{
 use crate::data::SAMPLE_RATE;
 
 /// Global sample array
-type GSA = Mutex<AudioBuffer>;
+type GlobalSampleBuffer = Mutex<AudioBuffer>;
 
 pub(crate) type SampleArr<'a> = MutexGuard<'a, AudioBuffer>;
 
 static NO_SAMPLE: AtomicU8 = AtomicU8::new(0);
 
-pub fn get_buf() -> SampleArr<'static> {
-    static BUFFER: GSA = Mutex::new(AudioBuffer::new());
+pub(crate) fn get_buf() -> SampleArr<'static> {
+    static BUFFER: GlobalSampleBuffer = Mutex::new(AudioBuffer::new());
     BUFFER.lock().unwrap()
 }
 
-pub fn get_no_sample() -> u8 {
+pub(crate) fn get_no_sample() -> u8 {
     NO_SAMPLE.load(Relaxed)
 }
 
@@ -189,7 +189,7 @@ impl<const N: usize> MovingMaximum<N> {
                 .fold(new, |acc, x| acc.max(*x));
         }
 
-        return self.max;
+        self.max
     }
 }
 

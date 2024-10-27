@@ -92,7 +92,7 @@ pub fn draw_wavelet(prog: &mut crate::data::Program, stream: &mut crate::audio::
         for x in 0..pw {
             let xt = WT_SIZE as f32 * x as f32 / pw as f32;
 
-            let smp = wavelet_xy_interpolated(&mut w, Cplx::new(xt, yt), WT_POWER);
+            let smp = wavelet_xy_interpolated(&w, Cplx::new(xt, yt), WT_POWER);
 
             let r = crate::math::squish(smp.x, 0.25, 255.9) as u8;
             let b = crate::math::squish(smp.y, 0.25, 255.9) as u8;

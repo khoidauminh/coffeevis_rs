@@ -27,17 +27,17 @@ pub fn compute_fft_iterative(a: &mut [Cplx]) {
     for pair in a.chunks_exact_mut(2) {
         let q = pair[1];
         pair[1] = pair[0] - q;
-        pair[0] = pair[0] + q;
+        pair[0] += q;
     }
 
     for four in a.chunks_exact_mut(4) {
         let mut q = four[2];
         four[2] = four[0] - q;
-        four[0] = four[0] + q;
+        four[0] += q;
 
         q = four[3].times_minus_i();
         four[3] = four[1] - q;
-        four[1] = four[1] + q;
+        four[1] += q;
     }
 
     const TWIDDLE_FACTORS: [Cplx; 16] = [
@@ -109,7 +109,7 @@ pub fn compute_fft_iterative(a: &mut [Cplx]) {
 
             let q = right[0];
             right[0] = left[0] - q;
-            left[0] = left[0] + q;
+            left[0] += q;
 
             let mut factor = root;
 
@@ -120,7 +120,7 @@ pub fn compute_fft_iterative(a: &mut [Cplx]) {
                     let q = *smpr * factor;
 
                     *smpr = *smpl - q;
-                    *smpl = *smpl + q;
+                    *smpl += q;
 
                     factor *= root;
                 });

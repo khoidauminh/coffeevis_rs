@@ -44,17 +44,15 @@ pub fn grayb(r: u8, g: u8, b: u8) -> u8 {
 }
 
 pub fn u8_mul(a: u8, b: u8) -> u8 {
-    let [out, _] = (a as u16 * b as u16).to_be_bytes();
-    out
+    (a as u16 * b as u16).to_be_bytes()[0]
 }
 
 pub fn u32_fade(this: u32, other: u8) -> u32 {
     let [aa, r, g, b] = this.to_be_bytes();
-    let a = u8_mul(aa, other);
     let r = u8_mul(r, other);
     let g = u8_mul(g, other);
     let b = u8_mul(b, other);
-    u32::from_be_bytes([a, r, g, b])
+    u32::from_be_bytes([aa, r, g, b])
 }
 
 pub fn alpha_mix(a: u8, b: u8) -> u8 {

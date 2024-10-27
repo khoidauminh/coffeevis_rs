@@ -26,10 +26,6 @@ impl Mode {
     }*/
 
     pub fn is_con(&self) -> bool {
-        match self {
-            Mode::ConAlpha | Mode::ConBlock | Mode::ConBrail => true,
-
-            _ => false,
-        }
+        matches!(self, Mode::ConAlpha | Mode::ConBlock | Mode::ConBrail)
     }
 }

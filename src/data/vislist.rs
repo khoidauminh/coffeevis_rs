@@ -207,7 +207,7 @@ impl VisNavigator {
             self.index_list = 1;
         }
 
-        return selected_vis;
+        selected_vis
     }
 }
 

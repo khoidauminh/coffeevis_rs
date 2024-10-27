@@ -88,7 +88,7 @@ pub fn integrate_inplace(a: &mut [Cplx], factor: usize, norm: bool) {
     while si < first_iter {
         table[fi] = a[si];
 
-        sum = sum + a[si];
+        sum += a[si];
         a[si] = sum;
 
         fi += 1;
@@ -99,8 +99,8 @@ pub fn integrate_inplace(a: &mut [Cplx], factor: usize, norm: bool) {
 
     let bound = l.saturating_sub(factor);
     while si < bound {
-        sum = sum - table[fi];
-        sum = sum + a[si];
+        sum -= table[fi];
+        sum += a[si];
         table[fi] = a[si];
 
         a[si] = sum;
@@ -110,7 +110,7 @@ pub fn integrate_inplace(a: &mut [Cplx], factor: usize, norm: bool) {
     }
 
     while si < l {
-        sum = sum - table[fi];
+        sum -= table[fi];
         a[si] = sum;
 
         si += 1;

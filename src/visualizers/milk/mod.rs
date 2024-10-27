@@ -1,4 +1,4 @@
-#[allow(warnings)]
+#![allow(warnings)]
 use crate::{
     graphics,
     math::{self, Cplx},

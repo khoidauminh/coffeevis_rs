@@ -99,7 +99,7 @@ pub fn draw_bars(prog: &mut crate::data::Program, stream: &mut crate::audio::Sam
 
     prepare(stream, bar_num, prog.VOL_SCL, prog.SMOOTHING);
 
-    let LOCAL = DATA.write().unwrap();
+    let LOCAL = DATA.read().unwrap();
 
     prog.pix.clear();
     let sizef = Cplx::new(prog.pix.width() as f32, prog.pix.height() as f32);
@@ -175,7 +175,7 @@ pub fn draw_bars_circle(prog: &mut crate::data::Program, stream: &mut crate::aud
 
     prepare(stream, bar_num, prog.VOL_SCL, prog.SMOOTHING);
 
-    let LOCAL = DATA.write().unwrap();
+    let LOCAL = DATA.read().unwrap();
 
     prog.pix.clear();
 

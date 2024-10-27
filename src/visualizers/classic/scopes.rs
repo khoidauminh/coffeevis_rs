@@ -116,8 +116,8 @@ pub fn draw_oscilloscope(prog: &mut crate::data::Program, stream: &mut crate::au
     if zeroi == stream_.len() {
         zeroi = UP_COUNT;
     } else {
-        for rest in zeroi + 1..stream_.len() {
-            bass += stream_[rest].l1_norm();
+        for rest in stream_.iter().skip(zeroi + 1) {
+            bass += rest.l1_norm();
         }
     }
 
@@ -278,8 +278,8 @@ pub fn draw_oscilloscope3(prog: &mut crate::data::Program, stream: &mut crate::a
     let mut old2 = old;
 
     let (width, height) = prog.pix.sizet();
-    let width_top_h = width as i32 / 2;
-    let height_top_h = height as i32 / 2;
+    let width_top_h = width / 2;
+    let height_top_h = height / 2;
 
     let scale = prog.pix.height() as f32 * prog.VOL_SCL * 0.45;
 

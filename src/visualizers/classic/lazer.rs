@@ -40,7 +40,7 @@ pub fn draw_lazer(para: &mut crate::data::Program, stream: &mut crate::audio::Sa
 
     let mut LOCAL = DATA.write().unwrap();
 
-    a = a * LOCAL.p0;
+    a *= LOCAL.p0;
 
     LOCAL.p0.x = (LOCAL.p0.x + a.x + w) % w;
     LOCAL.p0.y = (LOCAL.p0.y + a.y + h) % h;

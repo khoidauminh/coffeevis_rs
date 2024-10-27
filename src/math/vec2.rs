@@ -51,6 +51,15 @@ where
     }
 }
 
+impl<T> SubAssign for Vec2<T>
+where
+    T: Sub<Output = T> + Copy,
+{
+    fn sub_assign(&mut self, other: Vec2<T>) {
+        *self = *self - other;
+    }
+}
+
 impl<T> Mul<Vec2<T>> for Vec2<T>
 where
     T: Add<Output = T> + Sub<Output = T> + Mul<Output = T> + Copy,
@@ -241,14 +250,14 @@ impl Vec2<i32> {
         self.x + self.y * s.x
     }
 
-    pub fn to_cplx(&self) -> Vec2<f32> {
+    pub fn to_cplx(self) -> Vec2<f32> {
         Vec2::<f32> {
             x: self.x as f32,
             y: self.y as f32,
         }
     }
 
-    pub fn center(&self) -> Vec2<i32> {
+    pub fn center(self) -> Vec2<i32> {
         Vec2::<i32> {
             x: self.x / 2,
             y: self.y / 2,

@@ -9,9 +9,7 @@ thread_local! {
 }
 
 fn blend(c1: u32, c2: u32) -> u32 {
-    let rgb = c1.add(c2);
-    let rgb = rgb.wrapping_shl(4);
-    rgb
+    c1.add(c2).wrapping_shl(4)
 }
 
 const GREEN: u32 = 0xFF_00_FF_00;
@@ -23,7 +21,7 @@ pub fn draw_slice(prog: &mut crate::data::Program, stream: &mut crate::audio::Sa
     let big_radius = (radius as i32 / 2) * 9 / 10;
     let big_radius_f = big_radius as f32;
 
-    let sizef = (stream.input_size()+1) as f32;
+    let sizef = (stream.input_size() + 1) as f32;
     let bass_low = 1.0 / sizef * 0.5;
     let bass_high = 1.0 / sizef * 2.0;
     // Dear god
@@ -43,8 +41,8 @@ pub fn draw_slice(prog: &mut crate::data::Program, stream: &mut crate::audio::Sa
                 )
             };
 
-            high = high + (stream[i] * j_high);
-            bin = bin + (stream[i] * j);
+            high += stream[i] * j_high;
+            bin += stream[i] * j;
         }
 
         ((bin.l1_norm() / sizef * 2.).min(TAU), high.l1_norm())

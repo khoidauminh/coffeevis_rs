@@ -1,11 +1,11 @@
-use crate::{data::Program, graphics::blend::Blend};
+use crate::data::Program;
 
 macro_rules! eprintln_red {
     () => {
-        eprintln!();
+        eprintln!()
     };
     ($arg:tt) => {
-        eprintln!("\x1B[31;1m{}\x1B[0m", $arg);
+        eprintln!("\x1B[31;1m{}\x1B[0m", $arg)
     };
 }
 
@@ -14,7 +14,7 @@ pub(crate) use eprintln_red;
 #[allow(unused_macros)]
 macro_rules! format_red {
     () => {
-        format!();
+        format!()
     };
     ($arg:tt) => {
         format!("\x1B[31;1m{}\x1B[0m", $arg)
@@ -24,7 +24,7 @@ macro_rules! format_red {
 #[allow(unused_macros)]
 macro_rules! panic_red {
     () => {
-        format!();
+        format!()
     };
     ($arg:tt) => {
         panic!("\x1B[31;1m{}\x1B[0m", $arg)
@@ -32,9 +32,9 @@ macro_rules! panic_red {
 }
 
 const RESO_WARNING: &str = "\
-	Coffeevis is a CPU program, it is not advised \
-	to run it at large a size.\
-	";
+    Coffeevis is a CPU program, it is not advised \
+    to run it at large a size.\
+    ";
 
 impl Program {
     pub fn eval_args(mut self, args: &mut dyn Iterator<Item = &String>) -> Self {
@@ -45,17 +45,8 @@ impl Program {
         let mut args = args.peekable();
         args.next();
 
-        let mut color = [0u8; 4];
-
-        loop {
-            let arg = match args.next() {
-                Some(st) => {
-                    // println!("{}", st);
-                    st.as_str()
-                }
-                None => break,
-            };
-
+        while let Some(arg) = args.next() {
+            let arg = arg.as_str();
             match arg {
                 "--win" => self.mode = Win,
 
@@ -99,8 +90,8 @@ impl Program {
                 "--fps" => {
                     let rate = args.next().expect(
                         "\
-							Argument error: Expected value for refresh rate.\n\
-							Available values: {float} or inf\
+                            Argument error: Expected value for refresh rate.\n\
+                            Available values: {float} or inf\
                         ",
                     );
 
@@ -134,33 +125,11 @@ impl Program {
                     self.RESIZE = true;
                 }
 
-                "--transparent" => match args.peek() {
-                    Some(&string) => {
-                        self.transparency = match string.parse::<u8>() {
-                            Ok(num) => {
-                                _ = args.next();
-                                num
-                            }
-                            Err(_) => 0,
-                        }
-                    }
-                    None => self.transparency = 0,
-                },
-
-                "--background" => {
-                    for (channel_string, channel) in ["red", "green", "blue"]
-                        .iter()
-                        .zip(color.iter_mut().skip(1))
-                    {
-                        match args.next() {
-                            Some(string) => {
-                                *channel = string.parse::<u8>().unwrap_or_else(|_| {
-                                    panic!("Invalid value for {}", channel_string)
-                                })
-                            }
-                            None => panic!("Expected value for {}", channel_string),
-                        }
-                    }
+                "--transparent" => {
+                    eprintln_red!(
+                        "Transparency isn't supported by Softbuffer. \
+                        See https://github.com/rust-windowing/softbuffer/issues/215\n"
+                    );
                 }
 
                 "--max-con-size" => {
@@ -193,13 +162,13 @@ impl Program {
                     "--braille" | "--block" | "--ascii" => {
                         panic!(
                             "\x1B[31;1m\
-								Feature terminal is turned off in \
-								this build of coffeevis.\n\
-								This was to make dependencies of coffeevis \
-								optional and excluded when not needed.\n\
-								Recompile coffeevis with `--features terminal`\
-								to use these flags.\
-							\x1B[0m"
+                                Feature terminal is turned off in \
+                                this build of coffeevis.\n\
+                                This was to make dependencies of coffeevis \
+                                optional and excluded when not needed.\n\
+                                Recompile coffeevis with `--features terminal`\
+                                to use these flags.\
+                            \x1B[0m"
                         )
                     }
 
@@ -207,35 +176,26 @@ impl Program {
                     "--minifb" => {
                         panic!(
                             "\x1B[31;1m\
-								Feature minifb is turned off in \
-								this build of coffeevis.\n\
-								Recompile coffeevis with `--features minifb` \
-								to use this flag.\
-							\x1B[0m"
+                                Feature minifb is turned off in \
+                                this build of coffeevis.\n\
+                                Recompile coffeevis with `--features minifb` \
+                                to use this flag.\
+                            \x1B[0m"
                         )
                     }
 
-                    &_ => eprintln!("Argument error: Unknown option {}", arg),
+                    &_ => eprintln_red!("Argument error: Unknown option {arg}"),
                 },
             }
         }
 
         self.update_size(size);
-        self.pix.background &= 0xFF_00_00_00;
-        self.pix.background |= u32::from_be_bytes(color);
-        self.pix.background = self
-            .pix
-            .background
-            .set_alpha(self.transparency)
-            .premultiply();
 
         if std::env::var("WAYLAND_DISPLAY").is_err() {
             self.WAYLAND = false;
         } else if !self.WAYLAND {
             std::env::set_var("WAYLAND_DISPLAY", "");
         }
-
-        // println!("Backround: {:x}", self.pix.background);
 
         self
     }
@@ -245,7 +205,7 @@ impl Program {
 
         println!(
             "\nWelcome to Coffeevis!\n\
-	        Audio visualizer by khoidauminh (Cas Pascal on github)"
+            Audio visualizer by khoidauminh (Cas Pascal on github)"
         );
 
         eprintln!("Startup configurations (may change): ");
@@ -281,8 +241,8 @@ impl Program {
         if self.RESIZE {
             eprint!(
                 "\n\
-				Note: resizing is not thoroughly tested and can crash the program or \
-				result in artifacts. "
+                Note: resizing is not thoroughly tested and can crash the program or \
+                result in artifacts. "
             );
         }
 

@@ -26,7 +26,7 @@ impl<T: Pixel> PixelBuffer<T> {
     }
 
     pub fn fade(&mut self, al: u8) {
-        self.command.fade(al, self.background);
+        self.command.fade(al);
     }
 
     pub fn fill(&mut self, c: T) {

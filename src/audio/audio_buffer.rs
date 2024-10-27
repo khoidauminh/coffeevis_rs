@@ -77,8 +77,7 @@ fn write_sample<T: cpal::Sample<Float = f32>>(smp: &mut Cplx, smp_in: &[T]) {
 
 impl AudioBuffer {
     pub const fn new() -> Self {
-
-        let size_mask: usize = BUFFER_CAPACITY.next_power_of_two()/2 - 1;
+        let size_mask: usize = BUFFER_CAPACITY.next_power_of_two() / 2 - 1;
 
         Self {
             buffer: [Cplx::zero(); BUFFER_CAPACITY],
@@ -161,7 +160,7 @@ impl AudioBuffer {
         AMP_TRIGGER_THRESHOLD / self.max
     }
 
-    pub fn to_vec(&mut self) -> Vec<Cplx> {
+    pub fn to_vec(&self) -> Vec<Cplx> {
         let mut o = vec![Cplx::zero(); self.buffer.len()];
         o.iter_mut()
             .zip(self.buffer.iter().cycle().skip(self.offset))
@@ -191,9 +190,7 @@ impl AudioBuffer {
 
         let mut max = 0.0f32;
 
-        let stop_reading = self.is_silent_for(
-            (self.size_mask / self.input_size).min(255) as u8
-        );
+        let stop_reading = self.is_silent_for((self.size_mask / self.input_size).min(255) as u8);
 
         let mut silent_samples = 0;
 
@@ -207,7 +204,9 @@ impl AudioBuffer {
 
             // Only check the first SILENCE_CHECK_SIZE samples
             if stop_reading {
-                if silent_samples >= SILENCE_CHECK_SIZE {break}
+                if silent_samples >= SILENCE_CHECK_SIZE {
+                    break;
+                }
                 silent_samples += (max < SILENCE_LIMIT) as u8;
             }
 
@@ -225,7 +224,6 @@ impl AudioBuffer {
     }
 
     pub fn post_process(&mut self, silent: bool) {
-
         self.offset = self.index_sub(self.write_point, self.input_size * 2);
 
         self.silent = if silent {

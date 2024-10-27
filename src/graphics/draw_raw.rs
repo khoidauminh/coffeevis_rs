@@ -96,10 +96,7 @@ pub fn fade<T: Pixel>(
     param: DrawParam,
 ) {
     let DrawParam::Fade { a } = param else { return };
-
-    let mut fader: T = c & T::from(0x00_FF_FF_FFu32);
-    fader = fader | T::from((a as u32) << 24);
-    canvas.iter_mut().for_each(|smp| *smp = smp.mix(fader));
+    canvas.iter_mut().for_each(|smp| *smp = smp.fade(255 - a));
 }
 
 pub fn fill<T: Pixel>(

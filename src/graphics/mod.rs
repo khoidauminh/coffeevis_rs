@@ -13,37 +13,37 @@ pub trait Pixel: Copy + Clone + Blend + Sized {
 
 impl Pixel for u32 {
     fn black() -> Self {
-        return 0xFF_00_00_00;
+        0xFF_00_00_00
     }
 
     fn white() -> Self {
-        return 0xFF_FF_FF_FF;
+        0xFF_FF_FF_FF
     }
 
     fn trans() -> Self {
-        return 0x0;
+        0x0
     }
 
     fn from(x: u32) -> Self {
-        return x;
+        x
     }
 }
 
 impl Pixel for u8 {
     fn black() -> Self {
-        return 0;
+        0
     }
 
     fn white() -> Self {
-        return 0xFF;
+        0xFF
     }
 
     fn trans() -> Self {
-        return 0;
+        0
     }
 
     fn from(x: u32) -> Self {
-        return x as u8;
+        x as u8
     }
 }
 
@@ -127,9 +127,9 @@ impl<T: Pixel> DrawCommandBuffer<T> {
             .push(make_command!(c, b, draw_cirle_by, Circle, p, r, f));
     }
 
-    pub fn fade(&mut self, a: u8, c: T) {
+    pub fn fade(&mut self, a: u8) {
         self.buffer
-            .push(make_command!(c, Blend::over, fade, Fade, a));
+            .push(make_command!(T::trans(), Blend::over, fade, Fade, a));
     }
 
     pub fn execute(&mut self, canvas: &mut [T], cwidth: usize, cheight: usize) {
@@ -154,7 +154,6 @@ pub struct PixelBuffer<T: Pixel> {
     width: usize,
     height: usize,
     command: DrawCommandBuffer<T>,
-    pub background: T,
 }
 
 pub type Image<T> = PixelBuffer<T>;
@@ -162,16 +161,15 @@ pub type Canvas = PixelBuffer<u32>;
 pub type AlphaMask = PixelBuffer<u8>;
 
 impl<T: Pixel> PixelBuffer<T> {
-    pub fn new(w: usize, h: usize, background: T) -> Self {
+    pub fn new(w: usize, h: usize) -> Self {
         let padded = crate::math::larger_or_equal_pw2(w * h);
         Self {
-            buffer: vec![T::black(); padded],
+            buffer: vec![T::trans(); padded],
             command: DrawCommandBuffer::new(),
             mask: padded - 1,
             len: w * h,
             width: w,
             height: h,
-            background,
         }
     }
 
@@ -205,7 +203,7 @@ impl<T: Pixel> PixelBuffer<T> {
     }
 
     pub fn clear(&mut self) {
-        self.buffer.fill(self.background);
+        self.buffer.fill(T::trans());
     }
 
     pub fn resize(&mut self, w: usize, h: usize) {

@@ -445,15 +445,15 @@ pub fn control_key_events_con(prog: &mut Program, exit: &mut bool) -> std::io::R
                         Command::Blank
                     }
 
-                    KeyCode::Char('1') => Command::FPS(10, true),
-                    KeyCode::Char('2') => Command::FPS(20, true),
-                    KeyCode::Char('3') => Command::FPS(30, true),
-                    KeyCode::Char('4') => Command::FPS(40, true),
-                    KeyCode::Char('5') => Command::FPS(50, true),
-                    KeyCode::Char('6') => Command::FPS(60, true),
+                    KeyCode::Char('1') => Command::Fps(10, true),
+                    KeyCode::Char('2') => Command::Fps(20, true),
+                    KeyCode::Char('3') => Command::Fps(30, true),
+                    KeyCode::Char('4') => Command::Fps(40, true),
+                    KeyCode::Char('5') => Command::Fps(50, true),
+                    KeyCode::Char('6') => Command::Fps(60, true),
 
-                    KeyCode::Char('7') => Command::FPS(-5, false),
-                    KeyCode::Char('8') => Command::FPS(5, false),
+                    KeyCode::Char('7') => Command::Fps(-5, false),
+                    KeyCode::Char('8') => Command::Fps(5, false),
                     KeyCode::Char('9') => Command::ConMax(-1, false),
                     KeyCode::Char('0') => Command::ConMax(1, false),
 

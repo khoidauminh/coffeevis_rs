@@ -28,8 +28,6 @@ pub const DEFAULT_SMOOTHING: f32 = 0.65;
 /// Stop rendering when get_no_sample() exceeds this value;
 pub const STOP_RENDERING: u8 = 192;
 
-/// How long silence has happened to trigger render slow down.
-
 pub const DEFAULT_SIZE_WIN: u16 = 60;
 
 pub const DEFAULT_WIN_SCALE: u8 = 3;
@@ -63,8 +61,6 @@ pub(crate) struct Program {
     pub pix: crate::graphics::Canvas,
 
     pub mode: Mode,
-
-    pub transparency: u8,
 
     pub MILLI_HZ: u32,
     pub REFRESH_RATE_MODE: RefreshRateMode,
@@ -103,9 +99,10 @@ pub enum Command {
     VisualizerNext,
     VisualizerPrev,
     SwitchConMode,
+    Resize(u16, u16),
     ConMax(i16, bool),
-    FPS(i16, bool),
-    FPSFrac(u32),
+    Fps(i16, bool),
+    FpsFrac(u32),
     SwitchVisList,
     VolUp,
     VolDown,
@@ -116,6 +113,13 @@ pub enum Command {
     AutoSwitch,
     Reset,
     Blank,
+    Close,
+}
+
+impl Command {
+    pub fn is_close_requested(&self) -> bool {
+        *self == Command::Close
+    }
 }
 
 impl Program {
@@ -134,13 +138,7 @@ impl Program {
 
             WAYLAND: true,
 
-            transparency: 255,
-
-            pix: crate::graphics::Canvas::new(
-                DEFAULT_SIZE_WIN as usize,
-                DEFAULT_SIZE_WIN as usize,
-                0x00_00_00_00,
-            ),
+            pix: crate::graphics::Canvas::new(DEFAULT_SIZE_WIN as usize, DEFAULT_SIZE_WIN as usize),
 
             MILLI_HZ: DEFAULT_MILLI_HZ,
             REFRESH_RATE_MODE: RefreshRateMode::Sync,
@@ -198,79 +196,73 @@ impl Program {
         match cmd {
             &VisualizerNext => {
                 self.change_visualizer(true);
-                true
+                return true;
             }
             &VisualizerPrev => {
                 self.change_visualizer(false);
-                true
+                return true;
             }
 
+            // &Resize(w, h) => {
+            // self.update_size((w, h));
+            // return true;
+            // }
             #[cfg(feature = "terminal")]
             &SwitchConMode => {
                 self.switch_con_mode();
-
-                true
+                return true;
             }
 
             &SwitchVisList => {
                 self.change_vislist();
-                true
+                return true;
             }
 
-            &FPS(fps, replace) => {
+            &Fps(fps, replace) => {
                 self.change_fps(fps, replace);
-                false
             }
 
-            &FPSFrac(milli_hz) => {
+            &FpsFrac(milli_hz) => {
                 self.change_fps_frac(milli_hz);
-                false
             }
 
             #[cfg(feature = "terminal")]
             &ConMax(d, replace) => {
                 self.change_con_max(d, replace);
-                true
             }
 
             &VolUp => {
                 self.increase_vol_scl();
-                false
             }
             &VolDown => {
                 self.decrease_vol_scl();
-                false
             }
 
             &SmoothUp => {
                 self.increase_smoothing();
-                false
             }
             &SmoothDown => {
                 self.decrease_smoothing();
-                false
             }
 
             &WavUp => {
                 self.increase_wav_win();
-                false
             }
             &WavDown => {
                 self.decrease_wav_win();
-                false
             }
 
             &AutoSwitch => {
                 self.toggle_auto_switch();
-                false
             }
             &Reset => {
                 self.reset_parameters();
-                false
             }
 
-            &_ => false,
+            &_ => {}
         }
+
+        false
     }
 
     pub fn eval_commands(&mut self, cmds: &mut Vec<Command>) -> bool {
@@ -428,20 +420,23 @@ impl Program {
 
     pub fn update_size<T>(&mut self, s: (T, T))
     where
+        T: Copy,
         u16: From<T>,
+        usize: From<T>,
     {
         let size = (u16::from(s.0), u16::from(s.1));
+        let sizeu = (usize::from(s.0), usize::from(s.1));
 
         match &self.mode {
             Mode::Win => {
                 (self.WIN_W, self.WIN_H) = size;
-                self.pix.resize(size.0 as usize, size.1 as usize);
+                self.pix.resize(sizeu.0, sizeu.1);
             }
 
             #[cfg(feature = "minifb")]
             Mode::WinLegacy => {
                 (self.WIN_W, self.WIN_H) = size;
-                self.pix.resize(size.0 as usize, size.1 as usize);
+                self.pix.resize(sizeu.0, sizeu.1);
             }
 
             _ => {
