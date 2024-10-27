@@ -71,8 +71,6 @@ pub(crate) struct Program {
     pub DURATIONS: [std::time::Duration; 4],
     pub REFRESH_RATE: std::time::Duration,
 
-    pub HZ_REPORT: bool,
-
     pub WAV_WIN: usize,
     pub VOL_SCL: f32,
     pub SMOOTHING: f32,
@@ -147,7 +145,6 @@ impl Program {
             MILLI_HZ: DEFAULT_MILLI_HZ,
             REFRESH_RATE_MODE: RefreshRateMode::Sync,
             REFRESH_RATE: rate,
-            HZ_REPORT: false,
 
             DURATIONS: [rate, rate * 4, rate * 16, Duration::from_millis(500)],
 
@@ -328,7 +325,7 @@ impl Program {
     }
 
     pub fn change_fps_frac(&mut self, fps: u32) {
-        let fps_f = (fps / 1000) as f32 + (fps % 1000) as f32;
+        let fps_f = fps as f32 / 1000.0;
         let rate = (1_000_000.0 / fps_f) as u64;
         self.MILLI_HZ = fps;
         self.REFRESH_RATE = std::time::Duration::from_micros(rate);

@@ -174,14 +174,7 @@ impl Program {
                     (self.CON_MAX_W, self.CON_MAX_H) = (s[0], s[1]);
                 }
 
-                "--x11" => {
-                    self.WAYLAND = false;
-                    //std::env::set_var("LANG", "en_US.UTF-8");
-                }
-
-                "--report-fps" => {
-                    self.HZ_REPORT = true;
-                }
+                "--x11" => self.WAYLAND = false,
 
                 "--vis" => {
                     let vis_name = args

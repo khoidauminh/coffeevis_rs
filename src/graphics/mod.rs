@@ -175,6 +175,10 @@ impl<T: Pixel> PixelBuffer<T> {
         }
     }
 
+    pub fn as_slice(&self) -> &[T] {
+        self.buffer.as_slice()
+    }
+
     pub fn draw_to_self(&mut self) {
         self.command
             .execute(&mut self.buffer, self.width, self.height);

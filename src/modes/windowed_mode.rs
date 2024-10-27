@@ -16,6 +16,7 @@ use minifb::{Window, WindowOptions};
 #[cfg(feature = "minifb")]
 pub fn init_window(prog: &Program) -> Result<Window, minifb::Error> {
     std::env::set_var("GDK_BACKEND", "x11");
+    std::env::set_var("LANG", "en_US-UTF-8");
 
     let mut win = Window::new(
         "kvis",
@@ -31,9 +32,8 @@ pub fn init_window(prog: &Program) -> Result<Window, minifb::Error> {
         },
     )?;
 
-    if cfg!(not(feature = "benchmark")) {
-        win.limit_update_rate(Some(prog.REFRESH_RATE));
-    }
+    win.limit_update_rate(Some(prog.REFRESH_RATE));
+
 
     Ok(win)
 }
@@ -256,19 +256,18 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
     let lock_fps = prog.REFRESH_RATE_MODE == crate::RefreshRateMode::Specified
         || prog.REFRESH_RATE_MODE == crate::RefreshRateMode::Unlimited;
 
-    let report_fps = prog.HZ_REPORT;
-
     let resizeable = prog.is_resizable();
 
     let de = std::env::var("XDG_CURRENT_DESKTOP").unwrap_or(String::new());
     let is_gnome = de == "GNOME";
+    let gnome_workaround = is_gnome && prog.is_wayland();
 
     std::env::set_var("WINIT_X11_SCALE_FACTOR", prog.scale().to_string());
 
     if prog.transparency < 255 {
         crate::data::reader::eprintln_red!(
-            "WARNING: transparency doesn't work for now.
-		\rSee https://github.com/rust-windowing/softbuffer/issues/215\n"
+            "WARNING: transparency doesn't work for now. \
+            See https://github.com/rust-windowing/softbuffer/issues/215\n"
         );
     }
 
@@ -286,7 +285,7 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
         .with_window_level(winit::window::WindowLevel::AlwaysOnTop)
         .with_transparent(false)
         .with_decorations(true)
-        .with_resizable(prog.is_resizable() || is_gnome)
+        .with_resizable(prog.is_resizable() || gnome_workaround)
         .with_window_icon(Some(icon));
 
     let window = Arc::new(event_loop.create_window(window_attributes).unwrap());
@@ -306,7 +305,6 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
 
     let window = window.clone();
     let thread_main_running_draw = state.thread_main_running.clone();
-    let thread_main_running_report = state.thread_main_running.clone();
 
     // So there this issue on GNOME where,
     // when the window launches unresizable, the window may appear squished.
@@ -319,7 +317,7 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
 
         eprintln!("Running in the {} desktop (XDG_CURRENT_DESKTOP).", de);
 
-        if !is_gnome {
+        if !gnome_workaround {
             return;
         }
 
@@ -344,51 +342,21 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
                         continue;
                     };
 
-                    eprintln!("Detected rate to be {}hz", milli_hz as f32 / 1000.0);
-                    eprintln!("Note: Coffeevis relies on Winit to detect refresh rates.");
-                    eprintln!("Refresh rate changed.\n");
+                    eprintln!(
+                        "\
+                        Detected rate to be {}hz.\n\
+                        Note: Coffeevis relies on Winit to detect refresh rates.\n\
+                        Run with --fps flag if you want to lock fps.\n\
+                        Refresh rate changed.\
+                        ",
+                        milli_hz as f32 / 1000.0
+                    );
+                    
                     *cmd = Command::FPSFrac(milli_hz);
 
                     return;
                 }
             }
-        }
-    });
-
-    const REPORT_RATE: usize = 4;
-    let fps_report = Arc::new(std::sync::atomic::AtomicUsize::new(0));
-    let average_render_time = Arc::new(RwLock::new(Duration::from_millis(0)));
-    let average_render_time_draw = average_render_time.clone();
-    let fps_report_draw = fps_report.clone();
-    let thread_report = thread::spawn(move || {
-        if !report_fps {
-            return;
-        }
-
-        eprintln!("Reporting FPS at {}Hz.", REPORT_RATE);
-
-        const DURATION_ZERO: Duration = Duration::from_millis(0);
-
-        while thread_main_running_report.load(Relaxed) {
-            thread::sleep(Duration::from_millis(1000 / REPORT_RATE as u64));
-
-            let frames = fps_report.swap(0, Relaxed);
-            let frames = frames * REPORT_RATE;
-
-            eprint!("FPS: {:3.}, ", frames);
-
-            if let Ok(mut time) = average_render_time.try_write() {
-                let average_time = if frames > 0 {
-                    *time / frames as u32
-                } else {
-                    DURATION_ZERO
-                };
-                eprint!("Render time: {:0>10?}. ", average_time);
-                eprint!("{:*<1$}", "", average_time.as_micros().min(100) as usize);
-                *time = DURATION_ZERO;
-            }
-
-            eprintln!();
         }
     });
 
@@ -428,8 +396,6 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
                 thread::sleep(Duration::from_millis(333));
                 continue;
             }
-
-            let render_begin = std::time::Instant::now();
 
             let new_size = window.inner_size();
 
@@ -474,16 +440,6 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
 
             let sleep = prog.DURATIONS[(no_sample >> 6) as usize];
 
-            if report_fps {
-                let _ = fps_report_draw.fetch_add(1, Relaxed);
-
-                let render_end = std::time::Instant::now();
-
-                if let Ok(mut time) = average_render_time_draw.try_write() {
-                    *time += render_end - render_begin;
-                }
-            }
-
             if prog.REFRESH_RATE_MODE != crate::RefreshRateMode::Unlimited {
                 thread::sleep(sleep);
             }
@@ -494,7 +450,6 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
 
     event_loop.run_app(&mut state).unwrap();
     let _ = thread_size.join();
-    let _ = thread_updates.join();
     thread_draw.join().unwrap();
 
     Ok(())
