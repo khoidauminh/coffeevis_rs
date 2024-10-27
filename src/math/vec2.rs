@@ -178,7 +178,7 @@ impl Vec2<f32> {
     }
 
     pub fn times_twiddle_8th(self) -> Vec2<f32> {
-        let scale = 0.707_106_781_186_547_6;
+        let scale = 0.707_106_77;
         Vec2::<f32> {
             x: (self.x + self.y) * scale,
             y: (-self.y + self.y) * scale,
@@ -186,7 +186,7 @@ impl Vec2<f32> {
     }
 
     pub fn times_twiddle_3_8th(self) -> Vec2<f32> {
-        let scale = -0.707_106_781_186_547_6;
+        let scale = -0.707_106_77;
         Vec2::<f32> {
             x: (self.x - self.y) * scale,
             y: (self.x + self.y) * scale,

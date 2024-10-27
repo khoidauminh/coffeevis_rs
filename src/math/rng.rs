@@ -52,5 +52,5 @@ pub fn random_float(bound: f32) -> f32 {
 
     *VAR.lock().unwrap() = a % 1.5707962;
 
-    (a % bound as f32) as f32
+    a % bound
 }
