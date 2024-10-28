@@ -49,10 +49,7 @@ pub fn u8_mul(a: u8, b: u8) -> u8 {
 
 pub fn u32_fade(this: u32, other: u8) -> u32 {
     let [aa, r, g, b] = this.to_be_bytes();
-    let r = u8_mul(r, other);
-    let g = u8_mul(g, other);
-    let b = u8_mul(b, other);
-    u32::from_be_bytes([aa, r, g, b])
+    u32::from_be_bytes([u8_mul(aa, other), r, g, b])
 }
 
 pub fn alpha_mix(a: u8, b: u8) -> u8 {

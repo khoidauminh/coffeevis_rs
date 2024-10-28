@@ -153,6 +153,16 @@ impl Program {
                     self.visualizer = self.VIS.switch_by_name(vis_name).func();
                 }
 
+                "--background" => {
+                    self.pix.set_background(u32::from_str_radix(
+                        args.next().expect(
+                            &format_red!("Argument error: Expected hex value for background color. E.g 0022FF")
+                        ),
+                        16,
+                    ).expect(&format_red!("Argument error: Invalid value for background color"))
+                    );
+                }
+
                 ":3" => {
                     eprintln_red!("\n:3");
                 }

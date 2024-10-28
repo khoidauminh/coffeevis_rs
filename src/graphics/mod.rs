@@ -154,6 +154,7 @@ pub struct PixelBuffer<T: Pixel> {
     width: usize,
     height: usize,
     command: DrawCommandBuffer<T>,
+    background: T,
 }
 
 pub type Image<T> = PixelBuffer<T>;
@@ -170,11 +171,16 @@ impl<T: Pixel> PixelBuffer<T> {
             len: w * h,
             width: w,
             height: h,
+            background: T::black(),
         }
     }
 
     pub fn as_slice(&self) -> &[T] {
         self.buffer.as_slice()
+    }
+
+    pub fn set_background(&mut self, bg: T) {
+        self.background = bg;
     }
 
     pub fn draw_to_self(&mut self) {
@@ -259,7 +265,15 @@ impl<T: Pixel> PixelBuffer<T> {
     // On Winit Wayland, resize increments hasn't been implemented,
     // So the width parameter is there to ensure that the horizontal
     // lines are aligned.
-    pub fn scale_to(&self, dest: &mut [T], scale: usize, width: Option<usize>) {
+    pub fn scale_to(
+        &self,
+        dest: &mut [T],
+        scale: usize,
+        width: Option<usize>,
+        mixer: Option<Mixer<T>>,
+    ) {
+        let mixer = mixer.unwrap_or(T::mix);
+
         let dst_width = width.unwrap_or(self.width * scale);
 
         let src_rows = self.buffer.chunks_exact(self.width);
@@ -267,7 +281,8 @@ impl<T: Pixel> PixelBuffer<T> {
 
         for (src_row, dst_row) in src_rows.zip(dst_rows) {
             for (src_pixel, dst_chunk) in src_row.iter().zip(dst_row.chunks_exact_mut(scale)) {
-                dst_chunk.fill(*src_pixel);
+                let pixel = mixer(self.background, *src_pixel);
+                dst_chunk.fill(pixel);
             }
         }
 

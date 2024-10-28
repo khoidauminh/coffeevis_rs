@@ -22,12 +22,12 @@ use visualizers::VisFunc;
 fn main() {
     let args = env::args().collect::<Vec<String>>();
 
-    let stream = get_source();
-    stream.play().unwrap();
-
     let prog = Program::new().eval_args(&mut args.iter());
 
     prog.print_startup_info();
+
+    let stream = get_source();
+    stream.play().unwrap();
 
     match prog.mode() {
         #[cfg(feature = "minifb")]

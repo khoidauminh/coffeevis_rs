@@ -275,14 +275,6 @@ impl Program {
         redraw
     }
 
-    pub fn as_win(mut self) -> Self {
-        self.pix
-            .resize(DEFAULT_SIZE_WIN as usize, DEFAULT_SIZE_WIN as usize);
-        self.mode = Mode::Win;
-        self.refresh();
-        self
-    }
-
     pub fn reset_switch(&mut self) {
         self.SWITCH = Instant::now() + self.AUTO_SWITCH_ITVL;
     }

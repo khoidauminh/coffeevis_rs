@@ -395,6 +395,8 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
             }
 
             if let Ok(mut buffer) = surface.buffer_mut() {
+                use crate::graphics::blend::Blend;
+
                 prog.force_render();
 
                 let len = buffer.len().min(prog.pix.sizel());
@@ -403,6 +405,7 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
                     &mut buffer,
                     prog.scale() as usize,
                     Some(size.width as usize),
+                    Some(u32::mix),
                 );
 
                 window.pre_present_notify();
