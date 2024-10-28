@@ -1,9 +1,6 @@
 #![allow(warnings)]
 
-use std::{
-    sync::Arc,
-    thread,
-};
+use std::{sync::Arc, thread};
 
 use crate::data::*;
 
@@ -171,7 +168,7 @@ impl ApplicationHandler for WindowState {
                 event_loop.exit();
             }
 
-            WindowEvent::MouseInput { button: button, .. } => {
+            WindowEvent::MouseInput { button, .. } => {
                 if button == winit::event::MouseButton::Left {
                     if let Err(err) = self.window.drag_window() {
                         eprintln!("Error starting window drag: {err}");
@@ -304,31 +301,34 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
     });
 
     let thread_updates = thread::spawn({
-        if lock_fps {
-            return Ok(());
-        }
-
         let window = window.clone();
         let commands_sender = commands_sender.clone();
 
-        move || loop {
-            thread::sleep(Duration::from_millis(621));
+        move || {
+            if lock_fps {
+                return;
+            }
 
-            if let Some(monitor) = window.current_monitor() {
-                if let Some(milli_hz) = monitor.refresh_rate_millihertz() {
-                    eprintln!(
-                        "\
-                    Detected rate to be {}hz.\n\
-                    Note: Coffeevis relies on Winit to detect refresh rates.\n\
-                    Run with --fps flag if you want to lock fps.\n\
-                    Refresh rate changed.\
-                    ",
-                        milli_hz as f32 / 1000.0
-                    );
+            // Try fetching monitor information for 5 times before giving up.
+            for _ in 0..5 {
+                thread::sleep(Duration::from_millis(621));
 
-                    commands_sender.send(Command::FpsFrac(milli_hz));
+                if let Some(monitor) = window.current_monitor() {
+                    if let Some(milli_hz) = monitor.refresh_rate_millihertz() {
+                        eprintln!(
+                            "\
+                            Detected rate to be {}hz.\n\
+                            Note: Coffeevis relies on Winit to detect refresh rates.\n\
+                            Run with --fps flag if you want to lock fps.\n\
+                            Refresh rate changed.\
+                            ",
+                            milli_hz as f32 / 1000.0
+                        );
 
-                    return;
+                        commands_sender.send(Command::FpsFrac(milli_hz));
+
+                        return;
+                    }
                 }
             }
         }
@@ -338,8 +338,8 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
     let thread_draw = thread::spawn({
         let commands_sender = commands_sender.clone();
         let window = window.clone();
+        let mut size = inner_size;
         let mut surface = {
-            let mut size = inner_size;
             use winit::raw_window_handle;
             let context = softbuffer::Context::new(window.clone()).unwrap();
             let mut surface = softbuffer::Surface::new(&context, window.clone()).unwrap();
@@ -363,6 +363,9 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
                 }
 
                 if let Command::Resize(w, h) = cmd {
+                    size.width = w as u32;
+                    size.height = h as u32;
+
                     let wd = w as u32 / scale;
                     let hd = h as u32 / scale;
 
@@ -391,11 +394,9 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
                 continue;
             }
 
-            let size = window.inner_size();
-
-            prog.force_render();
-
             if let Ok(mut buffer) = surface.buffer_mut() {
+                prog.force_render();
+
                 let len = buffer.len().min(prog.pix.sizel());
 
                 prog.pix.scale_to(
