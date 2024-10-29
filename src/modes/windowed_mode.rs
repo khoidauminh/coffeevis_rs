@@ -144,7 +144,7 @@ use crate::graphics::Canvas;
 
 struct WindowState {
     pub window: Arc<winit::window::Window>,
-    pub commands_sender: std::sync::mpsc::Sender<Command>,
+    pub commands_sender: std::sync::mpsc::SyncSender<Command>,
 }
 
 impl WindowState {
@@ -277,7 +277,7 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
 
     let inner_size = window.clone().inner_size();
 
-    let (commands_sender, commands_receiver) = std::sync::mpsc::channel::<Command>();
+    let (commands_sender, commands_receiver) = std::sync::mpsc::sync_channel::<Command>(8);
 
     let mut state = WindowState {
         window: window.clone(),

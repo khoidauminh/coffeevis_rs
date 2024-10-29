@@ -30,7 +30,7 @@ fn index_scale_derivative(x: f32) -> f32 {
 
 fn prepare(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
     // const WINDOW: usize = 2 * FFT_SIZE / 3;
-    let fall_factor = 0.4 * prog.SMOOTHING.powi(2) * (prog.MILLI_HZ / 1000) as f32 * 0.006944444;
+    let fall_factor = 0.35 * prog.SMOOTHING.powi(2) * (prog.MILLI_HZ / 1000) as f32 * 0.006944444;
     let mut fft = [Cplx::zero(); FFT_SIZE];
     const UP: usize = 2 * FFT_SIZE / (RANGE * 3 / 2);
 

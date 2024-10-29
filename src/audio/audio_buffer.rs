@@ -10,28 +10,31 @@ pub const BUFFER_CAPACITY: usize = 6210;
 
 const REACT_SPEED: f32 = 0.025;
 
-/// This is a struct that acts like a regular buffer
-/// but uses an offset index.
+/// This is a ring buffer.
 ///
-/// By default, coffeevis displays at 144hz, but cpal can't
-/// send input data that quickly between each rendering.
-/// Moreover, the visualizers don't use all of the
-/// data sent in in one rendering. Therefore, one
+/// By default, coffeevis displays at 144hz, but cpal
+/// can't send input data that quickly between each
+/// rendering. Moreover, the visualizers don't use all of
+/// the data sent in in one rendering. Therefore, one
 /// solution is to use one slice of then rotate
 /// it to get to the next one.
 ///
-/// AudioBuffer used the mentioned offset index to
-/// simulate rotating and bypass having to move elemenents.
+/// AudioBuffer uses a read_offset index to simulate
+/// rotating and a write_offset to bypass having to
+/// move elemenents.
 ///
-///
-/// To index as performantly as possible, AudioBuffer only allows
-/// powers of 2 lengths.
+/// To index as performantly as possible, AudioBuffer
+/// only allows powers of 2 lengths. If an arbitrary
+/// size is provided, it uses its closest smaller
+/// power of 2 value.
 pub struct AudioBuffer {
     pub buffer: [Cplx; BUFFER_CAPACITY],
 
     size_mask: usize,
+
     /// Where offset [0] starts
     offset: usize,
+
     /// To prevent "audio tearing" when writing input,
     /// `write_point` tells where the last write happened.
     /// Ensures that new data is written right after where
@@ -39,15 +42,26 @@ pub struct AudioBuffer {
     write_point_old: usize,
     write_point: usize,
 
+    /// `rotate_size`, `rotates_since_write` and
+    /// `average_rotates_since_write` enable smart rotation.
+    /// If auto_rotate() is called more frequently,
+    /// rotate_size gets smaller.
     rotate_size: usize,
-
     rotates_since_write: usize,
     average_rotates_since_write: usize,
 
+    /// Size of a REGULAR write, regardless whether
+    /// the last write is silent or not.
     input_size: usize,
 
+    /// `max`, `average`: fields for recording maxmimum/average audio
+    /// samples. For normalizing.
     max: f32,
     average: f32,
+
+    /// Records how many consecutive silent writes has happened.
+    /// Coffeevis will slow down when sufficient amount of silence
+    /// has been passed into the program.
     silent: u8,
 }
 
@@ -193,6 +207,7 @@ impl AudioBuffer {
         let stop_reading = self.is_silent_for((self.size_mask / self.input_size).min(255) as u8);
 
         let mut silent_samples = 0;
+        self.write_point_old = self.write_point;
 
         for chunk in data.chunks_exact(2) {
             let smp = unsafe { self.buffer.get_unchecked_mut(self.write_point) };
@@ -247,12 +262,20 @@ impl AudioBuffer {
             return;
         }
 
-        let mut write_point = self.index_sub(self.write_point, self.input_size);
-
-        for _ in 0..self.input_size {
-            let smp = unsafe { self.buffer.get_unchecked_mut(write_point) };
-            *smp *= scale_up_factor;
-            write_point = self.index_add(write_point, 1);
+        if self.write_point_old <= self.write_point {
+            self.buffer
+                .get_mut(self.write_point_old..self.write_point)
+                .iter_mut()
+                .for_each(|x| x.iter_mut().for_each(|x| *x *= scale_up_factor));
+        } else {
+            self.buffer
+                .iter_mut()
+                .take(self.write_point)
+                .for_each(|x| *x *= scale_up_factor);
+            self.buffer
+                .iter_mut()
+                .skip(self.write_point_old)
+                .for_each(|x| *x *= scale_up_factor);
         }
     }
 }
