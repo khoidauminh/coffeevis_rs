@@ -9,7 +9,7 @@ struct LocalData {
     pong: bool,
 }
 
-static DATA: std::sync::RwLock<LocalData> = std::sync::RwLock::new(LocalData {
+static DATA: std::sync::Mutex<LocalData> = std::sync::Mutex::new(LocalData {
     sweepi: 0,
     pong: false,
 });
@@ -33,7 +33,7 @@ pub fn draw_vol_sweeper(para: &mut crate::data::Program, stream: &mut crate::aud
         color_,
     ]);
 
-    let mut local = DATA.write().unwrap();
+    let mut local = DATA.lock().unwrap();
 
     para.pix
         .draw_rect_wh(P2::new(0, local.sweepi as i32), para.pix.width(), 1, 0);

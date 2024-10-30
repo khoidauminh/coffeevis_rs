@@ -1,6 +1,6 @@
 use std::sync::{
     atomic::{AtomicUsize, Ordering::Relaxed},
-    RwLock,
+    Mutex,
 };
 
 use crate::audio::MovingAverage;
@@ -11,7 +11,7 @@ use crate::visualizers::classic::cross::{draw_cross, CROSS_COL};
 use crate::math::{self, Cplx};
 
 static LOCALI: AtomicUsize = AtomicUsize::new(0);
-static WAVE_SCALE_FACTOR: RwLock<f32> = RwLock::new(1.0);
+static WAVE_SCALE_FACTOR: Mutex<f32> = Mutex::new(1.0);
 
 fn to_color(s: i32, size: i32) -> u8 {
     (s.abs() * 256 / size).min(255) as u8
@@ -123,12 +123,12 @@ pub fn draw_oscilloscope(prog: &mut crate::data::Program, stream: &mut crate::au
 
     let wave_scale_factor = (bass / (stream_.len() as f32)) * 13.0 + 2.0;
 
-    let wave_scale_factor_old = *WAVE_SCALE_FACTOR.read().unwrap();
+    let wave_scale_factor_old = *WAVE_SCALE_FACTOR.lock().unwrap();
 
     let wave_scale_factor =
         math::interpolate::subtractive_fall(wave_scale_factor_old, wave_scale_factor, 1.0, 0.5);
 
-    *WAVE_SCALE_FACTOR.write().unwrap() = wave_scale_factor;
+    *WAVE_SCALE_FACTOR.lock().unwrap() = wave_scale_factor;
 
     let mut smoothed_smp = stream[zeroi];
 
@@ -214,12 +214,12 @@ pub fn draw_oscilloscope2(prog: &mut crate::data::Program, stream: &mut crate::a
 
     let wave_scale_factor = bass * 13.0 + 2.0;
 
-    let wave_scale_factor_old = *WAVE_SCALE_FACTOR.read().unwrap();
+    let wave_scale_factor_old = *WAVE_SCALE_FACTOR.lock().unwrap();
 
     let wave_scale_factor =
         math::interpolate::subtractive_fall(wave_scale_factor_old, wave_scale_factor, 1.0, 0.5);
 
-    *WAVE_SCALE_FACTOR.write().unwrap() = wave_scale_factor;
+    *WAVE_SCALE_FACTOR.lock().unwrap() = wave_scale_factor;
 
     let mut smoothed_smp = stream[zeroi];
 
@@ -315,12 +315,12 @@ pub fn draw_oscilloscope3(prog: &mut crate::data::Program, stream: &mut crate::a
 
     let wave_scale_factor = bass * 15.0 + 2.0;
 
-    let wave_scale_factor_old = *WAVE_SCALE_FACTOR.read().unwrap();
+    let wave_scale_factor_old = *WAVE_SCALE_FACTOR.lock().unwrap();
 
     let wave_scale_factor =
         math::interpolate::subtractive_fall(wave_scale_factor_old, wave_scale_factor, 1.0, 0.5);
 
-    *WAVE_SCALE_FACTOR.write().unwrap() = wave_scale_factor;
+    *WAVE_SCALE_FACTOR.lock().unwrap() = wave_scale_factor;
 
     prog.pix.clear();
 

@@ -14,7 +14,7 @@ struct LocalData {
     y: i32,
 }
 
-static DATA: std::sync::RwLock<LocalData> = std::sync::RwLock::new(LocalData {
+static DATA: std::sync::Mutex<LocalData> = std::sync::Mutex::new(LocalData {
     i: 0.0,
     js: 0.0,
     jc: 0.0,
@@ -36,7 +36,7 @@ fn triangle_wav(amp: f32, prd: f32, t: f32) -> f32 {
 }
 
 pub fn draw_shaky(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
-    let mut LOCALDATA = DATA.write().unwrap();
+    let mut LOCALDATA = DATA.lock().unwrap();
 
     let mut data_f = [Cplx::zero(); 512];
 

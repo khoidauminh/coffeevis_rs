@@ -1,4 +1,4 @@
-use std::sync::RwLock;
+use std::sync::Mutex;
 
 use crate::data::FFT_SIZE;
 use crate::graphics::{blend::Blend, P2};
@@ -8,8 +8,8 @@ const COLOR: [u32; 3] = [0x66ff66, 0xaaffff, 0xaaaaff];
 
 const FFT_SIZE_HALF: usize = FFT_SIZE / 2;
 
-static DATA: RwLock<Vec<f32>> = RwLock::new(Vec::new());
-static MAX: RwLock<f32> = RwLock::new(0.0);
+static DATA: Mutex<Vec<f32>> = Mutex::new(Vec::new());
+static MAX: Mutex<f32> = Mutex::new(0.0);
 
 const FFT_SIZE_RECIP: f32 = 1.4 / FFT_SIZE as f32;
 const NORMALIZE_FACTOR: f32 = FFT_SIZE_RECIP;
@@ -34,7 +34,7 @@ fn prepare(
     let bnf = bar_num as f32;
     let _l = stream.len();
 
-    let mut LOCAL = DATA.write().unwrap();
+    let mut LOCAL = DATA.lock().unwrap();
 
     if bar_num != LOCAL.len() {
         LOCAL.resize(bar_num, 0.0);
@@ -53,7 +53,7 @@ fn prepare(
 
     math::fft(&mut data_f[0..bound]);
 
-    let _max = MAX.write().unwrap();
+    let _max = MAX.lock().unwrap();
 
     const NORM: f32 = FFT_SIZE_RECIP;
 
@@ -99,7 +99,7 @@ pub fn draw_bars(prog: &mut crate::data::Program, stream: &mut crate::audio::Sam
 
     prepare(stream, bar_num, prog.VOL_SCL, prog.SMOOTHING);
 
-    let LOCAL = DATA.read().unwrap();
+    let LOCAL = DATA.lock().unwrap();
 
     prog.pix.clear();
     let sizef = Cplx::new(prog.pix.width() as f32, prog.pix.height() as f32);
@@ -175,7 +175,7 @@ pub fn draw_bars_circle(prog: &mut crate::data::Program, stream: &mut crate::aud
 
     prepare(stream, bar_num, prog.VOL_SCL, prog.SMOOTHING);
 
-    let LOCAL = DATA.read().unwrap();
+    let LOCAL = DATA.lock().unwrap();
 
     prog.pix.clear();
 

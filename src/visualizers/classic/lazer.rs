@@ -6,7 +6,7 @@ struct LocalData {
     p1: Cplx,
 }
 
-static DATA: std::sync::RwLock<LocalData> = std::sync::RwLock::new(LocalData {
+static DATA: std::sync::Mutex<LocalData> = std::sync::Mutex::new(LocalData {
     p0: Cplx { x: 1.0, y: 1.0 },
     p1: Cplx { x: 1.0, y: 1.0 },
 });
@@ -38,7 +38,7 @@ pub fn draw_lazer(para: &mut crate::data::Program, stream: &mut crate::audio::Sa
         Cplx::new(sum.x * para.VOL_SCL * 0.0035, sum.y * para.VOL_SCL * 0.0035)
     };
 
-    let mut LOCAL = DATA.write().unwrap();
+    let mut LOCAL = DATA.lock().unwrap();
 
     a *= LOCAL.p0;
 
