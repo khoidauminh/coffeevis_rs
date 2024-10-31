@@ -208,26 +208,26 @@ impl<T: MMVal> MovingMaximum<T> {
         }
     }
 
-    fn pop(&mut self) -> T {
-        self.heap.pop().unwrap().value
-    }
-
     pub fn update(&mut self, new: T) -> T {
         self.heap.push(NumPair::<T> {
             index: self.index,
             value: new,
         });
 
-        while let Some(NumPair::<T> { index, value: _ }) = self.heap.peek() {
-            if index.wrapping_add(self.size) > self.index {
-                break;
-            }
+        if unsafe {
+            self.heap
+                .peek()
+                .unwrap_unchecked()
+                .index
+                .wrapping_add(self.size)
+                <= self.index
+        } {
             self.heap.pop();
         }
 
         self.index = self.index.wrapping_add(1);
 
-        self.heap.peek().unwrap().value
+        unsafe { self.heap.peek().unwrap_unchecked().value }
     }
 }
 
