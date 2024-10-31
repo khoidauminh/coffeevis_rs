@@ -220,23 +220,34 @@ impl AudioBuffer {
         let mut silent_samples = 0;
         self.write_point_old = self.write_point;
 
-        for chunk in data.chunks_exact(2) {
-            let smp = unsafe { self.buffer.get_unchecked_mut(self.write_point) };
-            write_sample(smp, chunk);
+        macro_rules! write_func {
+            ($chunk:expr) => {
+                let smp = unsafe { self.buffer.get_unchecked_mut(self.write_point) };
+                write_sample(smp, $chunk);
+                max = max.max(smp.x.abs()).max(smp.y.abs());
+                self.write_point = self.index_add(self.write_point, 1);
+            };
+        }
 
-            max = max.max(smp.x.abs()).max(smp.y.abs());
-
-            silent_samples += (max < SILENCE_LIMIT) as u8;
-
-            // Only check the first SILENCE_CHECK_SIZE samples
-            if stop_reading {
+        // Only check the first SILENCE_CHECK_SIZE samples
+        macro_rules! stop_func {
+            () => {
+                silent_samples += (max < SILENCE_LIMIT) as u8;
                 if silent_samples >= SILENCE_CHECK_SIZE {
                     break;
                 }
-                silent_samples += (max < SILENCE_LIMIT) as u8;
-            }
+            };
+        }
 
-            self.write_point = self.index_add(self.write_point, 1);
+        if stop_reading {
+            for chunk in data.chunks_exact(2) {
+                write_func!(chunk);
+                stop_func!();
+            }
+        } else {
+            for chunk in data.chunks_exact(2) {
+                write_func!(chunk);
+            }
         }
 
         self.max = crate::math::interpolate::multiplicative_fall(
@@ -252,7 +263,7 @@ impl AudioBuffer {
     pub fn post_process(&mut self, silent: bool) {
         self.offset = self.index_sub(self.write_point_old, self.no_samples_scanned);
 
-        dbg!(self.no_samples_scanned);
+        // dbg!(self.no_samples_scanned);
 
         self.silent = if silent {
             self.silent.saturating_add(1)
