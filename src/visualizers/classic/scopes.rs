@@ -379,5 +379,5 @@ pub fn draw_oscilloscope3(prog: &mut crate::data::Program, stream: &mut crate::a
 
     LOCALI.store(li, Relaxed);
 
-    stream.rotate_left(zeroi);
+    stream.rotate_left(zeroi / 2);
 }
