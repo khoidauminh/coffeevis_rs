@@ -50,11 +50,19 @@ pub struct AudioBuffer {
     rotates_since_write: usize,
     average_rotates_since_write: usize,
 
+    /// Often the the visualizer will rotate (sometimes a fixed
+    /// value) a lot and accidentally goes beyond the new data.
+    /// On the next write this will set the read point backward
+    /// the total amount of samples rotated since the last write.
+    ///
+    /// Only rotate_left mutates this value.
+    no_samples_scanned: usize,
+
     /// Size of a REGULAR write, regardless whether
     /// the last write is silent or not.
     input_size: usize,
 
-    /// `max`, `average`: fields for recording maxmimum/average audio
+    /// `max`, `average`: fields for recording maxmimum/average
     /// samples. For normalizing.
     max: f32,
     average: f32,
@@ -106,6 +114,8 @@ impl AudioBuffer {
             rotates_since_write: 0,
             average_rotates_since_write: 1,
 
+            no_samples_scanned: 0,
+
             max: 0.0,
             average: 0.0,
             silent: 0,
@@ -134,6 +144,7 @@ impl AudioBuffer {
 
     pub fn rotate_left(&mut self, n: usize) {
         self.offset = self.index_add(self.offset, n);
+        self.no_samples_scanned = self.no_samples_scanned.wrapping_add(n);
     }
 
     pub fn rotate_right(&mut self, n: usize) {
@@ -239,7 +250,9 @@ impl AudioBuffer {
     }
 
     pub fn post_process(&mut self, silent: bool) {
-        self.offset = self.index_sub(self.write_point, self.input_size * 2);
+        self.offset = self.index_sub(self.write_point_old, self.no_samples_scanned);
+
+        dbg!(self.no_samples_scanned);
 
         self.silent = if silent {
             self.silent.saturating_add(1)
@@ -253,6 +266,8 @@ impl AudioBuffer {
         self.rotates_since_write = 0;
 
         self.rotate_size = self.input_size / self.average_rotates_since_write + 1;
+
+        self.no_samples_scanned = 0;
     }
 
     pub fn checked_normalize(&mut self) {
