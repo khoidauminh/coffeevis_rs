@@ -145,51 +145,89 @@ where
     }
 }
 
-struct MovingMaximum<const N: usize> {
-    buffer: [f32; N],
-    size: usize,
-    index: usize,
-    max: f32,
+use std::cmp::Ordering;
+
+trait MMVal: PartialOrd + PartialEq + Copy + Clone + std::fmt::Display {}
+
+impl MMVal for f32 {}
+
+#[derive(Debug)]
+struct NumPair<T: MMVal> {
+    pub index: usize,
+    pub value: T,
 }
 
-impl<const N: usize> MovingMaximum<N> {
-    pub fn init(val: f32, size: usize) -> Self {
-        assert!(size < N);
+impl<T: MMVal> PartialEq for NumPair<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.value == other.value
+    }
+}
 
+impl<T: MMVal> Eq for NumPair<T> {}
+
+impl<T: MMVal> PartialOrd for NumPair<T> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        if self.value < other.value {
+            return Some(Ordering::Less);
+        }
+
+        if self.value > other.value {
+            return Some(Ordering::Greater);
+        }
+
+        Some(Ordering::Equal)
+    }
+}
+
+impl<T: MMVal> Ord for NumPair<T> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        if self.value < other.value {
+            return Ordering::Less;
+        }
+
+        if self.value > other.value {
+            return Ordering::Greater;
+        }
+
+        Ordering::Equal
+    }
+}
+
+struct MovingMaximum<T: MMVal> {
+    pub heap: std::collections::BinaryHeap<NumPair<T>>,
+    index: usize,
+    size: usize,
+}
+
+impl<T: MMVal> MovingMaximum<T> {
+    pub fn init(size: usize) -> Self {
         Self {
-            buffer: [val; N],
-            size,
+            heap: std::collections::BinaryHeap::with_capacity(size),
             index: 0,
-            max: val,
+            size,
         }
     }
 
-    fn pop(&mut self, new: f32) -> f32 {
-        let old = self.buffer[self.index];
-        self.buffer[self.index] = new;
-
-        self.index = increment(self.index, self.size);
-
-        old
+    fn pop(&mut self) -> T {
+        self.heap.pop().unwrap().value
     }
 
-    pub fn update(&mut self, new: f32) -> f32 {
-        let old = self.pop(new);
+    pub fn update(&mut self, new: T) -> T {
+        self.heap.push(NumPair::<T> {
+            index: self.index,
+            value: new,
+        });
 
-        if new > self.max {
-            self.max = new;
-            return self.max;
+        while let Some(NumPair::<T> { index, value: _ }) = self.heap.peek() {
+            if index.wrapping_add(self.size) > self.index {
+                break;
+            }
+            self.heap.pop();
         }
 
-        if old == self.max {
-            self.max = self
-                .buffer
-                .iter()
-                .take(self.size)
-                .fold(new, |acc, x| acc.max(*x));
-        }
+        self.index = self.index.wrapping_add(1);
 
-        self.max
+        self.heap.peek().unwrap().value
     }
 }
 
@@ -200,7 +238,7 @@ where
     let smoothing = window * 3 / 4;
 
     let mut mave = MovingAverage::<f32, 32>::init(limit, smoothing);
-    let mut mmax = MovingMaximum::<32>::init(limit, window);
+    let mut mmax = MovingMaximum::init(window);
 
     for i in 0..a.len() + smoothing {
         let smp = if let Some(ele) = a.get(i) {
@@ -210,6 +248,11 @@ where
         };
 
         let mult = mave.update(mmax.update(smp));
+
+        // eprintln!("{:?}", mmax.heap);
+        // let mut string = String::new();
+        // std::io::stdin().read_line(&mut string);
+        //std::io::read_to_string()
 
         let j = i.wrapping_sub(smoothing);
 
