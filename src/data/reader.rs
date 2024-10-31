@@ -167,6 +167,11 @@ impl Program {
                     eprintln_red!("\n:3");
                 }
 
+                "--no-display" => {
+                    eprintln_red!("You have told coffeevis to not present the buffer. Expect a black window (or no window on Wayland).");
+                    self.DISPLAY = false;
+                }
+
                 &_ => match arg {
                     #[cfg(not(feature = "terminal"))]
                     "--braille" | "--block" | "--ascii" => {

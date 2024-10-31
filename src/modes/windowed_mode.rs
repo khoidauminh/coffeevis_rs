@@ -403,17 +403,19 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
 
                 prog.force_render();
 
-                let len = buffer.len().min(prog.pix.sizel());
+                if prog.is_display_enabled() {
+                    let len = buffer.len().min(prog.pix.sizel());
 
-                prog.pix.scale_to(
-                    &mut buffer,
-                    prog.scale() as usize,
-                    Some(size.width as usize),
-                    Some(u32::mix),
-                );
+                    prog.pix.scale_to(
+                        &mut buffer,
+                        prog.scale() as usize,
+                        Some(size.width as usize),
+                        Some(u32::mix),
+                    );
 
-                window.pre_present_notify();
-                let _ = buffer.present();
+                    window.pre_present_notify();
+                    let _ = buffer.present();
+                }
             }
 
             let sleep_index = (no_sample >> 6) as usize;
