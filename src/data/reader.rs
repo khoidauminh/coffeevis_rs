@@ -112,13 +112,13 @@ impl Program {
                     if rate == f32::INFINITY {
                         self.MILLI_HZ = u32::MAX;
                         self.REFRESH_RATE = Duration::from_micros(1);
-                        self.REFRESH_RATE_MODE = crate::data::RefreshRateMode::Unlimited;
                     } else {
                         let rate = (rate * 1000.0) as u32;
 
                         self.change_fps_frac(rate);
-                        self.REFRESH_RATE_MODE = RefreshRateMode::Specified;
                     }
+
+                    self.REFRESH_RATE_MODE = RefreshRateMode::Specified;
                 }
 
                 "--resizable" => {
@@ -263,9 +263,7 @@ impl Program {
             eprintln_red!(RESO_WARNING);
         }
 
-        if self.MILLI_HZ / 1000 >= 300
-            || self.REFRESH_RATE_MODE == crate::RefreshRateMode::Unlimited
-        {
+        if self.MILLI_HZ / 1000 >= 300 {
             eprintln_red!("\nHave fun cooking your CPU");
         }
 

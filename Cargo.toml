@@ -14,13 +14,20 @@ readme = "README.md"
 [dependencies]
 cpal = "0.15"
 softbuffer = { version = "0.4", default-features = false }
-winit = { version =  "0.30", default-features = false }
+winit = { version = "0.30", default-features = false }
 qoi = "0.4.1"
 minifb = { version = "0.27", optional = true }
 crossterm = { version = "0.27", optional = true }
+fps_clock = "2.0"
 
 [features]
-default = ["winit/rwh_06", "winit/wayland", "winit/x11", "softbuffer/wayland", "softbuffer/x11"]
+default = [
+    "winit/rwh_06",
+    "winit/wayland",
+    "winit/x11",
+    "softbuffer/wayland",
+    "softbuffer/x11",
+]
 pure_wayland = ["winit/rwh_06", "winit/wayland", "softbuffer/wayland"]
 gnome_decor = ["winit/wayland-csd-adwaita"]
 terminal = ["dep:crossterm"]
@@ -31,6 +38,6 @@ fast_color = []
 overflow-checks = false
 
 [profile.release]
-codegen-units = 1     # Reduce number of codegen units to increase optimizations
-panic = 'abort'       # Abort on panic
-strip = true          # Strip symbols from binary
+codegen-units = 1 # Reduce number of codegen units to increase optimizations
+panic = 'abort'   # Abort on panic
+strip = true      # Strip symbols from binary

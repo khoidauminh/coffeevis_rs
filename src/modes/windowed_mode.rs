@@ -4,6 +4,7 @@ use std::{sync::Arc, thread};
 
 use crate::data::*;
 
+use fps_clock::FpsClock;
 #[cfg(feature = "minifb")]
 use minifb::{Window, WindowOptions};
 
@@ -247,8 +248,7 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
     size.0 *= scale;
     size.1 *= scale;
 
-    let lock_fps = prog.REFRESH_RATE_MODE == crate::RefreshRateMode::Specified
-        || prog.REFRESH_RATE_MODE == crate::RefreshRateMode::Unlimited;
+    let lock_fps = prog.REFRESH_RATE_MODE == crate::RefreshRateMode::Specified;
 
     let resizeable = prog.is_resizable();
 
@@ -303,15 +303,14 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
     let thread_updates = thread::spawn({
         let window = window.clone();
         let commands_sender = commands_sender.clone();
-
         move || {
             if lock_fps {
                 return;
             }
 
-            // Try fetching monitor information for 5 times before giving up.
+            // Tries to fetch monitor information for 5 times before giving up.
             for _ in 0..5 {
-                thread::sleep(Duration::from_millis(621));
+                thread::sleep(Duration::from_millis(500));
 
                 if let Some(monitor) = window.current_monitor() {
                     if let Some(milli_hz) = monitor.refresh_rate_millihertz() {
@@ -339,6 +338,7 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
         let commands_sender = commands_sender.clone();
         let window = window.clone();
         let mut size = inner_size;
+        let mut ticker = fps_clock::FpsClock::new(prog.MILLI_HZ / 1000);
         let mut surface = {
             use winit::raw_window_handle;
             let context = softbuffer::Context::new(window.clone()).unwrap();
@@ -383,6 +383,10 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
                     }
                 }
 
+                if let Command::FpsFrac(f) = cmd {
+                    ticker = fps_clock::FpsClock::new(f / 1000);
+                }
+
                 draw |= prog.eval_command(&cmd);
             }
 
@@ -412,9 +416,13 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
                 let _ = buffer.present();
             }
 
-            let sleep = prog.DURATIONS[(no_sample >> 6) as usize];
+            let sleep_index = (no_sample >> 6) as usize;
 
-            if prog.REFRESH_RATE_MODE != crate::RefreshRateMode::Unlimited {
+            let sleep = prog.DURATIONS[sleep_index];
+
+            if sleep_index == 0 {
+                ticker.tick();
+            } else {
                 thread::sleep(sleep);
             }
         }
@@ -422,6 +430,7 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
 
     event_loop.set_control_flow(winit::event_loop::ControlFlow::Wait);
     event_loop.run_app(&mut state).unwrap();
+    thread_updates.join().unwrap();
     thread_size.join().unwrap();
     thread_draw.join().unwrap();
 

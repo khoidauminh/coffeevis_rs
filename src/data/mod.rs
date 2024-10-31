@@ -36,7 +36,6 @@ pub const DEFAULT_WIN_SCALE: u8 = 3;
 pub enum RefreshRateMode {
     Sync,
     Specified,
-    Unlimited,
 }
 
 /// Main program struct

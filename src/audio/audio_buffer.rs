@@ -12,12 +12,12 @@ const REACT_SPEED: f32 = 0.025;
 
 /// This is a ring buffer.
 ///
-/// By default, coffeevis displays at 144hz, but cpal
-/// can't send input data that quickly between each
+/// By default, coffeevis displays at 144hz (or monitor rate),
+/// but cpal can't send input data that quickly between each
 /// rendering. Moreover, the visualizers don't use all of
 /// the data sent in in one rendering. Therefore, one
-/// solution is to use one slice of then rotate
-/// it to get to the next one.
+/// solution is to use one slice of the buffer then rotate
+/// it to get to the next slice.
 ///
 /// AudioBuffer uses a read_offset index to simulate
 /// rotating and a write_offset to bypass having to
@@ -36,29 +36,27 @@ pub struct AudioBuffer {
     offset: usize,
 
     /// To prevent "audio tearing" when writing input,
-    /// `write_point` tells where the last write happened.
+    /// `write_point_next` tells where the last write ended.
     /// Ensures that new data is written right after where
     /// the old one was.
-    write_point_old: usize,
     write_point: usize,
+    write_point_next: usize,
 
-    /// `rotate_size`, `rotates_since_write` and
-    /// `average_rotates_since_write` enable smart rotation.
+    /// `rotate_size` and `rotates_since_write` enable smart rotation.
     /// If auto_rotate() is called more frequently,
     /// rotate_size gets smaller.
     rotate_size: usize,
     rotates_since_write: usize,
-    average_rotates_since_write: usize,
 
     /// Often the the visualizer will rotate (sometimes a fixed
-    /// value) a lot and accidentally goes beyond the new data.
+    /// value) a lot and accidentally go beyond the new data.
     /// On the next write this will set the read point backward
     /// the total amount of samples rotated since the last write.
     ///
     /// Only rotate_left mutates this value.
-    no_samples_scanned: usize,
+    samples_scanned: usize,
 
-    /// Size of a REGULAR write, regardless whether
+    /// Size of input data (in Cplx unit), regardless whether
     /// the last write is silent or not.
     input_size: usize,
 
@@ -99,22 +97,19 @@ fn write_sample<T: cpal::Sample<Float = f32>>(smp: &mut Cplx, smp_in: &[T]) {
 
 impl AudioBuffer {
     pub const fn new() -> Self {
-        let size_mask: usize = BUFFER_CAPACITY.next_power_of_two() / 2 - 1;
-
         Self {
             buffer: [Cplx::zero(); BUFFER_CAPACITY],
             offset: 0,
-            write_point_old: 0,
             write_point: 0,
+            write_point_next: 0,
             input_size: 1000,
 
-            size_mask,
+            size_mask: BUFFER_CAPACITY.next_power_of_two() / 2 - 1,
 
             rotate_size: DEFAULT_ROTATE_SIZE,
             rotates_since_write: 0,
-            average_rotates_since_write: 1,
 
-            no_samples_scanned: 0,
+            samples_scanned: 0,
 
             max: 0.0,
             average: 0.0,
@@ -144,7 +139,7 @@ impl AudioBuffer {
 
     pub fn rotate_left(&mut self, n: usize) {
         self.offset = self.index_add(self.offset, n);
-        self.no_samples_scanned = self.no_samples_scanned.wrapping_add(n);
+        self.samples_scanned = self.samples_scanned.wrapping_add(n);
     }
 
     pub fn rotate_right(&mut self, n: usize) {
@@ -204,28 +199,28 @@ impl AudioBuffer {
     }
 
     pub fn set_to_writepoint(&mut self) {
-        self.offset = self.write_point;
+        self.offset = self.write_point_next;
     }
 
     pub fn read_from_input<T: cpal::Sample<Float = f32>>(&mut self, data: &[T]) {
         let input_size = data.len();
         self.input_size = input_size / 2;
 
-        // self.write_point_old = self.write_point;
+        // self.write_point = self.write_point_next;
 
         let mut max = 0.0f32;
 
         let stop_reading = self.is_silent_for((self.size_mask / self.input_size).min(255) as u8);
 
         let mut silent_samples = 0;
-        self.write_point_old = self.write_point;
+        self.write_point = self.write_point_next;
 
         macro_rules! write_func {
             ($chunk:expr) => {
-                let smp = unsafe { self.buffer.get_unchecked_mut(self.write_point) };
+                let smp = unsafe { self.buffer.get_unchecked_mut(self.write_point_next) };
                 write_sample(smp, $chunk);
                 max = max.max(smp.x.abs()).max(smp.y.abs());
-                self.write_point = self.index_add(self.write_point, 1);
+                self.write_point_next = self.index_add(self.write_point_next, 1);
             };
         }
 
@@ -261,9 +256,9 @@ impl AudioBuffer {
     }
 
     pub fn post_process(&mut self, silent: bool) {
-        self.offset = self.index_sub(self.write_point_old, self.no_samples_scanned);
+        self.offset = self.index_sub(self.write_point, self.samples_scanned);
 
-        // dbg!(self.no_samples_scanned);
+        // dbg!(self.samples_scanned);
 
         self.silent = if silent {
             self.silent.saturating_add(1)
@@ -271,14 +266,10 @@ impl AudioBuffer {
             0
         };
 
-        self.average_rotates_since_write =
-            (self.average_rotates_since_write + self.rotates_since_write).max(2) / 2;
+        self.rotate_size = self.input_size / (self.rotates_since_write + 1) + 1;
 
         self.rotates_since_write = 0;
-
-        self.rotate_size = self.input_size / self.average_rotates_since_write + 1;
-
-        self.no_samples_scanned = 0;
+        self.samples_scanned = 0;
     }
 
     pub fn checked_normalize(&mut self) {
@@ -288,19 +279,19 @@ impl AudioBuffer {
             return;
         }
 
-        if self.write_point_old <= self.write_point {
+        if self.write_point <= self.write_point_next {
             self.buffer
-                .get_mut(self.write_point_old..self.write_point)
+                .get_mut(self.write_point..self.write_point_next)
                 .iter_mut()
                 .for_each(|x| x.iter_mut().for_each(|x| *x *= scale_up_factor));
         } else {
             self.buffer
                 .iter_mut()
-                .take(self.write_point)
+                .take(self.write_point_next)
                 .for_each(|x| *x *= scale_up_factor);
             self.buffer
                 .iter_mut()
-                .skip(self.write_point_old)
+                .skip(self.write_point)
                 .for_each(|x| *x *= scale_up_factor);
         }
     }
