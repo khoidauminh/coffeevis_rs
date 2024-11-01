@@ -60,24 +60,34 @@ where
     }
 }
 
-impl<T> Mul<Vec2<T>> for Vec2<T>
-where
-    T: Add<Output = T> + Sub<Output = T> + Mul<Output = T> + Copy,
-{
-    type Output = Vec2<T>;
-    fn mul(self, other: Vec2<T>) -> Vec2<T> {
-        Vec2::<T> {
+impl Mul<Vec2<u32>> for Vec2<u32> {
+    type Output = Vec2<u32>;
+    fn mul(self, other: Vec2<u32>) -> Vec2<u32> {
+        Vec2::<u32> {
             x: self.x * other.x - self.y * other.y,
             y: self.x * other.y + self.y * other.x,
         }
     }
 }
 
-impl<T> MulAssign for Vec2<T>
-where
-    T: Add<Output = T> + Sub<Output = T> + Mul<Output = T> + Copy,
-{
-    fn mul_assign(&mut self, other: Vec2<T>) {
+impl Mul<Vec2<f32>> for Vec2<f32> {
+    type Output = Vec2<f32>;
+    fn mul(self, other: Vec2<f32>) -> Vec2<f32> {
+        Vec2::<f32> {
+            x: self.x.mul_add(other.x, -self.y * other.y),
+            y: self.x.mul_add(other.y, self.y * other.x),
+        }
+    }
+}
+
+impl MulAssign for Vec2<f32> {
+    fn mul_assign(&mut self, other: Vec2<f32>) {
+        *self = *self * other;
+    }
+}
+
+impl MulAssign for Vec2<u32> {
+    fn mul_assign(&mut self, other: Vec2<u32>) {
         *self = *self * other;
     }
 }
@@ -194,7 +204,7 @@ impl Vec2<f32> {
     }
 
     pub fn mag(self) -> f32 {
-        (self.x.powi(2) + self.y.powi(2)).sqrt()
+        f32::hypot(self.x, self.y)
     }
 
     pub fn l1_norm(self) -> f32 {
