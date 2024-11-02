@@ -85,18 +85,11 @@ impl RainDrop {
         }
         let mut p = self.position.to_p2();
 
-        while current_length > 0 {
+        while current_length > 0 && p.y >= 0 {
             let fade = current_length * 256 / self.length;
             let fade = fade as u8;
-
-            canvas.set_pixel_xy_by(p, self.color.mul_alpha(fade), u32::mix);
-
-            if p.y == 0 {
-                break;
-            }
-
+            canvas.set_pixel_xy(p, self.color.fade(fade));
             p.y -= 1;
-
             current_length -= 1;
         }
     }
@@ -120,8 +113,11 @@ pub fn draw(prog: &mut Program, stream: &mut SampleArr) {
 
     static OLD_VOLUME: Mutex<f32> = Mutex::new(0.0);
 
+    let Ok(mut list) = LIST_OF_DROPS.try_lock() else {
+        return;
+    };
+
     START.call_once(|| {
-        let mut list = LIST_OF_DROPS.lock().unwrap();
         for drop in list.iter_mut() {
             drop.randomize_start();
         }
@@ -147,25 +143,18 @@ pub fn draw(prog: &mut Program, stream: &mut SampleArr) {
         (255.0 * blue) as u8,
     ]));
 
-    let mut list = LIST_OF_DROPS.lock().unwrap();
-
     let size = prog.pix.size();
-
-    if !list.first().unwrap().is_bounds_match(size) {
-        list.iter_mut().for_each(|drop| {
-            drop.set_bound(size);
-            drop.randomize_start();
-        });
-    }
 
     for drop in list.iter_mut() {
         let size = prog.pix.size();
 
-        if drop.is_bounds_match(size) {
+        if !drop.is_bounds_match(size) {
             drop.set_bound(size);
+            drop.randomize_start();
         }
 
         drop.draw(&mut prog.pix);
+
         let p = drop.fall(*old * 0.01);
         if !p {
             drop.randomize_start();
@@ -173,29 +162,4 @@ pub fn draw(prog: &mut Program, stream: &mut SampleArr) {
     }
 
     stream.auto_rotate();
-}
-
-fn draw_rain_drop(canvas: &mut Canvas, mut p: P2, length: usize, _intensity: u8, color: u32) {
-    let _w = canvas.width();
-    let _h = canvas.height();
-
-    let mut current_length = length;
-
-    if p.x as usize >= _w {
-        return;
-    }
-
-    while current_length > 0 {
-        let fade = current_length * 256 / length;
-        let fade = fade as u8;
-
-        canvas.set_pixel_xy_by(p, color.mul_alpha(fade), u32::mix);
-
-        if p.y == 0 {
-            break;
-        }
-
-        p.y -= 1;
-        current_length -= 1;
-    }
 }

@@ -268,15 +268,11 @@ pub fn draw_oscilloscope2(prog: &mut crate::data::Program, stream: &mut crate::a
 use crate::math::interpolate::linearfc;
 
 pub fn draw_oscilloscope3(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
-    let l = stream.input_size() / 2;
+    let Ok(mut wave_scale_factor) = WAVE_SCALE_FACTOR.try_lock() else {
+        return;
+    };
 
-    let mut zero_x = 0usize;
-    let mut zero_y = 0usize;
-
-    let mut ssmp = stream[-5isize as usize];
-    let mut old = ssmp;
-    let mut old2 = old;
-
+    let l = stream.input_size() * 2 / 3;
     let (width, height) = prog.pix.sizet();
     let width_top_h = width / 2;
     let height_top_h = height / 2;
@@ -285,22 +281,32 @@ pub fn draw_oscilloscope3(prog: &mut crate::data::Program, stream: &mut crate::a
 
     let mut bass_sum = 0.0;
 
-    for i in -4isize..0 {
-        ssmp = linearfc(ssmp, stream[i as usize], 0.01);
+    let mut i = (-20_isize) as usize;
+
+    let mut ssmp = stream[i];
+    let mut old = ssmp;
+    let mut old2 = old;
+
+    while i != 0 {
+        ssmp = linearfc(ssmp, stream[i], 0.01);
         old2 = old;
         old = ssmp;
+        i = i.wrapping_add(1);
     }
+
+    let mut zeros = [0].to_vec();
 
     for i in 0..l {
         let t = stream[i];
         ssmp = linearfc(ssmp, t, 0.01);
 
-        if zero_x == 0 && old2.x > 0.0 && ssmp.x < 0.0 {
-            zero_x = i
-        }
-
-        if zero_y == 0 && old2.y > 0.0 && ssmp.y < 0.0 {
-            zero_y = i
+        if zeros.len() < 5 {
+            if old2.x > 0.0 && ssmp.x < 0.0 {
+                zeros.push(i);
+            }
+            if old2.y > 0.0 && ssmp.y < 0.0 {
+                zeros.push(i);
+            }
         }
 
         old2 = old;
@@ -309,22 +315,17 @@ pub fn draw_oscilloscope3(prog: &mut crate::data::Program, stream: &mut crate::a
         bass_sum += ssmp.x.powi(2) + ssmp.y.powi(2);
     }
 
-    let zeroi = if zero_x > 5 { zero_x } else { zero_y } - 50;
+    let zeroi = zeros[zeros.len() - 1] - 50;
 
     let bass = (bass_sum / l as f32).sqrt();
 
-    let wave_scale_factor = bass * 15.0 + 2.0;
+    let wsf = bass * 15.0 + 2.0;
 
-    let wave_scale_factor_old = *WAVE_SCALE_FACTOR.lock().unwrap();
-
-    let wave_scale_factor =
-        math::interpolate::subtractive_fall(wave_scale_factor_old, wave_scale_factor, 1.0, 0.5);
-
-    *WAVE_SCALE_FACTOR.lock().unwrap() = wave_scale_factor;
+    *wave_scale_factor = math::interpolate::subtractive_fall(*wave_scale_factor, wsf, 1.0, 0.5);
 
     prog.pix.clear();
 
-    let wave_scale_factor = wave_scale_factor as isize;
+    let wave_scale_factor = *wave_scale_factor as isize;
 
     for x in 0..prog.pix.width() as i32 {
         let di = (x - width_top_h) as isize * wave_scale_factor + zeroi as isize;

@@ -81,15 +81,6 @@ impl std::ops::Index<usize> for AudioBuffer {
     }
 }
 
-impl std::ops::IndexMut<usize> for AudioBuffer {
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        unsafe {
-            self.buffer
-                .get_unchecked_mut(index.wrapping_add(self.offset) & self.size_mask)
-        }
-    }
-}
-
 fn write_sample<T: cpal::Sample<Float = f32>>(smp: &mut Cplx, smp_in: &[T]) {
     smp.x = smp_in[0].to_float_sample();
     smp.y = smp_in[1].to_float_sample();
