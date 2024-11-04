@@ -271,6 +271,7 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
         .with_transparent(false)
         .with_decorations(true)
         .with_resizable(prog.is_resizable() || gnome_workaround)
+        .with_min_inner_size(win_size)
         .with_window_icon(Some(icon));
 
     let window = Arc::new(event_loop.create_window(window_attributes).unwrap());

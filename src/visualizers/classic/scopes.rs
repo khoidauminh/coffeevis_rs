@@ -319,7 +319,7 @@ pub fn draw_oscilloscope3(prog: &mut crate::data::Program, stream: &mut crate::a
 
     let bass = (bass_sum / l as f32).sqrt();
 
-    let wsf = bass * 15.0 + 2.0;
+    let wsf = bass * 10.0 + 2.0;
 
     *wave_scale_factor = math::interpolate::subtractive_fall(*wave_scale_factor, wsf, 1.0, 0.5);
 
@@ -333,7 +333,7 @@ pub fn draw_oscilloscope3(prog: &mut crate::data::Program, stream: &mut crate::a
         let mut smp_max = Cplx::new(-1.0, -1.0);
         let mut smp_min = Cplx::new(1.0, 1.0);
 
-        for i in (di..di + wave_scale_factor).step_by(2) {
+        for i in di..di + wave_scale_factor {
             let smp = &stream[i as usize];
 
             smp_max.x = smp_max.x.max(smp.x);

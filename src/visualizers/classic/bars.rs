@@ -63,13 +63,13 @@ fn prepare(
         .enumerate()
         .map(|(i, smp)| {
             let scl = ((i + 2) as f32).log2().powi(2);
-            let smp_f32: f32 = (*smp).mag();
+            let smp_f32: f32 = smp.mag();
 
             smp_f32 * volume_scale * scl * NORM
         })
         .collect::<Vec<f32>>();
 
-    crate::audio::limiter(&mut data_f[..bar_num], 0.9, 7, 0.98, |x| x);
+    crate::audio::limiter(&mut data_f[..bar_num], 1.0, 10, 0.98, |x| x);
 
     let bnf = 1.0 / bnf;
 
@@ -80,10 +80,8 @@ fn prepare(
         .enumerate()
         .for_each(|(i, (w, r))| {
             let i_ = i as f32 * bnf;
-            let smoothing = (0.095 - 0.055 * i_) * prog_smoothing;
-            *w = math::interpolate::multiplicative_fall(*w, *r, 0.0, smoothing);
-
-            // *w = math::interpolate::linearf(*w, *r, dynamic_smoothing+0.25);
+            let accel = (0.090 - 0.055 * i_) * prog_smoothing;
+            *w = math::interpolate::multiplicative_fall(*w, *r, 0.0, accel);
         });
 
     stream.rotate_left(FFT_SIZE_HALF / 2);
@@ -195,28 +193,26 @@ pub fn draw_bars_circle(prog: &mut crate::data::Program, stream: &mut crate::aud
 
         // let scalef = math::fft_scale_up(i, bar_num);
 
-        let bar = (math::interpolate::linearf(LOCAL[i], LOCAL[i_next], t) * sizef) as i32;
-        let bar = bar * 7 / 10;
+        let bar = math::interpolate::linearf(LOCAL[i], LOCAL[i_next], t) * sizef;
+        let bar = bar * 0.7;
 
         let p1 = P2::new(
             wh + (sizef * angle.x) as i32 / 2,
             hh + (sizef * angle.y) as i32 / 2,
         );
         let p2 = P2::new(
-            wh + ((size - bar) as f32 * angle.x) as i32 / 2,
-            hh + ((size - bar) as f32 * angle.y) as i32 / 2,
+            wh + ((sizef - bar) * angle.x) as i32 / 2,
+            hh + ((sizef - bar) * angle.y) as i32 / 2,
         );
 
         let _i2 = i << 2;
 
         let pulse = (stream[i * 3 / 2].x * 32768.0) as u8;
-        let peak = (bar * 255 / size).min(255) as u8;
+        let peak = (bar as i32 * 255 / size).min(255) as u8;
 
         let r: u8 = 0;
         let g: u8 = peak.saturating_add(pulse >> 1);
-        //let b: u8 =
         let b: u8 = 0xFF;
-
         let c = u32::compose([0xFF, r, g, b]);
 
         prog.pix.draw_line(p1, p2, c);
