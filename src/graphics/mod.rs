@@ -148,6 +148,7 @@ impl<T: Pixel> DrawCommandBuffer<T> {
 }
 
 pub struct PixelBuffer<T: Pixel> {
+    scaled_buffer: Vec<T>,
     buffer: Vec<T>,
     len: usize,
     mask: usize,
@@ -165,6 +166,7 @@ impl<T: Pixel> PixelBuffer<T> {
     pub fn new(w: usize, h: usize) -> Self {
         let padded = crate::math::larger_or_equal_pw2(w * h);
         Self {
+            scaled_buffer: Vec::new(),
             buffer: vec![T::trans(); padded],
             command: DrawCommandBuffer::new(),
             mask: padded - 1,
@@ -266,12 +268,14 @@ impl<T: Pixel> PixelBuffer<T> {
     // So the width parameter is there to ensure that the horizontal
     // lines are aligned.
     pub fn scale_to(
-        &self,
+        &mut self,
         dest: &mut [T],
         scale: usize,
         width: Option<usize>,
         mixer: Option<Mixer<T>>,
     ) {
+        self.scaled_buffer.resize(dest.len(), T::trans());
+
         use std::sync::atomic::{AtomicU8, Ordering::Relaxed};
         static FIELD: AtomicU8 = AtomicU8::new(0);
 
@@ -282,7 +286,11 @@ impl<T: Pixel> PixelBuffer<T> {
         let dst_width = width.unwrap_or(self.width * scale);
 
         let src_rows = self.buffer.chunks_exact(self.width);
-        let dst_rows = dest.chunks_exact_mut(dst_width).skip(field).step_by(scale);
+        let dst_rows = self
+            .scaled_buffer
+            .chunks_exact_mut(dst_width)
+            .skip(field)
+            .step_by(scale);
 
         for (src_row, dst_row) in src_rows.zip(dst_rows) {
             for (src_pixel, dst_chunk) in src_row.iter().zip(dst_row.chunks_exact_mut(scale)) {
@@ -298,6 +306,8 @@ impl<T: Pixel> PixelBuffer<T> {
         //         row.copy_from_slice(row1);
         //     }
         // }
+
+        dest.copy_from_slice(&self.scaled_buffer);
     }
 }
 
