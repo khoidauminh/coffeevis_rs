@@ -272,12 +272,17 @@ impl<T: Pixel> PixelBuffer<T> {
         width: Option<usize>,
         mixer: Option<Mixer<T>>,
     ) {
+        use std::sync::atomic::{AtomicU8, Ordering::Relaxed};
+        static FIELD: AtomicU8 = AtomicU8::new(0);
+
+        let field = FIELD.fetch_add(1, Relaxed) as usize % scale;
+
         let mixer = mixer.unwrap_or(T::mix);
 
         let dst_width = width.unwrap_or(self.width * scale);
 
         let src_rows = self.buffer.chunks_exact(self.width);
-        let dst_rows = dest.chunks_exact_mut(dst_width).step_by(scale);
+        let dst_rows = dest.chunks_exact_mut(dst_width).skip(field).step_by(scale);
 
         for (src_row, dst_row) in src_rows.zip(dst_rows) {
             for (src_pixel, dst_chunk) in src_row.iter().zip(dst_row.chunks_exact_mut(scale)) {
@@ -286,13 +291,13 @@ impl<T: Pixel> PixelBuffer<T> {
             }
         }
 
-        for block in dest.chunks_exact_mut(dst_width * scale) {
-            let (row1, rows) = block.split_at_mut(dst_width);
+        // for block in dest.chunks_exact_mut(dst_width * scale) {
+        //     let (row1, rows) = block.split_at_mut(dst_width);
 
-            for row in rows.chunks_mut(dst_width) {
-                row.copy_from_slice(row1);
-            }
-        }
+        //     for row in rows.chunks_mut(dst_width) {
+        //         row.copy_from_slice(row1);
+        //     }
+        // }
     }
 }
 

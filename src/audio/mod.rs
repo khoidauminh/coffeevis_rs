@@ -97,27 +97,25 @@ pub fn read_samples<T: cpal::Sample<Float = f32>>(data: &[T]) {
     set_no_sample(b.silent());
 }
 
-pub struct MovingAverage<T, const N: usize> {
+pub struct MovingAverage<T> {
     size: usize,
     index: usize,
-    vec: [T; N],
+    vec: Vec<T>,
     sum: T,
     denominator: f32,
     average: T,
 }
 
-impl<T, const N: usize> MovingAverage<T, N>
+impl<T> MovingAverage<T>
 where
     T: Add<Output = T> + Sub<Output = T> + Mul<f32, Output = T> + std::marker::Copy,
     f32: Mul<T, Output = T>,
 {
     pub fn init(val: T, size: usize) -> Self {
-        assert!(size < N);
-
         Self {
             size,
             index: 0,
-            vec: [val; N],
+            vec: vec![val; size],
             denominator: (size as f32).recip(),
             sum: size as f32 * val,
             average: val,
@@ -237,7 +235,7 @@ where
 {
     let smoothing = window * 3 / 4;
 
-    let mut mave = MovingAverage::<f32, 32>::init(limit, smoothing);
+    let mut mave = MovingAverage::init(limit, smoothing);
     let mut mmax = MovingMaximum::init(window);
 
     for i in 0..a.len() + smoothing {
@@ -249,16 +247,10 @@ where
 
         let mult = mave.update(mmax.update(smp));
 
-        // eprintln!("{:?}", mmax.heap);
-        // let mut string = String::new();
-        // std::io::stdin().read_line(&mut string);
-        //std::io::read_to_string()
-
         let j = i.wrapping_sub(smoothing);
 
         if let Some(ele) = a.get_mut(j) {
             let mult = gain / mult;
-
             *ele = *ele * mult;
         }
     }

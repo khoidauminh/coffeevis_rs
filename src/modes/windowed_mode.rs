@@ -264,14 +264,13 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
         winit::window::Icon::from_rgba(v, w, h).expect("Failed to create window icon.")
     };
 
-    let window_attributes = winit::window::Window::default_attributes()
+    let mut window_attributes = winit::window::Window::default_attributes()
         .with_title("cvis")
         .with_inner_size(win_size)
         .with_window_level(winit::window::WindowLevel::AlwaysOnTop)
         .with_transparent(false)
         .with_decorations(true)
         .with_resizable(prog.is_resizable() || gnome_workaround)
-        .with_min_inner_size(win_size)
         .with_window_icon(Some(icon));
 
     let window = Arc::new(event_loop.create_window(window_attributes).unwrap());
@@ -297,6 +296,11 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
                 thread::sleep(Duration::from_millis(50));
                 window.request_inner_size(LogicalSize::new(size.0, size.1));
                 window.set_resizable(resizeable);
+            }
+
+            if !resizeable {
+                window.set_min_inner_size(Some(win_size));
+                window.set_max_inner_size(Some(win_size));
             }
         }
     });

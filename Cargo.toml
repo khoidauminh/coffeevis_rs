@@ -2,7 +2,7 @@
 name = "coffeevis"
 version = "0.5.0"
 edition = "2021"
-authors = ["Cas Pascal <casboi86@gmail.com"]
+authors = ["Cas Pascal <casboi86@gmail.com>"]
 description = "Personal graphical/console music visualizer for Linux."
 license = "MIT"
 keywords = ["graphics", "audio", "music", "visualizer"]
@@ -28,7 +28,6 @@ default = [
     "softbuffer/wayland",
     "softbuffer/x11",
 ]
-pure_wayland = ["winit/rwh_06", "winit/wayland", "softbuffer/wayland"]
 gnome_decor = ["winit/wayland-csd-adwaita"]
 terminal = ["dep:crossterm"]
 minifb = ["dep:minifb"]
