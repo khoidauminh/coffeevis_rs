@@ -133,7 +133,7 @@ use winit::{
         NamedKey::{Escape, Space},
     },
     platform::modifier_supplement::KeyEventExtModifierSupplement,
-    window::WindowId,
+    window::{WindowButtons, WindowId},
 };
 
 use std::num::NonZeroU32;

@@ -148,6 +148,7 @@ impl<T: Pixel> DrawCommandBuffer<T> {
 }
 
 pub struct PixelBuffer<T: Pixel> {
+    field: usize,
     scaled_buffer: Vec<T>,
     buffer: Vec<T>,
     len: usize,
@@ -166,6 +167,7 @@ impl<T: Pixel> PixelBuffer<T> {
     pub fn new(w: usize, h: usize) -> Self {
         let padded = crate::math::larger_or_equal_pw2(w * h);
         Self {
+            field: 0,
             scaled_buffer: Vec::new(),
             buffer: vec![T::trans(); padded],
             command: DrawCommandBuffer::new(),
@@ -276,11 +278,6 @@ impl<T: Pixel> PixelBuffer<T> {
     ) {
         self.scaled_buffer.resize(dest.len(), T::trans());
 
-        use std::sync::atomic::{AtomicU8, Ordering::Relaxed};
-        static FIELD: AtomicU8 = AtomicU8::new(0);
-
-        let field = FIELD.fetch_add(1, Relaxed) as usize % scale;
-
         let mixer = mixer.unwrap_or(T::mix);
 
         let dst_width = width.unwrap_or(self.width * scale);
@@ -289,7 +286,7 @@ impl<T: Pixel> PixelBuffer<T> {
         let dst_rows = self
             .scaled_buffer
             .chunks_exact_mut(dst_width)
-            .skip(field)
+            .skip(self.field)
             .step_by(scale);
 
         for (src_row, dst_row) in src_rows.zip(dst_rows) {
@@ -308,6 +305,8 @@ impl<T: Pixel> PixelBuffer<T> {
         // }
 
         dest.copy_from_slice(&self.scaled_buffer);
+
+        self.field = (self.field + 1) % scale;
     }
 }
 

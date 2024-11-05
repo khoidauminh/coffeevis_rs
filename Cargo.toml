@@ -23,12 +23,12 @@ fps_clock = "2.0"
 [features]
 default = [
     "winit/rwh_06",
+    "winit/wayland-csd-adwaita",
     "winit/wayland",
     "winit/x11",
     "softbuffer/wayland",
     "softbuffer/x11",
 ]
-gnome_decor = ["winit/wayland-csd-adwaita"]
 terminal = ["dep:crossterm"]
 minifb = ["dep:minifb"]
 fast_color = []

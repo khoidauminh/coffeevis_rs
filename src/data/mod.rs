@@ -28,9 +28,8 @@ pub const DEFAULT_SMOOTHING: f32 = 0.65;
 /// Stop rendering when get_no_sample() exceeds this value;
 pub const STOP_RENDERING: u8 = 192;
 
-pub const DEFAULT_SIZE_WIN: u16 = 60;
-
-pub const DEFAULT_WIN_SCALE: u8 = 3;
+pub const DEFAULT_SIZE_WIN: u16 = 84;
+pub const DEFAULT_WIN_SCALE: u8 = 2;
 
 #[derive(PartialEq)]
 pub enum RefreshRateMode {

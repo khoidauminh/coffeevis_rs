@@ -14,8 +14,6 @@ This project also serves as my playground, so you'll see a lot of weird implemen
 New visualizers: TODO!
 Configuration changes: TODO!
 
-Users who want to see GNOME-style decorations will now have to recompile coffeevis with `--features gnome_decor`.
-
 ### Important change since v0.5.0
 *Terminal and minifb mode have been moved to their own features. You'll need to
 recompile with `--features terminal` and/or `--features minifb` to use them.*
