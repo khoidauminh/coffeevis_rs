@@ -3,6 +3,8 @@
 
 use std::env;
 
+use scheduler::set_self_priority;
+
 mod audio;
 mod data;
 mod graphics;
@@ -20,6 +22,8 @@ use cpal::traits::StreamTrait;
 use visualizers::VisFunc;
 
 fn main() {
+    let _ = set_self_priority(scheduler::Which::Process, -11);
+
     let args = env::args().collect::<Vec<String>>();
 
     let prog = Program::new().eval_args(&mut args.iter());

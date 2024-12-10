@@ -13,22 +13,15 @@ readme = "README.md"
 
 [dependencies]
 cpal = "0.15"
-softbuffer = { version = "0.4", default-features = false }
-winit = { version = "0.30", default-features = false }
+softbuffer = "0.4"
+winit = "0.30"
 qoi = "0.4.1"
 minifb = { version = "0.27", optional = true }
 crossterm = { version = "0.27", optional = true }
 fps_clock = "2.0"
+scheduler = "0.1.3"
 
 [features]
-default = [
-    "winit/rwh_06",
-    "winit/wayland-csd-adwaita",
-    "winit/wayland",
-    "winit/x11",
-    "softbuffer/wayland",
-    "softbuffer/x11",
-]
 terminal = ["dep:crossterm"]
 minifb = ["dep:minifb"]
 fast_color = []

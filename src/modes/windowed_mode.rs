@@ -254,7 +254,8 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
 
     let de = std::env::var("XDG_CURRENT_DESKTOP").unwrap_or(String::new());
     let is_gnome = de == "GNOME";
-    let gnome_workaround = is_gnome && prog.is_wayland();
+    let is_wayland = prog.is_wayland();
+    let gnome_workaround = is_gnome && is_wayland;
 
     let win_size = dpi::PhysicalSize::<u32>::new(size.0, size.1);
 
@@ -269,8 +270,8 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
         .with_inner_size(win_size)
         .with_window_level(winit::window::WindowLevel::AlwaysOnTop)
         .with_transparent(false)
-        .with_decorations(true)
-        .with_resizable(prog.is_resizable() || gnome_workaround)
+        .with_decorations(!(is_gnome && is_wayland))
+        .with_resizable(prog.is_resizable())
         .with_window_icon(Some(icon));
 
     let window = Arc::new(event_loop.create_window(window_attributes).unwrap());
@@ -294,8 +295,7 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
 
             if gnome_workaround {
                 thread::sleep(Duration::from_millis(50));
-                window.request_inner_size(LogicalSize::new(size.0, size.1));
-                window.set_resizable(resizeable);
+                window.set_decorations(true);
             }
 
             if !resizeable {

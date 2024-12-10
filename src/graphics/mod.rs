@@ -175,7 +175,7 @@ impl<T: Pixel> PixelBuffer<T> {
             len: w * h,
             width: w,
             height: h,
-            background: T::black(),
+            background: T::from(0xFF_24_24_24),
         }
     }
 
@@ -295,14 +295,6 @@ impl<T: Pixel> PixelBuffer<T> {
                 dst_chunk.fill(pixel);
             }
         }
-
-        // for block in dest.chunks_exact_mut(dst_width * scale) {
-        //     let (row1, rows) = block.split_at_mut(dst_width);
-
-        //     for row in rows.chunks_mut(dst_width) {
-        //         row.copy_from_slice(row1);
-        //     }
-        // }
 
         dest.copy_from_slice(&self.scaled_buffer);
 
