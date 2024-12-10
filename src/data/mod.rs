@@ -30,7 +30,7 @@ pub const STOP_RENDERING: u8 = 192;
 
 pub const DEFAULT_SIZE_WIN: u16 = 84;
 pub const DEFAULT_WIN_SCALE: u8 = 2;
-pub const MAX_PIXEL_BUFFER_HEIGHT: u16 = 300;
+pub const MAX_PIXEL_BUFFER_SIZE: u32 = u16::MAX as u32 *3;
 
 #[derive(PartialEq)]
 pub enum RefreshRateMode {

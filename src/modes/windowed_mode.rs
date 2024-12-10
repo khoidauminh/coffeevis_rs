@@ -368,8 +368,8 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
                 }
 
                 if let Command::Resize(w, mut h) = cmd {
-
-                    h = h.min(MAX_PIXEL_BUFFER_HEIGHT);
+                    let w = w as u32;
+                    let h = (h as u32).min(MAX_PIXEL_BUFFER_SIZE / w);
 
                     size.width  = w as u32;
                     size.height = h as u32;
