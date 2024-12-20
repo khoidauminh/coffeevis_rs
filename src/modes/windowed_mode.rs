@@ -132,7 +132,9 @@ use winit::{
         Key,
         NamedKey::{Escape, Space},
     },
-    platform::modifier_supplement::KeyEventExtModifierSupplement,
+    platform::{
+        modifier_supplement::KeyEventExtModifierSupplement, wayland::WindowAttributesExtWayland,
+    },
     window::{WindowButtons, WindowId},
 };
 
@@ -272,6 +274,7 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
         .with_transparent(false)
         .with_decorations(!(is_gnome && is_wayland))
         .with_resizable(prog.is_resizable())
+        .with_name("coffeevis", "cvis")
         .with_window_icon(Some(icon));
 
     let window = Arc::new(event_loop.create_window(window_attributes).unwrap());
@@ -367,11 +370,11 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
                     break;
                 }
 
-                if let Command::Resize(w, mut h) = cmd {
+                if let Command::Resize(w, h) = cmd {
                     let w = w as u32;
                     let h = (h as u32).min(MAX_PIXEL_BUFFER_SIZE / w);
 
-                    size.width  = w as u32;
+                    size.width = w as u32;
                     size.height = h as u32;
 
                     let wd = w as u32 / scale;
