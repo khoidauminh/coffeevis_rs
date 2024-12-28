@@ -321,7 +321,7 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
                 thread::sleep(Duration::from_millis(500));
 
                 if let Some(monitor) = window.current_monitor() {
-                    if let Some(milli_hz) = monitor.refresh_rate_millihertz() {
+                    if let Some(mut milli_hz) = monitor.refresh_rate_millihertz() {
                         eprintln!(
                             "\
                             Detected rate to be {}hz.\n\
@@ -331,6 +331,10 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
                             ",
                             milli_hz as f32 / 1000.0
                         );
+
+                        if milli_hz < 72_000 {
+                            milli_hz *= 2;
+                        }
 
                         commands_sender.send(Command::FpsFrac(milli_hz));
 
@@ -431,12 +435,10 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
 
             let sleep_index = (no_sample >> 6) as usize;
 
-            let sleep = prog.DURATIONS[sleep_index];
-
             if sleep_index == 0 {
                 ticker.tick();
             } else {
-                thread::sleep(sleep);
+                thread::sleep(prog.DURATIONS[sleep_index]);
             }
         }
     });

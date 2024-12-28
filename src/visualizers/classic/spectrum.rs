@@ -34,7 +34,7 @@ fn prepare(
     LOCAL: &mut MutexGuard<LocalType>,
 ) {
     // const WINDOW: usize = 2 * FFT_SIZE / 3;
-    let fall_factor = 0.35 * prog.SMOOTHING.powi(2) * (prog.MILLI_HZ / 1000) as f32 * 0.006944444;
+    let fall_factor = 35.0 * prog.SMOOTHING.powi(2) / (24 + prog.MILLI_HZ / 1000) as f32;
     let mut fft = [Cplx::zero(); FFT_SIZE];
     const UP: usize = 2 * FFT_SIZE / (RANGE * 3 / 2);
 
