@@ -34,7 +34,7 @@ fn prepare(
     LOCAL: &mut MutexGuard<LocalType>,
 ) {
     // const WINDOW: usize = 2 * FFT_SIZE / 3;
-    let fall_factor = 35.0 * prog.SMOOTHING.powi(2) / (24 + prog.MILLI_HZ / 1000) as f32;
+    let accel = 0.26 * prog.SMOOTHING.powi(2); // / (100.0 + prog.MILLI_HZ as f32 / 2400.0);
     let mut fft = [Cplx::zero(); FFT_SIZE];
     const UP: usize = 2 * FFT_SIZE / (RANGE * 3 / 2);
 
@@ -56,8 +56,8 @@ fn prepare(
     crate::audio::limiter(&mut fft[0..RANGE], 1.5, 7, prog.VOL_SCL * 2.0, |x| x.max());
 
     LOCAL.iter_mut().zip(fft.iter()).for_each(|(smp, si)| {
-        smp.x = multiplicative_fall(smp.x, si.x, 0.0, fall_factor);
-        smp.y = multiplicative_fall(smp.y, si.y, 0.0, fall_factor);
+        smp.x = multiplicative_fall(smp.x, si.x, 0.0, accel);
+        smp.y = multiplicative_fall(smp.y, si.y, 0.0, accel);
     });
 
     stream.auto_rotate();

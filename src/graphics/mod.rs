@@ -271,16 +271,17 @@ impl<T: Pixel> PixelBuffer<T> {
     // lines are aligned.
     pub fn scale_to(
         &mut self,
-        dest: &mut [T],
         scale: usize,
+        dest: Option<&mut [T]>,
         width: Option<usize>,
         mixer: Option<Mixer<T>>,
     ) {
-        self.scaled_buffer.resize(dest.len(), T::trans());
-
         let mixer = mixer.unwrap_or(T::mix);
 
         let dst_width = width.unwrap_or(self.width * scale);
+
+        self.scaled_buffer
+            .resize(self.height * scale * dst_width, T::trans());
 
         let src_rows = self.buffer.chunks_exact(self.width);
         let dst_rows = self
@@ -296,7 +297,16 @@ impl<T: Pixel> PixelBuffer<T> {
             }
         }
 
-        dest.copy_from_slice(&self.scaled_buffer);
+        // for line_chunk in self.scaled_buffer.chunks_exact_mut(dst_width * scale) {
+        //     let (first_line, other) = line_chunk.split_at_mut(dst_width);
+        //     for other_lines in other.chunks_exact_mut(dst_width) {
+        //         other_lines.copy_from_slice(first_line);
+        //     }
+        // }
+
+        if let Some(dest) = dest {
+            dest.copy_from_slice(&self.scaled_buffer);
+        }
 
         self.field = (self.field + 1) % scale;
     }

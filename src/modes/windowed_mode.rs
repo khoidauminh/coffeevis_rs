@@ -1,6 +1,9 @@
 #![allow(warnings)]
 
-use std::{sync::Arc, thread};
+use std::{
+    sync::Arc,
+    thread::{self, current},
+};
 
 use crate::data::*;
 
@@ -316,30 +319,21 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
                 return;
             }
 
-            // Tries to fetch monitor information for 5 times before giving up.
-            for _ in 0..5 {
-                thread::sleep(Duration::from_millis(500));
+            thread::sleep(Duration::from_millis(500));
 
-                if let Some(monitor) = window.current_monitor() {
-                    if let Some(mut milli_hz) = monitor.refresh_rate_millihertz() {
-                        eprintln!(
-                            "\
-                            Detected rate to be {}hz.\n\
-                            Note: Coffeevis relies on Winit to detect refresh rates.\n\
-                            Run with --fps flag if you want to lock fps.\n\
-                            Refresh rate changed.\
-                            ",
-                            milli_hz as f32 / 1000.0
-                        );
+            if let Some(monitor) = window.current_monitor() {
+                if let Some(mut milli_hz) = monitor.refresh_rate_millihertz() {
+                    eprintln!(
+                        "\
+                        Detected rate to be {}hz.\n\
+                        Note: Coffeevis relies on Winit to detect refresh rates.\n\
+                        Run with --fps flag if you want to lock fps.\n\
+                        Refresh rate changed.\
+                        ",
+                        milli_hz as f32 / 1000.0
+                    );
 
-                        if milli_hz < 72_000 {
-                            milli_hz *= 2;
-                        }
-
-                        commands_sender.send(Command::FpsFrac(milli_hz));
-
-                        return;
-                    }
+                    commands_sender.send(Command::FpsFrac(milli_hz));
                 }
             }
         }
@@ -365,6 +359,8 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
 
             surface
         };
+
+        let mut loop_index: usize = 0;
 
         move || loop {
             let mut draw = false;
@@ -416,14 +412,29 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
             if let Ok(mut buffer) = surface.buffer_mut() {
                 use crate::graphics::blend::Blend;
 
-                prog.force_render();
+                if prog.MILLI_HZ < 72_000 {
+                    prog.force_render();
+
+                    prog.pix.scale_to(
+                        prog.scale() as usize,
+                        None,
+                        Some(size.width as usize),
+                        Some(u32::mix),
+                    );
+
+                    prog.RUN_FACTOR = 2;
+                } else {
+                    prog.RUN_FACTOR = 1;
+                }
 
                 if prog.is_display_enabled() {
                     let len = buffer.len().min(prog.pix.sizel());
 
+                    prog.force_render();
+
                     prog.pix.scale_to(
-                        &mut buffer,
                         prog.scale() as usize,
+                        Some(&mut buffer),
                         Some(size.width as usize),
                         Some(u32::mix),
                     );
@@ -440,6 +451,8 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
             } else {
                 thread::sleep(prog.DURATIONS[sleep_index]);
             }
+
+            loop_index = loop_index.wrapping_add(1);
         }
     });
 
