@@ -148,7 +148,6 @@ impl<T: Pixel> DrawCommandBuffer<T> {
 }
 
 pub struct PixelBuffer<T: Pixel> {
-    field: usize,
     scaled_buffer: Vec<T>,
     buffer: Vec<T>,
     len: usize,
@@ -167,7 +166,6 @@ impl<T: Pixel> PixelBuffer<T> {
     pub fn new(w: usize, h: usize) -> Self {
         let padded = crate::math::larger_or_equal_pw2(w * h);
         Self {
-            field: 0,
             scaled_buffer: Vec::new(),
             buffer: vec![T::trans(); padded],
             command: DrawCommandBuffer::new(),
@@ -272,7 +270,7 @@ impl<T: Pixel> PixelBuffer<T> {
     pub fn scale_to(
         &mut self,
         scale: usize,
-        dest: Option<&mut [T]>,
+        dest: &mut [T],
         width: Option<usize>,
         mixer: Option<Mixer<T>>,
     ) {
@@ -280,14 +278,20 @@ impl<T: Pixel> PixelBuffer<T> {
 
         let dst_width = width.unwrap_or(self.width * scale);
 
-        self.scaled_buffer
-            .resize(self.height * scale * dst_width, T::trans());
+        self.scaled_buffer.resize(dest.len(), T::trans());
+
+        // Shift the lines of the scaled buffer down
+        // to create the illusion of movement
+        let shift_start = (self.height * scale - 1) * dst_width;
+        for i in (0..shift_start).step_by(dst_width).rev() {
+            let j = i + dst_width;
+            self.scaled_buffer.copy_within(i..j, j);
+        }
 
         let src_rows = self.buffer.chunks_exact(self.width);
         let dst_rows = self
             .scaled_buffer
             .chunks_exact_mut(dst_width)
-            .skip(self.field)
             .step_by(scale);
 
         for (src_row, dst_row) in src_rows.zip(dst_rows) {
@@ -297,18 +301,7 @@ impl<T: Pixel> PixelBuffer<T> {
             }
         }
 
-        // for line_chunk in self.scaled_buffer.chunks_exact_mut(dst_width * scale) {
-        //     let (first_line, other) = line_chunk.split_at_mut(dst_width);
-        //     for other_lines in other.chunks_exact_mut(dst_width) {
-        //         other_lines.copy_from_slice(first_line);
-        //     }
-        // }
-
-        if let Some(dest) = dest {
-            dest.copy_from_slice(&self.scaled_buffer);
-        }
-
-        self.field = (self.field + 1) % scale;
+        dest.copy_from_slice(&self.scaled_buffer);
     }
 }
 

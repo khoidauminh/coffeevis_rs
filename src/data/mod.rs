@@ -50,7 +50,6 @@ pub(crate) struct Program {
     DISPLAY: bool,
 
     SCALE: u8,
-    pub RUN_FACTOR: u8,
 
     /// Allow for resizing. Windowed mode only.
     RESIZE: bool,
@@ -132,7 +131,6 @@ impl Program {
         Self {
             DISPLAY: true,
             SCALE: DEFAULT_WIN_SCALE,
-            RUN_FACTOR: 1,
             RESIZE: false,
 
             mode: Mode::Win,

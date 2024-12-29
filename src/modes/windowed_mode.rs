@@ -360,8 +360,6 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
             surface
         };
 
-        let mut loop_index: usize = 0;
-
         move || loop {
             let mut draw = false;
 
@@ -412,21 +410,6 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
             if let Ok(mut buffer) = surface.buffer_mut() {
                 use crate::graphics::blend::Blend;
 
-                if prog.MILLI_HZ < 72_000 {
-                    prog.force_render();
-
-                    prog.pix.scale_to(
-                        prog.scale() as usize,
-                        None,
-                        Some(size.width as usize),
-                        Some(u32::mix),
-                    );
-
-                    prog.RUN_FACTOR = 2;
-                } else {
-                    prog.RUN_FACTOR = 1;
-                }
-
                 if prog.is_display_enabled() {
                     let len = buffer.len().min(prog.pix.sizel());
 
@@ -434,7 +417,7 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
 
                     prog.pix.scale_to(
                         prog.scale() as usize,
-                        Some(&mut buffer),
+                        &mut buffer,
                         Some(size.width as usize),
                         Some(u32::mix),
                     );
@@ -451,8 +434,6 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
             } else {
                 thread::sleep(prog.DURATIONS[sleep_index]);
             }
-
-            loop_index = loop_index.wrapping_add(1);
         }
     });
 

@@ -34,7 +34,7 @@ fn prepare(
     LOCAL: &mut MutexGuard<LocalType>,
 ) {
     // const WINDOW: usize = 2 * FFT_SIZE / 3;
-    let accel = 0.26 * prog.SMOOTHING.powi(2); // / (100.0 + prog.MILLI_HZ as f32 / 2400.0);
+    let accel = 0.27 * prog.SMOOTHING.powi(2);
     let mut fft = [Cplx::zero(); FFT_SIZE];
     const UP: usize = 2 * FFT_SIZE / (RANGE * 3 / 2);
 
