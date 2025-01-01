@@ -11,12 +11,18 @@ This project also serves as my playground, so you'll see a lot of weird implemen
 
 ## What's new in v0.6.0
 
+Terminal mode is back and enabled by default!
+
+Minifb support has been removed!
+
+Two new features have been added: 'window_only' and 'console_only` that
+respectively disables terminal mode and winit mode if you don't want it.
+
+A little post-processing effect has been added to window mode which should
+make the animations a little more smooth looking.
+
 New visualizers: TODO!
 Configuration changes: TODO!
-
-### Important change since v0.5.0
-*Terminal and minifb mode have been moved to their own features. You'll need to
-recompile with `--features terminal` and/or `--features minifb` to use them.*
 
 ## Examples:
 

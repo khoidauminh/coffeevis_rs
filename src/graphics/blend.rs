@@ -1,4 +1,5 @@
 pub type Mixer<T> = fn(T, T) -> T;
+pub type Argb = u32;
 
 use std::ops;
 
@@ -35,8 +36,6 @@ pub trait Blend:
     fn fade(self, alpha: u8) -> Self;
     fn decompose(self) -> [u8; 4];
     fn compose(array: [u8; 4]) -> Self;
-    // fn mul(&mut self, other: u32) -> u32;
-    // fn mul_alpha(&mut self, other: u32) -> u32;
 }
 
 pub fn grayb(r: u8, g: u8, b: u8) -> u8 {

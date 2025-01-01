@@ -76,9 +76,7 @@ pub(crate) struct Program {
     WIN_W: u16,
     WIN_H: u16,
 
-    #[cfg(feature = "terminal")]
     pub CON_W: u16,
-    #[cfg(feature = "terminal")]
     pub CON_H: u16,
 
     pub CON_MAX_W: u16,
@@ -88,7 +86,7 @@ pub(crate) struct Program {
 
     visualizer: VisFunc,
 
-    #[cfg(feature = "terminal")]
+    #[cfg(not(feature = "window_only"))]
     pub flusher: crate::modes::console_mode::Flusher,
 
     SWITCH: Instant,
@@ -132,6 +130,8 @@ impl Program {
 
         let rate = std::time::Duration::from_micros(1_000_000 / DEFAULT_HZ);
 
+        let default_mode = Mode::default();
+
         Self {
             DISPLAY: true,
             SCALE: DEFAULT_WIN_SCALE,
@@ -139,7 +139,7 @@ impl Program {
 
             HIDDEN: false,
 
-            mode: Mode::Win,
+            mode: default_mode,
 
             WAYLAND: true,
 
@@ -155,8 +155,8 @@ impl Program {
 
             visualizer: vis.func(),
 
-            #[cfg(feature = "terminal")]
-            flusher: Program::print_alpha,
+            #[cfg(not(feature = "window_only"))]
+            flusher: default_mode.get_flusher(),
 
             SWITCH: Instant::now() + Duration::from_secs(8),
             AUTO_SWITCH: true,
@@ -169,9 +169,7 @@ impl Program {
             WIN_W: DEFAULT_SIZE_WIN,
             WIN_H: DEFAULT_SIZE_WIN,
 
-            #[cfg(feature = "terminal")]
             CON_W: 50,
-            #[cfg(feature = "terminal")]
             CON_H: 25,
 
             CON_MAX_W: 50,
@@ -218,7 +216,7 @@ impl Program {
 
             &Hidden(b) => self.set_hidden(b),
 
-            #[cfg(feature = "terminal")]
+            #[cfg(not(feature = "window_only"))]
             &SwitchConMode => {
                 self.switch_con_mode();
                 return true;
@@ -237,7 +235,7 @@ impl Program {
                 self.change_fps_frac(milli_hz);
             }
 
-            #[cfg(feature = "terminal")]
+            #[cfg(not(feature = "window_only"))]
             &ConMax(d, replace) => {
                 self.change_con_max(d, replace);
             }
@@ -383,7 +381,7 @@ impl Program {
         let mut stdout = std::io::stdout();
 
         if self.DISPLAY && self.mode.is_con() {
-            #[cfg(feature = "terminal")]
+            #[cfg(not(feature = "window_only"))]
             {
                 use crossterm::{
                     style::Print,
@@ -430,13 +428,13 @@ impl Program {
         };
 
         match &self.mode {
-            Mode::Win | Mode::WinLegacy => {
+            Mode::Win => {
                 self.WIN_W = w;
                 self.WIN_H = h;
             }
 
             _ => {
-                #[cfg(feature = "terminal")]
+                #[cfg(not(feature = "window_only"))]
                 {
                     self.CON_W = w;
                     self.CON_H = h;
@@ -450,11 +448,9 @@ impl Program {
 
     pub fn refresh(&mut self) {
         match &self.mode {
-            Mode::Win | Mode::WinLegacy => {
-                self.pix.resize(self.WIN_W as usize, self.WIN_H as usize)
-            }
+            Mode::Win => self.pix.resize(self.WIN_W as usize, self.WIN_H as usize),
             _ => {
-                #[cfg(feature = "terminal")]
+                #[cfg(not(feature = "window_only"))]
                 self.pix.resize(self.CON_W as usize, self.CON_H as usize);
             }
         }
@@ -506,7 +502,7 @@ impl Program {
         self.SMOOTHING = DEFAULT_SMOOTHING;
         self.WAV_WIN = DEFAULT_WAV_WIN;
 
-        #[cfg(feature = "terminal")]
+        #[cfg(not(feature = "window_only"))]
         self.change_con_max(50, true);
 
         if self.REFRESH_RATE_MODE != RefreshRateMode::Specified {

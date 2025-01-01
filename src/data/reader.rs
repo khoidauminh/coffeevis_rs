@@ -38,6 +38,7 @@ const RESO_WARNING: &str = "\
 
 impl Program {
     pub fn eval_args(mut self, args: &mut dyn Iterator<Item = &String>) -> Self {
+        #[allow(unused_imports)]
         use crate::{data::*, modes::Mode::*};
 
         let mut size = (DEFAULT_SIZE_WIN, DEFAULT_SIZE_WIN);
@@ -48,18 +49,16 @@ impl Program {
         while let Some(arg) = args.next() {
             let arg = arg.as_str();
             match arg {
+                #[cfg(not(feature = "console_only"))]
                 "--win" => self.mode = Win,
 
-                #[cfg(feature = "minifb")]
-                "--minifb" => self.mode = WinLegacy,
-
-                #[cfg(feature = "terminal")]
+                #[cfg(not(feature = "window_only"))]
                 "--braille" => (self.mode, self.flusher) = (ConBrail, Program::print_brail),
 
-                #[cfg(feature = "terminal")]
+                #[cfg(not(feature = "window_only"))]
                 "--ascii" => (self.mode, self.flusher) = (ConAlpha, Program::print_alpha),
 
-                #[cfg(feature = "terminal")]
+                #[cfg(not(feature = "window_only"))]
                 "--block" => (self.mode, self.flusher) = (ConBlock, Program::print_block),
 
                 "--no-auto-switch" => self.AUTO_SWITCH = false,
@@ -173,28 +172,26 @@ impl Program {
                 }
 
                 &_ => match arg {
-                    #[cfg(not(feature = "terminal"))]
+                    #[cfg(feature = "window_only")]
                     "--braille" | "--block" | "--ascii" => {
                         panic!(
                             "\x1B[31;1m\
                                 Feature terminal is turned off in \
                                 this build of coffeevis.\n\
-                                This was to make dependencies of coffeevis \
-                                optional and excluded when not needed.\n\
-                                Recompile coffeevis with `--features terminal`\
-                                to use these flags.\
+                                Did you happen to commpile coffeevis \
+                                with features \"window_only\"?\
                             \x1B[0m"
                         )
                     }
 
-                    #[cfg(not(feature = "minifb"))]
-                    "--minifb" => {
+                    #[cfg(feature = "console_only")]
+                    "--win" => {
                         panic!(
                             "\x1B[31;1m\
-                                Feature minifb is turned off in \
+                                Feature winit is turned off in \
                                 this build of coffeevis.\n\
-                                Recompile coffeevis with `--features minifb` \
-                                to use this flag.\
+                                Did you happen to commpile coffeevis \
+                                with feature \"console_only\"?\
                             \x1B[0m"
                         )
                     }
@@ -219,7 +216,7 @@ impl Program {
     }
 
     pub fn print_startup_info(&self) {
-        use crate::modes::Mode::{ConAlpha, ConBlock, ConBrail, Win, WinLegacy};
+        use crate::modes::Mode::{ConAlpha, ConBlock, ConBrail, Win};
 
         println!(
             "\nWelcome to Coffeevis!\n\
@@ -240,8 +237,6 @@ impl Program {
                 "Running with: Winit, {}",
                 if self.WAYLAND { "Wayland" } else { "X11" }
             ),
-
-            WinLegacy => println!("Running with minifb"),
 
             _ => {
                 println!(

@@ -16,14 +16,12 @@ cpal = "0.15"
 softbuffer = "0.4"
 winit = "0.30"
 qoi = "0.4.1"
-minifb = { version = "0.27", optional = true }
-crossterm = { version = "0.27", optional = true }
+crossterm = "0.27"
 fps_clock = "2.0"
-scheduler = "0.1.3"
 
 [features]
-terminal = ["dep:crossterm"]
-minifb = ["dep:minifb"]
+window_only = []
+console_only = []
 fast_color = []
 
 [profile.dev]

@@ -12,49 +12,49 @@ use crossterm::{
 use sixel_rs;
 use sixel_sys;
 */
-use crate::{data::*, graphics::blend::grayb, modes::Mode};
+use crate::{
+    data::*,
+    graphics::{
+        blend::{grayb, Argb, Blend},
+        Pixel,
+    },
+    modes::Mode,
+};
 use std::io::{stdout, Stdout, Write};
 
 pub type Flusher = fn(&Program, &mut Stdout);
 
-type Rgb = [u8; 3];
-const BLACK: Rgb = [0; 3];
 const ERROR: u8 = 6;
 
 struct ColoredString {
     pub string: String,
-    pub fg: Rgb,
-    pub bg: Rgb,
+    pub fg: Argb,
+    pub bg: Argb,
     error: u8,
 }
 
 impl ColoredString {
-    pub fn new(ch: char, fg: Rgb, error: u8) -> Self {
+    pub fn new(ch: char, fg: Argb, error: u8) -> Self {
         Self {
             string: String::from(ch),
-            fg: fg,
-            bg: BLACK,
+            fg,
+            bg: Argb::black(),
             error,
         }
     }
 
-    pub fn new_bg(ch: char, fg: Rgb, bg: Rgb, error: u8) -> Self {
+    pub fn new_bg(ch: char, fg: Argb, bg: Argb, error: u8) -> Self {
         Self {
             string: String::from(ch),
-            fg: fg,
-            bg: bg,
+            fg,
+            bg,
             error,
         }
     }
 
-    pub fn append(&mut self, ch: char, fg: Rgb) -> bool {
-        /*if ch == '\0' {
-            self.string.push_str("\x1B[1C");
-            return true;
-        }*/
-
-        let [r, g, b] = self.fg;
-        let [nr, ng, nb] = fg;
+    pub fn append(&mut self, ch: char, fg: Argb) -> bool {
+        let [_, r, g, b] = self.fg.decompose();
+        let [_, nr, ng, nb] = fg.decompose();
 
         let er = r.abs_diff(nr);
         let eg = g.abs_diff(ng);
@@ -66,18 +66,12 @@ impl ColoredString {
         }
 
         false
-        //return Some(Self::new(ch, r, g, b, self.error));
     }
 
-    pub fn append_bg(&mut self, ch: char, fg: Rgb, bg: Rgb) -> bool {
-        /*if ch == '\0' {
-            self.string.push_str("\x1B[1C");
-            return true;
-        }*/
-
+    pub fn append_bg(&mut self, ch: char, fg: Argb, bg: Argb) -> bool {
         let mergable_fg = {
-            let [r, g, b] = self.fg;
-            let [nr, ng, nb] = fg;
+            let [_, r, g, b] = self.fg.decompose();
+            let [_, nr, ng, nb] = fg.decompose();
 
             let er = r.abs_diff(nr);
             let eg = g.abs_diff(ng);
@@ -87,8 +81,8 @@ impl ColoredString {
         };
 
         let mergable_bg = {
-            let [r, g, b] = self.bg;
-            let [nr, ng, nb] = bg;
+            let [_, r, g, b] = self.bg.decompose();
+            let [_, nr, ng, nb] = bg.decompose();
 
             let er = r.abs_diff(nr);
             let eg = g.abs_diff(ng);
@@ -109,22 +103,22 @@ impl ColoredString {
 trait StyledLine {
     fn init() -> Self;
     fn clear_line(&mut self);
-    fn push_pixel(&mut self, ch: char, fg: Rgb);
-    fn push_pixel_bg(&mut self, ch: char, fg: Rgb, bg: Rgb);
+    fn push_pixel(&mut self, ch: char, fg: Argb);
+    fn push_pixel_bg(&mut self, ch: char, fg: Argb, bg: Argb);
     fn queue_print(&self);
 }
 
 impl StyledLine for Vec<ColoredString> {
     fn init() -> Self {
-        vec![ColoredString::new('\0', BLACK, ERROR)]
+        vec![ColoredString::new('\0', Argb::black(), ERROR)]
     }
 
     fn clear_line(&mut self) {
         self.clear();
-        self.push(ColoredString::new('\0', BLACK, ERROR));
+        self.push(ColoredString::new('\0', Argb::black(), ERROR));
     }
 
-    fn push_pixel(&mut self, ch: char, fg: Rgb) {
+    fn push_pixel(&mut self, ch: char, fg: Argb) {
         if let Some(last) = self.last_mut() {
             if last.append(ch, fg) {
                 return;
@@ -134,7 +128,7 @@ impl StyledLine for Vec<ColoredString> {
         self.push(ColoredString::new(ch, fg, ERROR));
     }
 
-    fn push_pixel_bg(&mut self, ch: char, fg: Rgb, bg: Rgb) {
+    fn push_pixel_bg(&mut self, ch: char, fg: Argb, bg: Argb) {
         if let Some(last) = self.last_mut() {
             if last.append_bg(ch, fg, bg) {
                 return;
@@ -145,31 +139,15 @@ impl StyledLine for Vec<ColoredString> {
     }
 
     fn queue_print(&self) {
-        for ColoredString {
-            string,
-            fg: [r, g, b],
-            ..
-        } in self
-        {
-            let _ = queue!(
-                stdout(),
-                Print(string.clone().with(Color::Rgb {
-                    r: *r,
-                    g: *g,
-                    b: *b
-                }))
-            );
+        for ColoredString { string, fg, .. } in self {
+            let [_, r, g, b] = fg.decompose();
+            let _ = queue!(stdout(), Print(string.clone().with(Color::Rgb { r, g, b })));
         }
     }
 }
 
-// ASCII ONLY
-// pub const CHARSET_BLOCKOPAC: &str = &[' ', '░', '▒', '▓'];
 const CHARSET_OPAC_EXP: &[u8] = b" `.-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ\
     5Yxjya]2ESwqkP6h9d4VpOGbUAKXHm8RD#$Bg0MNWQ%&@";
-
-#[allow(dead_code)]
-pub const CHARSET_SIZEOPAC: &[u8] = b" -~+oiwGW@$";
 
 impl Program {
     pub fn print_con(&mut self) {
@@ -201,8 +179,6 @@ impl Program {
     }
 
     pub fn switch_con_mode(&mut self) {
-        // self.mode.next_con();
-
         self.mode = match self.mode {
             Mode::ConAlpha => {
                 self.flusher = Program::print_block;
@@ -217,8 +193,7 @@ impl Program {
                 Mode::ConAlpha
             }
 
-            Mode::Win => Mode::Win,
-            Mode::WinLegacy => Mode::WinLegacy,
+            _ => self.mode,
         };
 
         self.refresh_con();
@@ -270,7 +245,7 @@ impl Program {
 
                 let alpha_char = to_ascii_art(CHARSET_OPAC_EXP, lum);
 
-                line.push_pixel(alpha_char, [r, g, b]);
+                line.push_pixel(alpha_char, Argb::compose([0, r, g, b]));
             }
 
             line.queue_print();
@@ -291,7 +266,7 @@ impl Program {
                 let idx_base = y_base * self.pix.width() + x_base;
                 let [_, mut r, mut g, mut b] = self.pix.pixel(idx_base).to_be_bytes();
 
-                let mut bg = [0u8; 3];
+                let mut bg = Argb::black();
 
                 let bx = (0..2).fold(0, |acc, i| {
                     let idx = idx_base + i * self.pix.width(); // iterate horizontally, then jump to the nex row;
@@ -307,7 +282,7 @@ impl Program {
                         }
 
                         32..=47 => {
-                            bg = [pr, pg, pb];
+                            bg = Argb::compose([0, pr, pg, pb]);
                             // blocks that aren't drawn can still be displayed
                             // by addding background color
                         }
@@ -320,11 +295,7 @@ impl Program {
 
                 let block_char = ([' ', '▄', '▀', '█'])[bx as usize];
 
-                // let [_, bgr, bgg, bgb] = self.bg.to_be_bytes();
-
-                line.push_pixel_bg(block_char, [r, g, b], bg);
-
-                //Self::print_ascii_with_bg(stdout, block_char, r, g, b, bg);
+                line.push_pixel_bg(block_char, Argb::compose([0, r, g, b]), bg);
             }
 
             line.queue_print();
@@ -368,26 +339,13 @@ impl Program {
 						// be used to increase performance.
 					}) as u32;
 
-                line.push_pixel(char::from_u32(bx).unwrap(), [r, g, b]);
+                line.push_pixel(char::from_u32(bx).unwrap(), Argb::compose([0, r, g, b]));
             }
 
             line.queue_print();
             line.clear_line();
         }
     }
-    /*
-    pub fn print_sixel(&self, stdout: &mut Stdout) {
-        let w = self.pix.width();
-        let h = self.pix.height();
-        let canvas =
-            sixel_rs::encoder::QuickFrameBuilder::new()
-            .width(w)
-            .height(h)
-            .format(sixel_sys::PixelFormat::ARGB8888)
-            .pixels(self.pix.iter().map(|x| x.to_be_bytes()).flatten().collect::<Vec<u8>>())
-        ;
-
-    }*/
 }
 
 fn to_ascii_art<T>(table: &[u8], x: T) -> char
@@ -422,17 +380,12 @@ pub fn rescale(mut s: (u16, u16), prog: &Program) -> (u16, u16) {
 pub fn control_key_events_con(prog: &mut Program, exit: &mut bool) -> std::io::Result<()> {
     prog.update_vis();
 
-    let refresh_rates = [
-        prog.REFRESH_RATE,
-        prog.REFRESH_RATE * 10,
-        prog.REFRESH_RATE * 50,
-    ];
     let no_sample = crate::audio::get_no_sample();
-    let inactive = (no_sample > 64) as u8 + (no_sample > 192) as u8;
+    let inactive = no_sample as usize * prog.DURATIONS.len() / 256;
 
     let mut command = Command::Blank;
 
-    if poll(refresh_rates[inactive as usize])? {
+    if poll(prog.DURATIONS[inactive])? {
         match read()? {
             Event::Key(event) => {
                 command = match event.code {
@@ -492,6 +445,8 @@ pub fn control_key_events_con(prog: &mut Program, exit: &mut bool) -> std::io::R
 }
 
 pub fn con_main(mut prog: Program) -> std::io::Result<()> {
+    prog.print_startup_info();
+
     let mut stdout = stdout();
 
     enable_raw_mode()?;
@@ -523,115 +478,13 @@ pub fn con_main(mut prog: Program) -> std::io::Result<()> {
 
             prog.force_render();
             prog.print_con();
-            // prog.print_err_con();
 
             let _ = stdout.flush();
         }
         let _ = queue!(stdout, LeaveAlternateScreen, Show)?;
     }
+
     disable_raw_mode()?;
 
     Ok(())
 }
-
-/*
-pub fn prepare_stdout_ascii(prog: &mut Program, stdout: &mut Stdout) {
-    let center = (
-        (prog.CON_W /2).saturating_sub(prog.pix.width() as u16 /2),
-        (prog.CON_H /2).saturating_sub(prog.pix.height() as u16 /4)
-    );
-
-    for y in 0..prog.pix.height() {
-        let cy = center.1 + y as u16 / 2;
-        queue!(stdout, cursor::MoveTo(center.0, cy));
-
-        for x in 0..prog.pix.width() {
-            let [_, r, g, b] = prog.pix[y*prog.pix.width() + x].to_le_bytes();
-           // let cx = center.0 + x as u16;
-
-            //let gray = (30 * r as usize + 59 * g as usize + 11 * b as usize) / 100;
-            let gray = grayb(r, g, b);
-            //let ansi = rgb_to_ansi(r, g, b);
-            let c = to_art(prog.ascii_set, gray);
-
-            queue!(
-                stdout,
-
-                SetColors(Colors::new(
-                    Color::Rgb{r: r, g: g, b: b},
-                    //Color::AnsiValue(ansi),
-                    Color::Reset
-                )),
-                Print(c)
-            );
-
-        }
-    }
-}
-
-pub fn prepare_stdout_braille(prog: &mut Program, stdout: &mut Stdout) {
-    let center = (
-        (prog.CON_W /2).saturating_sub(prog.pix.width() as u16 /4),
-        (prog.CON_H /2).saturating_sub(prog.pix.height() as u16 /8)
-    );
-
-    //let w = prog.pix.width().saturating_sub(2) as u32;
-    //let h = prog.pix.height().saturating_sub(4) as u32;
-
-    let w = prog.pix.width() as u32;
-    let h = prog.pix.height() as u32;
-
-    let mut braille = Canvas::new(
-        w,
-        h
-    );
-
-    let (mut ar, mut ag, mut ab) = (0u8, 0u8, 0u8);
-
-    //let hh = prog.pix.height()-1;
-
-    for (i, p) in prog.pix.iter().enumerate() {
-        let (r, g, b) = u32_to_rgb(*p);
-        let gray = (r as u16 + g as u16 + b as u16) / 144;
-        let (x, y) = (
-            (i % prog.pix.width()),
-            (i / prog.pix.width())
-        );
-
-        if gray > 0 {
-            /*if (x & 1 != 0) {
-                ar = ((ar as u16 + r as u16) /2 ) as u8;
-                ag = ((ar as u16 + g as u16) /2 ) as u8;
-                ab = ((ar as u16 + b as u16) /2 ) as u8;
-            } else {
-                ar = r;
-                ag = g;
-                ab = b;
-            }*/
-
-               ar = r;
-            ag = g;
-               ab = b;
-
-            braille.set_colored(
-                x as u32, y as u32, PixelColor::TrueColor{r: ar, g: ag, b: ab}
-            );
-
-        //queue!(stdout, Clear(ClearType::All))
-        }
-    }
-
-    for (y, line) in braille.rows().iter().enumerate() {
-        let yl = center.1 + y as u16;
-        if yl < prog.CON_H {
-            queue!(stdout, cursor::MoveTo(center.0, yl), Print(line));
-        }
-    }
-
-    //queue!(stdout, cursor::MoveTo(1, 1), Print(braille.frame()));
-}
-
-
-pub fn console_draw_braille(prog: &mut Program, stdout: &mut Stdout) {
-    let mut
-}*/

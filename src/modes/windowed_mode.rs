@@ -1,130 +1,6 @@
 #![allow(warnings)]
 
-use std::{
-    sync::Arc,
-    thread::{self, current},
-};
-
-use crate::data::*;
-
 use fps_clock::FpsClock;
-#[cfg(feature = "minifb")]
-use minifb::{Window, WindowOptions};
-
-#[cfg(feature = "minifb")]
-pub fn init_window(prog: &Program) -> Result<Window, minifb::Error> {
-    std::env::set_var("GDK_BACKEND", "x11");
-    std::env::set_var("LANG", "en_US-UTF-8");
-
-    let mut win = Window::new(
-        "kvis",
-        prog.pix.width() * prog.scale() as usize,
-        prog.pix.height() * prog.scale() as usize,
-        WindowOptions {
-            // resize: prog.RESIZE,
-            topmost: true,
-            borderless: false,
-            transparency: false,
-            scale_mode: minifb::ScaleMode::UpperLeft,
-            ..WindowOptions::default()
-        },
-    )?;
-
-    win.limit_update_rate(Some(prog.REFRESH_RATE));
-
-    Ok(win)
-}
-
-#[cfg(feature = "minifb")]
-pub fn control_key_events_win_legacy(win: &mut minifb::Window, prog: &mut Program) {
-    use minifb::{Key, KeyRepeat};
-
-    let fps_change = false;
-
-    prog.update_vis();
-
-    win.get_keys_pressed(KeyRepeat::No)
-        .iter()
-        .for_each(|key| match key {
-            Key::Space => prog.change_visualizer(true),
-
-            //~ Key::Key1 =>  { change_fps(prog, 10, true); fps_change = true; },
-            //~ Key::Key2 =>  { change_fps(prog, 20, true); fps_change = true; },
-            //~ Key::Key3 =>  { change_fps(prog, 30, true); fps_change = true; },
-            //~ Key::Key4 =>  { change_fps(prog, 40, true); fps_change = true; },
-            //~ Key::Key5 =>  { change_fps(prog, 50, true); fps_change = true; },
-            //~ Key::Key6 =>  { change_fps(prog, 60, true); fps_change = true; },
-
-            //~ Key::Key7 =>  { change_fps(prog, -5, false); fps_change = true; },
-            //~ Key::Key8 =>  { change_fps(prog,  5, false); fps_change = true; },
-            Key::Minus => prog.VOL_SCL = (prog.VOL_SCL / 1.2).clamp(0.0, 10.0),
-            Key::Equal => prog.VOL_SCL = (prog.VOL_SCL * 1.2).clamp(0.0, 10.0),
-
-            Key::LeftBracket => prog.SMOOTHING = (prog.SMOOTHING - 0.05).clamp(0.0, 0.95),
-            Key::RightBracket => prog.SMOOTHING = (prog.SMOOTHING + 0.05).clamp(0.0, 0.95),
-
-            Key::Semicolon => prog.WAV_WIN = (prog.WAV_WIN - 3).clamp(3, 50),
-            Key::Apostrophe => prog.WAV_WIN = (prog.WAV_WIN + 3).clamp(3, 50),
-
-            Key::Backslash => prog.toggle_auto_switch(),
-
-            Key::Slash => {
-                prog.VOL_SCL = DEFAULT_VOL_SCL;
-                prog.SMOOTHING = DEFAULT_SMOOTHING;
-                prog.WAV_WIN = DEFAULT_WAV_WIN;
-                // change_fps(prog, 144, true);
-            }
-
-            _ => {}
-        });
-
-    if fps_change {
-        win.limit_update_rate(Some(prog.REFRESH_RATE));
-    }
-}
-
-#[cfg(feature = "minifb")]
-pub fn minifb_main(mut prog: Program) -> Result<(), minifb::Error> {
-    let mut win = init_window(&prog)?;
-    win.topmost(true);
-
-    let scale = prog.scale() as usize;
-
-    while win.is_open() && !win.is_key_down(minifb::Key::Q) {
-        let s = win.get_size();
-
-        let s = (s.0 / scale, s.1 / scale);
-
-        if s.0 != prog.pix.width() || s.1 != prog.pix.height() {
-            prog.update_size_win(s);
-        }
-
-        control_key_events_win_legacy(&mut win, &mut prog);
-
-        if crate::audio::get_no_sample() > 64 {
-            win.update();
-            continue;
-        }
-
-        prog.force_render();
-
-        let winw = prog.pix.width() * scale;
-        let winh = prog.pix.height() * scale;
-
-        if scale == 1 {
-            let _ = win.update_with_buffer(prog.pix.as_slice(), winw, winh);
-            continue;
-        }
-
-        let mut buffer = vec![0u32; winw * winh];
-
-        prog.pix.scale_to(&mut buffer, scale, None);
-
-        let _ = win.update_with_buffer(&buffer, winw, winh);
-    }
-
-    Ok(())
-}
 
 use winit::{
     application::ApplicationHandler,
@@ -141,17 +17,20 @@ use winit::{
     window::{WindowButtons, WindowId},
 };
 
-use std::num::NonZeroU32;
-use std::sync::{mpsc, RwLock};
-use std::time::Duration;
+use std::{
+    num::NonZeroU32,
+    sync::{mpsc, Arc, RwLock},
+    thread::{self, current},
+    time::Duration,
+};
 
-use crate::data::Command;
+use crate::data::*;
 use crate::graphics::blend::Blend;
 use crate::graphics::Canvas;
 
 struct WindowState {
     pub window: Arc<winit::window::Window>,
-    pub commands_sender: std::sync::mpsc::SyncSender<Command>,
+    pub commands_sender: mpsc::SyncSender<Command>,
 }
 
 impl WindowState {
@@ -251,6 +130,8 @@ pub fn read_icon() -> (u32, u32, Vec<u8>) {
 }
 
 pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
+    prog.print_startup_info();
+
     let event_loop = EventLoop::new().unwrap();
 
     let mut size = (prog.pix.width() as u32, prog.pix.height() as u32);
