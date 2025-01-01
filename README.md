@@ -30,19 +30,19 @@ Configuration changes: TODO!
 ![windowed mode](./assets/kvis_preview_1.webp)
 
 ## Platform support
-Coffeevis is built for and runs on Linux.
+Coffeevis so far only runs on Linux.
 Windows, MacOS and BSD support is not available.
 
 ## Installation
 Run `cargo install coffeevis`
 
-To run coffeevis in a terminal, use:
+To disable winit, use:
 
-```cargo install coffeevis --features terminal```
+```cargo install coffeevis --features console_only```
 
-If for some reason you want to use minifb, use:
+To disable console mode, use:
 
-```cargo install coffeevis --features minifb```
+```cargo install coffeevis --features window_only```
 
 ## Configuration
 
