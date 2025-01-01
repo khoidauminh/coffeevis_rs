@@ -146,6 +146,7 @@ use std::sync::{mpsc, RwLock};
 use std::time::Duration;
 
 use crate::data::Command;
+use crate::graphics::blend::Blend;
 use crate::graphics::Canvas;
 
 struct WindowState {
@@ -180,6 +181,11 @@ impl ApplicationHandler for WindowState {
                         eprintln!("Error starting window drag: {err}");
                     }
                 }
+            }
+
+            WindowEvent::Occluded(b) => {
+                println!("Occluded: {}", b);
+                self.commands_sender.send(Command::Hidden(b));
             }
 
             WindowEvent::Resized(winit::dpi::PhysicalSize { width, height }) => {
@@ -375,9 +381,6 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
                     size.width = w as u32;
                     size.height = h as u32;
 
-                    let wd = w as u32 / scale;
-                    let hd = h as u32 / scale;
-
                     surface
                         .resize(
                             NonZeroU32::new(w as u32).unwrap(),
@@ -385,7 +388,7 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
                         )
                         .unwrap();
 
-                    prog.update_size((wd as u16, hd as u16));
+                    prog.update_size((w / scale, h / scale));
 
                     if let Ok(mut buffer) = surface.buffer_mut() {
                         buffer.fill(0x0);
@@ -401,19 +404,21 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
 
             prog.update_vis();
             let no_sample = crate::audio::get_no_sample();
+            let sleep_index = no_sample as usize * prog.DURATIONS.len() / 256;
 
-            if no_sample >= crate::data::STOP_RENDERING && !draw {
-                thread::sleep(Duration::from_millis(333));
+            if window.is_minimized().unwrap_or(false)
+                || prog.is_hidden()
+                || no_sample >= crate::data::STOP_RENDERING && !draw
+            {
+                thread::sleep(IDLE_INTERVAL);
                 continue;
             }
 
-            if let Ok(mut buffer) = surface.buffer_mut() {
-                use crate::graphics::blend::Blend;
+            prog.force_render();
 
-                if prog.is_display_enabled() {
+            if prog.is_display_enabled() {
+                if let Ok(mut buffer) = surface.buffer_mut() {
                     let len = buffer.len().min(prog.pix.sizel());
-
-                    prog.force_render();
 
                     prog.pix.scale_to(
                         prog.scale() as usize,
@@ -427,11 +432,9 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
                 }
             }
 
-            let sleep_index = (no_sample >> 6) as usize;
+            ticker.tick();
 
-            if sleep_index == 0 {
-                ticker.tick();
-            } else {
+            if sleep_index > 0 {
                 thread::sleep(prog.DURATIONS[sleep_index]);
             }
         }

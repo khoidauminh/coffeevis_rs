@@ -199,7 +199,10 @@ impl Program {
                         )
                     }
 
-                    &_ => eprintln_red!("Argument error: Unknown option {arg}"),
+                    &_ => {
+                        let msg = format!("Argument error: Unknown option {arg}");
+                        eprintln_red!(msg);
+                    }
                 },
             }
         }

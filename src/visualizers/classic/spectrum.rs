@@ -11,9 +11,6 @@ const RANGEF: f32 = RANGE as f32;
 const FFT_SIZEF: f32 = FFT_SIZE as f32;
 const FFT_SIZEF_RECIP: f32 = 1.0 / FFT_SIZEF;
 
-// static DATA: RwLock<[Cplx; RANGE + 1]> = RwLock::new([Cplx::zero(); RANGE + 1]);
-// I'm not sure if this has any improvement, but I'm trying it anyway.
-
 type LocalType = [Cplx; RANGE + 1];
 
 fn l1_norm_slide(a: Cplx, t: f32) -> f32 {
@@ -33,8 +30,7 @@ fn prepare(
     stream: &mut crate::audio::SampleArr,
     LOCAL: &mut MutexGuard<LocalType>,
 ) {
-    // const WINDOW: usize = 2 * FFT_SIZE / 3;
-    let accel = 0.27 * prog.SMOOTHING.powi(2);
+    let accel = 0.28 * prog.SMOOTHING.powi(2);
     let mut fft = [Cplx::zero(); FFT_SIZE];
     const UP: usize = 2 * FFT_SIZE / (RANGE * 3 / 2);
 
@@ -127,8 +123,6 @@ pub fn draw_spectrum(prog: &mut crate::data::Program, stream: &mut crate::audio:
         let color2 = color | channel_r << 8;
 
         let rect_l = P2::new((wf - bar_width_l).max(0.0) as i32 / 2, i);
-        // let rect_l_size = (bar_width_l as usize / 2, 1);
-
         let rect_r = P2::new(((bar_width_r as i32 + 1) / 2 + winwh).min(w), i);
 
         let middle = P2::new(winwh + 1, i);
