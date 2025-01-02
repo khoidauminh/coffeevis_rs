@@ -184,17 +184,7 @@ impl ApplicationHandler for WindowState {
 
                 window.request_redraw();
 
-                if self.prog.REFRESH_RATE_MODE != crate::RefreshRateMode::Specified {
-                    let now = Instant::now();
-                    if now > self.refresh_rate_check_deadline {
-                        check_refresh_rate(window, &mut self.prog);
-                        self.refresh_rate_check_deadline = now + Duration::from_secs(1);
-                    }
-                }
-
-                self.prog.update_vis();
                 let no_sample = crate::audio::get_no_sample();
-                let sleep_index = no_sample as usize * self.prog.DURATIONS.len() / 256;
 
                 if window.is_minimized().unwrap_or(false)
                     || self.prog.is_hidden()
@@ -204,6 +194,17 @@ impl ApplicationHandler for WindowState {
                     return;
                 }
 
+                let sleep_index = no_sample as usize * self.prog.DURATIONS.len() / 256;
+
+                if self.prog.REFRESH_RATE_MODE != crate::RefreshRateMode::Specified {
+                    let now = Instant::now();
+                    if now > self.refresh_rate_check_deadline {
+                        check_refresh_rate(window, &mut self.prog);
+                        self.refresh_rate_check_deadline = now + Duration::from_secs(1);
+                    }
+                }
+
+                self.prog.update_vis();
                 self.prog.force_render();
 
                 if self.prog.is_display_enabled() {
@@ -284,7 +285,7 @@ pub fn winit_main(prog: Program) {
     let mut state = WindowState {
         window: None,
         surface: None,
-        frame_deadline: Instant::now() + Duration::from_millis(50),
+        frame_deadline: Instant::now() + prog.DURATIONS[0],
         refresh_rate_check_deadline: Instant::now() + Duration::from_secs(1),
         prog,
         final_buffer_size: PhysicalSize::<u32>::new(0, 0),

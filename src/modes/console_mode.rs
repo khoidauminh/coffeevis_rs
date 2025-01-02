@@ -8,10 +8,7 @@ use crossterm::{
         LeaveAlternateScreen,
     },
 };
-/*
-use sixel_rs;
-use sixel_sys;
-*/
+
 use crate::{
     data::*,
     graphics::{
@@ -242,7 +239,7 @@ impl Program {
 
                 let lum = grayb(r, g, b);
 
-                let alpha_char = to_ascii_art(CHARSET_OPAC_EXP, lum);
+                let alpha_char = to_ascii_art(CHARSET_OPAC_EXP, lum as usize);
 
                 line.push_pixel(alpha_char, Argb::compose([0, r, g, b]));
             }
@@ -347,16 +344,8 @@ impl Program {
     }
 }
 
-fn to_ascii_art<T>(table: &[u8], x: T) -> char
-where
-    usize: From<T>,
-{
+fn to_ascii_art(table: &[u8], x: usize) -> char {
     table[(usize::from(x) * table.len()) >> 8] as char
-}
-
-#[allow(dead_code)]
-fn rgb_to_ansi(r: u8, g: u8, b: u8) -> u8 {
-    (16 + (r as u16 * 6 / 256) * 36 + (g as u16 * 6 / 256) * 6 + (b as u16 * 6 / 256)) as u8
 }
 
 pub fn rescale(mut s: (u16, u16), prog: &Program) -> (u16, u16) {
@@ -442,14 +431,14 @@ pub fn con_main(mut prog: Program) {
     enable_raw_mode().unwrap();
     stdout.flush().unwrap();
 
-    let mut EXIT: bool = false;
+    let mut exit: bool = false;
 
     let size = size().unwrap();
     prog.update_size(size);
 
     if !prog.is_display_enabled() {
-        while !EXIT {
-            control_key_events_con(&mut prog, &mut EXIT);
+        while !exit {
+            control_key_events_con(&mut prog, &mut exit);
             prog.force_render();
         }
     } else {
@@ -459,8 +448,8 @@ pub fn con_main(mut prog: Program) {
             Hide,
             SetAttribute(Attribute::Bold)
         );
-        while !EXIT {
-            control_key_events_con(&mut prog, &mut EXIT);
+        while !exit {
+            control_key_events_con(&mut prog, &mut exit);
 
             if crate::audio::get_no_sample() > crate::data::STOP_RENDERING {
                 continue;
