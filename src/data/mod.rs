@@ -32,6 +32,7 @@ pub const STOP_RENDERING: u8 = 192;
 pub const DEFAULT_SIZE_WIN: u16 = 84;
 pub const DEFAULT_WIN_SCALE: u8 = 2;
 pub const MAX_PIXEL_BUFFER_SIZE: u32 = u16::MAX as u32 * 3;
+pub const CRT_EFFECT: bool = false;
 
 #[derive(PartialEq)]
 pub enum RefreshRateMode {
@@ -56,6 +57,8 @@ pub(crate) struct Program {
     RESIZE: bool,
 
     HIDDEN: bool,
+
+    CRT: bool,
 
     /// Scaling purposes
     WAYLAND: bool,
@@ -138,6 +141,7 @@ impl Program {
             RESIZE: false,
 
             HIDDEN: false,
+            CRT: false,
 
             mode: default_mode,
 
@@ -175,6 +179,10 @@ impl Program {
             CON_MAX_W: 50,
             CON_MAX_H: 25,
         }
+    }
+
+    pub fn is_crt(&self) -> bool {
+        self.CRT
     }
 
     pub fn is_resizable(&self) -> bool {

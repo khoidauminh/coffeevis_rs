@@ -166,6 +166,10 @@ impl Program {
                     eprintln_red!("\n:3");
                 }
 
+                "--crt" => {
+                    self.CRT = true;
+                }
+
                 "--no-display" => {
                     eprintln_red!("You have told coffeevis to not present the buffer. Expect a black window (or no window on Wayland).");
                     self.DISPLAY = false;

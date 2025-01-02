@@ -17,7 +17,6 @@ softbuffer = "0.4"
 winit = "0.30"
 qoi = "0.4.1"
 crossterm = "0.28"
-fps_clock = "2.0"
 
 [features]
 window_only = []

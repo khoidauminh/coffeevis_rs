@@ -28,7 +28,7 @@ fn main() {
 
     match prog.mode() {
         #[cfg(not(feature = "console_only"))]
-        modes::Mode::Win => modes::windowed_mode::winit_main(prog).unwrap(),
+        modes::Mode::Win => modes::windowed_mode::winit_main(prog),
 
         _ => {
             #[allow(unused_mut, unused_assignments)]
@@ -37,7 +37,7 @@ fn main() {
             #[cfg(not(feature = "window_only"))]
             {
                 terminal = true;
-                modes::console_mode::con_main(prog).unwrap();
+                modes::console_mode::con_main(prog);
             }
 
             if !terminal {

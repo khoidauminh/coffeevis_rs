@@ -1,11 +1,7 @@
-#![allow(warnings)]
-
-use fps_clock::FpsClock;
-
 use winit::{
     application::ApplicationHandler,
-    dpi::{self, LogicalSize},
-    event::{DeviceEvent, DeviceId, ElementState, Event, WindowEvent},
+    dpi::{self, LogicalSize, PhysicalSize},
+    event::{self, DeviceEvent, DeviceId, ElementState, Event, WindowEvent},
     event_loop::{ActiveEventLoop, EventLoop},
     keyboard::{
         Key,
@@ -14,14 +10,14 @@ use winit::{
     platform::{
         modifier_supplement::KeyEventExtModifierSupplement, wayland::WindowAttributesExtWayland,
     },
-    window::{WindowButtons, WindowId},
+    window::{Icon, Window, WindowButtons, WindowId, WindowLevel},
 };
 
 use std::{
     num::NonZeroU32,
     sync::{mpsc, Arc, RwLock},
     thread::{self, current},
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use crate::data::*;
@@ -55,7 +51,7 @@ impl ApplicationHandler for WindowState {
             }
 
             WindowEvent::MouseInput { button, .. } => {
-                if button == winit::event::MouseButton::Left {
+                if button == event::MouseButton::Left {
                     if let Err(err) = self.window.drag_window() {
                         eprintln!("Error starting window drag: {err}");
                     }
@@ -67,7 +63,7 @@ impl ApplicationHandler for WindowState {
                 self.commands_sender.send(Command::Hidden(b));
             }
 
-            WindowEvent::Resized(winit::dpi::PhysicalSize { width, height }) => {
+            WindowEvent::Resized(PhysicalSize { width, height }) => {
                 self.commands_sender
                     .send(Command::Resize(width as u16, height as u16));
             }
@@ -129,38 +125,34 @@ pub fn read_icon() -> (u32, u32, Vec<u8>) {
     (width, height, vec)
 }
 
-pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
+pub fn winit_main(mut prog: Program) {
     prog.print_startup_info();
 
     let event_loop = EventLoop::new().unwrap();
 
-    let mut size = (prog.pix.width() as u32, prog.pix.height() as u32);
     let scale = prog.scale() as u32;
-
+    let mut size = (prog.pix.width() as u32, prog.pix.height() as u32);
     size.0 *= scale;
     size.1 *= scale;
 
     let lock_fps = prog.REFRESH_RATE_MODE == crate::RefreshRateMode::Specified;
-
     let resizeable = prog.is_resizable();
-
     let de = std::env::var("XDG_CURRENT_DESKTOP").unwrap_or(String::new());
     let is_gnome = de == "GNOME";
     let is_wayland = prog.is_wayland();
     let gnome_workaround = is_gnome && is_wayland;
 
-    let win_size = dpi::PhysicalSize::<u32>::new(size.0, size.1);
+    let win_size = dpi::LogicalSize::<u32>::new(size.0, size.1);
 
     let icon = {
         let (w, h, v) = read_icon();
-
-        winit::window::Icon::from_rgba(v, w, h).expect("Failed to create window icon.")
+        Icon::from_rgba(v, w, h).expect("Failed to create window icon.")
     };
 
-    let mut window_attributes = winit::window::Window::default_attributes()
+    let mut window_attributes = Window::default_attributes()
         .with_title("cvis")
         .with_inner_size(win_size)
-        .with_window_level(winit::window::WindowLevel::AlwaysOnTop)
+        .with_window_level(WindowLevel::AlwaysOnTop)
         .with_transparent(false)
         .with_decorations(!(is_gnome && is_wayland))
         .with_resizable(prog.is_resizable())
@@ -171,7 +163,7 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
 
     let inner_size = window.clone().inner_size();
 
-    let (commands_sender, commands_receiver) = std::sync::mpsc::sync_channel::<Command>(8);
+    let (commands_sender, commands_receiver) = mpsc::sync_channel::<Command>(8);
 
     let mut state = WindowState {
         window: window.clone(),
@@ -231,7 +223,7 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
         let commands_sender = commands_sender.clone();
         let window = window.clone();
         let mut size = inner_size;
-        let mut ticker = fps_clock::FpsClock::new(prog.MILLI_HZ / 1000);
+
         let mut surface = {
             use winit::raw_window_handle;
             let context = softbuffer::Context::new(window.clone()).unwrap();
@@ -246,6 +238,8 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
 
             surface
         };
+
+        let mut frame_deadline = Instant::now() + prog.DURATIONS[0];
 
         move || loop {
             let mut draw = false;
@@ -276,10 +270,6 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
                     }
                 }
 
-                if let Command::FpsFrac(f) = cmd {
-                    ticker = fps_clock::FpsClock::new(f / 1000);
-                }
-
                 draw |= prog.eval_command(&cmd);
             }
 
@@ -306,6 +296,7 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
                         &mut buffer,
                         Some(size.width as usize),
                         Some(u32::mix),
+                        prog.is_crt(),
                     );
 
                     window.pre_present_notify();
@@ -313,11 +304,12 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
                 }
             }
 
-            ticker.tick();
-
-            if sleep_index > 0 {
-                thread::sleep(prog.DURATIONS[sleep_index]);
+            let now = Instant::now();
+            if now < frame_deadline {
+                thread::sleep(frame_deadline - now);
             }
+
+            frame_deadline = Instant::now() + prog.DURATIONS[sleep_index];
         }
     });
 
@@ -326,6 +318,4 @@ pub fn winit_main(mut prog: Program) -> Result<(), &'static str> {
     thread_updates.join().unwrap();
     thread_size.join().unwrap();
     thread_draw.join().unwrap();
-
-    Ok(())
 }

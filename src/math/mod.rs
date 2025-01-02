@@ -156,22 +156,20 @@ pub mod interpolate {
     }
 
     pub fn smooth_step(a: f32, b: f32, t: f32) -> f32 {
-        // a + (b-a)*(t*t*(3.0-2.0*t))
         let t = t - 0.5;
         let t = t * (2.0 - 2.0 * t.abs()) + 0.5;
-
         a + (b - a) * t
     }
 
     pub fn nearest<T>(a: T, b: T, t: f32) -> T {
         if t < 0.5 {
-            return a;
+            a
+        } else {
+            b
         }
-        b
     }
 
     pub fn subtractive_fall(prev: f32, now: f32, min: f32, amount: f32) -> f32 {
-        //(now - (prev/now.max(min))*amount).max(min)
         if now > prev {
             return now;
         }

@@ -377,7 +377,7 @@ pub fn rescale(mut s: (u16, u16), prog: &Program) -> (u16, u16) {
     s
 }
 
-pub fn control_key_events_con(prog: &mut Program, exit: &mut bool) -> std::io::Result<()> {
+pub fn control_key_events_con(prog: &mut Program, exit: &mut bool) {
     prog.update_vis();
 
     let no_sample = crate::audio::get_no_sample();
@@ -385,8 +385,8 @@ pub fn control_key_events_con(prog: &mut Program, exit: &mut bool) -> std::io::R
 
     let mut command = Command::Blank;
 
-    if poll(prog.DURATIONS[inactive])? {
-        match read()? {
+    if poll(prog.DURATIONS[inactive]).unwrap() {
+        match read().unwrap() {
             Event::Key(event) => {
                 command = match event.code {
                     KeyCode::Char('b') => Command::VisualizerPrev,
@@ -440,26 +440,24 @@ pub fn control_key_events_con(prog: &mut Program, exit: &mut bool) -> std::io::R
     }
 
     prog.eval_command(&command);
-
-    Ok(())
 }
 
-pub fn con_main(mut prog: Program) -> std::io::Result<()> {
+pub fn con_main(mut prog: Program) {
     prog.print_startup_info();
 
     let mut stdout = stdout();
 
-    enable_raw_mode()?;
+    enable_raw_mode().unwrap();
     stdout.flush().unwrap();
 
     let mut EXIT: bool = false;
 
-    let size = size()?;
+    let size = size().unwrap();
     prog.update_size(size);
 
     if !prog.is_display_enabled() {
         while !EXIT {
-            control_key_events_con(&mut prog, &mut EXIT)?;
+            control_key_events_con(&mut prog, &mut EXIT);
             prog.force_render();
         }
     } else {
@@ -470,7 +468,7 @@ pub fn con_main(mut prog: Program) -> std::io::Result<()> {
             SetAttribute(Attribute::Bold)
         );
         while !EXIT {
-            control_key_events_con(&mut prog, &mut EXIT)?;
+            control_key_events_con(&mut prog, &mut EXIT);
 
             if crate::audio::get_no_sample() > crate::data::STOP_RENDERING {
                 continue;
@@ -481,10 +479,8 @@ pub fn con_main(mut prog: Program) -> std::io::Result<()> {
 
             let _ = stdout.flush();
         }
-        let _ = queue!(stdout, LeaveAlternateScreen, Show)?;
+        let _ = queue!(stdout, LeaveAlternateScreen, Show).unwrap();
     }
 
-    disable_raw_mode()?;
-
-    Ok(())
+    disable_raw_mode().unwrap();
 }
