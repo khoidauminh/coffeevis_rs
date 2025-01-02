@@ -1,3 +1,4 @@
+use softbuffer::Surface;
 use winit::{
     application::ApplicationHandler,
     dpi::{self, PhysicalSize},
@@ -15,7 +16,7 @@ use winit::{
 
 use std::{
     num::NonZeroU32,
-    sync::{mpsc, Arc},
+    sync::Arc,
     thread::{self},
     time::{Duration, Instant},
 };
@@ -24,81 +25,208 @@ use crate::data::*;
 use crate::graphics::blend::Blend;
 
 struct WindowState {
-    pub window: Arc<winit::window::Window>,
-    pub commands_sender: mpsc::SyncSender<Command>,
-}
-
-impl WindowState {
-    fn request_close(&self) {
-        self.commands_sender.send(Command::Close);
-    }
+    pub window: Option<Arc<winit::window::Window>>,
+    pub surface: Option<Surface<Arc<Window>, Arc<Window>>>,
+    pub prog: Program,
+    pub frame_deadline: Instant,
+    pub refresh_rate_check_deadline: Instant,
+    pub final_buffer_size: PhysicalSize<u32>,
 }
 
 impl ApplicationHandler for WindowState {
-    fn resumed(&mut self, event_loop: &ActiveEventLoop) {}
+    fn resumed(&mut self, event_loop: &ActiveEventLoop) {
+        self.prog.print_startup_info();
 
-    fn window_event(
-        &mut self,
-        event_loop: &ActiveEventLoop,
-        window_id: WindowId,
-        event: WindowEvent,
-    ) {
+        let scale = self.prog.scale() as u32;
+        let mut size = (self.prog.pix.width() as u32, self.prog.pix.height() as u32);
+        size.0 *= scale;
+        size.1 *= scale;
+
+        let resizeable = self.prog.is_resizable();
+        let de = std::env::var("XDG_CURRENT_DESKTOP").unwrap_or_default();
+        let is_gnome = de == "GNOME";
+        let is_wayland = self.prog.is_wayland();
+        let gnome_workaround = is_gnome && is_wayland;
+
+        let win_size = dpi::LogicalSize::<u32>::new(size.0, size.1);
+
+        let icon = {
+            let (w, h, v) = read_icon();
+            Icon::from_rgba(v, w, h).expect("Failed to create window icon.")
+        };
+
+        let window_attributes = Window::default_attributes()
+            .with_title("cvis")
+            .with_inner_size(win_size)
+            .with_window_level(WindowLevel::AlwaysOnTop)
+            .with_transparent(false)
+            .with_decorations(!(is_gnome && is_wayland))
+            .with_resizable(self.prog.is_resizable())
+            .with_name("coffeevis", "cvis")
+            .with_window_icon(Some(icon));
+
+        self.window = Some(Arc::new(
+            event_loop.create_window(window_attributes).unwrap(),
+        ));
+
+        let window = self.window.as_ref().unwrap().clone();
+        let size = window.inner_size();
+        self.final_buffer_size = size;
+
+        self.surface = {
+            let context = softbuffer::Context::new(window.clone()).unwrap();
+            let mut surface = softbuffer::Surface::new(&context, window.clone()).unwrap();
+
+            surface
+                .resize(
+                    NonZeroU32::new(size.width).unwrap(),
+                    NonZeroU32::new(size.height).unwrap(),
+                )
+                .unwrap();
+
+            Some(surface)
+        };
+
+        if !de.is_empty() {
+            eprintln!("Running in the {} desktop (XDG_CURRENT_DESKTOP).", de);
+        }
+
+        if gnome_workaround {
+            thread::sleep(Duration::from_millis(50));
+            window.set_decorations(true);
+        }
+
+        if !resizeable {
+            window.set_min_inner_size(Some(win_size));
+            window.set_max_inner_size(Some(win_size));
+        }
+    }
+
+    fn window_event(&mut self, event_loop: &ActiveEventLoop, _: WindowId, event: WindowEvent) {
         match event {
             WindowEvent::CloseRequested => {
-                self.request_close();
                 event_loop.exit();
             }
 
             WindowEvent::MouseInput { button, .. } => {
                 if button == event::MouseButton::Left {
-                    if let Err(err) = self.window.drag_window() {
+                    if let Err(err) = self.window.as_ref().unwrap().drag_window() {
                         eprintln!("Error starting window drag: {err}");
                     }
                 }
             }
 
             WindowEvent::Occluded(b) => {
-                println!("Occluded: {}", b);
-                self.commands_sender.send(Command::Hidden(b));
+                self.prog.set_hidden(b);
             }
 
             WindowEvent::Resized(PhysicalSize { width, height }) => {
-                self.commands_sender
-                    .send(Command::Resize(width as u16, height as u16));
+                let Some(surface) = self.surface.as_mut() else {
+                    return;
+                };
+
+                let scale = self.prog.scale() as u32;
+
+                let w = width as u32;
+                let h = (height as u32).min(MAX_PIXEL_BUFFER_SIZE / w);
+
+                self.final_buffer_size.width = w;
+                self.final_buffer_size.height = h;
+
+                surface
+                    .resize(NonZeroU32::new(w).unwrap(), NonZeroU32::new(h).unwrap())
+                    .unwrap();
+
+                self.prog.update_size((w / scale, h / scale));
+
+                if let Ok(mut buffer) = surface.buffer_mut() {
+                    buffer.fill(0x0);
+                }
             }
 
             WindowEvent::KeyboardInput { event, .. }
                 if event.state == ElementState::Pressed && !event.repeat =>
             {
-                self.commands_sender
-                    .send(match event.key_without_modifiers().as_ref() {
-                        Key::Named(Escape) => {
-                            event_loop.exit();
-                            self.request_close();
-                            Command::Blank
-                        }
+                match event.key_without_modifiers().as_ref() {
+                    Key::Named(Escape) => event_loop.exit(),
 
-                        Key::Named(Space) => Command::VisualizerNext,
+                    Key::Named(Space) => self.prog.change_visualizer(true),
 
-                        Key::Character("b") => Command::VisualizerPrev,
+                    Key::Character("b") => self.prog.change_visualizer(false),
 
-                        Key::Character("n") => Command::SwitchVisList,
+                    Key::Character("n") => self.prog.change_vislist(),
 
-                        Key::Character("-") => Command::VolDown,
-                        Key::Character("=") => Command::VolUp,
+                    Key::Character("-") => self.prog.decrease_vol_scl(),
+                    Key::Character("=") => self.prog.increase_vol_scl(),
 
-                        Key::Character("[") => Command::SmoothDown,
-                        Key::Character("]") => Command::SmoothUp,
+                    Key::Character("[") => self.prog.decrease_smoothing(),
+                    Key::Character("]") => self.prog.increase_smoothing(),
 
-                        Key::Character(";") => Command::WavDown,
-                        Key::Character("\'") => Command::WavUp,
+                    Key::Character(";") => self.prog.decrease_wav_win(),
+                    Key::Character("\'") => self.prog.increase_wav_win(),
 
-                        Key::Character("\\") => Command::AutoSwitch,
+                    Key::Character("\\") => self.prog.toggle_auto_switch(),
 
-                        Key::Character("/") => Command::Reset,
+                    Key::Character("/") => self.prog.reset_parameters(),
 
-                        _ => Command::Blank,
-                    });
+                    _ => {}
+                }
+            }
+
+            WindowEvent::RedrawRequested => {
+                let Some(window) = self.window.as_ref() else {
+                    return;
+                };
+
+                let Some(surface) = self.surface.as_mut() else {
+                    return;
+                };
+
+                window.request_redraw();
+
+                if self.prog.REFRESH_RATE_MODE != crate::RefreshRateMode::Specified {
+                    let now = Instant::now();
+                    if now > self.refresh_rate_check_deadline {
+                        check_refresh_rate(window, &mut self.prog);
+                        self.refresh_rate_check_deadline = now + Duration::from_secs(1);
+                    }
+                }
+
+                self.prog.update_vis();
+                let no_sample = crate::audio::get_no_sample();
+                let sleep_index = no_sample as usize * self.prog.DURATIONS.len() / 256;
+
+                if window.is_minimized().unwrap_or(false)
+                    || self.prog.is_hidden()
+                    || no_sample >= crate::data::STOP_RENDERING
+                {
+                    thread::sleep(IDLE_INTERVAL);
+                    return;
+                }
+
+                self.prog.force_render();
+
+                if self.prog.is_display_enabled() {
+                    if let Ok(mut buffer) = surface.buffer_mut() {
+                        self.prog.pix.scale_to(
+                            self.prog.scale() as usize,
+                            &mut buffer,
+                            Some(self.final_buffer_size.width as usize),
+                            Some(u32::mix),
+                            self.prog.is_crt(),
+                        );
+
+                        window.pre_present_notify();
+                        let _ = buffer.present();
+                    }
+                }
+
+                let now = Instant::now();
+                if now < self.frame_deadline {
+                    thread::sleep(self.frame_deadline - now);
+                }
+
+                self.frame_deadline = Instant::now() + self.prog.DURATIONS[sleep_index];
             }
 
             _ => {}
@@ -124,197 +252,44 @@ pub fn read_icon() -> (u32, u32, Vec<u8>) {
     (width, height, vec)
 }
 
-pub fn winit_main(mut prog: Program) {
-    prog.print_startup_info();
+pub fn check_refresh_rate(window: &Window, prog: &mut Program) {
+    let Some(monitor) = window.current_monitor() else {
+        return;
+    };
 
+    let Some(milli_hz) = monitor.refresh_rate_millihertz() else {
+        return;
+    };
+
+    if milli_hz == prog.MILLI_HZ {
+        return;
+    }
+
+    eprintln!(
+        "\
+    Detected rate to be {}hz.\n\
+    Note: Coffeevis relies on Winit to detect refresh rates.\n\
+    Run with --fps flag if you want to lock fps.\n\
+    Refresh rate changed.\
+    ",
+        milli_hz as f32 / 1000.0
+    );
+
+    prog.change_fps_frac(milli_hz);
+}
+
+pub fn winit_main(prog: Program) {
     let event_loop = EventLoop::new().unwrap();
 
-    let scale = prog.scale() as u32;
-    let mut size = (prog.pix.width() as u32, prog.pix.height() as u32);
-    size.0 *= scale;
-    size.1 *= scale;
-
-    let lock_fps = prog.REFRESH_RATE_MODE == crate::RefreshRateMode::Specified;
-    let resizeable = prog.is_resizable();
-    let de = std::env::var("XDG_CURRENT_DESKTOP").unwrap_or_default();
-    let is_gnome = de == "GNOME";
-    let is_wayland = prog.is_wayland();
-    let gnome_workaround = is_gnome && is_wayland;
-
-    let win_size = dpi::LogicalSize::<u32>::new(size.0, size.1);
-
-    let icon = {
-        let (w, h, v) = read_icon();
-        Icon::from_rgba(v, w, h).expect("Failed to create window icon.")
-    };
-
-    let window_attributes = Window::default_attributes()
-        .with_title("cvis")
-        .with_inner_size(win_size)
-        .with_window_level(WindowLevel::AlwaysOnTop)
-        .with_transparent(false)
-        .with_decorations(!(is_gnome && is_wayland))
-        .with_resizable(prog.is_resizable())
-        .with_name("coffeevis", "cvis")
-        .with_window_icon(Some(icon));
-
-    let window = Arc::new(event_loop.create_window(window_attributes).unwrap());
-
-    let inner_size = window.clone().inner_size();
-
-    let (commands_sender, commands_receiver) = mpsc::sync_channel::<Command>(8);
-
     let mut state = WindowState {
-        window: window.clone(),
-        commands_sender: commands_sender.clone(),
+        window: None,
+        surface: None,
+        frame_deadline: Instant::now() + Duration::from_millis(50),
+        refresh_rate_check_deadline: Instant::now() + Duration::from_secs(1),
+        prog,
+        final_buffer_size: PhysicalSize::<u32>::new(0, 0),
     };
-
-    let thread_size = thread::spawn({
-        let window = window.clone();
-
-        move || {
-            if !de.is_empty() {
-                eprintln!("Running in the {} desktop (XDG_CURRENT_DESKTOP).", de);
-            }
-
-            if gnome_workaround {
-                thread::sleep(Duration::from_millis(50));
-                window.set_decorations(true);
-            }
-
-            if !resizeable {
-                window.set_min_inner_size(Some(win_size));
-                window.set_max_inner_size(Some(win_size));
-            }
-        }
-    });
-
-    let thread_updates = thread::spawn({
-        let window = window.clone();
-        let commands_sender = commands_sender.clone();
-        move || {
-            if lock_fps {
-                return;
-            }
-
-            thread::sleep(Duration::from_millis(500));
-
-            if let Some(monitor) = window.current_monitor() {
-                if let Some(milli_hz) = monitor.refresh_rate_millihertz() {
-                    eprintln!(
-                        "\
-                        Detected rate to be {}hz.\n\
-                        Note: Coffeevis relies on Winit to detect refresh rates.\n\
-                        Run with --fps flag if you want to lock fps.\n\
-                        Refresh rate changed.\
-                        ",
-                        milli_hz as f32 / 1000.0
-                    );
-
-                    commands_sender.send(Command::FpsFrac(milli_hz));
-                }
-            }
-        }
-    });
-
-    // This is the main drawing thread;
-    let thread_draw = thread::spawn({
-        let commands_sender = commands_sender.clone();
-        let window = window.clone();
-        let mut size = inner_size;
-
-        let mut surface = {
-            
-            let context = softbuffer::Context::new(window.clone()).unwrap();
-            let mut surface = softbuffer::Surface::new(&context, window.clone()).unwrap();
-
-            surface
-                .resize(
-                    NonZeroU32::new(inner_size.width).unwrap(),
-                    NonZeroU32::new(inner_size.height).unwrap(),
-                )
-                .unwrap();
-
-            surface
-        };
-
-        let mut frame_deadline = Instant::now() + prog.DURATIONS[0];
-
-        move || loop {
-            let mut draw = false;
-
-            if let Ok(cmd) = commands_receiver.try_recv() {
-                if cmd.is_close_requested() {
-                    break;
-                }
-
-                if let Command::Resize(w, h) = cmd {
-                    let w = w as u32;
-                    let h = (h as u32).min(MAX_PIXEL_BUFFER_SIZE / w);
-
-                    size.width = w;
-                    size.height = h;
-
-                    surface
-                        .resize(
-                            NonZeroU32::new(w).unwrap(),
-                            NonZeroU32::new(h).unwrap(),
-                        )
-                        .unwrap();
-
-                    prog.update_size((w / scale, h / scale));
-
-                    if let Ok(mut buffer) = surface.buffer_mut() {
-                        buffer.fill(0x0);
-                    }
-                }
-
-                draw |= prog.eval_command(&cmd);
-            }
-
-            prog.update_vis();
-            let no_sample = crate::audio::get_no_sample();
-            let sleep_index = no_sample as usize * prog.DURATIONS.len() / 256;
-
-            if window.is_minimized().unwrap_or(false)
-                || prog.is_hidden()
-                || no_sample >= crate::data::STOP_RENDERING && !draw
-            {
-                thread::sleep(IDLE_INTERVAL);
-                continue;
-            }
-
-            prog.force_render();
-
-            if prog.is_display_enabled() {
-                if let Ok(mut buffer) = surface.buffer_mut() {
-                    let len = buffer.len().min(prog.pix.sizel());
-
-                    prog.pix.scale_to(
-                        prog.scale() as usize,
-                        &mut buffer,
-                        Some(size.width as usize),
-                        Some(u32::mix),
-                        prog.is_crt(),
-                    );
-
-                    window.pre_present_notify();
-                    let _ = buffer.present();
-                }
-            }
-
-            let now = Instant::now();
-            if now < frame_deadline {
-                thread::sleep(frame_deadline - now);
-            }
-
-            frame_deadline = Instant::now() + prog.DURATIONS[sleep_index];
-        }
-    });
 
     event_loop.set_control_flow(winit::event_loop::ControlFlow::Wait);
     event_loop.run_app(&mut state).unwrap();
-    thread_updates.join().unwrap();
-    thread_size.join().unwrap();
-    thread_draw.join().unwrap();
 }

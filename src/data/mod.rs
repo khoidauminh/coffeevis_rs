@@ -97,35 +97,6 @@ pub(crate) struct Program {
     AUTO_SWITCH_ITVL: Duration,
 }
 
-#[derive(Debug, PartialEq)]
-pub enum Command {
-    VisualizerNext,
-    VisualizerPrev,
-    SwitchConMode,
-    Resize(u16, u16),
-    ConMax(i16, bool),
-    Fps(i16, bool),
-    FpsFrac(u32),
-    Hidden(bool),
-    SwitchVisList,
-    VolUp,
-    VolDown,
-    SmoothUp,
-    SmoothDown,
-    WavUp,
-    WavDown,
-    AutoSwitch,
-    Reset,
-    Blank,
-    Close,
-}
-
-impl Command {
-    pub fn is_close_requested(&self) -> bool {
-        *self == Command::Close
-    }
-}
-
 impl Program {
     pub fn new() -> Self {
         let vislist_ = vislist::VisNavigator::new();
@@ -203,94 +174,6 @@ impl Program {
 
     pub fn is_hidden(&self) -> bool {
         self.HIDDEN
-    }
-
-    pub fn eval_command(&mut self, cmd: &Command) -> bool {
-        use Command::*;
-
-        if *cmd == Command::Blank {
-            return false;
-        }
-
-        match cmd {
-            &VisualizerNext => {
-                self.change_visualizer(true);
-                return true;
-            }
-            &VisualizerPrev => {
-                self.change_visualizer(false);
-                return true;
-            }
-
-            &Hidden(b) => self.set_hidden(b),
-
-            #[cfg(not(feature = "window_only"))]
-            &SwitchConMode => {
-                self.switch_con_mode();
-                return true;
-            }
-
-            &SwitchVisList => {
-                self.change_vislist();
-                return true;
-            }
-
-            &Fps(fps, replace) => {
-                self.change_fps(fps, replace);
-            }
-
-            &FpsFrac(milli_hz) => {
-                self.change_fps_frac(milli_hz);
-            }
-
-            #[cfg(not(feature = "window_only"))]
-            &ConMax(d, replace) => {
-                self.change_con_max(d, replace);
-            }
-
-            &VolUp => {
-                self.increase_vol_scl();
-            }
-
-            &VolDown => {
-                self.decrease_vol_scl();
-            }
-
-            &SmoothUp => {
-                self.increase_smoothing();
-            }
-            &SmoothDown => {
-                self.decrease_smoothing();
-            }
-
-            &WavUp => {
-                self.increase_wav_win();
-            }
-            &WavDown => {
-                self.decrease_wav_win();
-            }
-
-            &AutoSwitch => {
-                self.toggle_auto_switch();
-            }
-            &Reset => {
-                self.reset_parameters();
-            }
-
-            &_ => {}
-        }
-
-        false
-    }
-
-    pub fn eval_commands(&mut self, cmds: &mut Vec<Command>) -> bool {
-        let mut redraw = false;
-        for cmd in cmds.iter() {
-            redraw |= self.eval_command(cmd);
-        }
-        cmds.clear();
-
-        redraw
     }
 
     pub fn reset_switch(&mut self) {
