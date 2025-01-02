@@ -25,10 +25,10 @@ impl Mode {
     pub fn get_flusher(&self) -> console_mode::Flusher {
         use crate::Program;
 
-        match self {
-            &Mode::ConAlpha => Program::print_alpha,
-            &Mode::ConBrail => Program::print_brail,
-            &_ => Program::print_block,
+        match *self {
+            Mode::ConAlpha => Program::print_alpha,
+            Mode::ConBrail => Program::print_brail,
+            _ => Program::print_block,
         }
     }
 

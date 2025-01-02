@@ -155,10 +155,7 @@ impl Program {
     }
 
     pub fn as_con(mut self) -> Self {
-        match self.mode {
-            Mode::Win => self.set_con_mode(Mode::ConAlpha),
-            _ => {}
-        }
+        if self.mode == Mode::Win { self.set_con_mode(Mode::ConAlpha) }
         self
     }
 
@@ -479,7 +476,7 @@ pub fn con_main(mut prog: Program) {
 
             let _ = stdout.flush();
         }
-        let _ = queue!(stdout, LeaveAlternateScreen, Show).unwrap();
+        queue!(stdout, LeaveAlternateScreen, Show).unwrap();
     }
 
     disable_raw_mode().unwrap();

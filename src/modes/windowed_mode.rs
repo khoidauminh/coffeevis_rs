@@ -1,7 +1,7 @@
 use winit::{
     application::ApplicationHandler,
-    dpi::{self, LogicalSize, PhysicalSize},
-    event::{self, DeviceEvent, DeviceId, ElementState, Event, WindowEvent},
+    dpi::{self, PhysicalSize},
+    event::{self, ElementState, WindowEvent},
     event_loop::{ActiveEventLoop, EventLoop},
     keyboard::{
         Key,
@@ -10,19 +10,18 @@ use winit::{
     platform::{
         modifier_supplement::KeyEventExtModifierSupplement, wayland::WindowAttributesExtWayland,
     },
-    window::{Icon, Window, WindowButtons, WindowId, WindowLevel},
+    window::{Icon, Window, WindowId, WindowLevel},
 };
 
 use std::{
     num::NonZeroU32,
-    sync::{mpsc, Arc, RwLock},
-    thread::{self, current},
+    sync::{mpsc, Arc},
+    thread::{self},
     time::{Duration, Instant},
 };
 
 use crate::data::*;
 use crate::graphics::blend::Blend;
-use crate::graphics::Canvas;
 
 struct WindowState {
     pub window: Arc<winit::window::Window>,
@@ -137,7 +136,7 @@ pub fn winit_main(mut prog: Program) {
 
     let lock_fps = prog.REFRESH_RATE_MODE == crate::RefreshRateMode::Specified;
     let resizeable = prog.is_resizable();
-    let de = std::env::var("XDG_CURRENT_DESKTOP").unwrap_or(String::new());
+    let de = std::env::var("XDG_CURRENT_DESKTOP").unwrap_or_default();
     let is_gnome = de == "GNOME";
     let is_wayland = prog.is_wayland();
     let gnome_workaround = is_gnome && is_wayland;
@@ -149,7 +148,7 @@ pub fn winit_main(mut prog: Program) {
         Icon::from_rgba(v, w, h).expect("Failed to create window icon.")
     };
 
-    let mut window_attributes = Window::default_attributes()
+    let window_attributes = Window::default_attributes()
         .with_title("cvis")
         .with_inner_size(win_size)
         .with_window_level(WindowLevel::AlwaysOnTop)
@@ -201,7 +200,7 @@ pub fn winit_main(mut prog: Program) {
             thread::sleep(Duration::from_millis(500));
 
             if let Some(monitor) = window.current_monitor() {
-                if let Some(mut milli_hz) = monitor.refresh_rate_millihertz() {
+                if let Some(milli_hz) = monitor.refresh_rate_millihertz() {
                     eprintln!(
                         "\
                         Detected rate to be {}hz.\n\
@@ -225,7 +224,7 @@ pub fn winit_main(mut prog: Program) {
         let mut size = inner_size;
 
         let mut surface = {
-            use winit::raw_window_handle;
+            
             let context = softbuffer::Context::new(window.clone()).unwrap();
             let mut surface = softbuffer::Surface::new(&context, window.clone()).unwrap();
 
@@ -244,7 +243,7 @@ pub fn winit_main(mut prog: Program) {
         move || loop {
             let mut draw = false;
 
-            if let Ok(mut cmd) = commands_receiver.try_recv() {
+            if let Ok(cmd) = commands_receiver.try_recv() {
                 if cmd.is_close_requested() {
                     break;
                 }
@@ -253,13 +252,13 @@ pub fn winit_main(mut prog: Program) {
                     let w = w as u32;
                     let h = (h as u32).min(MAX_PIXEL_BUFFER_SIZE / w);
 
-                    size.width = w as u32;
-                    size.height = h as u32;
+                    size.width = w;
+                    size.height = h;
 
                     surface
                         .resize(
-                            NonZeroU32::new(w as u32).unwrap(),
-                            NonZeroU32::new(h as u32).unwrap(),
+                            NonZeroU32::new(w).unwrap(),
+                            NonZeroU32::new(h).unwrap(),
                         )
                         .unwrap();
 
