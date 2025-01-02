@@ -43,58 +43,57 @@ pub enum RefreshRateMode {
 /// Main program struct
 ///
 /// Notes:
-/// Windowed mode resolution will be stored in `WIN_W` and `WIN_H`.
-/// Console mode reolution are stored in `CON_W` and `CON_H`,
-/// with special fields: `CON_MAX_W` and `CON_MAX_H` for maximum
+/// Windowed mode resolution will be stored in `window_width` and `window_height`.
+/// Console mode reolution are stored in `console_width` and `console_height`,
+/// with special fields: `console_max_width` and `console_max_height` for maximum
 /// console resolution allowed.
 pub(crate) struct Program {
     /// for experimental purposes. Console mode only.
-    DISPLAY: bool,
+    display: bool,
 
-    SCALE: u8,
+    scale: u8,
 
     /// Allow for resizing. Windowed mode only.
-    RESIZE: bool,
+    resize: bool,
 
-    HIDDEN: bool,
+    hidden: bool,
 
-    CRT: bool,
+    crt: bool,
 
     /// Scaling purposes
-    WAYLAND: bool,
+    wayland: bool,
 
     pub pix: crate::graphics::Canvas,
 
     pub mode: Mode,
 
-    pub MILLI_HZ: u32,
-    pub REFRESH_RATE_MODE: RefreshRateMode,
-    pub DURATIONS: [std::time::Duration; 4],
-    pub REFRESH_RATE: std::time::Duration,
+    pub milli_hz: u32,
+    pub refresh_rate_mode: RefreshRateMode,
+    pub refresh_rate_intervals: [std::time::Duration; 4],
 
-    pub WAV_WIN: usize,
-    pub VOL_SCL: f32,
-    pub SMOOTHING: f32,
+    pub wav_win: usize,
+    pub vol_scl: f32,
+    pub smoothing: f32,
 
-    WIN_W: u16,
-    WIN_H: u16,
+    window_width: u16,
+    window_height: u16,
 
-    pub CON_W: u16,
-    pub CON_H: u16,
+    pub console_width: u16,
+    pub console_height: u16,
 
-    pub CON_MAX_W: u16,
-    pub CON_MAX_H: u16,
+    pub console_max_width: u16,
+    pub console_max_height: u16,
 
-    VIS: vislist::VisNavigator,
+    vis_navigator: vislist::VisNavigator,
 
     visualizer: VisFunc,
 
     #[cfg(not(feature = "window_only"))]
     pub flusher: crate::modes::console_mode::Flusher,
 
-    SWITCH: Instant,
-    AUTO_SWITCH: bool,
-    AUTO_SWITCH_ITVL: Duration,
+    switch: Instant,
+    auto_switch: bool,
+    auto_switch_interval: Duration,
 }
 
 impl Program {
@@ -107,87 +106,86 @@ impl Program {
         let default_mode = Mode::default();
 
         Self {
-            DISPLAY: true,
-            SCALE: DEFAULT_WIN_SCALE,
-            RESIZE: false,
+            display: true,
+            scale: DEFAULT_WIN_SCALE,
+            resize: false,
 
-            HIDDEN: false,
-            CRT: false,
+            hidden: false,
+            crt: false,
 
             mode: default_mode,
 
-            WAYLAND: true,
+            wayland: true,
 
             pix: crate::graphics::Canvas::new(DEFAULT_SIZE_WIN as usize, DEFAULT_SIZE_WIN as usize),
 
-            MILLI_HZ: DEFAULT_MILLI_HZ,
-            REFRESH_RATE_MODE: RefreshRateMode::Sync,
-            REFRESH_RATE: rate,
+            milli_hz: DEFAULT_MILLI_HZ,
+            refresh_rate_mode: RefreshRateMode::Sync,
 
-            DURATIONS: [rate, rate * 4, rate * 16, Duration::from_millis(500)],
+            refresh_rate_intervals: [rate, rate * 4, rate * 16, Duration::from_millis(500)],
 
-            VIS: vislist_,
+            vis_navigator: vislist_,
 
             visualizer: vis.func(),
 
             #[cfg(not(feature = "window_only"))]
             flusher: default_mode.get_flusher(),
 
-            SWITCH: Instant::now() + Duration::from_secs(8),
-            AUTO_SWITCH: true,
-            AUTO_SWITCH_ITVL: Duration::from_secs(8),
+            switch: Instant::now() + Duration::from_secs(8),
+            auto_switch: true,
+            auto_switch_interval: Duration::from_secs(8),
 
-            WAV_WIN: DEFAULT_WAV_WIN,
-            VOL_SCL: DEFAULT_VOL_SCL,
-            SMOOTHING: DEFAULT_SMOOTHING,
+            wav_win: DEFAULT_WAV_WIN,
+            vol_scl: DEFAULT_VOL_SCL,
+            smoothing: DEFAULT_SMOOTHING,
 
-            WIN_W: DEFAULT_SIZE_WIN,
-            WIN_H: DEFAULT_SIZE_WIN,
+            window_width: DEFAULT_SIZE_WIN,
+            window_height: DEFAULT_SIZE_WIN,
 
-            CON_W: 50,
-            CON_H: 25,
+            console_width: 50,
+            console_height: 25,
 
-            CON_MAX_W: 50,
-            CON_MAX_H: 25,
+            console_max_width: 50,
+            console_max_height: 25,
         }
     }
 
     pub fn is_crt(&self) -> bool {
-        self.CRT
+        self.crt
     }
 
     pub fn is_resizable(&self) -> bool {
-        self.RESIZE
+        self.resize
     }
 
     pub fn is_display_enabled(&self) -> bool {
-        self.DISPLAY
+        self.display
     }
 
     pub fn is_wayland(&self) -> bool {
-        self.WAYLAND
+        self.wayland
     }
 
     pub fn set_hidden(&mut self, b: bool) {
-        self.HIDDEN = b;
+        self.hidden = b;
     }
 
     pub fn is_hidden(&self) -> bool {
-        self.HIDDEN
+        self.hidden
     }
 
     pub fn reset_switch(&mut self) {
-        self.SWITCH = Instant::now() + self.AUTO_SWITCH_ITVL;
+        self.switch = Instant::now() + self.auto_switch_interval;
     }
 
     pub fn update_vis(&mut self) -> bool {
         let elapsed = Instant::now();
 
-        if elapsed < self.SWITCH || !self.AUTO_SWITCH {
+        if elapsed < self.switch || !self.auto_switch {
             return false;
         }
 
-        self.SWITCH = elapsed + self.AUTO_SWITCH_ITVL;
+        self.switch = elapsed + self.auto_switch_interval;
 
         self.change_visualizer(true);
 
@@ -196,36 +194,36 @@ impl Program {
 
     pub fn change_fps(&mut self, amount: i16, replace: bool) {
         if replace {
-            self.MILLI_HZ = amount as u32 * 1000;
+            self.milli_hz = amount as u32 * 1000;
         } else {
-            self.MILLI_HZ = self
-                .MILLI_HZ
+            self.milli_hz = self
+                .milli_hz
                 .saturating_add_signed(amount as i32 * 1000)
                 .clamp(1, 200 * 1000);
         }
 
-        self.change_fps_frac(self.MILLI_HZ);
+        self.change_fps_frac(self.milli_hz);
     }
 
     pub fn change_fps_frac(&mut self, fps: u32) {
         let fps_f = fps as f32 / 1000.0;
         let rate = (1_000_000.0 / fps_f) as u64;
-        self.MILLI_HZ = fps;
-        self.REFRESH_RATE = std::time::Duration::from_micros(rate);
+        self.milli_hz = fps;
+        let interval = std::time::Duration::from_micros(rate);
 
-        self.DURATIONS = [
-            self.REFRESH_RATE,
-            self.REFRESH_RATE * 4,
-            self.REFRESH_RATE * 16,
+        self.refresh_rate_intervals = [
+            interval,
+            interval * 4,
+            interval * 16,
             Duration::from_millis(500),
         ];
     }
 
     pub fn change_visualizer(&mut self, forward: bool) {
         let new_visualizer = if forward {
-            self.VIS.next_vis()
+            self.vis_navigator.next_vis()
         } else {
-            self.VIS.prev_vis()
+            self.vis_navigator.prev_vis()
         };
 
         self.visualizer = new_visualizer.func();
@@ -236,8 +234,8 @@ impl Program {
 
         crate::audio::set_normalizer(new_visualizer.request());
 
-        let vis_name = self.VIS.current_vis_name();
-        let vis_list = self.VIS.current_list_name();
+        let vis_name = self.vis_navigator.current_vis_name();
+        let vis_list = self.vis_navigator.current_list_name();
 
         self.print_message(format!(
             "Switching to {} in list {}\r\n",
@@ -246,9 +244,9 @@ impl Program {
     }
 
     pub fn change_vislist(&mut self) {
-        self.VIS.next_list();
+        self.vis_navigator.next_list();
 
-        let new_visualizer = self.VIS.current_vis();
+        let new_visualizer = self.vis_navigator.current_vis();
 
         self.visualizer = new_visualizer.func();
 
@@ -258,8 +256,8 @@ impl Program {
 
         crate::audio::set_normalizer(new_visualizer.request());
 
-        let vis_name = self.VIS.current_vis_name();
-        let vis_list = self.VIS.current_list_name();
+        let vis_name = self.vis_navigator.current_vis_name();
+        let vis_list = self.vis_navigator.current_list_name();
 
         self.print_message(format!(
             "Switching to {} in list {}\r\n",
@@ -271,7 +269,7 @@ impl Program {
         use std::io::Write;
         let mut stdout = std::io::stdout();
 
-        if self.DISPLAY && self.mode.is_con() {
+        if self.display && self.mode.is_con() {
             #[cfg(not(feature = "window_only"))]
             {
                 use crossterm::{
@@ -302,8 +300,8 @@ impl Program {
             (Ok(w), Ok(h)) => (w, h),
             _ => panic!("Size overflow!"),
         };
-        self.WIN_W = w;
-        self.WIN_H = h;
+        self.window_width = w;
+        self.window_height = h;
         self.pix.resize(w as usize, h as usize);
     }
 
@@ -320,15 +318,15 @@ impl Program {
 
         match &self.mode {
             Mode::Win => {
-                self.WIN_W = w;
-                self.WIN_H = h;
+                self.window_width = w;
+                self.window_height = h;
             }
 
             _ => {
                 #[cfg(not(feature = "window_only"))]
                 {
-                    self.CON_W = w;
-                    self.CON_H = h;
+                    self.console_width = w;
+                    self.console_height = h;
                     (w, h) = crate::modes::console_mode::rescale((w, h), self);
                 }
             }
@@ -339,10 +337,13 @@ impl Program {
 
     pub fn refresh(&mut self) {
         match &self.mode {
-            Mode::Win => self.pix.resize(self.WIN_W as usize, self.WIN_H as usize),
+            Mode::Win => self
+                .pix
+                .resize(self.window_width as usize, self.window_height as usize),
             _ => {
                 #[cfg(not(feature = "window_only"))]
-                self.pix.resize(self.CON_W as usize, self.CON_H as usize);
+                self.pix
+                    .resize(self.console_width as usize, self.console_height as usize);
             }
         }
     }
@@ -356,47 +357,47 @@ impl Program {
     }
 
     pub fn increase_vol_scl(&mut self) {
-        self.VOL_SCL = (self.VOL_SCL * 1.2).clamp(0.0, 10.0);
+        self.vol_scl = (self.vol_scl * 1.2).clamp(0.0, 10.0);
     }
 
     pub fn decrease_vol_scl(&mut self) {
-        self.VOL_SCL = (self.VOL_SCL / 1.2).clamp(0.0, 10.0);
+        self.vol_scl = (self.vol_scl / 1.2).clamp(0.0, 10.0);
     }
 
     pub fn increase_smoothing(&mut self) {
-        self.SMOOTHING = (self.SMOOTHING + 0.05).clamp(0.0, 0.95);
+        self.smoothing = (self.smoothing + 0.05).clamp(0.0, 0.95);
     }
 
     pub fn decrease_smoothing(&mut self) {
-        self.SMOOTHING = (self.SMOOTHING - 0.05).clamp(0.0, 0.95);
+        self.smoothing = (self.smoothing - 0.05).clamp(0.0, 0.95);
     }
 
     pub fn increase_wav_win(&mut self) {
-        self.WAV_WIN = (self.WAV_WIN * 5 / 4).clamp(3, 500)
+        self.wav_win = (self.wav_win * 5 / 4).clamp(3, 500)
     }
 
     pub fn decrease_wav_win(&mut self) {
-        self.WAV_WIN = (self.WAV_WIN * 4 / 5).clamp(3, 500)
+        self.wav_win = (self.wav_win * 4 / 5).clamp(3, 500)
     }
 
     pub fn toggle_auto_switch(&mut self) {
-        self.AUTO_SWITCH ^= true;
+        self.auto_switch ^= true;
 
         self.print_message(format!(
             "Auto switch is now {}\n",
-            if self.AUTO_SWITCH { "on" } else { "off" }
+            if self.auto_switch { "on" } else { "off" }
         ));
     }
 
     pub fn reset_parameters(&mut self) {
-        self.VOL_SCL = DEFAULT_VOL_SCL;
-        self.SMOOTHING = DEFAULT_SMOOTHING;
-        self.WAV_WIN = DEFAULT_WAV_WIN;
+        self.vol_scl = DEFAULT_VOL_SCL;
+        self.smoothing = DEFAULT_SMOOTHING;
+        self.wav_win = DEFAULT_WAV_WIN;
 
         #[cfg(not(feature = "window_only"))]
         self.change_con_max(50, true);
 
-        if self.REFRESH_RATE_MODE != RefreshRateMode::Specified {
+        if self.refresh_rate_mode != RefreshRateMode::Specified {
             self.change_fps_frac(DEFAULT_MILLI_HZ);
         }
     }
@@ -406,6 +407,6 @@ impl Program {
     }
 
     pub fn scale(&self) -> u8 {
-        self.SCALE
+        self.scale
     }
 }

@@ -18,12 +18,12 @@ fn to_color(s: i32, size: i32) -> u8 {
 }
 
 pub fn draw_vectorscope(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
-    let range = prog.WAV_WIN;
+    let range = prog.wav_win;
     let _l = stream.len();
 
     let size = prog.pix.height().min(prog.pix.width()) as i32;
     let sizei = size;
-    let scale = size as f32 * prog.VOL_SCL * 0.5;
+    let scale = size as f32 * prog.vol_scl * 0.5;
 
     let (width, height) = prog.pix.sizet();
 
@@ -63,7 +63,7 @@ pub fn draw_vectorscope(prog: &mut crate::data::Program, stream: &mut crate::aud
 
     draw_cross(prog);
 
-    stream.rotate_left(prog.WAV_WIN);
+    stream.rotate_left(prog.wav_win);
 }
 
 pub fn draw_oscilloscope(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
@@ -75,7 +75,7 @@ pub fn draw_oscilloscope(prog: &mut crate::data::Program, stream: &mut crate::au
     let _width_top_h = width >> 1;
     let height_top_h = height >> 1;
 
-    let scale = prog.pix.height() as f32 * prog.VOL_SCL * 0.45;
+    let scale = prog.pix.height() as f32 * prog.vol_scl * 0.45;
 
     prog.pix.clear();
 
@@ -180,7 +180,7 @@ pub fn draw_oscilloscope2(prog: &mut crate::data::Program, stream: &mut crate::a
     let _width_top_h = width >> 1;
     let height_top_h = height >> 1;
 
-    let scale = prog.pix.height() as f32 * prog.VOL_SCL * 0.45;
+    let scale = prog.pix.height() as f32 * prog.vol_scl * 0.45;
 
     prog.pix.clear();
 
@@ -277,7 +277,7 @@ pub fn draw_oscilloscope3(prog: &mut crate::data::Program, stream: &mut crate::a
     let width_top_h = width / 2;
     let height_top_h = height / 2;
 
-    let scale = prog.pix.height() as f32 * prog.VOL_SCL * 0.45;
+    let scale = prog.pix.height() as f32 * prog.vol_scl * 0.45;
 
     let mut bass_sum = 0.0;
 

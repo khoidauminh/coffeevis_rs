@@ -35,27 +35,27 @@ pub fn draw_lazer(para: &mut crate::data::Program, stream: &mut crate::audio::Sa
             sum.y += smooth;
         }
 
-        Cplx::new(sum.x * para.VOL_SCL * 0.0035, sum.y * para.VOL_SCL * 0.0035)
+        Cplx::new(sum.x * para.vol_scl * 0.0035, sum.y * para.vol_scl * 0.0035)
     };
 
-    let mut LOCAL = DATA.lock().unwrap();
+    let mut local = DATA.lock().unwrap();
 
-    a *= LOCAL.p0;
+    a *= local.p0;
 
-    LOCAL.p0.x = (LOCAL.p0.x + a.x + w) % w;
-    LOCAL.p0.y = (LOCAL.p0.y + a.y + h) % h;
+    local.p0.x = (local.p0.x + a.x + w) % w;
+    local.p0.y = (local.p0.y + a.y + h) % h;
 
     let color = u32::from_be_bytes([
         0xff,
-        (48.0 + LOCAL.p0.x * 255.0 / w).min(255.0) as u8,
-        (48.0 + LOCAL.p0.y * 255.0 / h).min(255.0) as u8,
+        (48.0 + local.p0.x * 255.0 / w).min(255.0) as u8,
+        (48.0 + local.p0.y * 255.0 / h).min(255.0) as u8,
         ((255.0 - a.x * a.y * 2.0).abs().min(255.0)) as u8,
     ]);
 
     para.pix.fade(3);
 
     para.pix
-        .draw_line(LOCAL.p1.to_p2(), LOCAL.p0.to_p2(), color);
+        .draw_line(local.p1.to_p2(), local.p0.to_p2(), color);
 
-    LOCAL.p1 = LOCAL.p0;
+    local.p1 = local.p0;
 }

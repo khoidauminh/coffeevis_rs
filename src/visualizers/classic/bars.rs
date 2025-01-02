@@ -34,10 +34,10 @@ fn prepare(
     let bnf = bar_num as f32;
     let _l = stream.len();
 
-    let mut LOCAL = DATA.lock().unwrap();
+    let mut local = DATA.lock().unwrap();
 
-    if bar_num != LOCAL.len() {
-        LOCAL.resize(bar_num, 0.0);
+    if bar_num != local.len() {
+        local.resize(bar_num, 0.0);
     }
 
     let mut data_f = [Cplx::zero(); FFT_SIZE];
@@ -73,7 +73,7 @@ fn prepare(
 
     let bnf = 1.0 / bnf;
 
-    LOCAL
+    local
         .iter_mut()
         .zip(data_f.iter())
         .take(bar_num)
@@ -95,9 +95,9 @@ pub fn draw_bars(prog: &mut crate::data::Program, stream: &mut crate::audio::Sam
     let bnf_recip = 1.0 / bnf;
     let _l = stream.len();
 
-    prepare(stream, bar_num, prog.VOL_SCL, prog.SMOOTHING);
+    prepare(stream, bar_num, prog.vol_scl, prog.smoothing);
 
-    let LOCAL = DATA.lock().unwrap();
+    let local = DATA.lock().unwrap();
 
     prog.pix.clear();
     let sizef = Cplx::new(prog.pix.width() as f32, prog.pix.height() as f32);
@@ -120,8 +120,8 @@ pub fn draw_bars(prog: &mut crate::data::Program, stream: &mut crate::audio::Sam
         let t = idxf.fract();
 
         smoothed_smp = smoothed_smp.max(cubed_sqrt(smooth_step(
-            LOCAL[idx],
-            LOCAL[(idx + 1).min(bar_num)],
+            local[idx],
+            local[(idx + 1).min(bar_num)],
             t,
         )));
 
@@ -171,9 +171,9 @@ pub fn draw_bars_circle(prog: &mut crate::data::Program, stream: &mut crate::aud
     let wh = prog.pix.width() as i32 / 2;
     let hh = prog.pix.height() as i32 / 2;
 
-    prepare(stream, bar_num, prog.VOL_SCL, prog.SMOOTHING);
+    prepare(stream, bar_num, prog.vol_scl, prog.smoothing);
 
-    let LOCAL = DATA.lock().unwrap();
+    let local = DATA.lock().unwrap();
 
     prog.pix.clear();
 
@@ -193,7 +193,7 @@ pub fn draw_bars_circle(prog: &mut crate::data::Program, stream: &mut crate::aud
 
         // let scalef = math::fft_scale_up(i, bar_num);
 
-        let bar = math::interpolate::linearf(LOCAL[i], LOCAL[i_next], t) * sizef;
+        let bar = math::interpolate::linearf(local[i], local[i_next], t) * sizef;
         let bar = bar * 0.7;
 
         let p1 = P2::new(

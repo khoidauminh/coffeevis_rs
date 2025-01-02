@@ -61,7 +61,7 @@ impl Program {
                 #[cfg(not(feature = "window_only"))]
                 "--block" => (self.mode, self.flusher) = (ConBlock, Program::print_block),
 
-                "--no-auto-switch" => self.AUTO_SWITCH = false,
+                "--no-auto-switch" => self.auto_switch = false,
 
                 "--size" => {
                     let s = args
@@ -75,13 +75,13 @@ impl Program {
                 }
 
                 "--scale" => {
-                    self.SCALE = args
+                    self.scale = args
                         .next()
                         .expect("Argument error: Expected u8 value for scale")
                         .parse::<u8>()
                         .expect("Argument error: Invalid value");
 
-                    if self.SCALE == 0 {
+                    if self.scale == 0 {
                         panic!("Argument error: scale is 0");
                     }
                 }
@@ -94,34 +94,19 @@ impl Program {
                         ",
                     );
 
-                    let rate = match rate.as_str() {
-                        "inf" => f32::INFINITY,
+                    let rate = rate.parse::<f32>().expect("Argument error: Invalid value.");
 
-                        &_ => {
-                            let rate = rate.parse::<f32>().expect("Argument error: Invalid value.");
-
-                            if rate < 0.0 {
-                                panic!("...What?");
-                            }
-
-                            rate
-                        }
-                    };
-
-                    if rate == f32::INFINITY {
-                        self.MILLI_HZ = u32::MAX;
-                        self.REFRESH_RATE = Duration::from_micros(1);
-                    } else {
-                        let rate = (rate * 1000.0) as u32;
-
-                        self.change_fps_frac(rate);
+                    if rate < 0.0 {
+                        panic!("...What?");
                     }
 
-                    self.REFRESH_RATE_MODE = RefreshRateMode::Specified;
+                    self.change_fps_frac((rate * 1000.0) as u32);
+
+                    self.refresh_rate_mode = RefreshRateMode::Specified;
                 }
 
                 "--resizable" => {
-                    self.RESIZE = true;
+                    self.resize = true;
                 }
 
                 "--transparent" => {
@@ -139,17 +124,17 @@ impl Program {
                         .map(|x| x.parse::<u16>().expect("Argument error: Invalid value"))
                         .collect::<Vec<_>>();
 
-                    (self.CON_MAX_W, self.CON_MAX_H) = (s[0], s[1]);
+                    (self.console_max_width, self.console_max_height) = (s[0], s[1]);
                 }
 
-                "--x11" => self.WAYLAND = false,
+                "--x11" => self.wayland = false,
 
                 "--vis" => {
                     let vis_name = args
                         .next()
                         .expect("Argument error: Expected name of visualizer");
 
-                    self.visualizer = self.VIS.switch_by_name(vis_name).func();
+                    self.visualizer = self.vis_navigator.switch_by_name(vis_name).func();
                 }
 
                 "--background" => {
@@ -167,12 +152,12 @@ impl Program {
                 }
 
                 "--crt" => {
-                    self.CRT = true;
+                    self.crt = true;
                 }
 
                 "--no-display" => {
                     eprintln_red!("You have told coffeevis to not present the buffer. Expect a black window (or no window on Wayland).");
-                    self.DISPLAY = false;
+                    self.display = false;
                 }
 
                 &_ => match arg {
@@ -211,8 +196,8 @@ impl Program {
         self.update_size(size);
 
         if std::env::var("WAYLAND_DISPLAY").is_err() {
-            self.WAYLAND = false;
-        } else if !self.WAYLAND {
+            self.wayland = false;
+        } else if !self.wayland {
             std::env::set_var("WAYLAND_DISPLAY", "");
         }
 
@@ -229,17 +214,17 @@ impl Program {
 
         eprintln!("Startup configurations (may change): ");
 
-        println!("Refresh rate: {}hz", self.MILLI_HZ as f32 / 1000.0);
+        println!("Refresh rate: {}hz", self.milli_hz as f32 / 1000.0);
 
         println!(
             "Auto switch: {}",
-            if self.AUTO_SWITCH { "on" } else { "off" }
+            if self.auto_switch { "on" } else { "off" }
         );
 
         match self.mode {
             Win => println!(
                 "Running with: Winit, {}",
-                if self.WAYLAND { "Wayland" } else { "X11" }
+                if self.wayland { "Wayland" } else { "X11" }
             ),
 
             _ => {
@@ -255,7 +240,7 @@ impl Program {
             }
         }
 
-        if self.RESIZE {
+        if self.resize {
             eprint!(
                 "\n\
                 Note: resizing is not thoroughly tested and can crash the program or \
@@ -263,14 +248,14 @@ impl Program {
             );
         }
 
-        let w = self.WIN_W as u32 * self.SCALE as u32;
-        let h = self.WIN_H as u32 * self.SCALE as u32;
+        let w = self.window_width as u32 * self.scale as u32;
+        let h = self.window_height as u32 * self.scale as u32;
 
-        if self.RESIZE || w * h > 70000 {
+        if self.resize || w * h > 70000 {
             eprintln_red!(RESO_WARNING);
         }
 
-        if self.MILLI_HZ / 1000 >= 300 {
+        if self.milli_hz / 1000 >= 300 {
             eprintln_red!("\nHave fun cooking your CPU");
         }
 

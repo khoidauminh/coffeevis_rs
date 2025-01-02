@@ -50,13 +50,13 @@ pub fn draw_slice(prog: &mut crate::data::Program, stream: &mut crate::audio::Sa
 
     let mut amp = sweep;
 
-    AMP.with_borrow_mut(|LOCAL| {
-        amp = 2.5 * (sweep - *LOCAL).max(0.0) + sweep * 0.3 + high * 0.00005;
-        *LOCAL = sweep;
+    AMP.with_borrow_mut(|local| {
+        amp = 2.5 * (sweep - *local).max(0.0) + sweep * 0.3 + high * 0.00005;
+        *local = sweep;
     });
 
-    ANGLE.with_borrow_mut(move |LOCAL| {
-        let angle = LOCAL;
+    ANGLE.with_borrow_mut(move |local| {
+        let angle = local;
         let new_angle = *angle + amp;
 
         let d = 1.0 / (big_radius_f * PI);

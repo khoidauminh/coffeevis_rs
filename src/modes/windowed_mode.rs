@@ -127,8 +127,8 @@ impl ApplicationHandler for WindowState {
 
                 let scale = self.prog.scale() as u32;
 
-                let w = width as u32;
-                let h = (height as u32).min(MAX_PIXEL_BUFFER_SIZE / w);
+                let w = width;
+                let h = height.min(MAX_PIXEL_BUFFER_SIZE / w);
 
                 self.final_buffer_size.width = w;
                 self.final_buffer_size.height = h;
@@ -194,9 +194,9 @@ impl ApplicationHandler for WindowState {
                     return;
                 }
 
-                let sleep_index = no_sample as usize * self.prog.DURATIONS.len() / 256;
+                let sleep_index = no_sample as usize * self.prog.refresh_rate_intervals.len() / 256;
 
-                if self.prog.REFRESH_RATE_MODE != crate::RefreshRateMode::Specified {
+                if self.prog.refresh_rate_mode != crate::RefreshRateMode::Specified {
                     let now = Instant::now();
                     if now > self.refresh_rate_check_deadline {
                         check_refresh_rate(window, &mut self.prog);
@@ -227,7 +227,8 @@ impl ApplicationHandler for WindowState {
                     thread::sleep(self.frame_deadline - now);
                 }
 
-                self.frame_deadline = Instant::now() + self.prog.DURATIONS[sleep_index];
+                self.frame_deadline =
+                    Instant::now() + self.prog.refresh_rate_intervals[sleep_index];
             }
 
             _ => {}
@@ -236,9 +237,9 @@ impl ApplicationHandler for WindowState {
 }
 
 pub fn read_icon() -> (u32, u32, Vec<u8>) {
-    let ICON_FILE = include_bytes!("../../assets/coffeevis_icon_128x128.qoi");
+    let icon_file = include_bytes!("../../assets/coffeevis_icon_128x128.qoi");
 
-    let mut icon = qoi::Decoder::new(ICON_FILE)
+    let mut icon = qoi::Decoder::new(icon_file)
         .expect("Failed to parse qoi image")
         .with_channels(qoi::Channels::Rgba);
 
@@ -262,7 +263,7 @@ pub fn check_refresh_rate(window: &Window, prog: &mut Program) {
         return;
     };
 
-    if milli_hz == prog.MILLI_HZ {
+    if milli_hz == prog.milli_hz {
         return;
     }
 
@@ -285,7 +286,7 @@ pub fn winit_main(prog: Program) {
     let mut state = WindowState {
         window: None,
         surface: None,
-        frame_deadline: Instant::now() + prog.DURATIONS[0],
+        frame_deadline: Instant::now() + prog.refresh_rate_intervals[0],
         refresh_rate_check_deadline: Instant::now() + Duration::from_secs(1),
         prog,
         final_buffer_size: PhysicalSize::<u32>::new(0, 0),

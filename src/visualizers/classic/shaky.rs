@@ -36,7 +36,7 @@ fn triangle_wav(amp: f32, prd: f32, t: f32) -> f32 {
 }
 
 pub fn draw_shaky(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
-    let mut LOCALDATA = DATA.lock().unwrap();
+    let mut localdata = DATA.lock().unwrap();
 
     let mut data_f = [Cplx::zero(); 512];
 
@@ -53,25 +53,25 @@ pub fn draw_shaky(prog: &mut crate::data::Program, stream: &mut crate::audio::Sa
     let smooth_amplitude = amplitude * 0.00003;
     let amplitude_scaled = amplitude * 0.00000002;
 
-    LOCALDATA.js = (LOCALDATA.js + amplitude_scaled) % 2.0;
-    LOCALDATA.jc = (LOCALDATA.jc + amplitude_scaled * crate::math::PIH) % 2.0;
+    localdata.js = (localdata.js + amplitude_scaled) % 2.0;
+    localdata.jc = (localdata.jc + amplitude_scaled * crate::math::PIH) % 2.0;
 
-    LOCALDATA.xshake = (smooth_amplitude) * fast::cos_norm(fast::wrap(LOCALDATA.jc));
-    LOCALDATA.yshake = (smooth_amplitude) * fast::sin_norm(fast::wrap(LOCALDATA.js));
+    localdata.xshake = (smooth_amplitude) * fast::cos_norm(fast::wrap(localdata.jc));
+    localdata.yshake = (smooth_amplitude) * fast::sin_norm(fast::wrap(localdata.js));
 
-    LOCALDATA.x = math::interpolate::linearf(LOCALDATA.x as f32, LOCALDATA.xshake, 0.1) as i32;
-    LOCALDATA.y = math::interpolate::linearf(LOCALDATA.y as f32, LOCALDATA.yshake, 0.1) as i32;
+    localdata.x = math::interpolate::linearf(localdata.x as f32, localdata.xshake, 0.1) as i32;
+    localdata.y = math::interpolate::linearf(localdata.y as f32, localdata.yshake, 0.1) as i32;
 
-    LOCALDATA.js += 0.01;
-    LOCALDATA.jc += 0.01;
-    LOCALDATA.i = (LOCALDATA.i + INCR + amplitude_scaled) % 1.0;
+    localdata.js += 0.01;
+    localdata.jc += 0.01;
+    localdata.i = (localdata.i + INCR + amplitude_scaled) % 1.0;
 
     prog.pix.fade(4);
 
-    let (x_soft_shake, y_soft_shake) = diamond_func(8.0, 1.0, LOCALDATA.i);
+    let (x_soft_shake, y_soft_shake) = diamond_func(8.0, 1.0, localdata.i);
 
-    let final_x = x_soft_shake + LOCALDATA.x;
-    let final_y = y_soft_shake + LOCALDATA.y;
+    let final_x = x_soft_shake + localdata.x;
+    let final_y = y_soft_shake + localdata.y;
 
     let width = prog.pix.width() as i32;
     let height = prog.pix.height() as i32;

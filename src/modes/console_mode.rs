@@ -164,14 +164,14 @@ impl Program {
     }
 
     pub fn change_con_max(&mut self, amount: i16, replace: bool) {
-        self.CON_MAX_W = ((self.CON_MAX_W * (!replace) as u16) as i16 + amount)
+        self.console_max_width = ((self.console_width * (!replace) as u16) as i16 + amount)
             .clamp(0, self.pix.width() as i16) as u16;
-        self.CON_MAX_H = self.CON_MAX_W >> 1;
+        self.console_max_height = self.console_max_height >> 1;
         self.clear_con();
     }
 
     pub fn refresh_con(&mut self) {
-        self.update_size((self.CON_W, self.CON_H));
+        self.update_size((self.console_width, self.console_height));
     }
 
     pub fn switch_con_mode(&mut self) {
@@ -212,8 +212,8 @@ impl Program {
 
     fn get_center(&self, divider_x: u16, divider_y: u16) -> (u16, u16) {
         (
-            (self.CON_W / 2).saturating_sub(self.pix.width() as u16 / divider_x),
-            (self.CON_H / 2).saturating_sub(self.pix.height() as u16 / divider_y),
+            (self.console_width / 2).saturating_sub(self.pix.width() as u16 / divider_x),
+            (self.console_height / 2).saturating_sub(self.pix.height() as u16 / divider_y),
         )
     }
 
@@ -345,12 +345,12 @@ impl Program {
 }
 
 fn to_ascii_art(table: &[u8], x: usize) -> char {
-    table[(usize::from(x) * table.len()) >> 8] as char
+    table[(x * table.len()) >> 8] as char
 }
 
 pub fn rescale(mut s: (u16, u16), prog: &Program) -> (u16, u16) {
-    s.0 = s.0.min(prog.CON_MAX_W);
-    s.1 = s.1.min(prog.CON_MAX_H);
+    s.0 = s.0.min(prog.console_max_width);
+    s.1 = s.1.min(prog.console_height);
 
     match prog.mode() {
         Mode::ConBrail => {
@@ -369,9 +369,9 @@ pub fn control_key_events_con(prog: &mut Program, exit: &mut bool) {
     prog.update_vis();
 
     let no_sample = crate::audio::get_no_sample();
-    let inactive = no_sample as usize * prog.DURATIONS.len() / 256;
+    let inactive = no_sample as usize * prog.refresh_rate_intervals.len() / 256;
 
-    if poll(prog.DURATIONS[inactive]).unwrap() {
+    if poll(prog.refresh_rate_intervals[inactive]).unwrap() {
         match read().unwrap() {
             Event::Key(event) => match event.code {
                 KeyCode::Char('b') => prog.change_visualizer(false),

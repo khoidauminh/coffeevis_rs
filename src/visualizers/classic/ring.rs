@@ -2,7 +2,7 @@ use crate::graphics::P2;
 use crate::math::Cplx;
 
 pub fn draw_ring(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
-    let range = prog.WAV_WIN;
+    let range = prog.wav_win;
 
     let size = prog.pix.height().min(prog.pix.width()) as i32;
 
@@ -23,7 +23,7 @@ pub fn draw_ring(prog: &mut crate::data::Program, stream: &mut crate::audio::Sam
 
         let smp = stream[di] - stream[di.saturating_sub(1)].scale(0.7);
 
-        let p = (smp * Cplx::new(prog.VOL_SCL * 0.65, 0.0) + Cplx::new(0.4, 0.4))
+        let p = (smp * Cplx::new(prog.vol_scl * 0.65, 0.0) + Cplx::new(0.4, 0.4))
             * crate::math::cos_sin(di as f32 * rate);
         let x = (p.x * size as f32) as i32;
         let y = (p.y * size as f32) as i32;

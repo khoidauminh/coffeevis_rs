@@ -28,9 +28,9 @@ fn index_scale_derivative(x: f32) -> f32 {
 fn prepare(
     prog: &mut crate::data::Program,
     stream: &mut crate::audio::SampleArr,
-    LOCAL: &mut MutexGuard<LocalType>,
+    local: &mut MutexGuard<LocalType>,
 ) {
-    let accel = 0.28 * prog.SMOOTHING.powi(2);
+    let accel = 0.28 * prog.smoothing.powi(2);
     let mut fft = [Cplx::zero(); FFT_SIZE];
     const UP: usize = 2 * FFT_SIZE / (RANGE * 3 / 2);
 
@@ -49,9 +49,9 @@ fn prepare(
         *smp *= scalef;
     });
 
-    crate::audio::limiter(&mut fft[0..RANGE], 1.5, 7, prog.VOL_SCL * 2.0, |x| x.max());
+    crate::audio::limiter(&mut fft[0..RANGE], 1.5, 7, prog.vol_scl * 2.0, |x| x.max());
 
-    LOCAL.iter_mut().zip(fft.iter()).for_each(|(smp, si)| {
+    local.iter_mut().zip(fft.iter()).for_each(|(smp, si)| {
         smp.x = multiplicative_fall(smp.x, si.x, 0.0, accel);
         smp.y = multiplicative_fall(smp.y, si.y, 0.0, accel);
     });
@@ -62,11 +62,11 @@ fn prepare(
 pub fn draw_spectrum(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
     static DATA: Mutex<LocalType> = std::sync::Mutex::new([Cplx::zero(); RANGE + 1]);
 
-    let Ok(mut LOCAL) = DATA.try_lock() else {
+    let Ok(mut local) = DATA.try_lock() else {
         return;
     };
 
-    prepare(prog, stream, &mut LOCAL);
+    prepare(prog, stream, &mut local);
 
     let _l = stream.len();
     let (w, h) = prog.pix.sizet();
@@ -98,12 +98,12 @@ pub fn draw_spectrum(prog: &mut crate::data::Program, stream: &mut crate::audio:
         if idx_next < RANGE {
             let t = idxf.fract();
 
-            bar_width_l = smooth_step(LOCAL[idx].x, LOCAL[idx_next].x, t);
-            bar_width_r = smooth_step(LOCAL[idx].y, LOCAL[idx_next].y, t);
+            bar_width_l = smooth_step(local[idx].x, local[idx_next].x, t);
+            bar_width_r = smooth_step(local[idx].y, local[idx_next].y, t);
         } else {
             const LAST: usize = RANGE - 1;
-            bar_width_l = LOCAL[LAST].x;
-            bar_width_r = LOCAL[LAST].y;
+            bar_width_l = local[LAST].x;
+            bar_width_r = local[LAST].y;
         }
 
         let bar_width_l = bar_width_l * whf;
