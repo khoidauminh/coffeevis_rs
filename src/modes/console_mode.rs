@@ -10,6 +10,7 @@ use crossterm::{
 };
 
 use crate::{
+    audio::get_no_sample,
     data::*,
     graphics::{
         blend::{grayb, Argb, Blend},
@@ -369,18 +370,15 @@ pub fn control_key_events_con(prog: &mut Program, exit: &mut bool) {
     prog.update_vis();
 
     let no_sample = crate::audio::get_no_sample();
-    let inactive = no_sample as usize * prog.refresh_rate_intervals.len() / 256;
 
-    if poll(prog.refresh_rate_intervals[inactive]).unwrap() {
+    if poll(prog.get_rr_interval(no_sample)).unwrap() {
         match read().unwrap() {
             Event::Key(event) => match event.code {
                 KeyCode::Char('b') => prog.change_visualizer(false),
 
                 KeyCode::Char(' ') => prog.change_visualizer(true),
 
-                KeyCode::Char('q') => {
-                    *exit = true;
-                }
+                KeyCode::Char('q') => *exit = true,
 
                 KeyCode::Char('1') => prog.change_fps(10, true),
                 KeyCode::Char('2') => prog.change_fps(20, true),
@@ -391,6 +389,7 @@ pub fn control_key_events_con(prog: &mut Program, exit: &mut bool) {
 
                 KeyCode::Char('7') => prog.change_fps(-5, false),
                 KeyCode::Char('8') => prog.change_fps(5, false),
+
                 KeyCode::Char('9') => prog.change_con_max(-1, false),
                 KeyCode::Char('0') => prog.change_con_max(1, false),
 
@@ -439,7 +438,7 @@ pub fn con_main(mut prog: Program) {
     if !prog.is_display_enabled() {
         while !exit {
             control_key_events_con(&mut prog, &mut exit);
-            prog.force_render();
+            prog.render();
         }
     } else {
         let _ = queue!(
@@ -451,11 +450,11 @@ pub fn con_main(mut prog: Program) {
         while !exit {
             control_key_events_con(&mut prog, &mut exit);
 
-            if crate::audio::get_no_sample() > crate::data::STOP_RENDERING {
+            if get_no_sample() > STOP_RENDERING {
                 continue;
             }
 
-            prog.force_render();
+            prog.render();
             prog.print_con();
 
             let _ = stdout.flush();

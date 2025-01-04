@@ -1,9 +1,10 @@
 use softbuffer::Surface;
+
 use winit::{
     application::ApplicationHandler,
-    dpi::{self, PhysicalSize},
+    dpi::{LogicalSize, PhysicalSize},
     event::{self, ElementState, WindowEvent},
-    event_loop::{ActiveEventLoop, EventLoop},
+    event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
     keyboard::{
         Key,
         NamedKey::{Escape, Space},
@@ -17,7 +18,7 @@ use winit::{
 use std::{
     num::NonZeroU32,
     sync::Arc,
-    thread::{self},
+    thread::sleep,
     time::{Duration, Instant},
 };
 
@@ -28,7 +29,7 @@ struct WindowState {
     pub window: Option<Arc<winit::window::Window>>,
     pub surface: Option<Surface<Arc<Window>, Arc<Window>>>,
     pub prog: Program,
-    pub frame_deadline: Instant,
+    pub poll_deadline: Instant,
     pub refresh_rate_check_deadline: Instant,
     pub final_buffer_size: PhysicalSize<u32>,
 }
@@ -48,7 +49,7 @@ impl ApplicationHandler for WindowState {
         let is_wayland = self.prog.is_wayland();
         let gnome_workaround = is_gnome && is_wayland;
 
-        let win_size = dpi::LogicalSize::<u32>::new(size.0, size.1);
+        let win_size = LogicalSize::<u32>::new(size.0, size.1);
 
         let icon = {
             let (w, h, v) = read_icon();
@@ -92,7 +93,7 @@ impl ApplicationHandler for WindowState {
         }
 
         if gnome_workaround {
-            thread::sleep(Duration::from_millis(50));
+            sleep(Duration::from_millis(50));
             window.set_decorations(true);
         }
 
@@ -190,11 +191,9 @@ impl ApplicationHandler for WindowState {
                     || self.prog.is_hidden()
                     || no_sample >= crate::data::STOP_RENDERING
                 {
-                    thread::sleep(IDLE_INTERVAL);
+                    sleep(IDLE_INTERVAL);
                     return;
                 }
-
-                let sleep_index = no_sample as usize * self.prog.refresh_rate_intervals.len() / 256;
 
                 if self.prog.refresh_rate_mode != crate::RefreshRateMode::Specified {
                     let now = Instant::now();
@@ -205,7 +204,7 @@ impl ApplicationHandler for WindowState {
                 }
 
                 self.prog.update_vis();
-                self.prog.force_render();
+                self.prog.render();
 
                 if self.prog.is_display_enabled() {
                     if let Ok(mut buffer) = surface.buffer_mut() {
@@ -223,12 +222,11 @@ impl ApplicationHandler for WindowState {
                 }
 
                 let now = Instant::now();
-                if now < self.frame_deadline {
-                    thread::sleep(self.frame_deadline - now);
+                if now < self.poll_deadline {
+                    sleep(self.poll_deadline - now);
                 }
 
-                self.frame_deadline =
-                    Instant::now() + self.prog.refresh_rate_intervals[sleep_index];
+                self.poll_deadline = Instant::now() + self.prog.get_rr_interval(no_sample);
             }
 
             _ => {}
@@ -286,12 +284,12 @@ pub fn winit_main(prog: Program) {
     let mut state = WindowState {
         window: None,
         surface: None,
-        frame_deadline: Instant::now() + prog.refresh_rate_intervals[0],
+        poll_deadline: Instant::now() + prog.refresh_rate_intervals[0],
         refresh_rate_check_deadline: Instant::now() + Duration::from_secs(1),
         prog,
         final_buffer_size: PhysicalSize::<u32>::new(0, 0),
     };
 
-    event_loop.set_control_flow(winit::event_loop::ControlFlow::Wait);
+    event_loop.set_control_flow(ControlFlow::Wait);
     event_loop.run_app(&mut state).unwrap();
 }

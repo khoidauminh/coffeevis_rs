@@ -18,7 +18,7 @@ pub const INCREMENT: usize = 2;
 
 pub const DEFAULT_MILLI_HZ: u32 = 144 * 1000;
 pub const DEFAULT_HZ: u64 = DEFAULT_MILLI_HZ as u64 / 1000;
-pub const IDLE_INTERVAL: Duration = Duration::from_millis(200);
+pub const IDLE_INTERVAL: Duration = Duration::from_millis(1000 / 15);
 
 pub const DEFAULT_WAV_WIN: usize = 144 * INCREMENT;
 pub const DEFAULT_ROTATE_SIZE: usize = 289; // 3539;
@@ -28,6 +28,7 @@ pub const DEFAULT_SMOOTHING: f32 = 0.65;
 
 /// Stop rendering when get_no_sample() exceeds this value;
 pub const STOP_RENDERING: u8 = 192;
+pub const SLOW_DOWN_THRESHOLD: u8 = 86;
 
 pub const DEFAULT_SIZE_WIN: u16 = 84;
 pub const DEFAULT_WIN_SCALE: u8 = 2;
@@ -69,7 +70,7 @@ pub(crate) struct Program {
 
     pub milli_hz: u32,
     pub refresh_rate_mode: RefreshRateMode,
-    pub refresh_rate_intervals: [std::time::Duration; 4],
+    pub refresh_rate_intervals: [std::time::Duration; 2],
 
     pub wav_win: usize,
     pub vol_scl: f32,
@@ -101,7 +102,7 @@ impl Program {
         let vislist_ = vislist::VisNavigator::new();
         let vis = vislist_.current_vis();
 
-        let rate = std::time::Duration::from_micros(1_000_000 / DEFAULT_HZ);
+        let rate = Duration::from_nanos(1_000_000_000 / DEFAULT_HZ);
 
         let default_mode = Mode::default();
 
@@ -122,7 +123,7 @@ impl Program {
             milli_hz: DEFAULT_MILLI_HZ,
             refresh_rate_mode: RefreshRateMode::Sync,
 
-            refresh_rate_intervals: [rate, rate * 4, rate * 16, Duration::from_millis(500)],
+            refresh_rate_intervals: [rate, rate * 8],
 
             vis_navigator: vislist_,
 
@@ -148,6 +149,11 @@ impl Program {
             console_max_width: 50,
             console_max_height: 25,
         }
+    }
+
+    pub fn get_rr_interval(&self, no_sample: u8) -> Duration {
+        let rr_index = (no_sample > SLOW_DOWN_THRESHOLD) as usize;
+        self.refresh_rate_intervals[rr_index]
     }
 
     pub fn is_crt(&self) -> bool {
@@ -207,16 +213,11 @@ impl Program {
 
     pub fn change_fps_frac(&mut self, fps: u32) {
         let fps_f = fps as f32 / 1000.0;
-        let rate = (1_000_000.0 / fps_f) as u64;
+        let rate = (1_000_000_000.0 / fps_f) as u64;
         self.milli_hz = fps;
-        let interval = std::time::Duration::from_micros(rate);
+        let interval = Duration::from_nanos(rate);
 
-        self.refresh_rate_intervals = [
-            interval,
-            interval * 4,
-            interval * 16,
-            Duration::from_millis(500),
-        ];
+        self.refresh_rate_intervals = [interval, interval * 8];
     }
 
     pub fn change_visualizer(&mut self, forward: bool) {
@@ -348,11 +349,9 @@ impl Program {
         }
     }
 
-    pub fn force_render(&mut self) {
+    pub fn render(&mut self) {
         let mut buf = crate::audio::get_buf();
-
         (self.visualizer)(self, &mut buf);
-
         self.pix.draw_to_self();
     }
 
