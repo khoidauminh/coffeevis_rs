@@ -154,29 +154,16 @@ pub struct PixelBuffer<T: Pixel> {
     mask: usize,
     width: usize,
     height: usize,
+    field: usize,
     command: DrawCommandBuffer<T>,
     background: T,
 }
 
+const FIELD_START: usize = 16;
+
 pub type Image<T> = PixelBuffer<T>;
 pub type Canvas = PixelBuffer<u32>;
 pub type AlphaMask = PixelBuffer<u8>;
-
-impl<T: Pixel> std::ops::Index<usize> for PixelBuffer<T> {
-    type Output = [T];
-
-    fn index(&self, i: usize) -> &Self::Output {
-        let j = i * self.width;
-        &self.buffer[j..j.wrapping_add(self.width)]
-    }
-}
-
-impl<T: Pixel> std::ops::IndexMut<usize> for PixelBuffer<T> {
-    fn index_mut(&mut self, i: usize) -> &mut Self::Output {
-        let j = i.wrapping_mul(self.width);
-        &mut self.buffer[j..j.wrapping_add(self.width)]
-    }
-}
 
 impl<T: Pixel> PixelBuffer<T> {
     pub fn new(w: usize, h: usize) -> Self {
@@ -189,6 +176,7 @@ impl<T: Pixel> PixelBuffer<T> {
             len: w * h,
             width: w,
             height: h,
+            field: FIELD_START,
             background: T::from(0xFF_24_24_24),
         }
     }
@@ -295,20 +283,47 @@ impl<T: Pixel> PixelBuffer<T> {
 
         let dst_width = width.unwrap_or(self.width * scale);
 
-        self.out_buffer.resize(dest.len(), T::trans());
+        let new_len = dest.len() + FIELD_START * dst_width;
+
+        if self.out_buffer.len() < new_len {
+            self.out_buffer.resize(new_len, T::trans());
+        }
 
         if !crt {
-            // Shift the lines of the scaled buffer down
-            // to create the illusion of movement
-            let shift_start = (self.height * scale - 1) * dst_width;
-            for i in (0..shift_start).step_by(dst_width).rev() {
-                let j = i + dst_width;
-                self.out_buffer.copy_within(i..j, j);
+            // Shift the lines of the out buffer down
+            // to create the illusion of movement.
+            //
+            // We simulate shifting by sliding the starting
+            // point of the buffer backward. When we reach the
+            // start of the buffer, we finally do the actual shift.
+
+            self.field = self.field.wrapping_sub(1);
+
+            if self.field > FIELD_START {
+                let shift_start = (self.height * scale - 1) * dst_width;
+                let offset = dst_width * FIELD_START;
+
+                for (_, i) in (0..shift_start)
+                    .step_by(dst_width)
+                    .enumerate()
+                    .filter(|&(i, _)| i % scale != 0)
+                    .rev()
+                {
+                    let j = i + dst_width;
+                    let z = i + offset;
+                    self.out_buffer.copy_within(i..j, z);
+                }
+
+                self.field = FIELD_START;
             }
         }
 
+        let index_start = self.field * dst_width;
+
+        let out_buffer = &mut self.out_buffer[index_start..];
+
         let src_rows = self.buffer.chunks_exact(self.width);
-        let dst_rows = self.out_buffer.chunks_exact_mut(dst_width).step_by(scale);
+        let dst_rows = out_buffer.chunks_exact_mut(dst_width).step_by(scale);
 
         for (src_row, dst_row) in src_rows.zip(dst_rows) {
             for (src_pixel, dst_chunk) in src_row.iter().zip(dst_row.chunks_exact_mut(scale)) {
@@ -317,7 +332,7 @@ impl<T: Pixel> PixelBuffer<T> {
             }
         }
 
-        dest.copy_from_slice(&self.out_buffer);
+        dest.copy_from_slice(&out_buffer[..dest.len()]);
     }
 }
 
