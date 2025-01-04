@@ -300,7 +300,7 @@ impl<T: Pixel> PixelBuffer<T> {
             self.field = self.field.wrapping_sub(1);
 
             if self.field > FIELD_START {
-                let shift_start = (self.height * scale - 1) * dst_width;
+                let shift_start = self.height * scale * dst_width;
                 let offset = dst_width * FIELD_START;
 
                 for (_, i) in (0..shift_start)
@@ -320,7 +320,7 @@ impl<T: Pixel> PixelBuffer<T> {
 
         let index_start = self.field * dst_width;
 
-        let out_buffer = &mut self.out_buffer[index_start..];
+        let out_buffer = &mut self.out_buffer[index_start..index_start + dest.len()];
 
         let src_rows = self.buffer.chunks_exact(self.width);
         let dst_rows = out_buffer.chunks_exact_mut(dst_width).step_by(scale);
@@ -332,7 +332,7 @@ impl<T: Pixel> PixelBuffer<T> {
             }
         }
 
-        dest.copy_from_slice(&out_buffer[..dest.len()]);
+        dest.copy_from_slice(&out_buffer);
     }
 }
 
