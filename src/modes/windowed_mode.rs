@@ -257,7 +257,7 @@ pub fn check_refresh_rate(window: &Window, prog: &mut Program) {
         return;
     };
 
-    let Some(milli_hz) = monitor.refresh_rate_millihertz() else {
+    let Some(mut milli_hz) = monitor.refresh_rate_millihertz() else {
         return;
     };
 
@@ -274,6 +274,11 @@ pub fn check_refresh_rate(window: &Window, prog: &mut Program) {
     ",
         milli_hz as f32 / 1000.0
     );
+
+    if milli_hz > CAP_MILLI_HZ {
+        milli_hz = CAP_MILLI_HZ;
+        eprintln!("(Refresh rate has been capped to {}.", CAP_MILLI_HZ);
+    }
 
     prog.change_fps_frac(milli_hz);
 }

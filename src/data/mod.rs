@@ -16,6 +16,7 @@ pub const FFT_SIZE: usize = 1 << FFT_POWER;
 
 pub const INCREMENT: usize = 2;
 
+pub const CAP_MILLI_HZ: u32 = 192 * 1000;
 pub const DEFAULT_MILLI_HZ: u32 = 144 * 1000;
 pub const DEFAULT_HZ: u64 = DEFAULT_MILLI_HZ as u64 / 1000;
 pub const IDLE_INTERVAL: Duration = Duration::from_millis(1000 / 15);
