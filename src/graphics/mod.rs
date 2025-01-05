@@ -159,7 +159,7 @@ pub struct PixelBuffer<T: Pixel> {
     background: T,
 }
 
-const FIELD_START: usize = 16;
+const FIELD_START: usize = 64;
 
 pub type Image<T> = PixelBuffer<T>;
 pub type Canvas = PixelBuffer<u32>;
