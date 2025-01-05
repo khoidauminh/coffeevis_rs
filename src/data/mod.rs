@@ -21,6 +21,7 @@ pub const CAP_MILLI_HZ: u32 = 192 * 1000;
 pub const DEFAULT_MILLI_HZ: u32 = 144 * 1000;
 pub const DEFAULT_HZ: u64 = DEFAULT_MILLI_HZ as u64 / 1000;
 pub const IDLE_INTERVAL: Duration = Duration::from_millis(1000 / 15);
+pub const HIDDEN_INTERVAL: Duration = Duration::from_millis(1000 / 5);
 
 pub const DEFAULT_WAV_WIN: usize = 144 * INCREMENT;
 pub const DEFAULT_ROTATE_SIZE: usize = 289; // 3539;

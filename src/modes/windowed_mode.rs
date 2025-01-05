@@ -17,7 +17,7 @@ use winit::{
 
 use std::{
     num::NonZeroU32,
-    sync::Arc,
+    rc::Rc,
     thread::sleep,
     time::{Duration, Instant},
 };
@@ -26,8 +26,8 @@ use crate::data::*;
 use crate::graphics::blend::Blend;
 
 struct WindowState {
-    pub window: Option<Arc<winit::window::Window>>,
-    pub surface: Option<Surface<Arc<Window>, Arc<Window>>>,
+    pub window: Option<Rc<Window>>,
+    pub surface: Option<Surface<Rc<Window>, Rc<Window>>>,
     pub prog: Program,
     pub poll_deadline: Instant,
     pub refresh_rate_check_deadline: Instant,
@@ -66,7 +66,7 @@ impl ApplicationHandler for WindowState {
             .with_name("coffeevis", "cvis")
             .with_window_icon(Some(icon));
 
-        self.window = Some(Arc::new(
+        self.window = Some(Rc::new(
             event_loop.create_window(window_attributes).unwrap(),
         ));
 
@@ -191,10 +191,12 @@ impl ApplicationHandler for WindowState {
 
                 let no_sample = crate::audio::get_no_sample();
 
-                if window.is_minimized().unwrap_or(false)
-                    || self.prog.is_hidden()
-                    || no_sample >= crate::data::STOP_RENDERING
-                {
+                if window.is_minimized().unwrap_or(false) || self.prog.is_hidden() {
+                    sleep(HIDDEN_INTERVAL);
+                    return;
+                }
+
+                if no_sample >= crate::data::STOP_RENDERING {
                     sleep(IDLE_INTERVAL);
                     return;
                 }
