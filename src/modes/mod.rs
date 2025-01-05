@@ -18,7 +18,7 @@ impl Mode {
         return Mode::Win;
 
         #[allow(unreachable_code)]
-        return Mode::ConBlock;
+        return Mode::ConAlpha;
     }
 
     #[cfg(not(feature = "window_only"))]

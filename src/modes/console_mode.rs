@@ -351,7 +351,7 @@ fn to_ascii_art(table: &[u8], x: usize) -> char {
 
 pub fn rescale(mut s: (u16, u16), prog: &Program) -> (u16, u16) {
     s.0 = s.0.min(prog.console_max_width);
-    s.1 = s.1.min(prog.console_height);
+    s.1 = s.1.min(prog.console_max_height);
 
     match prog.mode() {
         Mode::ConBrail => {

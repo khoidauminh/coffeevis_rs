@@ -1,6 +1,7 @@
 pub mod reader;
 pub mod vislist;
 
+use core::fmt;
 use std::time::{Duration, Instant};
 
 use crate::modes::Mode;
@@ -52,6 +53,8 @@ pub enum RefreshRateMode {
 pub(crate) struct Program {
     /// for experimental purposes. Console mode only.
     display: bool,
+
+    quiet: bool,
 
     scale: u8,
 
@@ -108,6 +111,7 @@ impl Program {
         let default_mode = Mode::default();
 
         Self {
+            quiet: false,
             display: true,
             scale: DEFAULT_WIN_SCALE,
             resize: false,
@@ -267,7 +271,11 @@ impl Program {
         ))
     }
 
-    pub fn print_message(&self, message: String) {
+    pub fn print_message<S: fmt::Display>(&self, message: S) {
+        if self.quiet {
+            return;
+        }
+
         use std::io::Write;
         let mut stdout = std::io::stdout();
 
@@ -292,19 +300,6 @@ impl Program {
 
         print!("{}", message);
         let _ = stdout.flush();
-    }
-
-    pub fn update_size_win<T>(&mut self, s: (T, T))
-    where
-        u16: TryFrom<T>,
-    {
-        let (w, h) = match (u16::try_from(s.0), u16::try_from(s.1)) {
-            (Ok(w), Ok(h)) => (w, h),
-            _ => panic!("Size overflow!"),
-        };
-        self.window_width = w;
-        self.window_height = h;
-        self.pix.resize(w as usize, h as usize);
     }
 
     pub fn update_size<T>(&mut self, s: (T, T))

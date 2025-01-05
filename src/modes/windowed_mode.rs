@@ -89,7 +89,10 @@ impl ApplicationHandler for WindowState {
         };
 
         if !de.is_empty() {
-            eprintln!("Running in the {} desktop (XDG_CURRENT_DESKTOP).", de);
+            self.prog.print_message(format!(
+                "Running in the {} desktop (XDG_CURRENT_DESKTOP).",
+                de
+            ));
         }
 
         if gnome_workaround {
@@ -112,7 +115,8 @@ impl ApplicationHandler for WindowState {
             WindowEvent::MouseInput { button, .. } => {
                 if button == event::MouseButton::Left {
                     if let Err(err) = self.window.as_ref().unwrap().drag_window() {
-                        eprintln!("Error starting window drag: {err}");
+                        self.prog
+                            .print_message(format!("Error starting window drag: {err}"));
                     }
                 }
             }
@@ -265,7 +269,7 @@ pub fn check_refresh_rate(window: &Window, prog: &mut Program) {
         return;
     }
 
-    eprintln!(
+    prog.print_message(format!(
         "\
     Detected rate to be {}hz.\n\
     Note: Coffeevis relies on Winit to detect refresh rates.\n\
@@ -273,11 +277,14 @@ pub fn check_refresh_rate(window: &Window, prog: &mut Program) {
     Refresh rate changed.\
     ",
         milli_hz as f32 / 1000.0
-    );
+    ));
 
     if milli_hz > CAP_MILLI_HZ {
         milli_hz = CAP_MILLI_HZ;
-        eprintln!("(Refresh rate has been capped to {}.", CAP_MILLI_HZ);
+        prog.print_message(format!(
+            "(Refresh rate has been capped to {}.",
+            CAP_MILLI_HZ
+        ));
     }
 
     prog.change_fps_frac(milli_hz);

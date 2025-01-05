@@ -49,6 +49,8 @@ impl Program {
         while let Some(arg) = args.next() {
             let arg = arg.as_str();
             match arg {
+                "--quiet" => self.quiet = true,
+
                 #[cfg(not(feature = "console_only"))]
                 "--win" => self.mode = Win,
 
@@ -207,56 +209,58 @@ impl Program {
     pub fn print_startup_info(&self) {
         use crate::modes::Mode::{ConAlpha, ConBlock, ConBrail, Win};
 
-        println!(
+        self.print_message(
             "\nWelcome to Coffeevis!\n\
-            Audio visualizer by khoidauminh (Cas Pascal on github)"
+            Audio visualizer by khoidauminh (Cas Pascal on github)\n",
         );
 
-        eprintln!("Startup configurations (may change): ");
+        self.print_message("Startup configurations (may change):\n");
 
-        println!("Refresh rate: {}hz", self.milli_hz as f32 / 1000.0);
+        self.print_message(format!(
+            "Refresh rate: {}hz\n",
+            self.milli_hz as f32 / 1000.0
+        ));
 
-        println!(
-            "Auto switch: {}",
+        self.print_message(format!(
+            "Auto switch: {}\n",
             if self.auto_switch { "on" } else { "off" }
-        );
+        ));
 
         match self.mode {
-            Win => println!(
-                "Running with: Winit, {}",
+            Win => self.print_message(format!(
+                "Running with: Winit, {}\n",
                 if self.wayland { "Wayland" } else { "X11" }
-            ),
+            )),
 
             _ => {
-                println!(
-                    "Running in a terminal: {} rendering",
+                self.print_message(format!(
+                    "Running in a terminal: {} rendering\n",
                     match self.mode {
                         ConBrail => "braille",
                         ConAlpha => "ascii",
                         ConBlock => "block",
                         _ => "",
                     }
-                );
+                ));
             }
         }
 
         if self.resize {
-            eprint!(
-                "\n\
-                Note: resizing is not thoroughly tested and can crash the program or \
-                result in artifacts. "
-            );
+            self.print_message(format_red!(
+                "Note: resizing is not thoroughly tested and can crash the program or \
+                result in artifacts.\n"
+            ));
         }
 
         let w = self.window_width as u32 * self.scale as u32;
         let h = self.window_height as u32 * self.scale as u32;
 
         if self.resize || w * h > 70000 {
-            eprintln_red!(RESO_WARNING);
+            self.print_message(format_red!(RESO_WARNING));
         }
 
         if self.milli_hz / 1000 >= 300 {
-            eprintln_red!("\nHave fun cooking your CPU");
+            self.print_message(format_red!("\nHave fun cooking your CPU"));
         }
 
         println!();
