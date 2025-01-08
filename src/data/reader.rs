@@ -31,11 +31,6 @@ macro_rules! panic_red {
     };
 }
 
-const RESO_WARNING: &str = "\
-    Coffeevis is a CPU program, it is not advised \
-    to run it at large a size.\
-    ";
-
 impl Program {
     pub fn eval_args(mut self, args: &mut dyn Iterator<Item = &String>) -> Self {
         #[allow(unused_imports)]
@@ -58,7 +53,7 @@ impl Program {
                 "--braille" => (self.mode, self.flusher) = (ConBrail, Program::print_brail),
 
                 #[cfg(not(feature = "window_only"))]
-                "--ascii" => (self.mode, self.flusher) = (ConAlpha, Program::print_alpha),
+                "--ascii" => (self.mode, self.flusher) = (ConAscii, Program::print_ascii),
 
                 #[cfg(not(feature = "window_only"))]
                 "--block" => (self.mode, self.flusher) = (ConBlock, Program::print_block),
@@ -83,9 +78,11 @@ impl Program {
                         .parse::<u8>()
                         .expect("Argument error: Invalid value");
 
-                    if self.scale == 0 {
-                        panic!("Argument error: scale is 0");
+                    if self.scale > MAX_SCALE_FACTOR {
+                        panic!("Argument error: scale exceeds maximum allowed {MAX_SCALE_FACTOR}.");
                     }
+
+                    assert_ne!(self.scale, 0);
                 }
 
                 "--fps" => {
@@ -207,8 +204,6 @@ impl Program {
     }
 
     pub fn print_startup_info(&self) {
-        use crate::modes::Mode::{ConAlpha, ConBlock, ConBrail, Win};
-
         self.print_message(
             "\nWelcome to Coffeevis!\n\
             Audio visualizer by khoidauminh (Cas Pascal on github)\n",
@@ -226,23 +221,16 @@ impl Program {
             if self.auto_switch { "on" } else { "off" }
         ));
 
-        match self.mode {
-            Win => self.print_message(format!(
+        if self.mode.is_con() {
+            self.print_message(format!(
+                "Running in a terminal: {} rendering\n",
+                self.mode.get_name()
+            ));
+        } else {
+            self.print_message(format!(
                 "Running with: Winit, {}\n",
                 if self.wayland { "Wayland" } else { "X11" }
-            )),
-
-            _ => {
-                self.print_message(format!(
-                    "Running in a terminal: {} rendering\n",
-                    match self.mode {
-                        ConBrail => "braille",
-                        ConAlpha => "ascii",
-                        ConBlock => "block",
-                        _ => "",
-                    }
-                ));
-            }
+            ))
         }
 
         if self.resize {
@@ -256,7 +244,12 @@ impl Program {
         let h = self.window_height as u32 * self.scale as u32;
 
         if self.resize || w * h > 70000 {
-            self.print_message(format_red!(RESO_WARNING));
+            self.print_message(format_red!(
+                "\
+                Coffeevis is a CPU program, it is not advised \
+                to run it at large a size.\
+                "
+            ));
         }
 
         if self.milli_hz / 1000 >= 300 {

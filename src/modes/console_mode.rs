@@ -147,6 +147,18 @@ impl StyledLine for Vec<ColoredString> {
 const CHARSET_OPAC_EXP: &[u8] = b" `.-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ\
     5Yxjya]2ESwqkP6h9d4VpOGbUAKXHm8RD#$Bg0MNWQ%&@";
 
+impl Mode {
+    pub fn get_flusher(&self) -> Flusher {
+        use crate::Program;
+
+        match *self {
+            Mode::ConAscii => Program::print_ascii,
+            Mode::ConBrail => Program::print_brail,
+            _ => Program::print_block,
+        }
+    }
+}
+
 impl Program {
     pub fn print_con(&mut self) {
         (self.flusher)(self, &mut std::io::stdout());
@@ -154,7 +166,7 @@ impl Program {
 
     pub fn as_con(mut self) -> Self {
         if self.mode == Mode::Win {
-            self.set_con_mode(Mode::ConAlpha)
+            self.set_con_mode(Mode::ConAscii)
         }
         self
     }
@@ -176,29 +188,14 @@ impl Program {
     }
 
     pub fn switch_con_mode(&mut self) {
-        self.mode = match self.mode {
-            Mode::ConAlpha => {
-                self.flusher = Program::print_block;
-                Mode::ConBlock
-            }
-            Mode::ConBlock => {
-                self.flusher = Program::print_brail;
-                Mode::ConBrail
-            }
-            Mode::ConBrail => {
-                self.flusher = Program::print_alpha;
-                Mode::ConAlpha
-            }
-
-            _ => self.mode,
-        };
-
+        self.mode = self.mode.next();
+        self.flusher = self.mode.get_flusher();
         self.refresh_con();
     }
 
     pub fn set_con_mode(&mut self, mode: Mode) {
         match mode {
-            Mode::ConAlpha => self.flusher = Program::print_alpha,
+            Mode::ConAscii => self.flusher = Program::print_ascii,
             Mode::ConBlock => self.flusher = Program::print_block,
             Mode::ConBrail => self.flusher = Program::print_brail,
             _ => {}
@@ -218,7 +215,7 @@ impl Program {
         )
     }
 
-    pub fn print_alpha(&self, stdout: &mut Stdout) {
+    pub fn print_ascii(&self, stdout: &mut Stdout) {
         let center = self.get_center(2, 4);
 
         let mut line = Vec::<ColoredString>::init();

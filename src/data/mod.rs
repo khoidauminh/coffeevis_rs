@@ -35,7 +35,9 @@ pub const SLOW_DOWN_THRESHOLD: u8 = 86;
 
 pub const DEFAULT_SIZE_WIN: u16 = 84;
 pub const DEFAULT_WIN_SCALE: u8 = 2;
+
 pub const MAX_PIXEL_BUFFER_SIZE: u32 = u16::MAX as u32 * 3;
+pub const MAX_SCALE_FACTOR: u8 = 8;
 pub const CRT_EFFECT: bool = false;
 
 #[derive(PartialEq)]
