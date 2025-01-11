@@ -197,8 +197,6 @@ impl AudioBuffer {
         let input_size = data.len();
         self.input_size = input_size / 2;
 
-        // self.write_point = self.write_point_next;
-
         let mut max = 0.0f32;
 
         let stop_reading = self.is_silent_for((self.size_mask / self.input_size).min(255) as u8);
@@ -248,8 +246,6 @@ impl AudioBuffer {
 
     pub fn post_process(&mut self, silent: bool) {
         self.offset = self.index_sub(self.write_point, self.samples_scanned);
-
-        // dbg!(self.samples_scanned);
 
         self.silent = if silent {
             self.silent.saturating_add(1)

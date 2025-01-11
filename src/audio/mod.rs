@@ -5,6 +5,8 @@ mod audio_buffer;
 use crate::math::increment;
 use audio_buffer::AudioBuffer;
 
+use std::cmp::Ordering;
+use std::collections::BinaryHeap;
 use std::ops::*;
 use std::sync::{
     atomic::{AtomicBool, AtomicU8, Ordering::Relaxed},
@@ -143,13 +145,10 @@ where
     }
 }
 
-use std::cmp::Ordering;
-
-trait MMVal: PartialOrd + PartialEq + Copy + Clone + std::fmt::Display {}
+trait MMVal: PartialOrd + PartialEq + Clone {}
 
 impl MMVal for f32 {}
 
-#[derive(Debug)]
 struct NumPair<T: MMVal> {
     pub index: usize,
     pub value: T,
@@ -192,15 +191,17 @@ impl<T: MMVal> Ord for NumPair<T> {
 }
 
 struct MovingMaximum<T: MMVal> {
-    pub heap: std::collections::BinaryHeap<NumPair<T>>,
+    heap: BinaryHeap<NumPair<T>>,
     index: usize,
     size: usize,
 }
 
 impl<T: MMVal> MovingMaximum<T> {
-    pub fn init(size: usize) -> Self {
+    pub fn init(size: usize, cap: usize) -> Self {
         Self {
-            heap: std::collections::BinaryHeap::with_capacity(size),
+            // The heap will typically hold more elements than the window size.
+            // This is to make sure it re-allocates at little as possible.
+            heap: BinaryHeap::with_capacity(size.max(cap)),
             index: 0,
             size,
         }
@@ -225,7 +226,7 @@ impl<T: MMVal> MovingMaximum<T> {
 
         self.index = self.index.wrapping_add(1);
 
-        unsafe { self.heap.peek().unwrap_unchecked().value }
+        unsafe { self.heap.peek().unwrap_unchecked().value.clone() }
     }
 }
 
@@ -236,7 +237,7 @@ where
     let smoothing = window * 3 / 4;
 
     let mut mave = MovingAverage::init(limit, smoothing);
-    let mut mmax = MovingMaximum::init(window);
+    let mut mmax = MovingMaximum::init(window, a.len());
 
     for i in 0..a.len() + smoothing {
         let smp = if let Some(ele) = a.get(i) {
