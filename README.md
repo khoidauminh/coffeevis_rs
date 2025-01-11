@@ -34,15 +34,22 @@ Coffeevis so far only runs on Linux.
 Windows, MacOS and BSD support is not available.
 
 ## Installation
-Run `cargo install coffeevis`
+
+```
+cargo install coffeevis
+```
 
 To disable winit, use:
 
-```cargo install coffeevis --features console_only```
+```
+cargo install coffeevis --features console_only
+```
 
 To disable console mode, use:
 
-```cargo install coffeevis --features window_only```
+```
+cargo install coffeevis --features window_only
+```
 
 ## Configuration
 
@@ -64,13 +71,12 @@ Coffeevis supports temporary options at launch
 
 | Option | Value (example) | Description |
 | ------ | ------ | ------ |
-| --minifb |  | opens window with minifb (coffeevis now runs with winit by default) |
 | --x11 | | runs in X11 (Wayland is the default) |
 | --ascii<br />--block<br />--braille | | runs in the terminal |
 | --no-auto-switch | | disables automatic visualizer switching |
 | --size | 80x80 | sets resolution in window mode |
 | --scale | 2 | upscales in window mode |
-| --fps | 60 | sets refresh rate |
+| --fps | 60 | sets refresh rate (by default coffeevis will try to query your monitor's refresh rate) |
 | --resizable | | allows resizing in window mode |
 | --max-con-size | 50x50 | sets maximum resolution in terminal mode |
 | --vis | spectrum | launches coffeevis with the specified visualizer |
@@ -111,6 +117,6 @@ A maximum resolution is built into the console mode (default: 50x50). Coffeevis 
 | <kbd>.</kbd> | toggles between ascii rendering, block rendering and braille rendering |
 | <kbd>9</kbd> / <kbd>0</kbd> | decreases/increases maximum resolution |
 | <kbd>7</kbd> / <kbd>8</kbd> | decreases/increases fps by 5 (default: 60) |
-| <kbd>1</kbd> ... <kbd>6</kbd> | changes fps to 10 ... 60 respectively |
+| <kbd>1</kbd> .. <kbd>6</kbd> | changes fps to 10 ... 60 respectively |
 
 <sup><sub>Please don't look at my code. No I'm not hiding anything in there it's all garbage code idk how to do gpu programming so it's all cpu code uh uhhh</sub></sup>

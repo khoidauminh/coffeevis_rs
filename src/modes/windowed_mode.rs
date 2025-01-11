@@ -17,21 +17,22 @@ use winit::{
 
 use std::{
     num::NonZeroU32,
-    rc::Rc,
-    thread::sleep,
+    sync::{mpsc, Arc},
+    thread::{self, sleep},
     time::{Duration, Instant},
 };
 
-use crate::data::*;
 use crate::graphics::blend::Blend;
+use crate::{audio::get_no_sample, data::*};
 
 struct WindowState {
-    pub window: Option<Rc<Window>>,
-    pub surface: Option<Surface<Rc<Window>, Rc<Window>>>,
+    pub window: Option<Arc<Window>>,
+    pub surface: Option<Surface<Arc<Window>, Arc<Window>>>,
     pub prog: Program,
     pub poll_deadline: Instant,
     pub refresh_rate_check_deadline: Instant,
     pub final_buffer_size: PhysicalSize<u32>,
+    pub exit_sender: Option<mpsc::SyncSender<bool>>,
 }
 
 impl ApplicationHandler for WindowState {
@@ -66,7 +67,7 @@ impl ApplicationHandler for WindowState {
             .with_name("coffeevis", "cvis")
             .with_window_icon(Some(icon));
 
-        self.window = Some(Rc::new(
+        self.window = Some(Arc::new(
             event_loop.create_window(window_attributes).unwrap(),
         ));
 
@@ -90,7 +91,7 @@ impl ApplicationHandler for WindowState {
 
         if !de.is_empty() {
             self.prog.print_message(format!(
-                "Running in the {} desktop (XDG_CURRENT_DESKTOP).",
+                "Running in the {} desktop (XDG_CURRENT_DESKTOP).\n",
                 de
             ));
         }
@@ -104,6 +105,27 @@ impl ApplicationHandler for WindowState {
             window.set_min_inner_size(Some(win_size));
             window.set_max_inner_size(Some(win_size));
         }
+
+        let (exit_send, exit_recv) = mpsc::sync_channel(1);
+
+        self.exit_sender = Some(exit_send);
+
+        // Coffeevis needs to wind down as much as
+        // possble when hidden or there's no input
+        // received. However, sleeping in the main
+        // thread will block the program from properly
+        // processing other events.
+        //
+        // Secondly, coffeevis only does a request_redraw after
+        // successfully rendering a frame, so if it's on idle
+        // mode, no frame is drawn, no request is made and thus
+        // it will be stuck idling. This thread will send a
+        // request to kick start it.
+        let _ = thread::Builder::new().stack_size(1024).spawn(move || {
+            while !exit_recv.recv_timeout(IDLE_INTERVAL).is_ok_and(|x| x) {
+                window.request_redraw();
+            }
+        });
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _: WindowId, event: WindowEvent) {
@@ -183,28 +205,19 @@ impl ApplicationHandler for WindowState {
                     return;
                 };
 
-                let Some(surface) = self.surface.as_mut() else {
-                    return;
-                };
-
-                window.request_redraw();
-
                 let no_sample = crate::audio::get_no_sample();
 
-                if window.is_minimized().unwrap_or(false) || self.prog.is_hidden() {
-                    sleep(HIDDEN_INTERVAL);
+                if window.is_minimized().unwrap_or(false)
+                    || self.prog.is_hidden()
+                    || no_sample >= STOP_RENDERING
+                {
                     return;
                 }
 
-                if no_sample >= crate::data::STOP_RENDERING {
-                    sleep(IDLE_INTERVAL);
-                    return;
-                }
-
-                if self.prog.refresh_rate_mode != crate::RefreshRateMode::Specified {
+                if self.prog.refresh_rate_mode != RefreshRateMode::Specified {
                     let now = Instant::now();
                     if now > self.refresh_rate_check_deadline {
-                        check_refresh_rate(window, &mut self.prog);
+                        Self::check_refresh_rate(window, &mut self.prog);
                         self.refresh_rate_check_deadline = now + Duration::from_secs(1);
                     }
                 }
@@ -212,27 +225,34 @@ impl ApplicationHandler for WindowState {
                 self.prog.update_vis();
                 self.prog.render();
 
-                if self.prog.is_display_enabled() {
-                    if let Ok(mut buffer) = surface.buffer_mut() {
-                        self.prog.pix.scale_to(
-                            self.prog.scale() as usize,
-                            &mut buffer,
-                            Some(self.final_buffer_size.width as usize),
-                            Some(u32::mix),
-                            self.prog.is_crt(),
-                        );
-
-                        window.pre_present_notify();
-                        let _ = buffer.present();
+                'render: {
+                    if !self.prog.is_display_enabled() {
+                        break 'render;
                     }
+
+                    let Some(surface) = self.surface.as_mut() else {
+                        break 'render;
+                    };
+
+                    let Ok(mut buffer) = surface.buffer_mut() else {
+                        break 'render;
+                    };
+
+                    self.prog.pix.scale_to(
+                        self.prog.scale() as usize,
+                        &mut buffer,
+                        Some(self.final_buffer_size.width as usize),
+                        Some(u32::mix),
+                        self.prog.is_crt(),
+                    );
+
+                    window.pre_present_notify();
+                    let _ = buffer.present();
                 }
 
-                let now = Instant::now();
-                if now < self.poll_deadline {
-                    sleep(self.poll_deadline - now);
-                }
+                window.request_redraw();
 
-                self.poll_deadline = Instant::now() + self.prog.get_rr_interval(no_sample);
+                self.wait();
             }
 
             _ => {}
@@ -240,7 +260,52 @@ impl ApplicationHandler for WindowState {
     }
 }
 
-pub fn read_icon() -> (u32, u32, Vec<u8>) {
+impl WindowState {
+    fn wait(&mut self) {
+        let now = Instant::now();
+        if now < self.poll_deadline {
+            sleep(self.poll_deadline - now);
+        }
+
+        self.poll_deadline = Instant::now() + self.prog.get_rr_interval(get_no_sample());
+    }
+
+    fn check_refresh_rate(window: &Window, prog: &mut Program) {
+        let Some(monitor) = window.current_monitor() else {
+            return;
+        };
+
+        let Some(mut milli_hz) = monitor.refresh_rate_millihertz() else {
+            return;
+        };
+
+        if milli_hz == prog.milli_hz {
+            return;
+        }
+
+        prog.print_message(format!(
+            "\
+        Detected rate to be {}hz.\n\
+        Note: Coffeevis relies on Winit to detect refresh rates.\n\
+        Run with --fps flag if you want to lock fps.\n\
+        Refresh rate changed.\n\
+        ",
+            milli_hz as f32 / 1000.0
+        ));
+
+        if milli_hz > CAP_MILLI_HZ {
+            milli_hz = CAP_MILLI_HZ;
+            prog.print_message(format!(
+                "(Refresh rate has been capped to {}.)\n",
+                CAP_MILLI_HZ
+            ));
+        }
+
+        prog.change_fps_frac(milli_hz);
+    }
+}
+
+fn read_icon() -> (u32, u32, Vec<u8>) {
     let icon_file = include_bytes!("../../assets/coffeevis_icon_128x128.qoi");
 
     let mut icon = qoi::Decoder::new(icon_file)
@@ -258,40 +323,6 @@ pub fn read_icon() -> (u32, u32, Vec<u8>) {
     (width, height, vec)
 }
 
-pub fn check_refresh_rate(window: &Window, prog: &mut Program) {
-    let Some(monitor) = window.current_monitor() else {
-        return;
-    };
-
-    let Some(mut milli_hz) = monitor.refresh_rate_millihertz() else {
-        return;
-    };
-
-    if milli_hz == prog.milli_hz {
-        return;
-    }
-
-    prog.print_message(format!(
-        "\
-    Detected rate to be {}hz.\n\
-    Note: Coffeevis relies on Winit to detect refresh rates.\n\
-    Run with --fps flag if you want to lock fps.\n\
-    Refresh rate changed.\
-    ",
-        milli_hz as f32 / 1000.0
-    ));
-
-    if milli_hz > CAP_MILLI_HZ {
-        milli_hz = CAP_MILLI_HZ;
-        prog.print_message(format!(
-            "(Refresh rate has been capped to {}.",
-            CAP_MILLI_HZ
-        ));
-    }
-
-    prog.change_fps_frac(milli_hz);
-}
-
 pub fn winit_main(prog: Program) {
     let event_loop = EventLoop::new().unwrap();
 
@@ -302,8 +333,10 @@ pub fn winit_main(prog: Program) {
         refresh_rate_check_deadline: Instant::now() + Duration::from_secs(1),
         prog,
         final_buffer_size: PhysicalSize::<u32>::new(0, 0),
+        exit_sender: None,
     };
 
     event_loop.set_control_flow(ControlFlow::Wait);
     event_loop.run_app(&mut state).unwrap();
+    state.exit_sender.as_ref().map(|x| x.send(true));
 }
