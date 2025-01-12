@@ -74,10 +74,7 @@ pub struct AudioBuffer {
 impl std::ops::Index<usize> for AudioBuffer {
     type Output = Cplx;
     fn index(&self, index: usize) -> &Self::Output {
-        unsafe {
-            self.buffer
-                .get_unchecked(index.wrapping_add(self.offset) & self.size_mask)
-        }
+        &self.buffer[index.wrapping_add(self.offset) & self.size_mask]
     }
 }
 
@@ -106,10 +103,6 @@ impl AudioBuffer {
             average: 0.0,
             silent: 0,
         }
-    }
-
-    pub fn as_slice(&self) -> &[Cplx] {
-        &self.buffer
     }
 
     pub fn input_size(&self) -> usize {
@@ -206,7 +199,7 @@ impl AudioBuffer {
 
         macro_rules! write_func {
             ($chunk:expr) => {
-                let smp = unsafe { self.buffer.get_unchecked_mut(self.write_point_next) };
+                let smp = &mut self.buffer[self.write_point_next];
                 write_sample(smp, $chunk);
                 max = max.max(smp.x.abs()).max(smp.y.abs());
                 self.write_point_next = self.index_add(self.write_point_next, 1);
