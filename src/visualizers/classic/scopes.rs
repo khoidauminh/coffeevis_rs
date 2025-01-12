@@ -12,6 +12,7 @@ use crate::math::{self, Cplx};
 
 static LOCALI: AtomicUsize = AtomicUsize::new(0);
 static WAVE_SCALE_FACTOR: Mutex<f32> = Mutex::new(1.0);
+const SMOOTH_SIZE: usize = 7;
 
 fn to_color(s: i32, size: i32) -> u8 {
     (s.abs() * 256 / size).min(255) as u8
@@ -34,9 +35,7 @@ pub fn draw_vectorscope(prog: &mut crate::data::Program, stream: &mut crate::aud
 
     prog.pix.clear();
 
-    const SMOOTH_SIZE: usize = 7;
-
-    let mut smoothed_sample = MovingAverage::init(Cplx::zero(), SMOOTH_SIZE);
+    let mut smoothed_sample = MovingAverage::<_, SMOOTH_SIZE>::init(Cplx::zero(), SMOOTH_SIZE);
 
     for _ in 0..SMOOTH_SIZE {
         let sample = Cplx::new(stream[di].x, stream[di + PHASE_OFFSET].y);

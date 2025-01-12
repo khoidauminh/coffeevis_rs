@@ -5,8 +5,6 @@ mod audio_buffer;
 use crate::math::increment;
 use audio_buffer::AudioBuffer;
 
-use std::cmp::Ordering;
-use std::collections::BinaryHeap;
 use std::ops::*;
 use std::sync::{
     atomic::{AtomicBool, AtomicU8, Ordering::Relaxed},
@@ -99,16 +97,16 @@ pub fn read_samples<T: cpal::Sample<Float = f32>>(data: &[T]) {
     set_no_sample(b.silent());
 }
 
-pub struct MovingAverage<T> {
+pub struct MovingAverage<T, const N: usize> {
     size: usize,
     index: usize,
-    vec: Vec<T>,
+    vec: [T; N],
     sum: T,
     denominator: f32,
     average: T,
 }
 
-impl<T> MovingAverage<T>
+impl<T, const N: usize> MovingAverage<T, N>
 where
     T: Add<Output = T> + Sub<Output = T> + Mul<f32, Output = T> + std::marker::Copy,
     f32: Mul<T, Output = T>,
@@ -117,7 +115,7 @@ where
         Self {
             size,
             index: 0,
-            vec: vec![val; size],
+            vec: [val; N],
             denominator: (size as f32).recip(),
             sum: size as f32 * val,
             average: val,
@@ -145,99 +143,113 @@ where
     }
 }
 
-trait MMVal: PartialOrd + PartialEq + Clone {}
+use std::mem;
 
-impl MMVal for f32 {}
-
-struct NumPair<T: MMVal> {
+#[derive(Default, Clone, Copy)]
+struct NumPair<T> {
     pub index: usize,
     pub value: T,
 }
 
-impl<T: MMVal> PartialEq for NumPair<T> {
-    fn eq(&self, other: &Self) -> bool {
-        self.value == other.value
-    }
-}
-
-impl<T: MMVal> Eq for NumPair<T> {}
-
-impl<T: MMVal> PartialOrd for NumPair<T> {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        if self.value < other.value {
-            return Some(Ordering::Less);
-        }
-
-        if self.value > other.value {
-            return Some(Ordering::Greater);
-        }
-
-        Some(Ordering::Equal)
-    }
-}
-
-impl<T: MMVal> Ord for NumPair<T> {
-    fn cmp(&self, other: &Self) -> Ordering {
-        if self.value < other.value {
-            return Ordering::Less;
-        }
-
-        if self.value > other.value {
-            return Ordering::Greater;
-        }
-
-        Ordering::Equal
-    }
-}
-
-struct MovingMaximum<T: MMVal> {
-    heap: BinaryHeap<NumPair<T>>,
+struct MovingMaximum<T, const N: usize> {
+    pub heap: [NumPair<T>; N],
+    len: usize,
     index: usize,
     size: usize,
 }
 
-impl<T: MMVal> MovingMaximum<T> {
-    pub fn init(size: usize, cap: usize) -> Self {
+impl<T, const N: usize> MovingMaximum<T, N>
+where
+    T: Default + Copy + Clone + PartialOrd,
+{
+    pub fn init(size: usize) -> Self {
         Self {
-            // The heap will typically hold more elements than the window size.
-            // This is to make sure it re-allocates at little as possible.
-            heap: BinaryHeap::with_capacity(size.max(cap)),
+            heap: [NumPair::default(); N],
+            len: 0,
             index: 0,
             size,
         }
     }
 
+    pub fn push(&mut self, new: NumPair<T>) {
+        let mut i = self.len;
+        self.len += 1;
+        while i > 0 {
+            let p = (i - 1) / 2;
+            if self.heap[p].value >= new.value {
+                break;
+            }
+
+            self.heap[i] = self.heap[p].clone();
+
+            i = p;
+        }
+
+        self.heap[i] = new;
+    }
+
+    pub fn peek(&self) -> &NumPair<T> {
+        &self.heap[0]
+    }
+
+    pub fn pop(&mut self, mut i_: usize) -> NumPair<T> {
+        self.len -= 1;
+        let last = mem::take(&mut self.heap[self.len]);
+        let out = mem::replace(&mut self.heap[0], last);
+
+        let bound = self.len - 2;
+        let mut i = 2 * i_ + 1;
+
+        while i < bound {
+            i += (self.heap[i].value <= self.heap[i + 1].value) as usize;
+
+            if self.heap[i_].value >= self.heap[i].value {
+                return out;
+            }
+
+            self.heap[i_] = self.heap[i].clone();
+            i_ = i;
+            i = i * 2 + 1;
+        }
+
+        if i == self.len - 1 && self.heap[i_].value < self.heap[i].value {
+            self.heap[i_] = self.heap[i].clone();
+        }
+
+        out
+    }
+
     pub fn update(&mut self, new: T) -> T {
-        self.heap.push(NumPair::<T> {
+        self.push(NumPair::<T> {
             index: self.index,
             value: new,
         });
 
-        if unsafe {
-            self.heap
-                .peek()
-                .unwrap_unchecked()
-                .index
-                .wrapping_add(self.size)
-                <= self.index
-        } {
-            self.heap.pop();
+        let max_age = self.peek().index.wrapping_add(self.size - 1);
+
+        if max_age <= self.index {
+            self.pop(0);
         }
 
-        self.index = self.index.wrapping_add(1);
+        self.index += 1;
 
-        unsafe { self.heap.peek().unwrap_unchecked().value.clone() }
+        self.peek().value
     }
 }
 
-pub fn limiter<T>(a: &mut [T], limit: f32, window: usize, gain: f32, flattener: fn(T) -> f32)
-where
+pub fn limiter<T, const N: usize>(
+    a: &mut [T],
+    limit: f32,
+    window: usize,
+    gain: f32,
+    flattener: fn(T) -> f32,
+) where
     T: Into<f32> + std::ops::Mul<f32, Output = T> + std::marker::Copy,
 {
     let smoothing = window * 3 / 4;
 
-    let mut mave = MovingAverage::init(limit, smoothing);
-    let mut mmax = MovingMaximum::init(window, a.len());
+    let mut mave = MovingAverage::<_, N>::init(limit, smoothing);
+    let mut mmax = MovingMaximum::<_, N>::init(window);
 
     for i in 0..a.len() + smoothing {
         let smp = if let Some(ele) = a.get(i) {

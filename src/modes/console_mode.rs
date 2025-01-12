@@ -164,18 +164,6 @@ impl Program {
         (self.flusher)(self, &mut std::io::stdout());
     }
 
-    pub fn as_con(mut self) -> Self {
-        if self.mode == Mode::Win {
-            self.set_con_mode(Mode::ConAscii)
-        }
-        self
-    }
-
-    pub fn as_con_force(mut self, mode: Mode) -> Self {
-        self.set_con_mode(mode);
-        self
-    }
-
     pub fn change_con_max(&mut self, amount: i16, replace: bool) {
         self.console_max_width = ((self.console_width * (!replace) as u16) as i16 + amount)
             .clamp(0, self.pix.width() as i16) as u16;
@@ -190,17 +178,6 @@ impl Program {
     pub fn switch_con_mode(&mut self) {
         self.mode = self.mode.next();
         self.flusher = self.mode.get_flusher();
-        self.refresh_con();
-    }
-
-    pub fn set_con_mode(&mut self, mode: Mode) {
-        match mode {
-            Mode::ConAscii => self.flusher = Program::print_ascii,
-            Mode::ConBlock => self.flusher = Program::print_block,
-            Mode::ConBrail => self.flusher = Program::print_brail,
-            _ => {}
-        }
-        self.mode = mode;
         self.refresh_con();
     }
 

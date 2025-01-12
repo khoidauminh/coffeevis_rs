@@ -69,7 +69,7 @@ fn prepare(
         })
         .collect::<Vec<f32>>();
 
-    crate::audio::limiter(&mut data_f[..bar_num], 1.0, 10, 0.98, |x| x);
+    crate::audio::limiter::<_, BARS>(&mut data_f[..bar_num], 1.0, 10, 0.98, |x| x);
 
     let bnf = 1.0 / bnf;
 

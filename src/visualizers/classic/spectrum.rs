@@ -49,7 +49,7 @@ fn prepare(
         *smp *= scalef;
     });
 
-    crate::audio::limiter(&mut fft[0..RANGE], 1.5, 7, prog.vol_scl * 2.0, |x| x.max());
+    crate::audio::limiter::<_, RANGE>(&mut fft[0..RANGE], 1.5, 7, prog.vol_scl * 2.0, |x| x.max());
 
     local.iter_mut().zip(fft.iter()).for_each(|(smp, si)| {
         smp.x = multiplicative_fall(smp.x, si.x, 0.0, accel);
