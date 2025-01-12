@@ -296,7 +296,7 @@ pub fn draw_oscilloscope3(prog: &mut crate::data::Program, stream: &mut crate::a
     }
 
     let mut zeros = [0; 6];
-    let mut zeros_len = 0;
+    let mut zeros_len = 1;
 
     for i in 0..l {
         let t = stream[i];
@@ -319,7 +319,7 @@ pub fn draw_oscilloscope3(prog: &mut crate::data::Program, stream: &mut crate::a
         bass_sum += ssmp.x.powi(2) + ssmp.y.powi(2);
     }
 
-    let zeroi = zeros[zeros_len.max(1) - 1] - 50;
+    let zeroi = zeros[zeros_len - 1] - 50;
 
     let bass = (bass_sum / l as f32).sqrt();
 
