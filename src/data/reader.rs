@@ -1,35 +1,4 @@
-use crate::data::Program;
-
-macro_rules! eprintln_red {
-    () => {
-        eprintln!()
-    };
-    ($arg:tt) => {
-        eprintln!("\x1B[31;1m{}\x1B[0m", $arg)
-    };
-}
-
-pub(crate) use eprintln_red;
-
-#[allow(unused_macros)]
-macro_rules! format_red {
-    () => {
-        format!()
-    };
-    ($arg:tt) => {
-        format!("\x1B[31;1m{}\x1B[0m", $arg)
-    };
-}
-
-#[allow(unused_macros)]
-macro_rules! panic_red {
-    () => {
-        format!()
-    };
-    ($arg:tt) => {
-        panic!("\x1B[31;1m{}\x1B[0m", $arg)
-    };
-}
+use crate::data::{format_red, Program};
 
 impl Program {
     pub fn eval_args(mut self, args: &mut dyn Iterator<Item = &String>) -> Self {

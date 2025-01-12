@@ -154,8 +154,14 @@ impl ApplicationHandler for WindowState {
 
                 let scale = self.prog.scale() as u32;
 
-                let w = width;
-                let h = height.min(MAX_PIXEL_BUFFER_SIZE / w);
+                let w = width.min(MAX_WIN_WIDTH);
+                let h = height.min(MAX_WIN_HEIGHT);
+
+                if w == MAX_WIN_WIDTH || h == MAX_WIN_HEIGHT {
+                    self.prog.print_message(format_red!(
+                        "You are hitting the resolution limit of Coffeevis!\n"
+                    ));
+                }
 
                 self.final_buffer_size.width = w;
                 self.final_buffer_size.height = h;

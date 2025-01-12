@@ -8,13 +8,21 @@ const COLOR: [u32; 3] = [0x66ff66, 0xaaffff, 0xaaaaff];
 
 const FFT_SIZE_HALF: usize = FFT_SIZE / 2;
 
-static DATA: Mutex<Vec<f32>> = Mutex::new(Vec::new());
-static MAX: Mutex<f32> = Mutex::new(0.0);
-
 const FFT_SIZE_RECIP: f32 = 1.4 / FFT_SIZE as f32;
 const NORMALIZE_FACTOR: f32 = FFT_SIZE_RECIP;
 const BARS: usize = 48;
-const MAX_BARS: usize = 128;
+const MAX_BARS: usize = 144;
+const MAX_BARS1: usize = MAX_BARS + 1;
+
+struct DataMax {
+    pub data: [f32; MAX_BARS + 1],
+    pub max: f32,
+}
+
+static DATA_MAX: Mutex<DataMax> = Mutex::new(DataMax {
+    data: [0.0f32; MAX_BARS1],
+    max: 0.0f32,
+});
 
 fn dynamic_smooth(t: f32, a: f32) -> f32 {
     ((t - a) / a).powi(2)
@@ -35,11 +43,7 @@ fn prepare(
     let bnf = bar_num as f32;
     let _l = stream.len();
 
-    let mut local = DATA.lock().unwrap();
-
-    if bar_num != local.len() {
-        local.resize(bar_num, 0.0);
-    }
+    let mut local = DATA_MAX.lock().unwrap();
 
     let mut data_c = [Cplx::zero(); FFT_SIZE];
 
@@ -54,11 +58,9 @@ fn prepare(
 
     math::fft(&mut data_c[0..bound]);
 
-    let _max = MAX.lock().unwrap();
-
     const NORM: f32 = FFT_SIZE_RECIP;
 
-    let mut data_f = [0f32; MAX_BARS];
+    let mut data_f = [0f32; MAX_BARS1];
     data_f
         .iter_mut()
         .take(bar_num)
@@ -71,11 +73,12 @@ fn prepare(
             *smp = smp_f32 * volume_scale * scl * NORM;
         });
 
-    crate::audio::limiter::<_, MAX_BARS>(&mut data_f[..bar_num], 1.0, 10, 0.98, |x| x);
+    crate::audio::limiter::<_, MAX_BARS1>(&mut data_f[..bar_num], 1.0, 10, 0.98, |x| x);
 
     let bnf = 1.0 / bnf;
 
     local
+        .data
         .iter_mut()
         .zip(data_f.iter())
         .take(bar_num)
@@ -92,14 +95,14 @@ fn prepare(
 pub fn draw_bars(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
     use crate::math::{fast::cubed_sqrt, interpolate::smooth_step};
 
-    let bar_num = prog.pix.width() / 2;
+    let bar_num = (prog.pix.width() / 2).min(MAX_BARS);
     let bnf = bar_num as f32;
     let bnf_recip = 1.0 / bnf;
     let _l = stream.len();
 
     prepare(stream, bar_num, prog.vol_scl, prog.smoothing);
 
-    let local = DATA.lock().unwrap();
+    let local = DATA_MAX.lock().unwrap();
 
     prog.pix.clear();
     let sizef = Cplx::new(prog.pix.width() as f32, prog.pix.height() as f32);
@@ -122,8 +125,8 @@ pub fn draw_bars(prog: &mut crate::data::Program, stream: &mut crate::audio::Sam
         let t = idxf.fract();
 
         smoothed_smp = smoothed_smp.max(cubed_sqrt(smooth_step(
-            local[idx],
-            local[(idx + 1).min(bar_num)],
+            local.data[idx],
+            local.data[(idx + 1).min(bar_num)],
             t,
         )));
 
@@ -165,7 +168,7 @@ pub fn draw_bars_circle(prog: &mut crate::data::Program, stream: &mut crate::aud
     let size = prog.pix.height().min(prog.pix.width()) as i32;
     let sizef = size as f32;
 
-    let bar_num = math::fast::isqrt(prog.pix.sizel()).min(MAX_BARS - 1);
+    let bar_num = math::fast::isqrt(prog.pix.sizel()).min(MAX_BARS);
     let bnf = bar_num as f32;
     let bnf_recip = 1.0 / bnf;
     let _l = stream.len();
@@ -175,7 +178,7 @@ pub fn draw_bars_circle(prog: &mut crate::data::Program, stream: &mut crate::aud
 
     prepare(stream, bar_num, prog.vol_scl, prog.smoothing);
 
-    let local = DATA.lock().unwrap();
+    let local = DATA_MAX.lock().unwrap();
 
     prog.pix.clear();
 
@@ -195,7 +198,7 @@ pub fn draw_bars_circle(prog: &mut crate::data::Program, stream: &mut crate::aud
 
         // let scalef = math::fft_scale_up(i, bar_num);
 
-        let bar = math::interpolate::linearf(local[i], local[i_next], t) * sizef;
+        let bar = math::interpolate::linearf(local.data[i], local.data[i_next], t) * sizef;
         let bar = bar * 0.7;
 
         let p1 = P2::new(

@@ -11,7 +11,7 @@ mod visualizers;
 
 use audio::get_source;
 use cpal::traits::StreamTrait;
-use data::reader::eprintln_red;
+use data::eprintln_red;
 use visualizers::VisFunc;
 
 fn main() {

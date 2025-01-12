@@ -35,7 +35,8 @@ pub const SLOW_DOWN_THRESHOLD: u8 = 86;
 pub const DEFAULT_SIZE_WIN: u16 = 84;
 pub const DEFAULT_WIN_SCALE: u8 = 2;
 
-pub const MAX_PIXEL_BUFFER_SIZE: u32 = u16::MAX as u32 * 3;
+pub const MAX_WIN_WIDTH: u32 = 480;
+pub const MAX_WIN_HEIGHT: u32 = 360;
 pub const MAX_SCALE_FACTOR: u8 = 8;
 pub const CRT_EFFECT: bool = false;
 
@@ -44,6 +45,37 @@ pub enum RefreshRateMode {
     Sync,
     Specified,
 }
+
+macro_rules! eprintln_red {
+    () => {
+        eprintln!()
+    };
+    ($arg:tt) => {
+        eprintln!("\x1B[31;1m{}\x1B[0m", $arg)
+    };
+}
+
+macro_rules! format_red {
+    () => {
+        format!()
+    };
+    ($arg:tt) => {
+        format!("\x1B[31;1m{}\x1B[0m", $arg)
+    };
+}
+
+#[allow(unused_macros)]
+macro_rules! panic_red {
+    () => {
+        format!()
+    };
+    ($arg:tt) => {
+        panic!("\x1B[31;1m{}\x1B[0m", $arg)
+    };
+}
+
+pub(crate) use eprintln_red;
+pub(crate) use format_red;
 
 /// Main program struct
 ///
