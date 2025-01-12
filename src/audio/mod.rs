@@ -108,7 +108,7 @@ pub struct MovingAverage<T, const N: usize> {
 
 impl<T, const N: usize> MovingAverage<T, N>
 where
-    T: Add<Output = T> + Sub<Output = T> + Mul<f32, Output = T> + std::marker::Copy,
+    T: Add<Output = T> + Sub<Output = T> + Mul<f32, Output = T> + Copy,
     f32: Mul<T, Output = T>,
 {
     pub fn init(val: T, size: usize) -> Self {
@@ -143,8 +143,6 @@ where
     }
 }
 
-use std::mem;
-
 #[derive(Default, Clone, Copy)]
 struct NumPair<T> {
     pub index: usize,
@@ -160,7 +158,7 @@ struct MovingMaximum<T, const N: usize> {
 
 impl<T, const N: usize> MovingMaximum<T, N>
 where
-    T: Default + Copy + Clone + PartialOrd,
+    T: Default + Copy + PartialOrd,
 {
     pub fn init(size: usize) -> Self {
         Self {
@@ -180,7 +178,7 @@ where
                 break;
             }
 
-            self.heap[i] = self.heap[p].clone();
+            self.heap[i] = self.heap[p];
 
             i = p;
         }
@@ -192,28 +190,27 @@ where
         &self.heap[0]
     }
 
-    pub fn pop(&mut self, mut i_: usize) -> NumPair<T> {
+    pub fn pop(&mut self, mut p: usize) -> NumPair<T> {
         self.len -= 1;
-        let last = mem::take(&mut self.heap[self.len]);
-        let out = mem::replace(&mut self.heap[0], last);
+        let out = self.heap[0];
+        self.heap[0] = self.heap[self.len];
 
         let bound = self.len - 2;
-        let mut i = 2 * i_ + 1;
-
+        let mut i = 2 * p + 1;
         while i < bound {
             i += (self.heap[i].value <= self.heap[i + 1].value) as usize;
 
-            if self.heap[i_].value >= self.heap[i].value {
+            if self.heap[p].value >= self.heap[i].value {
                 return out;
             }
 
-            self.heap[i_] = self.heap[i].clone();
-            i_ = i;
+            self.heap[p] = self.heap[i];
+            p = i;
             i = i * 2 + 1;
         }
 
-        if i == self.len - 1 && self.heap[i_].value < self.heap[i].value {
-            self.heap[i_] = self.heap[i].clone();
+        if i == self.len - 1 && self.heap[p].value < self.heap[i].value {
+            self.heap[p] = self.heap[i];
         }
 
         out
