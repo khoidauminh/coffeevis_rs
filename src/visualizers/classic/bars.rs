@@ -14,6 +14,7 @@ static MAX: Mutex<f32> = Mutex::new(0.0);
 const FFT_SIZE_RECIP: f32 = 1.4 / FFT_SIZE as f32;
 const NORMALIZE_FACTOR: f32 = FFT_SIZE_RECIP;
 const BARS: usize = 48;
+const MAX_BARS: usize = 128;
 
 fn dynamic_smooth(t: f32, a: f32) -> f32 {
     ((t - a) / a).powi(2)
@@ -40,36 +41,37 @@ fn prepare(
         local.resize(bar_num, 0.0);
     }
 
-    let mut data_f = [Cplx::zero(); FFT_SIZE];
+    let mut data_c = [Cplx::zero(); FFT_SIZE];
 
     const UP: usize = FFT_SIZE / (BARS * 3 / 2);
-    data_f
+    data_c
         .iter_mut()
         .take(FFT_SIZE_HALF)
         .enumerate()
         .for_each(|(i, smp)| *smp = stream[i * UP]);
 
-    let bound = data_f.len().min(math::ideal_fft_bound(BARS));
+    let bound = data_c.len().min(math::ideal_fft_bound(BARS));
 
-    math::fft(&mut data_f[0..bound]);
+    math::fft(&mut data_c[0..bound]);
 
     let _max = MAX.lock().unwrap();
 
     const NORM: f32 = FFT_SIZE_RECIP;
 
-    let mut data_f = data_f
+    let mut data_f = [0f32; MAX_BARS];
+    data_f
         .iter_mut()
         .take(bar_num)
+        .zip(data_c.iter())
         .enumerate()
-        .map(|(i, smp)| {
+        .for_each(|(i, (smp, cplx))| {
             let scl = ((i + 2) as f32).log2().powi(2);
-            let smp_f32: f32 = smp.mag();
+            let smp_f32: f32 = cplx.mag();
 
-            smp_f32 * volume_scale * scl * NORM
-        })
-        .collect::<Vec<f32>>();
+            *smp = smp_f32 * volume_scale * scl * NORM;
+        });
 
-    crate::audio::limiter::<_, BARS>(&mut data_f[..bar_num], 1.0, 10, 0.98, |x| x);
+    crate::audio::limiter::<_, MAX_BARS>(&mut data_f[..bar_num], 1.0, 10, 0.98, |x| x);
 
     let bnf = 1.0 / bnf;
 
@@ -163,7 +165,7 @@ pub fn draw_bars_circle(prog: &mut crate::data::Program, stream: &mut crate::aud
     let size = prog.pix.height().min(prog.pix.width()) as i32;
     let sizef = size as f32;
 
-    let bar_num = math::fast::isqrt(prog.pix.sizel());
+    let bar_num = math::fast::isqrt(prog.pix.sizel()).min(MAX_BARS - 1);
     let bnf = bar_num as f32;
     let bnf_recip = 1.0 / bnf;
     let _l = stream.len();

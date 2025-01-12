@@ -13,6 +13,7 @@ use crate::math::{self, Cplx};
 static LOCALI: AtomicUsize = AtomicUsize::new(0);
 static WAVE_SCALE_FACTOR: Mutex<f32> = Mutex::new(1.0);
 const SMOOTH_SIZE: usize = 7;
+const SMOOTH_BUFFER_SIZE: usize = 512;
 
 fn to_color(s: i32, size: i32) -> u8 {
     (s.abs() * 256 / size).min(255) as u8
@@ -78,7 +79,8 @@ pub fn draw_oscilloscope(prog: &mut crate::data::Program, stream: &mut crate::au
 
     prog.pix.clear();
 
-    let mut stream_ = stream.to_vec();
+    let mut stream_ = [Cplx::zero(); SMOOTH_BUFFER_SIZE];
+    stream.export(&mut stream_);
     const UP_COUNT: usize = 75;
     math::integrate_inplace(&mut stream_, UP_COUNT, true);
 
@@ -293,18 +295,21 @@ pub fn draw_oscilloscope3(prog: &mut crate::data::Program, stream: &mut crate::a
         i = i.wrapping_add(1);
     }
 
-    let mut zeros = [0].to_vec();
+    let mut zeros = [0; 6];
+    let mut zeros_len = 0;
 
     for i in 0..l {
         let t = stream[i];
         ssmp = linearfc(ssmp, t, 0.01);
 
-        if zeros.len() < 5 {
+        if zeros_len < 5 {
             if old2.x > 0.0 && ssmp.x < 0.0 {
-                zeros.push(i);
+                zeros[zeros_len] = i;
+                zeros_len += 1;
             }
             if old2.y > 0.0 && ssmp.y < 0.0 {
-                zeros.push(i);
+                zeros[zeros_len] = i;
+                zeros_len += 1;
             }
         }
 
@@ -314,7 +319,7 @@ pub fn draw_oscilloscope3(prog: &mut crate::data::Program, stream: &mut crate::a
         bass_sum += ssmp.x.powi(2) + ssmp.y.powi(2);
     }
 
-    let zeroi = zeros[zeros.len() - 1] - 50;
+    let zeroi = zeros[zeros_len.max(1) - 1] - 50;
 
     let bass = (bass_sum / l as f32).sqrt();
 

@@ -243,6 +243,8 @@ pub fn limiter<T, const N: usize>(
 ) where
     T: Into<f32> + std::ops::Mul<f32, Output = T> + std::marker::Copy,
 {
+    assert!(a.len() <= N);
+
     let smoothing = window * 3 / 4;
 
     let mut mave = MovingAverage::<_, N>::init(limit, smoothing);

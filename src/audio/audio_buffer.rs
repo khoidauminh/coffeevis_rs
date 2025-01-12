@@ -164,22 +164,15 @@ impl AudioBuffer {
         AMP_TRIGGER_THRESHOLD / self.max
     }
 
-    pub fn to_vec(&self) -> Vec<Cplx> {
-        let mut o = vec![Cplx::zero(); self.buffer.len()];
-        o.iter_mut()
+    pub fn export(&self, out: &mut [Cplx]) {
+        out.iter_mut()
             .zip(self.buffer.iter().cycle().skip(self.offset))
             .for_each(|(out, inp)| *out = *inp);
-        o
     }
 
     pub fn auto_rotate(&mut self) {
         self.rotate_left(self.rotate_size);
         self.rotates_since_write += 1;
-    }
-
-    #[doc(hidden)]
-    pub fn reset_offset(&mut self) {
-        self.offset = 0;
     }
 
     pub fn set_to_writepoint(&mut self) {
