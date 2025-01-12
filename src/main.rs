@@ -2,7 +2,6 @@
 #![forbid(unsafe_code)]
 
 use std::env;
-
 mod audio;
 mod data;
 mod graphics;
@@ -10,18 +9,15 @@ mod math;
 mod modes;
 mod visualizers;
 
-use data::*;
-
-// Audio lib
 use audio::get_source;
 use cpal::traits::StreamTrait;
-use reader::eprintln_red;
+use data::reader::eprintln_red;
 use visualizers::VisFunc;
 
 fn main() {
     let args = env::args().collect::<Vec<String>>();
 
-    let prog = Program::new().eval_args(&mut args.iter());
+    let prog = data::Program::new().eval_args(&mut args.iter());
 
     let stream = get_source();
     stream.play().unwrap();

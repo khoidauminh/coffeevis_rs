@@ -1,12 +1,9 @@
 use crate::graphics::{blend::Blend, P2};
 use crate::math::{cos_sin, interpolate::linearf, Cplx, TAU};
-use std::cell::RefCell;
 use std::f32::consts::PI;
+use std::sync::Mutex;
 
-thread_local! {
-    static ANGLE: RefCell<f32> = const { RefCell::new(0.0f32) };
-    static AMP: RefCell<f32> = const { RefCell::new(0.0f32) };
-}
+static ANGLE_AMP: Mutex<(f32, f32)> = Mutex::new((0.0f32, 0.0f32));
 
 fn blend(c1: u32, c2: u32) -> u32 {
     c1.add(c2).wrapping_shl(4)
@@ -48,39 +45,36 @@ pub fn draw_slice(prog: &mut crate::data::Program, stream: &mut crate::audio::Sa
         ((bin.l1_norm() / sizef * 2.).min(TAU), high.l1_norm())
     };
 
-    let mut amp = sweep;
+    let Ok(mut mt) = ANGLE_AMP.try_lock() else {
+        return;
+    };
 
-    AMP.with_borrow_mut(|local| {
-        amp = 2.5 * (sweep - *local).max(0.0) + sweep * 0.3 + high * 0.00005;
-        *local = sweep;
-    });
+    let amp = 2.5 * (sweep - mt.1).max(0.0) + sweep * 0.3 + high * 0.00005;
+    mt.1 = sweep;
 
-    ANGLE.with_borrow_mut(move |local| {
-        let angle = local;
-        let new_angle = *angle + amp;
+    let new_angle = mt.0 + amp;
 
-        let d = 1.0 / (big_radius_f * PI);
+    let d = 1.0 / (big_radius_f * PI);
 
-        let channel = high as u8 / 2;
-        let color = u32::compose([0xFF, channel, channel, channel]);
+    let channel = high as u8 / 2;
+    let color = u32::compose([0xFF, channel, channel, channel]);
 
-        let mut o = *angle;
-        while o < new_angle {
-            let x = o.cos() * big_radius_f;
-            let y = o.sin() * big_radius_f;
+    let mut o = mt.0;
+    while o < new_angle {
+        let x = o.cos() * big_radius_f;
+        let y = o.sin() * big_radius_f;
 
-            let p = P2::new(center.x + x as i32, center.y + y as i32);
+        let p = P2::new(center.x + x as i32, center.y + y as i32);
 
-            prog.pix.draw_line_by(center, p, color, blend);
+        prog.pix.draw_line_by(center, p, color, blend);
 
-            o += d;
-        }
+        o += d;
+    }
 
-        *angle = new_angle % TAU;
+    mt.0 = new_angle % TAU;
 
-        prog.pix
-            .draw_circle_by(center, small_radius, true, 0xFF_FF_FF_FF, u32::over);
-    });
+    prog.pix
+        .draw_circle_by(center, small_radius, true, 0xFF_FF_FF_FF, u32::over);
 
     stream.auto_rotate();
 }

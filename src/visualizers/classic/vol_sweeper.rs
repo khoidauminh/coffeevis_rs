@@ -1,6 +1,7 @@
 use crate::data::SAMPLE_SIZE;
 use crate::graphics::P2;
 use crate::math::fast::sin_norm;
+use std::sync::Mutex;
 
 const C: u32 = 16720064;
 
@@ -9,7 +10,7 @@ struct LocalData {
     pong: bool,
 }
 
-static DATA: std::sync::Mutex<LocalData> = std::sync::Mutex::new(LocalData {
+static DATA: Mutex<LocalData> = Mutex::new(LocalData {
     sweepi: 0,
     pong: false,
 });

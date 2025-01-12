@@ -149,7 +149,7 @@ const CHARSET_OPAC_EXP: &[u8] = b" `.-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neo
 
 impl Mode {
     pub fn get_flusher(&self) -> Flusher {
-        use crate::Program;
+        use crate::data::Program;
 
         match *self {
             Mode::ConAscii => Program::print_ascii,
