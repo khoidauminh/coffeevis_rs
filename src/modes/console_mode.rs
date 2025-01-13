@@ -381,8 +381,15 @@ pub fn control_key_events_con(prog: &mut Program, exit: &mut bool) {
                 KeyCode::Char('7') => prog.change_fps(-5, false),
                 KeyCode::Char('8') => prog.change_fps(5, false),
 
-                KeyCode::Char('9') => prog.change_con_max(-1, false),
-                KeyCode::Char('0') => prog.change_con_max(1, false),
+                KeyCode::Char('9') => {
+                    prog.change_con_max(-1, false);
+                    prog.update_size((prog.console_width, prog.console_height))
+                }
+
+                KeyCode::Char('0') => {
+                    prog.change_con_max(1, false);
+                    prog.update_size((prog.console_width, prog.console_height))
+                }
 
                 KeyCode::Char('-') => prog.decrease_vol_scl(),
                 KeyCode::Char('=') => prog.increase_vol_scl(),
