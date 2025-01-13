@@ -3,10 +3,12 @@ use std::sync::{
     Mutex,
 };
 
+use smallvec::SmallVec;
+
+use crate::audio::MovingAverage;
 use crate::data::{INCREMENT, PHASE_OFFSET};
 use crate::graphics::P2;
 use crate::visualizers::classic::cross::{draw_cross, CROSS_COL};
-use crate::{audio::MovingAverage, data::StackVec};
 
 use crate::math::{self, Cplx};
 
@@ -295,7 +297,7 @@ pub fn draw_oscilloscope3(prog: &mut crate::data::Program, stream: &mut crate::a
         i = i.wrapping_add(1);
     }
 
-    let mut zeros = StackVec::<usize, 6>::from([0]);
+    let mut zeros = SmallVec::from_buf([0; 6]);
 
     for i in 0..l {
         let t = stream[i];

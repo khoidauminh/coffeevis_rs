@@ -8,6 +8,7 @@ use crossterm::{
         LeaveAlternateScreen,
     },
 };
+use smallvec::{SmallVec, ToSmallVec};
 
 use crate::{
     audio::get_no_sample,
@@ -23,9 +24,10 @@ use std::io::{stdout, Stdout, Write};
 pub type Flusher = fn(&Program, &mut Stdout);
 
 const ERROR: u8 = 6;
+const MAX_SEGMENTS: usize = 48;
 
 struct ColoredString {
-    pub string: String,
+    pub string: SmallVec<[char; MAX_CON_WIDTH as usize]>,
     pub fg: Argb,
     pub bg: Argb,
     error: u8,
@@ -34,7 +36,7 @@ struct ColoredString {
 impl ColoredString {
     pub fn new(ch: char, fg: Argb, error: u8) -> Self {
         Self {
-            string: String::from(ch),
+            string: [ch].to_smallvec(),
             fg,
             bg: Argb::black(),
             error,
@@ -43,7 +45,7 @@ impl ColoredString {
 
     pub fn new_bg(ch: char, fg: Argb, bg: Argb, error: u8) -> Self {
         Self {
-            string: String::from(ch),
+            string: [ch].to_smallvec(),
             fg,
             bg,
             error,
@@ -106,9 +108,11 @@ trait StyledLine {
     fn queue_print(&self);
 }
 
-impl StyledLine for Vec<ColoredString> {
+impl StyledLine for SmallVec<[ColoredString; MAX_SEGMENTS]> {
     fn init() -> Self {
-        vec![ColoredString::new('\0', Argb::black(), ERROR)]
+        let mut out = Self::new();
+        out.push(ColoredString::new('\0', Argb::black(), ERROR));
+        out
     }
 
     fn clear_line(&mut self) {
@@ -139,7 +143,15 @@ impl StyledLine for Vec<ColoredString> {
     fn queue_print(&self) {
         for ColoredString { string, fg, .. } in self {
             let [_, r, g, b] = fg.decompose();
-            let _ = queue!(stdout(), Print(string.clone().with(Color::Rgb { r, g, b })));
+            let _ = queue!(
+                stdout(),
+                Print(
+                    string
+                        .iter()
+                        .collect::<String>()
+                        .with(Color::Rgb { r, g, b })
+                )
+            );
         }
     }
 }
@@ -165,9 +177,14 @@ impl Program {
     }
 
     pub fn change_con_max(&mut self, amount: i16, replace: bool) {
-        self.console_max_width = ((self.console_width * (!replace) as u16) as i16 + amount)
-            .clamp(0, self.pix.width() as i16) as u16;
-        self.console_max_height = self.console_max_height >> 1;
+        self.console_max_width = if replace {
+            amount as u16
+        } else {
+            self.console_max_width
+                .saturating_add_signed(amount)
+                .clamp(0, MAX_CON_WIDTH)
+        };
+        self.console_max_height = self.console_max_width / 2;
         self.clear_con();
     }
 
@@ -195,7 +212,7 @@ impl Program {
     pub fn print_ascii(&self, stdout: &mut Stdout) {
         let center = self.get_center(2, 4);
 
-        let mut line = Vec::<ColoredString>::init();
+        let mut line = SmallVec::<[ColoredString; MAX_SEGMENTS]>::init();
 
         for y in (0..self.pix.height()).step_by(2) {
             let cy = center.1 + y as u16 / 2;
@@ -227,7 +244,7 @@ impl Program {
     pub fn print_block(&self, stdout: &mut Stdout) {
         let center = self.get_center(2, 4);
 
-        let mut line = Vec::<ColoredString>::init();
+        let mut line = SmallVec::<[ColoredString; MAX_SEGMENTS]>::init();
 
         for y_base in (0..self.pix.height()).step_by(2) {
             let cy = center.1 + y_base as u16 / 2;
@@ -277,7 +294,7 @@ impl Program {
     pub fn print_brail(&self, stdout: &mut Stdout) {
         let center = self.get_center(4, 8);
 
-        let mut line = Vec::<ColoredString>::init();
+        let mut line = SmallVec::<[ColoredString; MAX_SEGMENTS]>::init();
 
         for y_base in (0..self.pix.height()).step_by(4) {
             let cy = center.1 + y_base as u16 / 4;

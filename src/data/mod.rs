@@ -2,6 +2,10 @@ pub mod reader;
 pub mod vislist;
 
 use core::fmt;
+
+#[cfg(not(feature = "window_only"))]
+use crate::modes::console_mode::rescale;
+
 use std::time::{Duration, Instant};
 
 use crate::{graphics::Canvas, modes::Mode};
@@ -35,8 +39,12 @@ pub const SLOW_DOWN_THRESHOLD: u8 = 86;
 pub const DEFAULT_SIZE_WIN: u16 = 84;
 pub const DEFAULT_WIN_SCALE: u8 = 2;
 
-pub const MAX_WIN_WIDTH: u32 = 480;
-pub const MAX_WIN_HEIGHT: u32 = 360;
+pub const MAX_WIN_WIDTH: u16 = 480;
+pub const MAX_WIN_HEIGHT: u16 = 360;
+
+pub const MAX_CON_WIDTH: u16 = 128;
+pub const MAX_CON_HEIGHT: u16 = 96;
+
 pub const MAX_SCALE_FACTOR: u8 = 8;
 pub const CRT_EFFECT: bool = false;
 
@@ -76,62 +84,6 @@ macro_rules! panic_red {
 
 pub(crate) use eprintln_red;
 pub(crate) use format_red;
-
-pub(crate) struct StackVec<T, const N: usize> {
-    data: [T; N],
-    len: usize,
-}
-
-impl<T, const N: usize> StackVec<T, N>
-where
-    T: Copy + Clone + Default,
-{
-    pub fn new() -> Self {
-        Self {
-            data: [T::default(); N],
-            len: 0,
-        }
-    }
-
-    pub fn from<const S: usize>(a: [T; S]) -> Self {
-        debug_assert!(S < N);
-        let mut data = [T::default(); N];
-        data[..S].copy_from_slice(&a[0..S]);
-        Self { data, len: S }
-    }
-
-    pub fn push(&mut self, val: T) {
-        debug_assert!(self.len < N);
-        self.data[self.len] = val;
-        self.len += 1;
-    }
-
-    pub fn pop(&mut self) -> T {
-        self.len -= 1;
-        self.data[self.len]
-    }
-
-    pub fn len(&self) -> usize {
-        self.len
-    }
-}
-
-use std::ops::{Index, IndexMut};
-
-impl<T, const N: usize> Index<usize> for StackVec<T, N> {
-    type Output = T;
-    fn index(&self, index: usize) -> &Self::Output {
-        debug_assert!(index < self.len);
-        &self.data[index]
-    }
-}
-
-impl<T, const N: usize> IndexMut<usize> for StackVec<T, N> {
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        debug_assert!(index < self.len);
-        &mut self.data[index]
-    }
-}
 
 /// Main program struct
 ///
@@ -392,34 +344,24 @@ impl Program {
         let _ = stdout.flush();
     }
 
-    pub fn update_size<T>(&mut self, s: (T, T))
-    where
-        T: Copy,
-        u16: TryFrom<T>,
-    {
-        #[allow(unused_mut)]
-        let (mut w, mut h) = match (u16::try_from(s.0), u16::try_from(s.1)) {
-            (Ok(w), Ok(h)) => (w, h),
-            _ => panic!("Size overflow!"),
-        };
-
+    pub fn update_size(&mut self, mut s: (u16, u16)) {
         match &self.mode {
             Mode::Win => {
-                self.window_width = w;
-                self.window_height = h;
+                self.window_width = s.0;
+                self.window_height = s.1;
             }
 
             _ => {
                 #[cfg(not(feature = "window_only"))]
                 {
-                    self.console_width = w;
-                    self.console_height = h;
-                    (w, h) = crate::modes::console_mode::rescale((w, h), self);
+                    self.console_width = s.0;
+                    self.console_height = s.1;
+                    s = rescale(s, self);
                 }
             }
         }
 
-        self.pix.resize(w as usize, h as usize);
+        self.pix.resize(s.0 as usize, s.1 as usize);
     }
 
     pub fn refresh(&mut self) {

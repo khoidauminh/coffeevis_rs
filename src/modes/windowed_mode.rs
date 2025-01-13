@@ -152,10 +152,10 @@ impl ApplicationHandler for WindowState {
                     return;
                 };
 
-                let scale = self.prog.scale() as u32;
+                let scale = self.prog.scale() as u16;
 
-                let w = width.min(MAX_WIN_WIDTH);
-                let h = height.min(MAX_WIN_HEIGHT);
+                let w = u16::min(MAX_WIN_WIDTH, width as u16);
+                let h = u16::min(MAX_WIN_HEIGHT, height as u16);
 
                 if w == MAX_WIN_WIDTH || h == MAX_WIN_HEIGHT {
                     self.prog.print_message(format_red!(
@@ -163,14 +163,16 @@ impl ApplicationHandler for WindowState {
                     ));
                 }
 
+                self.prog.update_size((w / scale, h / scale));
+
+                let (w, h) = (w as u32, h as u32);
+
                 self.final_buffer_size.width = w;
                 self.final_buffer_size.height = h;
 
                 surface
                     .resize(NonZeroU32::new(w).unwrap(), NonZeroU32::new(h).unwrap())
                     .unwrap();
-
-                self.prog.update_size((w / scale, h / scale));
 
                 if let Ok(mut buffer) = surface.buffer_mut() {
                     buffer.fill(0x0);

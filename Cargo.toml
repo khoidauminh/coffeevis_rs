@@ -17,6 +17,7 @@ softbuffer = "0.4"
 winit = "0.30"
 qoi = "0.4.1"
 crossterm = "0.28"
+smallvec = "1.13.2"
 
 [features]
 window_only = []
