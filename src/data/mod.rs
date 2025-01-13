@@ -4,7 +4,7 @@ pub mod vislist;
 use core::fmt;
 use std::time::{Duration, Instant};
 
-use crate::modes::Mode;
+use crate::{graphics::Canvas, modes::Mode};
 
 use crate::VisFunc;
 
@@ -77,6 +77,62 @@ macro_rules! panic_red {
 pub(crate) use eprintln_red;
 pub(crate) use format_red;
 
+pub(crate) struct StackVec<T, const N: usize> {
+    data: [T; N],
+    len: usize,
+}
+
+impl<T, const N: usize> StackVec<T, N>
+where
+    T: Copy + Clone + Default,
+{
+    pub fn new() -> Self {
+        Self {
+            data: [T::default(); N],
+            len: 0,
+        }
+    }
+
+    pub fn from<const S: usize>(a: [T; S]) -> Self {
+        debug_assert!(S < N);
+        let mut data = [T::default(); N];
+        data[..S].copy_from_slice(&a[0..S]);
+        Self { data, len: S }
+    }
+
+    pub fn push(&mut self, val: T) {
+        debug_assert!(self.len < N);
+        self.data[self.len] = val;
+        self.len += 1;
+    }
+
+    pub fn pop(&mut self) -> T {
+        self.len -= 1;
+        self.data[self.len]
+    }
+
+    pub fn len(&self) -> usize {
+        self.len
+    }
+}
+
+use std::ops::{Index, IndexMut};
+
+impl<T, const N: usize> Index<usize> for StackVec<T, N> {
+    type Output = T;
+    fn index(&self, index: usize) -> &Self::Output {
+        debug_assert!(index < self.len);
+        &self.data[index]
+    }
+}
+
+impl<T, const N: usize> IndexMut<usize> for StackVec<T, N> {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        debug_assert!(index < self.len);
+        &mut self.data[index]
+    }
+}
+
 /// Main program struct
 ///
 /// Notes:
@@ -108,7 +164,7 @@ pub(crate) struct Program {
 
     pub milli_hz: u32,
     pub refresh_rate_mode: RefreshRateMode,
-    pub refresh_rate_intervals: [std::time::Duration; 2],
+    pub refresh_rate_intervals: [Duration; 2],
 
     pub wav_win: usize,
     pub vol_scl: f32,
@@ -157,7 +213,7 @@ impl Program {
 
             wayland: true,
 
-            pix: crate::graphics::Canvas::new(DEFAULT_SIZE_WIN as usize, DEFAULT_SIZE_WIN as usize),
+            pix: Canvas::new(DEFAULT_SIZE_WIN as usize, DEFAULT_SIZE_WIN as usize),
 
             milli_hz: DEFAULT_MILLI_HZ,
             refresh_rate_mode: RefreshRateMode::Sync,

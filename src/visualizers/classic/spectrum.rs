@@ -60,7 +60,7 @@ fn prepare(
 }
 
 pub fn draw_spectrum(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
-    static DATA: Mutex<LocalType> = std::sync::Mutex::new([Cplx::zero(); RANGE + 1]);
+    static DATA: Mutex<LocalType> = Mutex::new([Cplx::zero(); RANGE + 1]);
 
     let Ok(mut local) = DATA.try_lock() else {
         return;

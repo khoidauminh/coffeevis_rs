@@ -3,10 +3,10 @@ use std::sync::{
     Mutex,
 };
 
-use crate::audio::MovingAverage;
 use crate::data::{INCREMENT, PHASE_OFFSET};
 use crate::graphics::P2;
 use crate::visualizers::classic::cross::{draw_cross, CROSS_COL};
+use crate::{audio::MovingAverage, data::StackVec};
 
 use crate::math::{self, Cplx};
 
@@ -295,21 +295,18 @@ pub fn draw_oscilloscope3(prog: &mut crate::data::Program, stream: &mut crate::a
         i = i.wrapping_add(1);
     }
 
-    let mut zeros = [0; 6];
-    let mut zeros_len = 1;
+    let mut zeros = StackVec::<usize, 6>::from([0]);
 
     for i in 0..l {
         let t = stream[i];
         ssmp = linearfc(ssmp, t, 0.01);
 
-        if zeros_len < 5 {
+        if zeros.len() < 5 {
             if old2.x > 0.0 && ssmp.x < 0.0 {
-                zeros[zeros_len] = i;
-                zeros_len += 1;
+                zeros.push(i);
             }
             if old2.y > 0.0 && ssmp.y < 0.0 {
-                zeros[zeros_len] = i;
-                zeros_len += 1;
+                zeros.push(i);
             }
         }
 
@@ -319,7 +316,7 @@ pub fn draw_oscilloscope3(prog: &mut crate::data::Program, stream: &mut crate::a
         bass_sum += ssmp.x.powi(2) + ssmp.y.powi(2);
     }
 
-    let zeroi = zeros[zeros_len - 1] - 50;
+    let zeroi = zeros[zeros.len() - 1] - 50;
 
     let bass = (bass_sum / l as f32).sqrt();
 
