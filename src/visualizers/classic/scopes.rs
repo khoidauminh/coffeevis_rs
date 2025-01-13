@@ -297,7 +297,8 @@ pub fn draw_oscilloscope3(prog: &mut crate::data::Program, stream: &mut crate::a
         i = i.wrapping_add(1);
     }
 
-    let mut zeros = SmallVec::from_buf([0; 6]);
+    let mut zeros = SmallVec::<[usize; 6]>::new();
+    zeros.push(0);
 
     for i in 0..l {
         let t = stream[i];
