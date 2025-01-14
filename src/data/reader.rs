@@ -84,6 +84,7 @@ impl Program {
                     );
                 }
 
+                #[cfg(not(feature = "window_only"))]
                 "--max-con-size" => {
                     let s = args
                         .next()
@@ -209,16 +210,19 @@ impl Program {
             ));
         }
 
-        let w = self.window_width as u32 * self.scale as u32;
-        let h = self.window_height as u32 * self.scale as u32;
+        #[cfg(not(feature = "console_only"))]
+        {
+            let w = self.window_width as u32 * self.scale as u32;
+            let h = self.window_height as u32 * self.scale as u32;
 
-        if self.resize || w * h > 70000 {
-            self.print_message(format_red!(
-                "\
+            if self.resize || w * h > 70000 {
+                self.print_message(format_red!(
+                    "\
                 Coffeevis is a CPU program, it is not advised \
                 to run it at large a size.\
                 "
-            ));
+                ));
+            }
         }
 
         if self.milli_hz / 1000 >= 300 {

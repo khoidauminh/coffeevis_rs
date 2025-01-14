@@ -3,9 +3,6 @@ pub mod vislist;
 
 use core::fmt;
 
-#[cfg(not(feature = "window_only"))]
-use crate::modes::console_mode::rescale;
-
 use std::time::{Duration, Instant};
 
 use crate::{graphics::Canvas, modes::Mode};
@@ -39,8 +36,9 @@ pub const SLOW_DOWN_THRESHOLD: u8 = 86;
 pub const DEFAULT_SIZE_WIN: u16 = 84;
 pub const DEFAULT_WIN_SCALE: u8 = 2;
 
-pub const MAX_WIN_WIDTH: u16 = 480;
-pub const MAX_WIN_HEIGHT: u16 = 360;
+pub const MAX_WIDTH: u16 = 480;
+
+pub const MAX_HEIGHT: u16 = 360;
 
 pub const MAX_CON_WIDTH: u16 = 128;
 pub const MAX_CON_HEIGHT: u16 = 96;
@@ -48,7 +46,7 @@ pub const MAX_CON_HEIGHT: u16 = 96;
 pub const MAX_SCALE_FACTOR: u8 = 8;
 pub const CRT_EFFECT: bool = false;
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone, Copy)]
 pub enum RefreshRateMode {
     Sync,
     Specified,
@@ -112,24 +110,33 @@ pub(crate) struct Program {
 
     pub pix: crate::graphics::Canvas,
 
-    pub mode: Mode,
+    mode: Mode,
 
-    pub milli_hz: u32,
-    pub refresh_rate_mode: RefreshRateMode,
-    pub refresh_rate_intervals: [Duration; 2],
+    milli_hz: u32,
+    refresh_rate_mode: RefreshRateMode,
+    refresh_rate_intervals: [Duration; 2],
 
     pub wav_win: usize,
     pub vol_scl: f32,
     pub smoothing: f32,
 
+    #[cfg(not(feature = "console_only"))]
     window_width: u16,
+
+    #[cfg(not(feature = "console_only"))]
     window_height: u16,
 
-    pub console_width: u16,
-    pub console_height: u16,
+    #[cfg(not(feature = "window_only"))]
+    console_width: u16,
 
-    pub console_max_width: u16,
-    pub console_max_height: u16,
+    #[cfg(not(feature = "window_only"))]
+    console_height: u16,
+
+    #[cfg(not(feature = "window_only"))]
+    console_max_width: u16,
+
+    #[cfg(not(feature = "window_only"))]
+    console_max_height: u16,
 
     vis_navigator: vislist::VisNavigator,
 
@@ -187,13 +194,22 @@ impl Program {
             vol_scl: DEFAULT_VOL_SCL,
             smoothing: DEFAULT_SMOOTHING,
 
+            #[cfg(not(feature = "console_only"))]
             window_width: DEFAULT_SIZE_WIN,
+
+            #[cfg(not(feature = "console_only"))]
             window_height: DEFAULT_SIZE_WIN,
 
+            #[cfg(not(feature = "window_only"))]
             console_width: 50,
+
+            #[cfg(not(feature = "window_only"))]
             console_height: 25,
 
+            #[cfg(not(feature = "window_only"))]
             console_max_width: 50,
+
+            #[cfg(not(feature = "window_only"))]
             console_max_height: 25,
         }
     }
@@ -229,6 +245,14 @@ impl Program {
 
     pub fn reset_switch(&mut self) {
         self.switch = Instant::now() + self.auto_switch_interval;
+    }
+
+    pub fn get_milli_hz(&self) -> u32 {
+        self.milli_hz
+    }
+
+    pub fn get_rr_mode(&self) -> RefreshRateMode {
+        self.refresh_rate_mode
     }
 
     pub fn update_vis(&mut self) -> bool {
@@ -344,8 +368,10 @@ impl Program {
         let _ = stdout.flush();
     }
 
+    #[allow(unused_mut)]
     pub fn update_size(&mut self, mut s: (u16, u16)) {
         match &self.mode {
+            #[cfg(not(feature = "console_only"))]
             Mode::Win => {
                 self.window_width = s.0;
                 self.window_height = s.1;
@@ -356,7 +382,7 @@ impl Program {
                 {
                     self.console_width = s.0;
                     self.console_height = s.1;
-                    s = rescale(s, self);
+                    s = self.rescale(s);
                 }
             }
         }
@@ -366,6 +392,7 @@ impl Program {
 
     pub fn refresh(&mut self) {
         match &self.mode {
+            #[cfg(not(feature = "console_only"))]
             Mode::Win => self
                 .pix
                 .resize(self.window_width as usize, self.window_height as usize),
@@ -435,5 +462,61 @@ impl Program {
 
     pub fn scale(&self) -> u8 {
         self.scale
+    }
+
+    #[cfg(not(feature = "window_only"))]
+    pub fn switch_con_mode(&mut self) {
+        self.mode = self.mode.next();
+        self.flusher = self.mode.get_flusher();
+        self.refresh_con();
+    }
+
+    #[cfg(not(feature = "window_only"))]
+    pub fn change_con_max(&mut self, amount: i16, replace: bool) {
+        self.console_max_width = if replace {
+            amount as u16
+        } else {
+            self.console_max_width
+                .saturating_add_signed(amount)
+                .clamp(0, MAX_CON_WIDTH)
+        };
+        self.console_max_height = self.console_max_width / 2;
+        self.clear_con();
+    }
+
+    #[cfg(not(feature = "window_only"))]
+    pub fn refresh_con(&mut self) {
+        self.update_size((self.console_width, self.console_height));
+    }
+
+    #[cfg(not(feature = "window_only"))]
+    pub fn get_center(&self, divider_x: u16, divider_y: u16) -> (u16, u16) {
+        (
+            (self.console_width / 2).saturating_sub(self.pix.width() as u16 / divider_x),
+            (self.console_height / 2).saturating_sub(self.pix.height() as u16 / divider_y),
+        )
+    }
+
+    #[cfg(not(feature = "window_only"))]
+    pub fn console_size(&self) -> (u16, u16) {
+        (self.console_width, self.console_height)
+    }
+
+    #[cfg(not(feature = "window_only"))]
+    pub fn rescale(&self, mut s: (u16, u16)) -> (u16, u16) {
+        s.0 = s.0.min(self.console_max_width);
+        s.1 = s.1.min(self.console_max_height);
+
+        match self.mode() {
+            Mode::ConBrail => {
+                s.0 *= 2;
+                s.1 *= 4;
+            }
+            _ => {
+                s.1 *= 2;
+            }
+        }
+
+        s
     }
 }

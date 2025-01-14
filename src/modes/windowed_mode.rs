@@ -154,10 +154,10 @@ impl ApplicationHandler for WindowState {
 
                 let scale = self.prog.scale() as u16;
 
-                let w = u16::min(MAX_WIN_WIDTH, width as u16);
-                let h = u16::min(MAX_WIN_HEIGHT, height as u16);
+                let w = u16::min(MAX_WIDTH, width as u16);
+                let h = u16::min(MAX_HEIGHT, height as u16);
 
-                if w == MAX_WIN_WIDTH || h == MAX_WIN_HEIGHT {
+                if w == MAX_WIDTH || h == MAX_HEIGHT {
                     self.prog.print_message(format_red!(
                         "You are hitting the resolution limit of Coffeevis!\n"
                     ));
@@ -222,7 +222,7 @@ impl ApplicationHandler for WindowState {
                     return;
                 }
 
-                if self.prog.refresh_rate_mode != RefreshRateMode::Specified {
+                if self.prog.get_rr_mode() != RefreshRateMode::Specified {
                     let now = Instant::now();
                     if now > self.refresh_rate_check_deadline {
                         Self::check_refresh_rate(window, &mut self.prog);
@@ -287,7 +287,7 @@ impl WindowState {
             return;
         };
 
-        if milli_hz == prog.milli_hz {
+        if milli_hz == prog.get_milli_hz() {
             return;
         }
 
@@ -337,7 +337,7 @@ pub fn winit_main(prog: Program) {
     let mut state = WindowState {
         window: None,
         surface: None,
-        poll_deadline: Instant::now() + prog.refresh_rate_intervals[0],
+        poll_deadline: Instant::now() + prog.get_rr_interval(0),
         refresh_rate_check_deadline: Instant::now() + Duration::from_secs(1),
         prog,
         final_buffer_size: PhysicalSize::<u32>::new(0, 0),

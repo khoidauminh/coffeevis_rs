@@ -179,37 +179,8 @@ impl Program {
         (self.flusher)(self, &mut std::io::stdout());
     }
 
-    pub fn change_con_max(&mut self, amount: i16, replace: bool) {
-        self.console_max_width = if replace {
-            amount as u16
-        } else {
-            self.console_max_width
-                .saturating_add_signed(amount)
-                .clamp(0, MAX_CON_WIDTH)
-        };
-        self.console_max_height = self.console_max_width / 2;
-        self.clear_con();
-    }
-
-    pub fn refresh_con(&mut self) {
-        self.update_size((self.console_width, self.console_height));
-    }
-
-    pub fn switch_con_mode(&mut self) {
-        self.mode = self.mode.next();
-        self.flusher = self.mode.get_flusher();
-        self.refresh_con();
-    }
-
     pub fn clear_con(&mut self) {
         let _ = queue!(std::io::stdout(), Clear(ClearType::All));
-    }
-
-    fn get_center(&self, divider_x: u16, divider_y: u16) -> (u16, u16) {
-        (
-            (self.console_width / 2).saturating_sub(self.pix.width() as u16 / divider_x),
-            (self.console_height / 2).saturating_sub(self.pix.height() as u16 / divider_y),
-        )
     }
 
     pub fn print_ascii(&self, stdout: &mut Stdout) {
@@ -343,23 +314,6 @@ fn to_ascii_art(table: &[u8], x: usize) -> char {
     table[(x * table.len()) >> 8] as char
 }
 
-pub fn rescale(mut s: (u16, u16), prog: &Program) -> (u16, u16) {
-    s.0 = s.0.min(prog.console_max_width);
-    s.1 = s.1.min(prog.console_max_height);
-
-    match prog.mode() {
-        Mode::ConBrail => {
-            s.0 *= 2;
-            s.1 *= 4;
-        }
-        _ => {
-            s.1 *= 2;
-        }
-    }
-
-    s
-}
-
 pub fn control_key_events_con(prog: &mut Program, exit: &mut bool) {
     prog.update_vis();
 
@@ -386,12 +340,12 @@ pub fn control_key_events_con(prog: &mut Program, exit: &mut bool) {
 
                 KeyCode::Char('9') => {
                     prog.change_con_max(-1, false);
-                    prog.update_size((prog.console_width, prog.console_height))
+                    prog.update_size(prog.console_size())
                 }
 
                 KeyCode::Char('0') => {
                     prog.change_con_max(1, false);
-                    prog.update_size((prog.console_width, prog.console_height))
+                    prog.update_size(prog.console_size())
                 }
 
                 KeyCode::Char('-') => prog.decrease_vol_scl(),

@@ -2,12 +2,12 @@ pub mod blend;
 pub mod draw;
 pub mod draw_raw;
 
-use crate::data::MAX_WIN_WIDTH;
+use crate::data::MAX_WIDTH;
 use blend::{Blend, Mixer};
 use draw_raw::*;
 
 const FIELD_START: usize = 64;
-const COMMAND_BUFFER_INIT_CAPACITY: usize = MAX_WIN_WIDTH as usize;
+const COMMAND_BUFFER_INIT_CAPACITY: usize = MAX_WIDTH as usize;
 
 pub(crate) trait Pixel: Copy + Clone + Blend + Sized {
     fn black() -> Self;
