@@ -74,7 +74,7 @@ pub fn channel_add(x: u8, y: u8, a: u8) -> u8 {
     x.saturating_add(u8_mul(y, a))
 }
 
-impl Blend for u32 {
+impl Blend for Argb {
     fn blend(self, other: u32) -> u32 {
         self.over(other)
     }

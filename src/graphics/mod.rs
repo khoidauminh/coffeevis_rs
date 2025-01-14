@@ -2,14 +2,42 @@ pub mod blend;
 pub mod draw;
 pub mod draw_raw;
 
+use crate::data::MAX_WIN_WIDTH;
 use blend::{Blend, Mixer};
+use draw_raw::*;
 
-pub trait Pixel: Copy + Clone + Blend + Sized {
+const FIELD_START: usize = 64;
+const COMMAND_BUFFER_INIT_CAPACITY: usize = MAX_WIN_WIDTH as usize;
+
+pub(crate) trait Pixel: Copy + Clone + Blend + Sized {
     fn black() -> Self;
     fn white() -> Self;
     fn trans() -> Self;
     fn from(x: u32) -> Self;
 }
+
+struct DrawCommand<T: Pixel> {
+    pub func: DrawFunction<T>,
+    pub param: DrawParam,
+    pub color: T,
+    pub blending: Mixer<T>,
+}
+
+pub struct PixelBuffer<T: Pixel> {
+    out_buffer: Vec<T>,
+    buffer: Vec<T>,
+    len: usize,
+    width: usize,
+    height: usize,
+    field: usize,
+    command: DrawCommandBuffer<T>,
+    background: T,
+}
+
+struct DrawCommandBuffer<T: Pixel>(Vec<DrawCommand<T>>);
+
+pub(crate) type Canvas = PixelBuffer<u32>;
+pub(crate) type P2 = crate::math::Vec2<i32>;
 
 impl Pixel for u32 {
     fn black() -> Self {
@@ -47,17 +75,6 @@ impl Pixel for u8 {
     }
 }
 
-pub(crate) type P2 = crate::math::Vec2<i32>;
-
-use draw_raw::{DrawFunction, DrawParam};
-
-pub struct DrawCommand<T: Pixel> {
-    pub func: DrawFunction<T>,
-    pub param: DrawParam,
-    pub color: T,
-    pub blending: Mixer<T>,
-}
-
 impl<T: Pixel> DrawCommand<T> {
     pub fn new(func: DrawFunction<T>, param: DrawParam, color: T, blending: Mixer<T>) -> Self {
         Self {
@@ -69,7 +86,7 @@ impl<T: Pixel> DrawCommand<T> {
     }
 }
 
-macro_rules! make_command {
+macro_rules! command {
 	($c:expr, $b:expr, $func:ident, $name:ident) => {
 		DrawCommand::new($func, DrawParam::$name{}, $c, $b)
 	};
@@ -79,61 +96,50 @@ macro_rules! make_command {
 	}
 }
 
-pub struct DrawCommandBuffer<T: Pixel> {
-    buffer: Vec<DrawCommand<T>>,
-}
-
-use draw_raw::*;
-
 impl<T: Pixel> DrawCommandBuffer<T> {
     pub fn new() -> Self {
-        Self { buffer: Vec::new() }
+        Self(Vec::with_capacity(COMMAND_BUFFER_INIT_CAPACITY))
     }
 
     pub fn rect(&mut self, ps: P2, pe: P2, c: T, b: Mixer<T>) {
-        self.buffer
-            .push(make_command!(c, b, draw_rect_xy_by, Rect, ps, pe));
+        self.0.push(command!(c, b, draw_rect_xy_by, Rect, ps, pe));
     }
 
     pub fn rect_wh(&mut self, ps: P2, w: usize, h: usize, c: T, b: Mixer<T>) {
-        self.buffer
-            .push(make_command!(c, b, draw_rect_wh_by, RectWh, ps, w, h));
+        self.0
+            .push(command!(c, b, draw_rect_wh_by, RectWh, ps, w, h));
     }
 
     pub fn line(&mut self, ps: P2, pe: P2, c: T, b: Mixer<T>) {
-        self.buffer
-            .push(make_command!(c, b, draw_line_by, Line, ps, pe));
+        self.0.push(command!(c, b, draw_line_by, Line, ps, pe));
     }
 
     pub fn plot(&mut self, p: P2, c: T, b: Mixer<T>) {
-        self.buffer
-            .push(make_command!(c, b, set_pixel_xy_by, Plot, p));
+        self.0.push(command!(c, b, set_pixel_xy_by, Plot, p));
     }
 
     pub fn plot_index(&mut self, i: usize, c: T, b: Mixer<T>) {
-        self.buffer
-            .push(make_command!(c, b, set_pixel_by, PlotIdx, i));
+        self.0.push(command!(c, b, set_pixel_by, PlotIdx, i));
     }
 
     pub fn fill(&mut self, c: T) {
         // Discards all previous commands since this
         // fill overwrites the entire buffer.
-        self.buffer.clear();
-        self.buffer.push(make_command!(c, Blend::over, fill, Fill));
+        self.0.clear();
+        self.0.push(command!(c, Blend::over, fill, Fill));
     }
 
     pub fn circle(&mut self, p: P2, r: i32, f: bool, c: T, b: Mixer<T>) {
-        self.buffer
-            .push(make_command!(c, b, draw_cirle_by, Circle, p, r, f));
+        self.0.push(command!(c, b, draw_cirle_by, Circle, p, r, f));
     }
 
     pub fn fade(&mut self, a: u8) {
-        self.buffer
-            .push(make_command!(T::trans(), Blend::over, fade, Fade, a));
+        self.0
+            .push(command!(T::trans(), Blend::over, fade, Fade, a));
     }
 
     pub fn execute(&mut self, canvas: &mut [T], cwidth: usize, cheight: usize) {
-        self.buffer.iter().for_each(|command| {
+        self.0.iter().for_each(|command| {
             (command.func)(
                 canvas,
                 cwidth,
@@ -143,36 +149,16 @@ impl<T: Pixel> DrawCommandBuffer<T> {
                 command.param,
             );
         });
-        self.buffer.clear();
+        self.0.clear();
     }
 }
 
-pub struct PixelBuffer<T: Pixel> {
-    out_buffer: Vec<T>,
-    buffer: Vec<T>,
-    len: usize,
-    mask: usize,
-    width: usize,
-    height: usize,
-    field: usize,
-    command: DrawCommandBuffer<T>,
-    background: T,
-}
-
-const FIELD_START: usize = 64;
-
-pub type Image<T> = PixelBuffer<T>;
-pub type Canvas = PixelBuffer<u32>;
-pub type AlphaMask = PixelBuffer<u8>;
-
 impl<T: Pixel> PixelBuffer<T> {
     pub fn new(w: usize, h: usize) -> Self {
-        let padded = crate::math::larger_or_equal_pw2(w * h);
         Self {
             out_buffer: Vec::new(),
-            buffer: vec![T::trans(); padded],
+            buffer: vec![T::trans(); w * h],
             command: DrawCommandBuffer::new(),
-            mask: padded - 1,
             len: w * h,
             width: w,
             height: h,
@@ -220,11 +206,9 @@ impl<T: Pixel> PixelBuffer<T> {
 
     pub fn resize(&mut self, w: usize, h: usize) {
         let len = w * h;
-        let padded = crate::math::larger_or_equal_pw2(len);
-
-        self.buffer.resize(padded, T::from(0));
-
-        self.mask = padded - 1;
+        if len > self.buffer.len() {
+            self.buffer.resize(len, T::from(0));
+        }
         self.width = w;
         self.height = h;
         self.len = len;
@@ -245,17 +229,8 @@ impl<T: Pixel> PixelBuffer<T> {
         y.wrapping_mul(self.width as u32).wrapping_add(x) as usize
     }
 
-    pub fn get_idx_wrap(&self, p: P2) -> usize {
-        self.wrap(self.get_idx_fast(p))
-    }
-
     pub fn pixel(&self, i: usize) -> T {
-        let iw = self.wrap(i);
-        self.buffer[iw]
-    }
-
-    fn wrap(&self, i: usize) -> usize {
-        i & self.mask
+        self.buffer[i]
     }
 
     pub fn to_rgba(i: &[u32], o: &mut [u8]) {
@@ -333,18 +308,5 @@ impl<T: Pixel> PixelBuffer<T> {
         }
 
         dest.copy_from_slice(&out_buffer);
-    }
-}
-
-impl Canvas {
-    pub fn clear_row(&mut self, y: usize) {
-        let i = y * self.width;
-        self.buffer[i..i + self.width].fill(u32::trans());
-    }
-
-    pub fn subtract_clear(&mut self, amount: u8) {
-        self.buffer.iter_mut().take(self.len).for_each(|pixel| {
-            *pixel = pixel.sub_by_alpha(amount);
-        });
     }
 }

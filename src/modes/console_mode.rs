@@ -8,7 +8,10 @@ use crossterm::{
         LeaveAlternateScreen,
     },
 };
+
 use smallvec::{SmallVec, ToSmallVec};
+
+use std::io::{stdout, Stdout, Write};
 
 use crate::{
     audio::get_no_sample,
@@ -19,12 +22,13 @@ use crate::{
     },
     modes::Mode,
 };
-use std::io::{stdout, Stdout, Write};
 
 pub type Flusher = fn(&Program, &mut Stdout);
 
 const ERROR: u8 = 6;
 const MAX_SEGMENTS: usize = 48;
+const CHARSET_OPAC_EXP: &[u8] = b" `.-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ\
+    5Yxjya]2ESwqkP6h9d4VpOGbUAKXHm8RD#$Bg0MNWQ%&@";
 
 struct ColoredString {
     pub string: SmallVec<[char; MAX_CON_WIDTH as usize]>,
@@ -100,6 +104,8 @@ impl ColoredString {
     }
 }
 
+/// Compress similar pixels into one string with the same
+/// color. Hopefully this reduces IO performance cost.
 trait StyledLine {
     fn init() -> Self;
     fn clear_line(&mut self);
@@ -155,9 +161,6 @@ impl StyledLine for SmallVec<[ColoredString; MAX_SEGMENTS]> {
         }
     }
 }
-
-const CHARSET_OPAC_EXP: &[u8] = b" `.-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ\
-    5Yxjya]2ESwqkP6h9d4VpOGbUAKXHm8RD#$Bg0MNWQ%&@";
 
 impl Mode {
     pub fn get_flusher(&self) -> Flusher {
