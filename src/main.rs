@@ -32,7 +32,7 @@ fn main() {
             #[cfg(not(feature = "window_only"))]
             {
                 terminal = true;
-                modes::console_mode::con_main(prog);
+                modes::console_mode::con_main(prog).unwrap();
             }
 
             if !terminal {

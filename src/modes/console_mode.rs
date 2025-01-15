@@ -11,7 +11,7 @@ use crossterm::{
 
 use smallvec::{SmallVec, ToSmallVec};
 
-use std::io::{stdout, Stdout, Write};
+use std::io::{stdout, Error, Stdout, Write};
 
 use crate::{
     audio::get_no_sample,
@@ -301,7 +301,10 @@ impl Program {
 						// be used to increase performance.
 					}) as u32;
 
-                line.push_pixel(char::from_u32(bx).unwrap(), Argb::compose([0, r, g, b]));
+                line.push_pixel(
+                    char::from_u32(bx).unwrap_or(' '),
+                    Argb::compose([0, r, g, b]),
+                );
             }
 
             line.queue_print();
@@ -314,13 +317,13 @@ fn to_ascii_art(table: &[u8], x: usize) -> char {
     table[(x * table.len()) >> 8] as char
 }
 
-pub fn control_key_events_con(prog: &mut Program, exit: &mut bool) {
+pub fn control_key_events_con(prog: &mut Program, exit: &mut bool) -> Result<(), Error> {
     prog.update_vis();
 
     let no_sample = crate::audio::get_no_sample();
 
-    if poll(prog.get_rr_interval(no_sample)).unwrap() {
-        match read().unwrap() {
+    if poll(prog.get_rr_interval(no_sample))? {
+        match read()? {
             Event::Key(event) => match event.code {
                 KeyCode::Char('b') => prog.change_visualizer(false),
 
@@ -375,24 +378,26 @@ pub fn control_key_events_con(prog: &mut Program, exit: &mut bool) {
             _ => {}
         }
     }
+
+    Ok(())
 }
 
-pub fn con_main(mut prog: Program) {
+pub fn con_main(mut prog: Program) -> Result<(), std::io::Error> {
     prog.print_startup_info();
 
     let mut stdout = stdout();
 
-    enable_raw_mode().unwrap();
-    stdout.flush().unwrap();
+    enable_raw_mode()?;
+    stdout.flush()?;
 
     let mut exit: bool = false;
 
-    let size = size().unwrap();
+    let size = size()?;
     prog.update_size(size);
 
     if !prog.is_display_enabled() {
         while !exit {
-            control_key_events_con(&mut prog, &mut exit);
+            control_key_events_con(&mut prog, &mut exit)?;
             prog.render();
         }
     } else {
@@ -403,7 +408,7 @@ pub fn con_main(mut prog: Program) {
             SetAttribute(Attribute::Bold)
         );
         while !exit {
-            control_key_events_con(&mut prog, &mut exit);
+            control_key_events_con(&mut prog, &mut exit)?;
 
             if get_no_sample() > STOP_RENDERING {
                 continue;
@@ -414,8 +419,10 @@ pub fn con_main(mut prog: Program) {
 
             let _ = stdout.flush();
         }
-        queue!(stdout, LeaveAlternateScreen, Show).unwrap();
+        queue!(stdout, LeaveAlternateScreen, Show)?;
     }
 
-    disable_raw_mode().unwrap();
+    disable_raw_mode()?;
+
+    Ok(())
 }

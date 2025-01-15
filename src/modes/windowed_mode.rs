@@ -1,5 +1,7 @@
 use softbuffer::Surface;
 
+use qoi::Header;
+
 use winit::{
     application::ApplicationHandler,
     dpi::{LogicalSize, PhysicalSize},
@@ -61,10 +63,13 @@ impl ApplicationHandler for WindowState {
 
         let win_size = LogicalSize::<u32>::new(size.0, size.1);
 
-        let icon = {
-            let (w, h, v) = read_icon();
-            Icon::from_rgba(v, w, h).expect("Failed to create window icon.")
-        };
+        let icon = read_icon()
+            .map(|(w, h, v)| {
+                Icon::from_rgba(v, w, h)
+                    .inspect_err(|_| self.prog.print_message("Failed to create window icon.\n"))
+                    .ok()
+            })
+            .flatten();
 
         let window_attributes = Window::default_attributes()
             .with_title("cvis")
@@ -74,13 +79,16 @@ impl ApplicationHandler for WindowState {
             .with_decorations(!(is_gnome && is_wayland))
             .with_resizable(self.prog.is_resizable())
             .with_name("coffeevis", "cvis")
-            .with_window_icon(Some(icon));
+            .with_window_icon(icon);
 
         self.window = Some(Box::leak(Box::new(
             event_loop.create_window(window_attributes).unwrap(),
         )));
 
-        let window = self.window.unwrap();
+        let window = self
+            .window
+            .expect("Window unwraps to none. This error should never happen!");
+
         let size = window.inner_size();
         self.final_buffer_size = size;
 
@@ -88,12 +96,7 @@ impl ApplicationHandler for WindowState {
             let context = softbuffer::Context::new(window).unwrap();
             let mut surface = softbuffer::Surface::new(&context, window).unwrap();
 
-            surface
-                .resize(
-                    NonZeroU32::new(size.width).unwrap(),
-                    NonZeroU32::new(size.height).unwrap(),
-                )
-                .unwrap();
+            Self::resize_surface(&mut surface, size.width, size.height);
 
             Some(surface)
         };
@@ -131,7 +134,7 @@ impl ApplicationHandler for WindowState {
         // it will be stuck idling. This thread will send a
         // request to kick start it.
         let _ = thread::Builder::new().stack_size(1024).spawn(move || {
-            while !exit_recv.recv_timeout(IDLE_INTERVAL).is_ok() {
+            while exit_recv.recv_timeout(IDLE_INTERVAL).is_err() {
                 window.request_redraw();
             }
         });
@@ -145,9 +148,9 @@ impl ApplicationHandler for WindowState {
 
             WindowEvent::MouseInput { button, .. } => {
                 if button == event::MouseButton::Left {
-                    if let Err(err) = self.window.as_ref().unwrap().drag_window() {
+                    if let Err(err) = self.window.as_ref().map(|f| f.drag_window()).transpose() {
                         self.prog
-                            .print_message(format!("Error starting window drag: {err}"));
+                            .print_message(format!("Error dragging window: {err}"));
                     }
                 }
             }
@@ -158,6 +161,8 @@ impl ApplicationHandler for WindowState {
 
             WindowEvent::Resized(PhysicalSize { width, height }) => {
                 let Some(surface) = self.surface.as_mut() else {
+                    self.prog
+                        .print_message("Coffeevis is unable to resize the buffer!\n");
                     return;
                 };
 
@@ -179,9 +184,7 @@ impl ApplicationHandler for WindowState {
                 self.final_buffer_size.width = w;
                 self.final_buffer_size.height = h;
 
-                surface
-                    .resize(NonZeroU32::new(w).unwrap(), NonZeroU32::new(h).unwrap())
-                    .unwrap();
+                Self::resize_surface(surface, w, h);
 
                 if let Ok(mut buffer) = surface.buffer_mut() {
                     buffer.fill(0x0);
@@ -242,29 +245,19 @@ impl ApplicationHandler for WindowState {
                 self.prog.update_vis();
                 self.prog.render();
 
-                'render: {
-                    if !self.prog.is_display_enabled() {
-                        break 'render;
+                if self.prog.is_display_enabled() {
+                    if let Some(Ok(mut buffer)) = self.surface.as_mut().map(|s| s.buffer_mut()) {
+                        self.prog.pix.scale_to(
+                            self.prog.scale() as usize,
+                            &mut buffer,
+                            Some(self.final_buffer_size.width as usize),
+                            Some(u32::mix),
+                            self.prog.is_crt(),
+                        );
+
+                        window.pre_present_notify();
+                        let _ = buffer.present();
                     }
-
-                    let Some(surface) = self.surface.as_mut() else {
-                        break 'render;
-                    };
-
-                    let Ok(mut buffer) = surface.buffer_mut() else {
-                        break 'render;
-                    };
-
-                    self.prog.pix.scale_to(
-                        self.prog.scale() as usize,
-                        &mut buffer,
-                        Some(self.final_buffer_size.width as usize),
-                        Some(u32::mix),
-                        self.prog.is_crt(),
-                    );
-
-                    window.pre_present_notify();
-                    let _ = buffer.present();
                 }
 
                 window.request_redraw();
@@ -287,12 +280,22 @@ impl WindowState {
         self.poll_deadline = Instant::now() + self.prog.get_rr_interval(get_no_sample());
     }
 
-    fn check_refresh_rate(window: &Window, prog: &mut Program) {
-        let Some(monitor) = window.current_monitor() else {
-            return;
-        };
+    fn resize_surface(surface: &mut Surface<&'static Window, &'static Window>, w: u32, h: u32) {
+        surface
+            .resize(
+                NonZeroU32::new(w).expect("Surface width is zero"),
+                NonZeroU32::new(h).expect("Surface height is zero"),
+            )
+            .expect("Failed to resize surface buffer");
+    }
 
-        let Some(mut milli_hz) = monitor.refresh_rate_millihertz() else {
+    fn check_refresh_rate(window: &Window, prog: &mut Program) {
+        let Some(mut milli_hz) = window
+            .current_monitor()
+            .map(|m| m.refresh_rate_millihertz())
+            .flatten()
+        else {
+            prog.print_message("Coffeevis is unable to query your monitor's refresh rate.\n");
             return;
         };
 
@@ -322,22 +325,19 @@ impl WindowState {
     }
 }
 
-fn read_icon() -> (u32, u32, Vec<u8>) {
+fn read_icon() -> Option<(u32, u32, Vec<u8>)> {
     let icon_file = include_bytes!("../../assets/coffeevis_icon_128x128.qoi");
 
     let mut icon = qoi::Decoder::new(icon_file)
-        .expect("Failed to parse qoi image")
-        .with_channels(qoi::Channels::Rgba);
+        .map(|i| i.with_channels(qoi::Channels::Rgba))
+        .ok()?;
 
-    let header = icon.header();
-    let width = header.width;
-    let height = header.height;
+    let &Header { width, height, .. } = icon.header();
 
-    let Ok(vec) = icon.decode_to_vec() else {
-        panic!("Failed to decode qoi to vec.")
-    };
-
-    (width, height, vec)
+    icon.decode_to_vec()
+        .ok()
+        .map(|v| Some((width, height, v)))
+        .flatten()
 }
 
 pub fn winit_main(prog: Program) {

@@ -43,7 +43,7 @@ fn prepare(
     let bnf = bar_num as f32;
     let _l = stream.len();
 
-    let mut local = DATA_MAX.lock().unwrap();
+    let mut local = DATA_MAX.try_lock().unwrap();
 
     let mut data_c = [Cplx::zero(); FFT_SIZE];
 
