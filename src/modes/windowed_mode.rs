@@ -17,7 +17,7 @@ use winit::{
 
 use std::{
     num::NonZeroU32,
-    sync::{mpsc, Arc},
+    sync::mpsc,
     thread::{self, sleep},
     time::{Duration, Instant},
 };
@@ -26,8 +26,9 @@ use crate::graphics::blend::Blend;
 use crate::{audio::get_no_sample, data::*};
 
 struct WindowState {
-    pub window: Option<Arc<Window>>,
-    pub surface: Option<Surface<Arc<Window>, Arc<Window>>>,
+    pub already_resumed: bool,
+    pub window: Option<&'static Window>,
+    pub surface: Option<Surface<&'static Window, &'static Window>>,
     pub prog: Program,
     pub poll_deadline: Instant,
     pub refresh_rate_check_deadline: Instant,
@@ -37,6 +38,14 @@ struct WindowState {
 
 impl ApplicationHandler for WindowState {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
+        // Since we are leaking the window into a static
+        // reference, resumed() is not allowed to be
+        // called again as it would cause the build up
+        // of leaked windows and potentially flood RAM.
+        assert!(!self.already_resumed);
+
+        self.already_resumed = true;
+
         self.prog.print_startup_info();
 
         let scale = self.prog.scale() as u32;
@@ -67,17 +76,17 @@ impl ApplicationHandler for WindowState {
             .with_name("coffeevis", "cvis")
             .with_window_icon(Some(icon));
 
-        self.window = Some(Arc::new(
+        self.window = Some(Box::leak(Box::new(
             event_loop.create_window(window_attributes).unwrap(),
-        ));
+        )));
 
-        let window = self.window.as_ref().unwrap().clone();
+        let window = self.window.unwrap();
         let size = window.inner_size();
         self.final_buffer_size = size;
 
         self.surface = {
-            let context = softbuffer::Context::new(window.clone()).unwrap();
-            let mut surface = softbuffer::Surface::new(&context, window.clone()).unwrap();
+            let context = softbuffer::Context::new(window).unwrap();
+            let mut surface = softbuffer::Surface::new(&context, window).unwrap();
 
             surface
                 .resize(
@@ -335,6 +344,7 @@ pub fn winit_main(prog: Program) {
     let event_loop = EventLoop::new().unwrap();
 
     let mut state = WindowState {
+        already_resumed: false,
         window: None,
         surface: None,
         poll_deadline: Instant::now() + prog.get_rr_interval(0),
