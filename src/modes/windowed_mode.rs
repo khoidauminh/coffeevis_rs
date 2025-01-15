@@ -32,7 +32,7 @@ struct WindowState {
     pub poll_deadline: Instant,
     pub refresh_rate_check_deadline: Instant,
     pub final_buffer_size: PhysicalSize<u32>,
-    pub exit_sender: Option<mpsc::SyncSender<bool>>,
+    pub exit_sender: Option<mpsc::SyncSender<()>>,
 }
 
 impl ApplicationHandler for WindowState {
@@ -122,7 +122,7 @@ impl ApplicationHandler for WindowState {
         // it will be stuck idling. This thread will send a
         // request to kick start it.
         let _ = thread::Builder::new().stack_size(1024).spawn(move || {
-            while !exit_recv.recv_timeout(IDLE_INTERVAL).is_ok_and(|x| x) {
+            while !exit_recv.recv_timeout(IDLE_INTERVAL).is_ok() {
                 window.request_redraw();
             }
         });
@@ -346,5 +346,5 @@ pub fn winit_main(prog: Program) {
 
     event_loop.set_control_flow(ControlFlow::Wait);
     event_loop.run_app(&mut state).unwrap();
-    state.exit_sender.as_ref().map(|x| x.send(true));
+    state.exit_sender.as_ref().map(|x| x.send(()));
 }
