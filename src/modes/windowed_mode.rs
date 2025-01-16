@@ -1,16 +1,13 @@
-use softbuffer::Surface;
+use softbuffer::{Context, Surface};
 
-use qoi::Header;
+use qoi::{Decoder, Header};
 
 use winit::{
     application::ApplicationHandler,
     dpi::{LogicalSize, PhysicalSize},
     event::{self, ElementState, WindowEvent},
     event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
-    keyboard::{
-        Key,
-        NamedKey::{Escape, Space},
-    },
+    keyboard::{Key, NamedKey},
     platform::{
         modifier_supplement::KeyEventExtModifierSupplement, wayland::WindowAttributesExtWayland,
     },
@@ -19,7 +16,7 @@ use winit::{
 
 use std::{
     num::NonZeroU32,
-    sync::mpsc,
+    sync::mpsc::{self, SyncSender},
     thread::{self, sleep},
     time::{Duration, Instant},
 };
@@ -27,15 +24,17 @@ use std::{
 use crate::graphics::blend::Blend;
 use crate::{audio::get_no_sample, data::*};
 
+type WindowSurface = Surface<&'static Window, &'static Window>;
+
 struct WindowState {
-    pub already_resumed: bool,
-    pub window: Option<&'static Window>,
-    pub surface: Option<Surface<&'static Window, &'static Window>>,
     pub prog: Program,
+    pub window: Option<&'static Window>,
+    pub surface: Option<WindowSurface>,
+    pub exit_sender: Option<SyncSender<()>>,
+    pub final_buffer_size: PhysicalSize<u32>,
     pub poll_deadline: Instant,
     pub refresh_rate_check_deadline: Instant,
-    pub final_buffer_size: PhysicalSize<u32>,
-    pub exit_sender: Option<mpsc::SyncSender<()>>,
+    pub already_resumed: bool,
 }
 
 impl ApplicationHandler for WindowState {
@@ -91,8 +90,8 @@ impl ApplicationHandler for WindowState {
         self.final_buffer_size = size;
 
         self.surface = {
-            let context = softbuffer::Context::new(window).unwrap();
-            let mut surface = softbuffer::Surface::new(&context, window).unwrap();
+            let context = Context::new(window).unwrap();
+            let mut surface = Surface::new(&context, window).unwrap();
 
             Self::resize_surface(&mut surface, size.width, size.height);
 
@@ -146,7 +145,7 @@ impl ApplicationHandler for WindowState {
 
             WindowEvent::MouseInput { button, .. } => {
                 if button == event::MouseButton::Left {
-                    if let Some(Err(err)) = self.window.as_ref().map(|f| f.drag_window()) {
+                    if let Some(err) = self.window.as_ref().and_then(|f| f.drag_window().err()) {
                         self.prog
                             .print_message(format!("Error dragging window: {err}"));
                     }
@@ -193,9 +192,9 @@ impl ApplicationHandler for WindowState {
                 if event.state == ElementState::Pressed && !event.repeat =>
             {
                 match event.key_without_modifiers().as_ref() {
-                    Key::Named(Escape) => event_loop.exit(),
+                    Key::Named(NamedKey::Escape) => event_loop.exit(),
 
-                    Key::Named(Space) => self.prog.change_visualizer(true),
+                    Key::Named(NamedKey::Space) => self.prog.change_visualizer(true),
 
                     Key::Character("b") => self.prog.change_visualizer(false),
 
@@ -223,11 +222,9 @@ impl ApplicationHandler for WindowState {
                     return;
                 };
 
-                let no_sample = crate::audio::get_no_sample();
-
                 if window.is_minimized().unwrap_or(false)
                     || self.prog.is_hidden()
-                    || no_sample >= STOP_RENDERING
+                    || get_no_sample() >= STOP_RENDERING
                 {
                     return;
                 }
@@ -254,7 +251,11 @@ impl ApplicationHandler for WindowState {
                         );
 
                         window.pre_present_notify();
-                        let _ = buffer.present();
+                        if let Err(e) = buffer.present() {
+                            self.prog.print_message(format!(
+                                "Coffeevis is failing to present buffers to the window: {e}.\n"
+                            ));
+                        }
                     }
                 }
 
@@ -278,7 +279,7 @@ impl WindowState {
         self.poll_deadline = Instant::now() + self.prog.get_rr_interval(get_no_sample());
     }
 
-    fn resize_surface(surface: &mut Surface<&'static Window, &'static Window>, w: u32, h: u32) {
+    fn resize_surface(surface: &mut WindowSurface, w: u32, h: u32) {
         surface
             .resize(
                 NonZeroU32::new(w).expect("Surface width is zero"),
@@ -325,7 +326,7 @@ impl WindowState {
 fn read_icon() -> Option<(u32, u32, Vec<u8>)> {
     let icon_file = include_bytes!("../../assets/coffeevis_icon_128x128.qoi");
 
-    let mut icon = qoi::Decoder::new(icon_file)
+    let mut icon = Decoder::new(icon_file)
         .map(|i| i.with_channels(qoi::Channels::Rgba))
         .ok()?;
 
@@ -337,15 +338,18 @@ fn read_icon() -> Option<(u32, u32, Vec<u8>)> {
 pub fn winit_main(prog: Program) {
     let event_loop = EventLoop::new().unwrap();
 
+    let poll_deadline = Instant::now() + prog.get_rr_interval(0);
+    let refresh_rate_check_deadline = Instant::now() + Duration::from_secs(1);
+
     let mut state = WindowState {
-        already_resumed: false,
+        prog,
         window: None,
         surface: None,
-        poll_deadline: Instant::now() + prog.get_rr_interval(0),
-        refresh_rate_check_deadline: Instant::now() + Duration::from_secs(1),
-        prog,
-        final_buffer_size: PhysicalSize::<u32>::new(0, 0),
         exit_sender: None,
+        final_buffer_size: PhysicalSize::<u32>::new(0, 0),
+        poll_deadline,
+        refresh_rate_check_deadline,
+        already_resumed: false,
     };
 
     event_loop.set_control_flow(ControlFlow::Wait);
