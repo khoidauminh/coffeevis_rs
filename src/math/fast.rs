@@ -30,10 +30,6 @@ pub fn unit_exp2(x: f32) -> f32 {
     unit_exp2_0(x) + 1.0
 }
 
-pub fn isqrt(val: usize) -> usize {
-    (val as f32).sqrt() as usize
-}
-
 pub const fn ilog2(x: usize) -> usize {
     usize::BITS.wrapping_sub(x.wrapping_shr(1).leading_zeros()) as usize
 }

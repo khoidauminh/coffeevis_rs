@@ -168,7 +168,7 @@ pub fn draw_bars_circle(prog: &mut crate::data::Program, stream: &mut crate::aud
     let size = prog.pix.height().min(prog.pix.width()) as i32;
     let sizef = size as f32;
 
-    let bar_num = math::fast::isqrt(prog.pix.sizel()).min(MAX_BARS);
+    let bar_num = prog.pix.sizel().isqrt().min(MAX_BARS);
     let bnf = bar_num as f32;
     let bnf_recip = 1.0 / bnf;
     let _l = stream.len();

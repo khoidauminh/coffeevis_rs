@@ -295,18 +295,19 @@ impl<T: Pixel> PixelBuffer<T> {
 
         let index_start = self.field * dst_width;
 
-        let out_buffer = &mut self.out_buffer[index_start..index_start + dest.len()];
+        if let Some(out_buffer) = self
+            .out_buffer
+            .get_mut(index_start..index_start + dest.len())
+        {
+            self.buffer
+                .chunks_exact(self.width)
+                .zip(out_buffer.chunks_exact_mut(dst_width).step_by(scale))
+                .flat_map(|(src_row, dst_row)| src_row.iter().zip(dst_row.chunks_exact_mut(scale)))
+                .for_each(|(src_pixel, dst_chunk)| {
+                    dst_chunk.fill(mixer(self.background, *src_pixel))
+                });
 
-        let src_rows = self.buffer.chunks_exact(self.width);
-        let dst_rows = out_buffer.chunks_exact_mut(dst_width).step_by(scale);
-
-        for (src_row, dst_row) in src_rows.zip(dst_rows) {
-            for (src_pixel, dst_chunk) in src_row.iter().zip(dst_row.chunks_exact_mut(scale)) {
-                let pixel = mixer(self.background, *src_pixel);
-                dst_chunk.fill(pixel);
-            }
+            dest.copy_from_slice(&out_buffer);
         }
-
-        dest.copy_from_slice(&out_buffer);
     }
 }

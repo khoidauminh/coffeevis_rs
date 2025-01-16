@@ -74,17 +74,10 @@ pub fn draw_rect_xy_by<T: Pixel>(
     let lines = canvas
         .chunks_exact_mut(cwidth)
         .skip(ys)
-        .take(ye.saturating_sub(ys).wrapping_add(1));
-
-    for line in lines {
-        let Some(chunk) = line.get_mut(xs..xe) else {
-            return;
-        };
-
-        for p in chunk {
-            *p = b(*p, c);
-        }
-    }
+        .take(ye.saturating_sub(ys).wrapping_add(1))
+        .flat_map(|l| l.get_mut(xs..xe))
+        .flatten()
+        .for_each(|p| *p = b(*p, c));
 }
 
 pub fn fade<T: Pixel>(
@@ -126,6 +119,7 @@ pub fn draw_rect_wh_by<T: Pixel>(
         ps.x.wrapping_add(w as i32),
         ps.y.wrapping_add(h as i32).wrapping_sub(1),
     );
+
     draw_rect_xy_by(canvas, cwidth, cheight, c, b, DrawParam::Rect { ps, pe });
 }
 
@@ -156,6 +150,7 @@ pub fn draw_line_by<T: Pixel>(
         if p.x == pe.x && p.y == pe.y {
             return;
         }
+
         let e2 = error * 2;
 
         if e2 >= dy {
@@ -212,11 +207,12 @@ pub fn draw_cirle_by<T: Pixel>(
             (y, -x),
         ];
 
-        for coord_pair in coords.chunks_exact(2) {
-            let c1 = coord_pair[0];
-            let c2 = coord_pair[1];
+        if filled {
+            coords.chunks_exact(2).for_each(|pair| {
+                let [c1, c2] = pair[0..2] else {
+                    return;
+                };
 
-            if filled {
                 let ps = P2::new(center.x + c1.0, center.y + c1.1);
                 let pe = P2::new(center.x + c2.0, center.y + c2.1);
 
@@ -228,20 +224,20 @@ pub fn draw_cirle_by<T: Pixel>(
                     b,
                     DrawParam::Rect { ps, pe },
                 );
-            } else {
-                for c in [c1, c2] {
-                    set_pixel_xy_by(
-                        canvas,
-                        cwidth,
-                        cheight,
-                        color,
-                        b,
-                        DrawParam::Plot {
-                            p: P2::new(center.x + c.0, center.y + c.1),
-                        },
-                    );
-                }
-            }
+            });
+        } else {
+            coords.iter().for_each(|c| {
+                set_pixel_xy_by(
+                    canvas,
+                    cwidth,
+                    cheight,
+                    color,
+                    b,
+                    DrawParam::Plot {
+                        p: P2::new(center.x + c.0, center.y + c.1),
+                    },
+                )
+            });
         }
     };
 

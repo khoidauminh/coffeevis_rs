@@ -148,7 +148,7 @@ impl ApplicationHandler for WindowState {
 
             WindowEvent::MouseInput { button, .. } => {
                 if button == event::MouseButton::Left {
-                    if let Err(err) = self.window.as_ref().map(|f| f.drag_window()).transpose() {
+                    if let Some(Err(err)) = self.window.as_ref().map(|f| f.drag_window()) {
                         self.prog
                             .print_message(format!("Error dragging window: {err}"));
                     }
@@ -290,10 +290,9 @@ impl WindowState {
     }
 
     fn check_refresh_rate(window: &Window, prog: &mut Program) {
-        let Some(mut milli_hz) = window
+        let Some(Some(mut milli_hz)) = window
             .current_monitor()
             .map(|m| m.refresh_rate_millihertz())
-            .flatten()
         else {
             prog.print_message("Coffeevis is unable to query your monitor's refresh rate.\n");
             return;

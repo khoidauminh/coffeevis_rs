@@ -129,7 +129,7 @@ impl Mul<Vec2<f32>> for f32 {
 
 impl<T> Vec2<T>
 where
-    T: std::default::Default + Copy + Mul<Output = T> + Add<Output = T> + Neg<Output = T>,
+    T: Default + Copy + Mul<Output = T> + Add<Output = T> + Neg<Output = T>,
 {
     pub fn one() -> Vec2<f32> {
         Vec2::<f32> { x: 1.0, y: 0.0 }
