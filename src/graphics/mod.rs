@@ -307,7 +307,7 @@ impl<T: Pixel> PixelBuffer<T> {
                     dst_chunk.fill(mixer(self.background, *src_pixel))
                 });
 
-            dest.copy_from_slice(&out_buffer);
+            dest.copy_from_slice(out_buffer);
         }
     }
 }

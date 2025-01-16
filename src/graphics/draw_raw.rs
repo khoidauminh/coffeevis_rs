@@ -71,7 +71,7 @@ pub fn draw_rect_xy_by<T: Pixel>(
 
     let xe = xe.min(cwidth);
 
-    let lines = canvas
+    canvas
         .chunks_exact_mut(cwidth)
         .skip(ys)
         .take(ye.saturating_sub(ys).wrapping_add(1))

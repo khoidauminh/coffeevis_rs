@@ -63,13 +63,11 @@ impl ApplicationHandler for WindowState {
 
         let win_size = LogicalSize::<u32>::new(size.0, size.1);
 
-        let icon = read_icon()
-            .map(|(w, h, v)| {
-                Icon::from_rgba(v, w, h)
-                    .inspect_err(|_| self.prog.print_message("Failed to create window icon.\n"))
-                    .ok()
-            })
-            .flatten();
+        let icon = read_icon().and_then(|(w, h, v)| {
+            Icon::from_rgba(v, w, h)
+                .inspect_err(|_| self.prog.print_message("Failed to create window icon.\n"))
+                .ok()
+        });
 
         let window_attributes = Window::default_attributes()
             .with_title("cvis")
@@ -333,10 +331,7 @@ fn read_icon() -> Option<(u32, u32, Vec<u8>)> {
 
     let &Header { width, height, .. } = icon.header();
 
-    icon.decode_to_vec()
-        .ok()
-        .map(|v| Some((width, height, v)))
-        .flatten()
+    icon.decode_to_vec().ok().map(|v| (width, height, v))
 }
 
 pub fn winit_main(prog: Program) {
