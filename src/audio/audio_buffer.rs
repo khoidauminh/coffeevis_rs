@@ -190,33 +190,19 @@ impl AudioBuffer {
         let mut silent_samples = 0;
         self.write_point = self.write_point_next;
 
-        macro_rules! write_func {
-            ($chunk:expr) => {
-                let smp = &mut self.buffer[self.write_point_next];
-                write_sample(smp, $chunk);
-                max = max.max(smp.x.abs()).max(smp.y.abs());
-                self.write_point_next = self.index_add(self.write_point_next, 1);
-            };
-        }
+        for chunk in data.chunks_exact(2) {
+            let smp = &mut self.buffer[self.write_point_next];
 
-        // Only check the first SILENCE_CHECK_SIZE samples
-        macro_rules! stop_func {
-            () => {
-                silent_samples += (max < SILENCE_LIMIT) as u8;
-                if silent_samples >= SILENCE_CHECK_SIZE {
-                    break;
-                }
-            };
-        }
+            write_sample(smp, chunk);
 
-        if stop_reading {
-            for chunk in data.chunks_exact(2) {
-                write_func!(chunk);
-                stop_func!();
-            }
-        } else {
-            for chunk in data.chunks_exact(2) {
-                write_func!(chunk);
+            max = max.max(smp.x.abs()).max(smp.y.abs());
+
+            self.write_point_next = self.index_add(self.write_point_next, 1);
+
+            silent_samples += (max < SILENCE_LIMIT) as u8;
+
+            if stop_reading && silent_samples >= SILENCE_CHECK_SIZE {
+                break;
             }
         }
 
@@ -256,7 +242,8 @@ impl AudioBuffer {
             self.buffer
                 .get_mut(self.write_point..self.write_point_next)
                 .iter_mut()
-                .for_each(|x| x.iter_mut().for_each(|x| *x *= scale_up_factor));
+                .flat_map(|x| x.iter_mut())
+                .for_each(|x| *x *= scale_up_factor);
         } else {
             self.buffer
                 .iter_mut()
