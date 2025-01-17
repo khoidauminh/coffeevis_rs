@@ -26,7 +26,6 @@ struct DrawCommand<T: Pixel> {
 pub struct PixelBuffer<T: Pixel> {
     out_buffer: Vec<T>,
     buffer: Vec<T>,
-    len: usize,
     width: usize,
     height: usize,
     field: usize,
@@ -159,7 +158,6 @@ impl<T: Pixel> PixelBuffer<T> {
             out_buffer: Vec::new(),
             buffer: vec![T::trans(); w * h],
             command: DrawCommandBuffer::new(),
-            len: w * h,
             width: w,
             height: h,
             field: FIELD_START,
@@ -193,7 +191,7 @@ impl<T: Pixel> PixelBuffer<T> {
     }
 
     pub fn sizel(&self) -> usize {
-        self.len
+        self.buffer.len()
     }
 
     pub fn sizet(&self) -> (i32, i32) {
@@ -211,7 +209,6 @@ impl<T: Pixel> PixelBuffer<T> {
         }
         self.width = w;
         self.height = h;
-        self.len = len;
     }
 
     pub fn update(&mut self) {
