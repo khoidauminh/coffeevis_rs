@@ -250,7 +250,7 @@ pub fn draw_oscilloscope2(prog: &mut crate::data::Program, stream: &mut crate::a
     let mut li = LOCALI.load(Relaxed);
     let random = math::rng::random_int(127) as usize;
 
-    li = (li + math::rng::faster_random_int(random, li, 3) + 3) % prog.pix.width();
+    li = (li + random + 3) % prog.pix.width();
 
     let rx = width - li as i32 - 1;
 
@@ -366,9 +366,9 @@ pub fn draw_oscilloscope3(prog: &mut crate::data::Program, stream: &mut crate::a
     }
 
     let mut li = LOCALI.load(Relaxed);
-    let random = math::rng::random_int(127) as usize;
+    let random = math::rng::random_int(3) as usize;
 
-    li = (li + math::rng::faster_random_int(random, li, 3) + 3) % prog.pix.width();
+    li = (li + random + 3) % prog.pix.width();
 
     let rx = width - li as i32 - 1;
 

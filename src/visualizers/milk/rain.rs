@@ -55,6 +55,7 @@ impl RainDrop {
     pub fn randomize_start(&mut self) {
         let wf = self.bound_width as f32;
         self.position.x = random_float(wf);
+        //dbg!(self.position.x);
         self.fall_amount = 0.5 + random_int(128) as f32 * 0.02;
         self.position.y = 0.0;
     }
