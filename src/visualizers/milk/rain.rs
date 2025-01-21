@@ -1,3 +1,4 @@
+use core::f32;
 use std::sync::Mutex;
 
 use crate::{
@@ -47,7 +48,10 @@ impl RainDrop {
             length,
             bound_width: size.x as u16,
             bound_height: size.y as u16 + length,
-            position: Cplx { x: 0.0, y: 0.0 },
+            position: Cplx {
+                x: 0.0,
+                y: f32::MAX,
+            },
             fall_amount: fall,
         }
     }
@@ -106,9 +110,6 @@ const DEFAULT_BOUND: P2 = P2 {
 
 // static mut drop: RainDrop = RainDrop::new(0xFF_FF_FF_FF, 8, 0.2, DEFAULT_SIZE_WIN as usize, DEFAULT_SIZE_WIN as usize);
 
-use std::sync::Once;
-static START: Once = Once::new();
-
 pub fn draw(prog: &mut Program, stream: &mut SampleArr) {
     static LIST_OF_DROPS: Mutex<[RainDrop; NUM_OF_DROPS]> =
         Mutex::new([RainDrop::new(0xFF_FF_FF_FF, 8, 0.2, DEFAULT_BOUND); NUM_OF_DROPS]);
@@ -119,16 +120,10 @@ pub fn draw(prog: &mut Program, stream: &mut SampleArr) {
         return;
     };
 
-    START.call_once(|| {
-        for drop in list.iter_mut() {
-            drop.randomize_start();
-        }
-    });
-
     let mut new_volume: f32 = 0.0;
     {
-        let mut y: f32 = stream[0usize].into();
-        for i in 1..200usize {
+        let mut y: f32 = stream[0].into();
+        for i in 1..200 {
             y = y + 0.25 * (stream[i].max() - y);
             new_volume += y;
         }

@@ -12,9 +12,9 @@ pub fn cos_norm(x: f32) -> f32 {
     x.cos()
 }
 
-pub fn bit_reverse(n: usize, power: usize) -> usize {
+pub fn bit_reverse(n: usize, power: u32) -> usize {
     n.reverse_bits()
-        .wrapping_shr(usize::BITS.wrapping_sub(power as u32))
+        .wrapping_shr(usize::BITS.wrapping_sub(power))
 }
 
 pub fn cubed_sqrt(x: f32) -> f32 {
@@ -30,6 +30,6 @@ pub fn unit_exp2(x: f32) -> f32 {
     unit_exp2_0(x) + 1.0
 }
 
-pub const fn ilog2(x: usize) -> usize {
-    usize::BITS.wrapping_sub(x.wrapping_shr(1).leading_zeros()) as usize
+pub const fn ilog2(x: usize) -> u32 {
+    usize::BITS.wrapping_sub(x.wrapping_shr(1).leading_zeros())
 }

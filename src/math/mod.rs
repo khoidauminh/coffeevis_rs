@@ -5,14 +5,8 @@ mod vec2;
 
 use std::ops;
 
-pub use std::f32::consts::FRAC_PI_2 as PIH;
-pub use std::f32::consts::TAU;
-
-pub const TAU_RECIP: f32 = 1.0 / TAU;
-pub const ZERO: Cplx = Cplx { x: 0.0, y: 0.0 };
-
-#[derive(Copy, Clone, Debug, Default)]
-pub struct Vec2<T: Copy + Clone> {
+#[derive(Copy, Clone)]
+pub struct Vec2<T> {
     pub x: T,
     pub y: T,
 }
@@ -25,14 +19,6 @@ pub trait ToUsize<T> {
 
 pub const fn ideal_fft_bound(up_to: usize) -> usize {
     (up_to * 3 / 2).next_power_of_two() * 2
-}
-
-pub fn larger_or_equal_pw2(x: usize) -> usize {
-    if x.is_power_of_two() {
-        x
-    } else {
-        x.next_power_of_two()
-    }
 }
 
 pub fn fft_stereo(a: &mut [Cplx], up_to: usize, norm: bool) {

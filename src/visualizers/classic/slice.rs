@@ -1,6 +1,6 @@
 use crate::graphics::{blend::Blend, P2};
-use crate::math::{cos_sin, interpolate::linearf, Cplx, TAU};
-use std::f32::consts::PI;
+use crate::math::{cos_sin, interpolate::linearf, Cplx};
+use std::f32::consts::{PI, TAU};
 use std::sync::Mutex;
 
 static ANGLE_AMP: Mutex<(f32, f32)> = Mutex::new((0.0f32, 0.0f32));

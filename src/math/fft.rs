@@ -1,6 +1,6 @@
 use super::Cplx;
 
-pub fn butterfly<T>(a: &mut [T], power: usize) {
+pub fn butterfly<T>(a: &mut [T], power: u32) {
     // first and last element stays in place
     for i in 1..a.len() - 1 {
         let ni = super::fast::bit_reverse(i, power);

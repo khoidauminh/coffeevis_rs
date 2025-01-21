@@ -1,3 +1,5 @@
+use std::{f32::consts::FRAC_PI_2, sync::Mutex};
+
 use crate::graphics::blend::Blend;
 use crate::math::{self, fast, Cplx};
 
@@ -14,7 +16,7 @@ struct LocalData {
     y: i32,
 }
 
-static DATA: std::sync::Mutex<LocalData> = std::sync::Mutex::new(LocalData {
+static DATA: Mutex<LocalData> = Mutex::new(LocalData {
     i: 0.0,
     js: 0.0,
     jc: 0.0,
@@ -54,7 +56,7 @@ pub fn draw_shaky(prog: &mut crate::data::Program, stream: &mut crate::audio::Sa
     let amplitude_scaled = amplitude * 0.00000002;
 
     localdata.js = (localdata.js + amplitude_scaled) % 2.0;
-    localdata.jc = (localdata.jc + amplitude_scaled * crate::math::PIH) % 2.0;
+    localdata.jc = (localdata.jc + amplitude_scaled * FRAC_PI_2) % 2.0;
 
     localdata.xshake = (smooth_amplitude) * fast::cos_norm(fast::wrap(localdata.jc));
     localdata.yshake = (smooth_amplitude) * fast::sin_norm(fast::wrap(localdata.js));
