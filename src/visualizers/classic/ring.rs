@@ -1,4 +1,4 @@
-use crate::graphics::{blend::Blend, P2};
+use crate::graphics::{Pixel, P2};
 use crate::math::Cplx;
 
 pub fn draw_ring(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {

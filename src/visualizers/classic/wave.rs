@@ -1,4 +1,4 @@
-use crate::graphics::{blend::Blend, P2};
+use crate::graphics::{Pixel, P2};
 
 const PERBYTE: usize = 16; // like percent but ranges from 0..256
 

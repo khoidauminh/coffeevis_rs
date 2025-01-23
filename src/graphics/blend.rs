@@ -1,42 +1,7 @@
 pub type Mixer<T> = fn(T, T) -> T;
 pub type Argb = u32;
 
-use std::ops;
-
-pub(crate) trait Blend:
-    Sized
-    + ops::BitAnd<Output = Self>
-    + ops::BitOr<Output = Self>
-    + ops::Shl<Output = Self>
-    + ops::Shr<Output = Self>
-    + ops::Add<Output = Self>
-    + ops::Sub<Output = Self>
-    + ops::Mul<Output = Self>
-{
-    fn over(self, other: Self) -> Self;
-    fn mix(self, other: Self) -> Self;
-    fn add(self, other: Self) -> Self;
-    fn sub(self, other: Self) -> Self;
-
-    fn grayb(self) -> u8;
-
-    fn premultiply(self) -> Self;
-
-    fn copy_alpha(self, other: Self) -> Self;
-
-    fn mul_alpha(self, a: u8) -> Self;
-
-    fn blend(self, other: Self) -> Self;
-
-    fn sub_by_alpha(self, other: u8) -> Self;
-
-    fn set_alpha(self, alpha: u8) -> Self;
-
-    fn or(self, other: Self) -> Self;
-    fn fade(self, alpha: u8) -> Self;
-    fn decompose(self) -> [u8; 4];
-    fn compose(array: [u8; 4]) -> Self;
-}
+use super::Pixel;
 
 pub fn grayb(r: u8, g: u8, b: u8) -> u8 {
     ((r as u16 + g as u16 + 2 * b as u16) / 4) as u8
@@ -74,7 +39,23 @@ pub fn channel_add(x: u8, y: u8, a: u8) -> u8 {
     x.saturating_add(u8_mul(y, a))
 }
 
-impl Blend for Argb {
+impl Pixel for Argb {
+    fn black() -> Argb {
+        0xFF_00_00_00
+    }
+
+    fn white() -> Argb {
+        0xFF_FF_FF_FF
+    }
+
+    fn trans() -> Argb {
+        0x0
+    }
+
+    fn from(x: u32) -> Argb {
+        x
+    }
+
     fn blend(self, other: u32) -> u32 {
         self.over(other)
     }
@@ -165,7 +146,23 @@ impl Blend for Argb {
     }
 }
 
-impl Blend for u8 {
+impl Pixel for u8 {
+    fn black() -> Self {
+        0
+    }
+
+    fn white() -> Self {
+        0xFF
+    }
+
+    fn trans() -> Self {
+        0
+    }
+
+    fn from(x: u32) -> Self {
+        x as u8
+    }
+
     fn blend(self, other: Self) -> Self {
         other
     }

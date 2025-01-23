@@ -2,7 +2,7 @@ use std::f32::consts::LN_2;
 
 use std::sync::{Mutex, MutexGuard};
 
-use crate::graphics::{blend::Blend, P2};
+use crate::graphics::{Pixel, P2};
 use crate::math::{self, interpolate::*, Cplx};
 
 const FFT_SIZE: usize = crate::data::FFT_SIZE / 2;

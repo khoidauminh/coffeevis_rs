@@ -1,4 +1,4 @@
-use crate::graphics::{blend::Blend, P2};
+use crate::graphics::{Pixel, P2};
 use crate::math::{cos_sin, interpolate::linearf, Cplx};
 use std::f32::consts::{PI, TAU};
 use std::sync::Mutex;

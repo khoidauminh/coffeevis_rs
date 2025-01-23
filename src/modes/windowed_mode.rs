@@ -21,7 +21,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use crate::graphics::blend::Blend;
+use crate::graphics::Pixel;
 use crate::{audio::get_no_sample, data::*};
 
 type WindowSurface = Surface<&'static Window, &'static Window>;

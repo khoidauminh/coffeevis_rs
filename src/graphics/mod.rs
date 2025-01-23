@@ -3,17 +3,54 @@ pub mod blend;
 pub mod draw_raw;
 
 use crate::data::MAX_WIDTH;
-use blend::{Blend, Mixer};
+use blend::Mixer;
 use draw_raw::*;
 
 const FIELD_START: usize = 64;
 const COMMAND_BUFFER_INIT_CAPACITY: usize = MAX_WIDTH as usize;
 
-pub(crate) trait Pixel: Copy + Clone + Blend + Sized {
+use std::ops;
+
+pub(crate) trait Pixel:
+    Copy
+    + Clone
+    + Sized
+    + ops::BitAnd<Output = Self>
+    + ops::BitOr<Output = Self>
+    + ops::Shl<Output = Self>
+    + ops::Shr<Output = Self>
+    + ops::Add<Output = Self>
+    + ops::Sub<Output = Self>
+    + ops::Mul<Output = Self>
+{
     fn black() -> Self;
     fn white() -> Self;
     fn trans() -> Self;
     fn from(x: u32) -> Self;
+
+    fn over(self, other: Self) -> Self;
+    fn mix(self, other: Self) -> Self;
+    fn add(self, other: Self) -> Self;
+    fn sub(self, other: Self) -> Self;
+
+    fn grayb(self) -> u8;
+
+    fn premultiply(self) -> Self;
+
+    fn copy_alpha(self, other: Self) -> Self;
+
+    fn mul_alpha(self, a: u8) -> Self;
+
+    fn blend(self, other: Self) -> Self;
+
+    fn sub_by_alpha(self, other: u8) -> Self;
+
+    fn set_alpha(self, alpha: u8) -> Self;
+
+    fn or(self, other: Self) -> Self;
+    fn fade(self, alpha: u8) -> Self;
+    fn decompose(self) -> [u8; 4];
+    fn compose(array: [u8; 4]) -> Self;
 }
 
 struct DrawCommand<T: Pixel> {
@@ -37,42 +74,6 @@ pub struct PixelBuffer<T: Pixel> {
 
 pub(crate) type Canvas = PixelBuffer<u32>;
 pub(crate) type P2 = crate::math::Vec2<i32>;
-
-impl Pixel for u32 {
-    fn black() -> Self {
-        0xFF_00_00_00
-    }
-
-    fn white() -> Self {
-        0xFF_FF_FF_FF
-    }
-
-    fn trans() -> Self {
-        0x0
-    }
-
-    fn from(x: u32) -> Self {
-        x
-    }
-}
-
-impl Pixel for u8 {
-    fn black() -> Self {
-        0
-    }
-
-    fn white() -> Self {
-        0xFF
-    }
-
-    fn trans() -> Self {
-        0
-    }
-
-    fn from(x: u32) -> Self {
-        x as u8
-    }
-}
 
 macro_rules! make_draw_func {
     ($fn_name:ident, $func:ident, $param_struct:ident $(, $param:ident: $type:ty)*) => {
@@ -107,7 +108,7 @@ impl<T: Pixel> DrawCommandBuffer<T> {
             func: fill,
             param: DrawParam::Fill {},
             color: c,
-            blending: Blend::over,
+            blending: Pixel::over,
         });
     }
 
@@ -116,7 +117,7 @@ impl<T: Pixel> DrawCommandBuffer<T> {
             func: fade,
             param: DrawParam::Fade { a },
             color: T::trans(),
-            blending: Blend::over,
+            blending: Pixel::over,
         });
     }
 

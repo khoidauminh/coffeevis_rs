@@ -1,5 +1,5 @@
 use crate::data::SAMPLE_SIZE;
-use crate::graphics::blend::Blend;
+use crate::graphics::Pixel;
 use crate::graphics::P2;
 use crate::math::fast::sin_norm;
 use std::sync::Mutex;

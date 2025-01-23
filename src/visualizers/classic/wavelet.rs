@@ -1,6 +1,6 @@
 use crate::{
     data::DEFAULT_ROTATE_SIZE,
-    graphics::{blend::Blend, Canvas, P2},
+    graphics::{Canvas, Pixel, P2},
     math::Cplx,
 };
 

@@ -17,7 +17,7 @@ use crate::{
     audio::get_no_sample,
     data::*,
     graphics::{
-        blend::{grayb, Argb, Blend},
+        blend::{grayb, Argb},
         Pixel,
     },
     modes::Mode,

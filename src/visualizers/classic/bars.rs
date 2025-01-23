@@ -1,7 +1,7 @@
 use std::sync::Mutex;
 
 use crate::data::FFT_SIZE;
-use crate::graphics::{blend::Blend, P2};
+use crate::graphics::{Pixel, P2};
 use crate::math::{self, Cplx};
 
 const COLOR: [u32; 3] = [0x66ff66, 0xaaffff, 0xaaaaff];

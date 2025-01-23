@@ -3,7 +3,7 @@ use std::sync::{
     Mutex,
 };
 
-use crate::graphics::blend::Blend;
+use crate::graphics::Pixel;
 
 use smallvec::SmallVec;
 

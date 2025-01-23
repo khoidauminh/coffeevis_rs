@@ -1,6 +1,6 @@
 use std::{f32::consts::FRAC_PI_2, sync::Mutex};
 
-use crate::graphics::blend::Blend;
+use crate::graphics::Pixel;
 use crate::math::{self, fast, Cplx};
 
 // soft shaking

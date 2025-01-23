@@ -1,5 +1,5 @@
 use crate::data::SAMPLE_SIZE;
-use crate::graphics::blend::Blend;
+use crate::graphics::Pixel;
 use crate::math::{interpolate::linearf, Cplx};
 
 struct LocalData {
