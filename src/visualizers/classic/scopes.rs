@@ -3,6 +3,8 @@ use std::sync::{
     Mutex,
 };
 
+use crate::graphics::blend::Blend;
+
 use smallvec::SmallVec;
 
 use crate::audio::MovingAverage;
@@ -55,9 +57,10 @@ pub fn draw_vectorscope(prog: &mut crate::data::Program, stream: &mut crate::aud
         let y = (sample.y * scale) as i32;
         let amp = (x.abs() + y.abs()) * 3 / 2;
 
-        prog.pix.set_pixel_xy(
+        prog.pix.command.plot(
             P2::new(x + width_top_h, y + height_top_h),
             u32::from_be_bytes([255, to_color(amp, sizei), 255, 64]),
+            u32::mix,
         );
 
         di += INCREMENT;
@@ -150,25 +153,29 @@ pub fn draw_oscilloscope(prog: &mut crate::data::Program, stream: &mut crate::au
 
         let x = x - 4;
         prog.pix
-            .set_pixel_xy_by(P2::new(x, y1), 0xFF_55_FF_55, |a, b| a | b);
+            .command
+            .plot(P2::new(x, y1), 0xFF_55_FF_55, |a, b| a | b);
         prog.pix
-            .set_pixel_xy_by(P2::new(x, y2), 0xFF_55_55_FF, |a, b| a | b);
+            .command
+            .plot(P2::new(x, y2), 0xFF_55_55_FF, |a, b| a | b);
     }
 
     let li = (LOCALI.load(Relaxed) + prog.pix.width() * 3 / 2 + 1) % prog.pix.width();
 
-    prog.pix.draw_rect_wh(
+    prog.pix.command.rect_wh(
         P2::new(li as i32, height / 10),
         1,
         prog.pix.height() - prog.pix.height() / 4,
         CROSS_COL,
+        u32::mix,
     );
 
-    prog.pix.draw_rect_wh(
+    prog.pix.command.rect_wh(
         P2::new(li as i32, height / 2),
         prog.pix.width() >> 3,
         1,
         CROSS_COL,
+        u32::mix,
     );
 
     stream.rotate_left(200);
@@ -242,9 +249,11 @@ pub fn draw_oscilloscope2(prog: &mut crate::data::Program, stream: &mut crate::a
         let x = x - 4;
 
         prog.pix
-            .set_pixel_xy_by(P2::new(x, y1), 0xFF_55_FF_55, |a, b| a | b);
+            .command
+            .plot(P2::new(x, y1), 0xFF_55_FF_55, |a, b| a | b);
         prog.pix
-            .set_pixel_xy_by(P2::new(x, y2), 0xFF_55_55_FF, |a, b| a | b);
+            .command
+            .plot(P2::new(x, y2), 0xFF_55_55_FF, |a, b| a | b);
     }
 
     let mut li = LOCALI.load(Relaxed);
@@ -254,15 +263,21 @@ pub fn draw_oscilloscope2(prog: &mut crate::data::Program, stream: &mut crate::a
 
     let rx = width - li as i32 - 1;
 
-    prog.pix.draw_rect_wh(
+    prog.pix.command.rect_wh(
         P2::new(rx, height / 10),
         1,
         prog.pix.height() - prog.pix.height() / 4,
         CROSS_COL,
+        u32::mix,
     );
 
-    prog.pix
-        .draw_rect_wh(P2::new(rx, height / 2), prog.pix.width() >> 3, 1, CROSS_COL);
+    prog.pix.command.rect_wh(
+        P2::new(rx, height / 2),
+        prog.pix.width() >> 3,
+        1,
+        CROSS_COL,
+        u32::mix,
+    );
 
     stream.rotate_left(zeroi);
     LOCALI.store(li, Relaxed);
@@ -360,9 +375,11 @@ pub fn draw_oscilloscope3(prog: &mut crate::data::Program, stream: &mut crate::a
         let p2_min = P2::new(x, y2_min);
 
         prog.pix
-            .draw_line_by(p1_max, p1_min, 0xFF_55_FF_55, |a, b| a | b);
+            .command
+            .line(p1_max, p1_min, 0xFF_55_FF_55, |a, b| a | b);
         prog.pix
-            .draw_line_by(p2_max, p2_min, 0xFF_55_55_FF, |a, b| a | b);
+            .command
+            .line(p2_max, p2_min, 0xFF_55_55_FF, |a, b| a | b);
     }
 
     let mut li = LOCALI.load(Relaxed);
@@ -372,15 +389,21 @@ pub fn draw_oscilloscope3(prog: &mut crate::data::Program, stream: &mut crate::a
 
     let rx = width - li as i32 - 1;
 
-    prog.pix.draw_rect_wh(
+    prog.pix.command.rect_wh(
         P2::new(rx, height / 10),
         1,
         prog.pix.height() - prog.pix.height() / 4,
         CROSS_COL,
+        u32::max,
     );
 
-    prog.pix
-        .draw_rect_wh(P2::new(rx, height / 2), prog.pix.width() >> 3, 1, CROSS_COL);
+    prog.pix.command.rect_wh(
+        P2::new(rx, height / 2),
+        prog.pix.width() >> 3,
+        1,
+        CROSS_COL,
+        u32::mix,
+    );
 
     LOCALI.store(li, Relaxed);
 

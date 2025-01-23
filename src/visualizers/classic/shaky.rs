@@ -68,7 +68,7 @@ pub fn draw_shaky(prog: &mut crate::data::Program, stream: &mut crate::audio::Sa
     localdata.jc += 0.01;
     localdata.i = (localdata.i + INCR + amplitude_scaled) % 1.0;
 
-    prog.pix.fade(4);
+    prog.pix.command.fade(4);
 
     let (x_soft_shake, y_soft_shake) = diamond_func(8.0, 1.0, localdata.i);
 
@@ -82,11 +82,12 @@ pub fn draw_shaky(prog: &mut crate::data::Program, stream: &mut crate::audio::Sa
     let blue = 255i32.saturating_sub(final_y.abs() * 5) as u8;
     let green = (amplitude * 0.0001) as u8;
 
-    prog.pix.draw_rect_wh(
+    prog.pix.command.rect_wh(
         crate::graphics::P2::new(final_x + width / 2 - 1, final_y + height / 2 - 1),
         3,
         3,
         u32::compose([0xFF, red, green, blue]),
+        u32::mix,
     );
 }
 

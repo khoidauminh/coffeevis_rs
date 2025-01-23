@@ -146,7 +146,7 @@ pub fn draw_bars(prog: &mut crate::data::Program, stream: &mut crate::audio::Sam
         let peak = (bar * 255 / prog.pix.height()) as u8;
         let _red = (fade.wrapping_mul(2) / 3).saturating_add(128).max(peak);
 
-        prog.pix.draw_rect_wh(
+        prog.pix.command.rect_wh(
             P2::new(
                 (prog.pix.width() * idx / bar_num) as i32,
                 (prog.pix.height() - bar.min(prog.pix.height() - 1)) as i32,
@@ -154,6 +154,7 @@ pub fn draw_bars(prog: &mut crate::data::Program, stream: &mut crate::audio::Sam
             2,
             bar,
             u32::from_be_bytes([0xFF, 0xFF, (fade).max(peak), 0]),
+            u32::mix,
         );
 
         smoothed_smp = 0.0;
@@ -220,6 +221,6 @@ pub fn draw_bars_circle(prog: &mut crate::data::Program, stream: &mut crate::aud
         let b: u8 = 0xFF;
         let c = u32::compose([0xFF, r, g, b]);
 
-        prog.pix.draw_line(p1, p2, c);
+        prog.pix.command.line(p1, p2, c, u32::mix);
     }
 }

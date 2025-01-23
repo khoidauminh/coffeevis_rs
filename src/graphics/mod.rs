@@ -1,5 +1,5 @@
 pub mod blend;
-pub mod draw;
+//pub mod draw;
 pub mod draw_raw;
 
 use crate::data::MAX_WIDTH;
@@ -23,17 +23,17 @@ struct DrawCommand<T: Pixel> {
     pub blending: Mixer<T>,
 }
 
+pub struct DrawCommandBuffer<T: Pixel>(Vec<DrawCommand<T>>);
+
 pub struct PixelBuffer<T: Pixel> {
     out_buffer: Vec<T>,
     buffer: Vec<T>,
     width: usize,
     height: usize,
     field: usize,
-    command: DrawCommandBuffer<T>,
     background: T,
+    pub command: DrawCommandBuffer<T>,
 }
-
-struct DrawCommandBuffer<T: Pixel>(Vec<DrawCommand<T>>);
 
 pub(crate) type Canvas = PixelBuffer<u32>;
 pub(crate) type P2 = crate::math::Vec2<i32>;
@@ -74,24 +74,16 @@ impl Pixel for u8 {
     }
 }
 
-impl<T: Pixel> DrawCommand<T> {
-    pub fn new(func: DrawFunction<T>, param: DrawParam, color: T, blending: Mixer<T>) -> Self {
-        Self {
-            func,
-            param,
-            color,
-            blending,
+macro_rules! make_draw_func {
+    ($fn_name:ident, $func:ident, $param_struct:ident $(, $param:ident: $type:ty)*) => {
+        pub fn $fn_name(&mut self, $($param: $type), *, c: T, b: Mixer<T>) {
+           	self.0.push(DrawCommand {
+          		func: $func,
+          		param: DrawParam::$param_struct{ $($param), * },
+          		color: c,
+          		blending: b
+           	});
         }
-    }
-}
-
-macro_rules! command {
-	($c:expr, $b:expr, $func:ident, $name:ident) => {
-		DrawCommand::new($func, DrawParam::$name{}, $c, $b)
-	};
-
-	($c:expr, $b:expr, $func:ident, $name:ident, $($e:ident),+) => {
-		DrawCommand::new($func, DrawParam::$name{ $($e), + }, $c, $b)
 	}
 }
 
@@ -100,41 +92,32 @@ impl<T: Pixel> DrawCommandBuffer<T> {
         Self(Vec::with_capacity(COMMAND_BUFFER_INIT_CAPACITY))
     }
 
-    pub fn rect(&mut self, ps: P2, pe: P2, c: T, b: Mixer<T>) {
-        self.0.push(command!(c, b, draw_rect_xy_by, Rect, ps, pe));
-    }
-
-    pub fn rect_wh(&mut self, ps: P2, w: usize, h: usize, c: T, b: Mixer<T>) {
-        self.0
-            .push(command!(c, b, draw_rect_wh_by, RectWh, ps, w, h));
-    }
-
-    pub fn line(&mut self, ps: P2, pe: P2, c: T, b: Mixer<T>) {
-        self.0.push(command!(c, b, draw_line_by, Line, ps, pe));
-    }
-
-    pub fn plot(&mut self, p: P2, c: T, b: Mixer<T>) {
-        self.0.push(command!(c, b, set_pixel_xy_by, Plot, p));
-    }
-
-    pub fn plot_index(&mut self, i: usize, c: T, b: Mixer<T>) {
-        self.0.push(command!(c, b, set_pixel_by, PlotIdx, i));
-    }
+    make_draw_func!(rect, draw_rect_xy_by, Rect, ps: P2, pe: P2);
+    make_draw_func!(rect_wh, draw_rect_wh_by, RectWh, ps: P2, w: usize, h: usize);
+    make_draw_func!(line, draw_line_by, Line, ps: P2, pe: P2);
+    make_draw_func!(plot, set_pixel_xy_by, Plot, p: P2);
+    make_draw_func!(plot_index, set_pixel_by, PlotIdx, i: usize);
+    make_draw_func!(circle, draw_cirle_by, Circle, p: P2, r: i32, f: bool);
 
     pub fn fill(&mut self, c: T) {
         // Discards all previous commands since this
         // fill overwrites the entire buffer.
         self.0.clear();
-        self.0.push(command!(c, Blend::over, fill, Fill));
-    }
-
-    pub fn circle(&mut self, p: P2, r: i32, f: bool, c: T, b: Mixer<T>) {
-        self.0.push(command!(c, b, draw_cirle_by, Circle, p, r, f));
+        self.0.push(DrawCommand {
+            func: fill,
+            param: DrawParam::Fill {},
+            color: c,
+            blending: Blend::over,
+        });
     }
 
     pub fn fade(&mut self, a: u8) {
-        self.0
-            .push(command!(T::trans(), Blend::over, fade, Fade, a));
+        self.0.push(DrawCommand {
+            func: fade,
+            param: DrawParam::Fade { a },
+            color: T::trans(),
+            blending: Blend::over,
+        });
     }
 
     pub fn execute(&mut self, canvas: &mut [T], cwidth: usize, cheight: usize) {

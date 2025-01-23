@@ -1,4 +1,4 @@
-use crate::graphics::P2;
+use crate::graphics::{blend::Blend, P2};
 
 const PERBYTE: usize = 16; // like percent but ranges from 0..256
 
@@ -14,11 +14,12 @@ pub fn draw_wave(para: &mut crate::data::Program, stream: &mut crate::audio::Sam
         let b: u8 = (smp.y * 144.0 + 128.0) as u8;
         let g: u8 = ((r as u16 + b as u16) / 2) as u8;
 
-        para.pix.draw_rect_wh(
+        para.pix.command.rect_wh(
             P2::new(x as i32, 0),
             1,
             para.pix.height(),
             u32::from_be_bytes([b, r, g, b]),
+            u32::mix,
         );
     }
 

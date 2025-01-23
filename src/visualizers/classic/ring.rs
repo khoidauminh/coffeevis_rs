@@ -1,4 +1,4 @@
-use crate::graphics::P2;
+use crate::graphics::{blend::Blend, P2};
 use crate::math::Cplx;
 
 pub fn draw_ring(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
@@ -30,7 +30,7 @@ pub fn draw_ring(prog: &mut crate::data::Program, stream: &mut crate::audio::Sam
 
         let int = (smp.l1_norm() * 128.0) as u8;
 
-        prog.pix.set_pixel_xy(
+        prog.pix.command.plot(
             P2::new(x / 2 + width_top_h, y / 2 + height_top_h),
             u32::from_be_bytes([
                 255,
@@ -38,6 +38,7 @@ pub fn draw_ring(prog: &mut crate::data::Program, stream: &mut crate::audio::Sam
                 255,
                 ((128 + y.abs() * 64 / size) as u8).saturating_add(int),
             ]),
+            u32::mix,
         );
     }
 

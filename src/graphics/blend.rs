@@ -3,7 +3,7 @@ pub type Argb = u32;
 
 use std::ops;
 
-pub trait Blend:
+pub(crate) trait Blend:
     Sized
     + ops::BitAnd<Output = Self>
     + ops::BitOr<Output = Self>

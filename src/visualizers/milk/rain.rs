@@ -94,7 +94,7 @@ impl RainDrop {
         while current_length > 0 && p.y >= 0 {
             let fade = current_length * 256 / self.length;
             let fade = fade as u8;
-            canvas.set_pixel_xy(p, self.color.fade(fade));
+            canvas.command.plot(p, self.color.fade(fade), u32::over);
             p.y -= 1;
             current_length -= 1;
         }
@@ -133,7 +133,7 @@ pub fn draw(prog: &mut Program, stream: &mut SampleArr) {
     *old = crate::math::interpolate::linearf(*old, new_volume, 0.2);
 
     let blue = 0.7 - *old * 0.005;
-    prog.pix.fill(u32::from_be_bytes([
+    prog.pix.command.fill(u32::from_be_bytes([
         0xFF,
         0,
         (119.0 * blue) as u8,

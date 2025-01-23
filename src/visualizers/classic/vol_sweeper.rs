@@ -1,4 +1,5 @@
 use crate::data::SAMPLE_SIZE;
+use crate::graphics::blend::Blend;
 use crate::graphics::P2;
 use crate::math::fast::sin_norm;
 use std::sync::Mutex;
@@ -16,7 +17,7 @@ static DATA: Mutex<LocalData> = Mutex::new(LocalData {
 });
 
 pub fn draw_vol_sweeper(para: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
-    para.pix.fade(3);
+    para.pix.command.fade(3);
 
     let w = {
         let mut sum = 0.0;
@@ -36,10 +37,16 @@ pub fn draw_vol_sweeper(para: &mut crate::data::Program, stream: &mut crate::aud
 
     let mut local = DATA.lock().unwrap();
 
+    para.pix.command.rect_wh(
+        P2::new(0, local.sweepi as i32),
+        para.pix.width(),
+        1,
+        0,
+        u32::mix,
+    );
     para.pix
-        .draw_rect_wh(P2::new(0, local.sweepi as i32), para.pix.width(), 1, 0);
-    para.pix
-        .draw_rect_wh(P2::new(0, local.sweepi as i32), w, 1, color);
+        .command
+        .rect_wh(P2::new(0, local.sweepi as i32), w, 1, color, u32::mix);
 
     match (local.sweepi >= para.pix.height(), local.pong) {
         (false, true) => local.sweepi = local.sweepi.wrapping_add(1),

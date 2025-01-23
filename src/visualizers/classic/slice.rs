@@ -66,7 +66,7 @@ pub fn draw_slice(prog: &mut crate::data::Program, stream: &mut crate::audio::Sa
 
         let p = P2::new(center.x + x as i32, center.y + y as i32);
 
-        prog.pix.draw_line_by(center, p, color, blend);
+        prog.pix.command.line(center, p, color, blend);
 
         o += d;
     }
@@ -74,7 +74,8 @@ pub fn draw_slice(prog: &mut crate::data::Program, stream: &mut crate::audio::Sa
     mt.0 = new_angle % TAU;
 
     prog.pix
-        .draw_circle_by(center, small_radius, true, 0xFF_FF_FF_FF, u32::over);
+        .command
+        .circle(center, small_radius, true, 0xFF_FF_FF_FF, u32::over);
 
     stream.auto_rotate();
 }

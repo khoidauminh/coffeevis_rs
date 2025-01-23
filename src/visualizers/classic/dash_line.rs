@@ -20,11 +20,12 @@ pub fn draw_dash_line(
 
         for i in 0..para.pix.width() {
             let index = (i / 10 + i) % stream.len();
-            para.pix.draw_rect_wh(
+            para.pix.command.rect_wh(
                 P2::new(i, o),
                 2,
                 2,
                 C | (((stream[index].y * 32784.0 % 256.0) as u32) << 24),
+                |_, y| y,
             );
         }
     } else {
@@ -36,11 +37,12 @@ pub fn draw_dash_line(
 
         for i in 0..para.pix.height() {
             let index = (i / 10 + i) % stream.len();
-            para.pix.draw_rect_wh(
+            para.pix.command.rect_wh(
                 P2::new(o, i),
                 2,
                 2,
                 C | (((stream[index].y * 32784.0 % 256.0) as u32) << 24),
+                |_, y| y,
             );
         }
     }
