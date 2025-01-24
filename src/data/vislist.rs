@@ -18,29 +18,7 @@ macro_rules! define_visualizer_struct {
     };
 }
 
-#[macro_export]
-macro_rules! define_visualizer {
-    ($func_name:ident, $func_body:block) => {
-        pub fn $func_name(prog: &mut $crate::data::Program, stream: &mut $crate::audio::SampleArr) {
-            $func_body
-        }
-    };
-}
-
-#[macro_export]
-macro_rules! vis_para {
-    () => { prog: &mut $crate::data::Program, stream: &mut $crate::audio::SampleArr };
-}
-
 impl Visualizer {
-    /*pub const fn new(f: VisFunc, name: &'static str, request: bool) -> Self {
-        Self {
-            func: f,
-            name: name,
-            request_normalizer: request,
-        }
-    }*/
-
     pub fn func(&self) -> VisFunc {
         self.func
     }
@@ -57,7 +35,7 @@ impl Visualizer {
 pub struct VisList {
     list: &'static [Visualizer],
     name: &'static str,
-    pub current_index: usize,
+    current_index: usize,
 }
 
 impl VisList {
@@ -110,25 +88,17 @@ impl VisNavigator {
 
     pub fn next_vis(&mut self) -> Visualizer {
         let list_size = self.current_list_len();
-
         self.index_vis = increment(self.index_vis, list_size);
-
         let current = self.current_vis();
-
         crate::audio::set_normalizer(current.request());
-
         current
     }
 
     pub fn prev_vis(&mut self) -> Visualizer {
         let list_size = self.current_list_len();
-
         self.index_vis = decrement(self.index_vis, list_size);
-
         let current = self.current_vis();
-
         crate::audio::set_normalizer(current.request());
-
         current
     }
 
@@ -213,7 +183,7 @@ impl VisNavigator {
 
 pub const VIS_CLASSIC: &[Visualizer] = &[
     define_visualizer_struct!(scopes::draw_vectorscope, "Vectorscope", true),
-    define_visualizer_struct!(scopes::draw_oscilloscope3, "Oscilloscope", true),
+    define_visualizer_struct!(scopes::draw_oscilloscope, "Oscilloscope", true),
     define_visualizer_struct!(ring::draw_ring, "Ring", true),
     define_visualizer_struct!(spectrum::draw_spectrum, "Spectrum", true),
     define_visualizer_struct!(bars::draw_bars, "Bars", true),
@@ -224,11 +194,6 @@ pub const VIS_CLASSIC: &[Visualizer] = &[
     define_visualizer_struct!(wave::draw_wave, "Wave", true),
     define_visualizer_struct!(vol_sweeper::draw_vol_sweeper, "Volume sweep", false),
     define_visualizer_struct!(slice::draw_slice, "Slice", false),
-    // define_visualizer_struct!(tests::draw_quick_sort_iter, "Test", true),
-    /*  [vol_sweeper::draw_vol_sweeper, "Vol sweeper"],
-    [// experiment1::draw_exp1,
-    [// experiment1::draw_f32,
-    [wave::draw_wave,  */
 ];
 
 pub const VIS_MILKY: &[Visualizer] = &[define_visualizer_struct!(milk::rain::draw, "Rain", false)];

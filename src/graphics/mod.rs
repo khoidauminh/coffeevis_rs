@@ -3,13 +3,14 @@ pub mod blend;
 pub mod draw_raw;
 
 use crate::data::MAX_WIDTH;
+use crate::math::Vec2;
 use blend::Mixer;
 use draw_raw::*;
 
 const FIELD_START: usize = 64;
 const COMMAND_BUFFER_INIT_CAPACITY: usize = MAX_WIDTH as usize;
 
-use std::ops;
+use std::ops::{self, Deref, DerefMut};
 
 pub(crate) trait Pixel:
     Copy
@@ -53,23 +54,23 @@ pub(crate) trait Pixel:
     fn compose(array: [u8; 4]) -> Self;
 }
 
-struct DrawCommand<T: Pixel> {
+struct DrawCommand<T> {
     pub func: DrawFunction<T>,
     pub param: DrawParam,
     pub color: T,
     pub blending: Mixer<T>,
 }
 
-pub struct DrawCommandBuffer<T: Pixel>(Vec<DrawCommand<T>>);
+pub struct DrawCommandBuffer<T>(Vec<DrawCommand<T>>);
 
-pub struct PixelBuffer<T: Pixel> {
+pub struct PixelBuffer<T> {
     out_buffer: Vec<T>,
     buffer: Vec<T>,
     width: usize,
     height: usize,
     field: usize,
     background: T,
-    pub command: DrawCommandBuffer<T>,
+    command: DrawCommandBuffer<T>,
 }
 
 pub(crate) type Canvas = PixelBuffer<u32>;
@@ -136,6 +137,19 @@ impl<T: Pixel> DrawCommandBuffer<T> {
     }
 }
 
+impl<T: Pixel> Deref for PixelBuffer<T> {
+    type Target = DrawCommandBuffer<T>;
+    fn deref(&self) -> &Self::Target {
+        &self.command
+    }
+}
+
+impl<T: Pixel> DerefMut for PixelBuffer<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.command
+    }
+}
+
 impl<T: Pixel> PixelBuffer<T> {
     pub fn new(w: usize, h: usize) -> Self {
         Self {
@@ -174,12 +188,15 @@ impl<T: Pixel> PixelBuffer<T> {
         P2::new(self.width as i32, self.height as i32)
     }
 
-    pub fn sizel(&self) -> usize {
-        self.buffer.len()
+    pub fn sizeu(&self) -> Vec2<usize> {
+        Vec2::<usize> {
+            x: self.width as usize,
+            y: self.height as usize,
+        }
     }
 
-    pub fn sizet(&self) -> (i32, i32) {
-        (self.width as i32, self.height as i32)
+    pub fn sizel(&self) -> usize {
+        self.buffer.len()
     }
 
     pub fn clear(&mut self) {

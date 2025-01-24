@@ -69,7 +69,7 @@ pub fn draw_spectrum(prog: &mut crate::data::Program, stream: &mut crate::audio:
     prepare(prog, stream, &mut local);
 
     let _l = stream.len();
-    let (w, h) = prog.pix.sizet();
+    let (w, h) = prog.pix.size().as_tuple();
     let winwh = w >> 1;
 
     let wf = w as f32;
@@ -127,12 +127,11 @@ pub fn draw_spectrum(prog: &mut crate::data::Program, stream: &mut crate::audio:
 
         let middle = P2::new(winwh + 1, i);
 
-        prog.pix.command.rect(rect_l, middle, color1, u32::mix);
-        prog.pix.command.rect(middle, rect_r, color2, u32::mix);
+        prog.pix.rect(rect_l, middle, color1, u32::mix);
+        prog.pix.rect(middle, rect_r, color2, u32::mix);
 
         let alpha = (128.0 + stream[i as usize / 2].x * 32768.0) as u8;
         prog.pix
-            .command
             .rect_wh(P2::new(winwh - 1, i), 2, 1, color.fade(alpha), u32::over);
     }
 }

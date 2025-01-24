@@ -30,7 +30,7 @@ pub fn draw_ring(prog: &mut crate::data::Program, stream: &mut crate::audio::Sam
 
         let int = (smp.l1_norm() * 128.0) as u8;
 
-        prog.pix.command.plot(
+        prog.pix.plot(
             P2::new(x / 2 + width_top_h, y / 2 + height_top_h),
             u32::from_be_bytes([
                 255,

@@ -53,10 +53,9 @@ pub fn draw_lazer(para: &mut crate::data::Program, stream: &mut crate::audio::Sa
         ((255.0 - a.x * a.y * 2.0).abs().min(255.0)) as u8,
     ]);
 
-    para.pix.command.fade(3);
+    para.pix.fade(3);
 
     para.pix
-        .command
         .line(local.p1.to_p2(), local.p0.to_p2(), color, u32::mix);
 
     local.p1 = local.p0;

@@ -129,6 +129,19 @@ impl Mul<Vec2<f32>> for f32 {
 
 impl<T> Vec2<T>
 where
+    T: Copy + Clone,
+{
+    pub fn as_slice(&self) -> [T; 2] {
+        [self.x, self.y]
+    }
+
+    pub fn as_tuple(&self) -> (T, T) {
+        (self.x, self.y)
+    }
+}
+
+impl<T> Vec2<T>
+where
     T: Default + Copy + Mul<Output = T> + Add<Output = T> + Neg<Output = T>,
 {
     pub fn one() -> Vec2<f32> {

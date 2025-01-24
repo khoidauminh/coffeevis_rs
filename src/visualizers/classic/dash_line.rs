@@ -20,7 +20,7 @@ pub fn draw_dash_line(
 
         for i in 0..para.pix.width() {
             let index = (i / 10 + i) % stream.len();
-            para.pix.command.rect_wh(
+            para.pix.rect_wh(
                 P2::new(i, o),
                 2,
                 2,
@@ -37,7 +37,7 @@ pub fn draw_dash_line(
 
         for i in 0..para.pix.height() {
             let index = (i / 10 + i) % stream.len();
-            para.pix.command.rect_wh(
+            para.pix.rect_wh(
                 P2::new(o, i),
                 2,
                 2,

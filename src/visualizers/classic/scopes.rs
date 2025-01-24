@@ -10,6 +10,7 @@ use smallvec::SmallVec;
 use crate::audio::MovingAverage;
 use crate::data::{INCREMENT, PHASE_OFFSET};
 use crate::graphics::P2;
+use crate::math::interpolate::linearfc;
 use crate::visualizers::classic::cross::{draw_cross, CROSS_COL};
 
 use crate::math::{self, Cplx};
@@ -31,7 +32,7 @@ pub fn draw_vectorscope(prog: &mut crate::data::Program, stream: &mut crate::aud
     let sizei = size;
     let scale = size as f32 * prog.vol_scl * 0.5;
 
-    let (width, height) = prog.pix.sizet();
+    let (width, height) = prog.pix.size().as_tuple();
 
     let width_top_h = width >> 1;
     let height_top_h = height >> 1;
@@ -57,7 +58,7 @@ pub fn draw_vectorscope(prog: &mut crate::data::Program, stream: &mut crate::aud
         let y = (sample.y * scale) as i32;
         let amp = (x.abs() + y.abs()) * 3 / 2;
 
-        prog.pix.command.plot(
+        prog.pix.plot(
             P2::new(x + width_top_h, y + height_top_h),
             u32::from_be_bytes([255, to_color(amp, sizei), 255, 64]),
             u32::mix,
@@ -72,226 +73,12 @@ pub fn draw_vectorscope(prog: &mut crate::data::Program, stream: &mut crate::aud
 }
 
 pub fn draw_oscilloscope(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
-    let l = stream.len();
-    let _li = l as i32;
-
-    let (width, height) = prog.pix.sizet();
-
-    let _width_top_h = width >> 1;
-    let height_top_h = height >> 1;
-
-    let scale = prog.pix.height() as f32 * prog.vol_scl * 0.45;
-
-    prog.pix.clear();
-
-    let mut stream_ = [Cplx::zero(); SMOOTH_BUFFER_SIZE];
-    stream.export(&mut stream_);
-    const UP_COUNT: usize = 75;
-    math::integrate_inplace(&mut stream_, UP_COUNT, true);
-
-    let mut zeroi = UP_COUNT;
-
-    let mut bass = 0.0;
-
-    while zeroi < stream_.len() {
-        let smp1 = stream_[zeroi].x;
-        let smp2 = stream_[zeroi - 2].x;
-
-        if smp1 < 0.0 && smp2 >= 0.0 {
-            break;
-        }
-
-        zeroi += 1;
-    }
-
-    if zeroi == stream_.len() {
-        zeroi = UP_COUNT;
-
-        while zeroi < stream_.len() {
-            let smp1 = stream_[zeroi].y;
-            let smp2 = stream_[zeroi - 2].y;
-
-            if smp1 < 0.0 && smp2 >= 0.0 {
-                break;
-            }
-
-            zeroi += 1;
-        }
-    }
-
-    if zeroi == stream_.len() {
-        zeroi = UP_COUNT;
-    } else {
-        for rest in stream_.iter().skip(zeroi + 1) {
-            bass += rest.l1_norm();
-        }
-    }
-
-    let wave_scale_factor = (bass / (stream_.len() as f32)) * 13.0 + 2.0;
-
-    let wave_scale_factor_old = *WAVE_SCALE_FACTOR.lock().unwrap();
-
-    let wave_scale_factor =
-        math::interpolate::subtractive_fall(wave_scale_factor_old, wave_scale_factor, 1.0, 0.5);
-
-    *WAVE_SCALE_FACTOR.lock().unwrap() = wave_scale_factor;
-
-    let mut smoothed_smp = stream[zeroi];
-
-    for x in 0..4 {
-        let di = x as usize * wave_scale_factor as usize + zeroi;
-        smoothed_smp = crate::math::interpolate::linearfc(smoothed_smp, stream[di], 0.33);
-    }
-
-    for x in 4..prog.pix.width() as i32 + 4 {
-        let di = x as usize * wave_scale_factor as usize + zeroi;
-
-        smoothed_smp = crate::math::interpolate::linearfc(smoothed_smp, stream[di], 0.33);
-
-        let y1 = height_top_h + (smoothed_smp.x * scale) as i32;
-        let y2 = height_top_h + (smoothed_smp.y * scale) as i32;
-
-        let x = x - 4;
-        prog.pix
-            .command
-            .plot(P2::new(x, y1), 0xFF_55_FF_55, |a, b| a | b);
-        prog.pix
-            .command
-            .plot(P2::new(x, y2), 0xFF_55_55_FF, |a, b| a | b);
-    }
-
-    let li = (LOCALI.load(Relaxed) + prog.pix.width() * 3 / 2 + 1) % prog.pix.width();
-
-    prog.pix.command.rect_wh(
-        P2::new(li as i32, height / 10),
-        1,
-        prog.pix.height() - prog.pix.height() / 4,
-        CROSS_COL,
-        u32::mix,
-    );
-
-    prog.pix.command.rect_wh(
-        P2::new(li as i32, height / 2),
-        prog.pix.width() >> 3,
-        1,
-        CROSS_COL,
-        u32::mix,
-    );
-
-    stream.rotate_left(200);
-    LOCALI.store(li, Relaxed);
-}
-
-pub fn draw_oscilloscope2(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
-    let l = stream.input_size();
-
-    let (width, height) = prog.pix.sizet();
-
-    let _width_top_h = width >> 1;
-    let height_top_h = height >> 1;
-
-    let scale = prog.pix.height() as f32 * prog.vol_scl * 0.45;
-
-    prog.pix.clear();
-
-    let mut sum = 0.0;
-    let mut smp = stream[0];
-
-    let mut zero_x = 0;
-    let mut zero_y = 0;
-    let mut max_x = -100.0;
-    let mut max_y = -100.0;
-
-    for i in 1..l {
-        smp = crate::math::interpolate::linearfc(smp, stream[i], 0.05);
-
-        if smp.x > max_x {
-            zero_x = i;
-            max_x = smp.x;
-        }
-
-        if smp.y > max_y {
-            zero_y = i;
-            max_y = smp.y;
-        }
-
-        sum += smp.x * smp.x + smp.y * smp.y;
-    }
-
-    let zeroi = if zero_x > 5 { zero_x } else { zero_y };
-
-    let bass = (sum / l as f32).sqrt();
-
-    let wave_scale_factor = bass * 13.0 + 2.0;
-
-    let wave_scale_factor_old = *WAVE_SCALE_FACTOR.lock().unwrap();
-
-    let wave_scale_factor =
-        math::interpolate::subtractive_fall(wave_scale_factor_old, wave_scale_factor, 1.0, 0.5);
-
-    *WAVE_SCALE_FACTOR.lock().unwrap() = wave_scale_factor;
-
-    let mut smoothed_smp = stream[zeroi];
-
-    for x in 0..4 {
-        let di = x as usize * wave_scale_factor as usize + zeroi;
-        smoothed_smp = crate::math::interpolate::linearfc(smoothed_smp, stream[di], 0.25);
-    }
-
-    for x in 4..prog.pix.width() as i32 + 4 {
-        let di = x as usize * wave_scale_factor as usize + zeroi;
-
-        smoothed_smp = crate::math::interpolate::linearfc(smoothed_smp, stream[di], 0.25);
-
-        let y1 = height_top_h + (smoothed_smp.x * scale) as i32;
-        let y2 = height_top_h + (smoothed_smp.y * scale) as i32;
-
-        let x = x - 4;
-
-        prog.pix
-            .command
-            .plot(P2::new(x, y1), 0xFF_55_FF_55, |a, b| a | b);
-        prog.pix
-            .command
-            .plot(P2::new(x, y2), 0xFF_55_55_FF, |a, b| a | b);
-    }
-
-    let mut li = LOCALI.load(Relaxed);
-    let random = math::rng::random_int(127) as usize;
-
-    li = (li + random + 3) % prog.pix.width();
-
-    let rx = width - li as i32 - 1;
-
-    prog.pix.command.rect_wh(
-        P2::new(rx, height / 10),
-        1,
-        prog.pix.height() - prog.pix.height() / 4,
-        CROSS_COL,
-        u32::mix,
-    );
-
-    prog.pix.command.rect_wh(
-        P2::new(rx, height / 2),
-        prog.pix.width() >> 3,
-        1,
-        CROSS_COL,
-        u32::mix,
-    );
-
-    stream.rotate_left(zeroi);
-    LOCALI.store(li, Relaxed);
-}
-
-use crate::math::interpolate::linearfc;
-
-pub fn draw_oscilloscope3(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
     let Ok(mut wave_scale_factor) = WAVE_SCALE_FACTOR.try_lock() else {
         return;
     };
 
     let l = stream.input_size() * 2 / 3;
-    let (width, height) = prog.pix.sizet();
+    let (width, height) = prog.pix.size().as_tuple();
     let width_top_h = width / 2;
     let height_top_h = height / 2;
 
@@ -374,12 +161,8 @@ pub fn draw_oscilloscope3(prog: &mut crate::data::Program, stream: &mut crate::a
         let p2_max = P2::new(x, y2_max);
         let p2_min = P2::new(x, y2_min);
 
-        prog.pix
-            .command
-            .line(p1_max, p1_min, 0xFF_55_FF_55, |a, b| a | b);
-        prog.pix
-            .command
-            .line(p2_max, p2_min, 0xFF_55_55_FF, |a, b| a | b);
+        prog.pix.line(p1_max, p1_min, 0xFF_55_FF_55, |a, b| a | b);
+        prog.pix.line(p2_max, p2_min, 0xFF_55_55_FF, |a, b| a | b);
     }
 
     let mut li = LOCALI.load(Relaxed);
@@ -389,21 +172,19 @@ pub fn draw_oscilloscope3(prog: &mut crate::data::Program, stream: &mut crate::a
 
     let rx = width - li as i32 - 1;
 
-    prog.pix.command.rect_wh(
+    let width = width as usize;
+    let height = height as usize;
+
+    prog.pix.rect_wh(
         P2::new(rx, height / 10),
         1,
-        prog.pix.height() - prog.pix.height() / 4,
+        width - height / 4,
         CROSS_COL,
         u32::max,
     );
 
-    prog.pix.command.rect_wh(
-        P2::new(rx, height / 2),
-        prog.pix.width() >> 3,
-        1,
-        CROSS_COL,
-        u32::mix,
-    );
+    prog.pix
+        .rect_wh(P2::new(rx, height / 2), width >> 3, 1, CROSS_COL, u32::mix);
 
     LOCALI.store(li, Relaxed);
 
