@@ -11,7 +11,7 @@ use winit::{
     platform::{
         modifier_supplement::KeyEventExtModifierSupplement, wayland::WindowAttributesExtWayland,
     },
-    window::{Icon, Window, WindowId, WindowLevel},
+    window::{Icon, Theme, Window, WindowId, WindowLevel},
 };
 
 use std::{
@@ -76,7 +76,7 @@ impl ApplicationHandler for WindowState {
             .with_decorations(!(is_gnome && is_wayland))
             .with_resizable(self.prog.is_resizable())
             .with_name("coffeevis", "cvis")
-            .with_theme(Some(winit::window::Theme::Dark))
+            .with_theme(Some(Theme::Dark))
             .with_window_icon(icon);
 
         self.window = Some(Box::leak(Box::new(

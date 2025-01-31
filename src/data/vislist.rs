@@ -183,7 +183,7 @@ impl VisNavigator {
 
 pub const VIS_CLASSIC: &[Visualizer] = &[
     define_visualizer_struct!(scopes::draw_vectorscope, "Vectorscope", true),
-    define_visualizer_struct!(scopes::draw_oscilloscope, "Oscilloscope", true),
+    define_visualizer_struct!(scopes::draw_oscilloscope, "Oscilloscope", false),
     define_visualizer_struct!(ring::draw_ring, "Ring", true),
     define_visualizer_struct!(spectrum::draw_spectrum, "Spectrum", true),
     define_visualizer_struct!(bars::draw_bars, "Bars", true),

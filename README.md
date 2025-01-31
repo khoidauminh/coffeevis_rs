@@ -26,8 +26,7 @@ Configuration changes: TODO!
 
 ## Examples:
 
-![console mode](./assets/kvis_preview_2.webp)
-![windowed mode](./assets/kvis_preview_1.webp)
+![Demonstration)[https://imgur.com/a/NClpCxj]
 
 ## Platform support
 Coffeevis so far only runs on Linux.
