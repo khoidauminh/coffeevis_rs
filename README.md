@@ -26,7 +26,7 @@ Configuration changes: TODO!
 
 ## Examples:
 
-![Demonstration](https://imgur.com/a/NClpCxj)
+![Demonstration](https://i.imgur.com/snklOIG.mp4)
 
 ## Platform support
 Coffeevis so far only runs on Linux.
