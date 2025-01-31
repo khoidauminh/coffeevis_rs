@@ -26,7 +26,8 @@ Configuration changes: TODO!
 
 ## Examples:
 
-![Demonstration](https://i.imgur.com/snklOIG.mp4)
+![Console](https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExMWwydzQydHVhdG9nbTZwZnZyNHEyazduNmp0aGFib21xYjFtc2F3YSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/flPyMMxHiSpo73kpEg/giphy.gif)
+![Terminal](https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExeThkNGxieWVxcGhhM3RibXZ5aGNzczN1YzF5aGRuNmVyYzBlYjc4NiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/5FZtC9GbiOrXrhnMON/giphy.gif)
 
 ## Platform support
 Coffeevis so far only runs on Linux.
