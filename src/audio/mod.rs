@@ -1,5 +1,4 @@
 use cpal::traits::{DeviceTrait, HostTrait};
-use cpal::SampleFormat;
 
 mod audio_buffer;
 use crate::math::increment;
@@ -10,8 +9,6 @@ use std::sync::{
     atomic::{AtomicBool, AtomicU8, Ordering::Relaxed},
     Mutex, MutexGuard,
 };
-
-use crate::data::SAMPLE_RATE;
 
 /// Global sample array
 type GlobalSampleBuffer = Mutex<AudioBuffer>;
@@ -40,61 +37,28 @@ pub fn set_normalizer(b: bool) {
 }
 
 pub fn get_source() -> cpal::Stream {
-    let host = cpal::default_host();
-    #[cfg(target_os = "windows")]
-    {
-        host = cpal::host_from_id(cpal::HostId::Asio).expect("failed to initialise ASIO host");
-    }
-
-    let device = host
+    let device = cpal::default_host()
         .default_input_device()
         .expect("no input device available");
 
-    let err_fn = |err| eprintln!("an error occurred on the input audio stream: {}", err);
-
-    let supported_configs_range = device
+    let config: cpal::StreamConfig = device
         .default_input_config()
-        .expect("error while querying configs");
+        .expect("error while querying configs")
+        .config();
 
-    let supported_config = supported_configs_range; //.next()
-
-    let sample_format = supported_config.sample_format();
-
-    let mut config: cpal::StreamConfig = supported_config.into();
-    config.channels = 2;
-    config.sample_rate = cpal::SampleRate(SAMPLE_RATE as u32);
-
-    match sample_format {
-        SampleFormat::F32 => device.build_input_stream(
+    device
+        .build_input_stream(
             &config,
-            move |data, _: &_| read_samples::<f32>(data),
-            err_fn,
+            |data: &[f32], _| {
+                let mut b = get_buf();
+                b.read_from_input(data);
+                b.checked_normalize();
+                set_no_sample(b.silent());
+            },
+            |err| eprintln!("an error occurred on the input audio stream: {}", err),
             None,
-        ),
-        SampleFormat::I16 => device.build_input_stream(
-            &config,
-            move |data, _: &_| read_samples::<i16>(data),
-            err_fn,
-            None,
-        ),
-        SampleFormat::U16 => device.build_input_stream(
-            &config,
-            move |data, _: &_| read_samples::<u16>(data),
-            err_fn,
-            None,
-        ),
-        _ => todo!(),
-    }
-    .unwrap()
-}
-
-pub fn read_samples<T: cpal::Sample<Float = f32>>(data: &[T]) {
-    let mut b = get_buf();
-
-    b.read_from_input(data);
-    b.checked_normalize();
-
-    set_no_sample(b.silent());
+        )
+        .unwrap()
 }
 
 pub struct MovingAverage<T, const N: usize> {

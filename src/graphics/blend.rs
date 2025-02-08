@@ -211,8 +211,8 @@ impl Pixel for u8 {
         self | other
     }
 
-    fn fade(self, _alpha: u8) -> Self {
-        unimplemented!()
+    fn fade(self, alpha: u8) -> Self {
+        u8_mul(self, alpha)
     }
 
     fn decompose(self) -> [u8; 4] {
