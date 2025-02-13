@@ -136,8 +136,8 @@ pub fn draw_oscilloscope(prog: &mut crate::data::Program, stream: &mut crate::au
     for x in 0..prog.pix.width() as i32 {
         let di = (x - width_top_h) as isize * wave_scale_factor + zeroi as isize;
 
-        let mut smp_max = Cplx::new(-1.0, -1.0);
-        let mut smp_min = Cplx::new(1.0, 1.0);
+        let mut smp_max = Cplx::new(-1000.0, -1000.0);
+        let mut smp_min = Cplx::new(1000.0, 1000.0);
 
         for i in di..di + wave_scale_factor {
             let smp = &stream[i as usize];
