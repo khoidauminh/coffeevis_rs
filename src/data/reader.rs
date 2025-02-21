@@ -167,7 +167,9 @@ impl Program {
         if std::env::var("WAYLAND_DISPLAY").is_err() {
             self.wayland = false;
         } else if !self.wayland {
-            std::env::set_var("WAYLAND_DISPLAY", "");
+            unsafe {
+                std::env::remove_var("WAYLAND_DISPLAY");
+            }
         }
 
         self
