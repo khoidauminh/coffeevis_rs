@@ -24,7 +24,7 @@ fn main() {
 
     match prog.mode() {
         #[cfg(not(feature = "console_only"))]
-        modes::Mode::Win => modes::windowed_mode::winit_main(prog),
+        modes::Mode::WinX11 | modes::Mode::WinWayland => modes::windowed_mode::winit_main(prog),
 
         _ => {
             #[allow(unused_mut, unused_assignments)]

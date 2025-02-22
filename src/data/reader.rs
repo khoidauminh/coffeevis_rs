@@ -1,10 +1,8 @@
-use crate::data::{Program, format_red};
+use crate::{data::*, modes::Mode::*};
 
 impl Program {
     pub fn eval_args(mut self, args: &mut dyn Iterator<Item = &String>) -> Self {
         #[allow(unused_imports)]
-        use crate::{data::*, modes::Mode::*};
-
         let mut size = (DEFAULT_SIZE_WIN, DEFAULT_SIZE_WIN);
 
         let mut args = args.peekable();
@@ -14,9 +12,6 @@ impl Program {
             let arg = arg.as_str();
             match arg {
                 "--quiet" => self.quiet = true,
-
-                #[cfg(not(feature = "console_only"))]
-                "--win" => self.mode = Win,
 
                 #[cfg(not(feature = "window_only"))]
                 "--braille" => (self.mode, self.flusher) = (ConBrail, Program::print_brail),
@@ -172,8 +167,11 @@ impl Program {
 
         self.update_size(size);
 
-        if std::env::var("WAYLAND_DISPLAY").is_err() {
-            self.wayland = false;
+        if !self.mode.is_con() {
+            self.mode = match std::env::var("WAYLAND_DISPLAY") {
+                Ok(s) if s.len() != 0 => WinWayland,
+                _ => WinX11,
+            }
         }
 
         self
@@ -205,7 +203,11 @@ impl Program {
         } else {
             self.print_message(format!(
                 "Running with: Winit, {}\n",
-                if self.wayland { "Wayland" } else { "X11" }
+                if self.mode == WinWayland {
+                    "Wayland"
+                } else {
+                    "X11"
+                }
             ))
         }
 

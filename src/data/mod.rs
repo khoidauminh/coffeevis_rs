@@ -105,9 +105,6 @@ pub(crate) struct Program {
 
     crt: bool,
 
-    /// Scaling purposes
-    wayland: bool,
-
     pub pix: crate::graphics::Canvas,
 
     mode: Mode,
@@ -170,8 +167,6 @@ impl Program {
 
             mode: default_mode,
 
-            wayland: true,
-
             pix: Canvas::new(DEFAULT_SIZE_WIN as usize, DEFAULT_SIZE_WIN as usize),
 
             milli_hz: DEFAULT_MILLI_HZ,
@@ -229,10 +224,6 @@ impl Program {
 
     pub fn is_display_enabled(&self) -> bool {
         self.display
-    }
-
-    pub fn is_wayland(&self) -> bool {
-        self.wayland
     }
 
     pub fn set_hidden(&mut self, b: bool) {
@@ -372,7 +363,7 @@ impl Program {
     pub fn update_size(&mut self, mut s: (u16, u16)) {
         match &self.mode {
             #[cfg(not(feature = "console_only"))]
-            Mode::Win => {
+            Mode::WinX11 | Mode::WinWayland => {
                 self.window_width = s.0;
                 self.window_height = s.1;
             }
@@ -393,7 +384,7 @@ impl Program {
     pub fn refresh(&mut self) {
         match &self.mode {
             #[cfg(not(feature = "console_only"))]
-            Mode::Win => self
+            Mode::WinX11 | Mode::WinWayland => self
                 .pix
                 .resize(self.window_width as usize, self.window_height as usize),
             _ => {

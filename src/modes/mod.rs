@@ -6,7 +6,8 @@ pub mod windowed_mode;
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Mode {
-    Win,
+    WinX11,
+    WinWayland,
     ConAscii,
     ConBlock,
     ConBrail,
@@ -15,7 +16,7 @@ pub enum Mode {
 impl Mode {
     pub fn default() -> Mode {
         #[cfg(not(feature = "console_only"))]
-        return Mode::Win;
+        return Mode::WinWayland;
 
         #[allow(unreachable_code)]
         return Mode::ConAscii;
