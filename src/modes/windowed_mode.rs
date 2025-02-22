@@ -34,19 +34,10 @@ struct WindowState {
     pub final_buffer_size: PhysicalSize<u32>,
     pub poll_deadline: Instant,
     pub refresh_rate_check_deadline: Instant,
-    pub already_resumed: bool,
 }
 
 impl ApplicationHandler for WindowState {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-        // Since we are leaking the window into a static
-        // reference, resumed() is not allowed to be
-        // called again as it would cause the build up
-        // of leaked windows and potentially flood RAM.
-        assert!(!self.already_resumed);
-
-        self.already_resumed = true;
-
         self.prog.print_startup_info();
 
         let scale = self.prog.scale() as u32;
@@ -73,9 +64,19 @@ impl ApplicationHandler for WindowState {
             .with_theme(Some(Theme::Dark))
             .with_window_icon(icon);
 
-        self.window = Some(Box::leak(Box::new(
-            event_loop.create_window(window_attributes).unwrap(),
-        )));
+        // Since we are leaking the window into a static
+        // reference, resumed() is not allowed to be
+        // called again as it would cause the build up
+        // of leaked windows and potentially flood RAM.
+        match self.window {
+            None => {
+                self.window = Some(Box::leak(Box::new(
+                    event_loop.create_window(window_attributes).unwrap(),
+                )))
+            }
+
+            Some(_) => panic!("Resume being called the 2nd time!"),
+        }
 
         let window = self
             .window
@@ -340,7 +341,6 @@ pub fn winit_main(prog: Program) {
         final_buffer_size: PhysicalSize::<u32>::new(0, 0),
         poll_deadline,
         refresh_rate_check_deadline,
-        already_resumed: false,
     };
 
     event_loop.set_control_flow(ControlFlow::Wait);
