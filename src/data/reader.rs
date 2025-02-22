@@ -96,7 +96,13 @@ impl Program {
                     (self.console_max_width, self.console_max_height) = (s[0], s[1]);
                 }
 
-                "--x11" => self.wayland = false,
+                "--x11" => {
+                    self.print_message(format_red!(
+                        "This option no longer works as Rust 2024 Edition now marks \
+                        set_var and remove_var as unsafe. Unset WAYLAND_DISPLAY to \
+                        force running in Xwayland."
+                    ));
+                }
 
                 "--vis" => {
                     let vis_name = args
