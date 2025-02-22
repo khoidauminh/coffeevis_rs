@@ -4,7 +4,7 @@ use qoi::{Decoder, Header};
 
 use winit::{
     application::ApplicationHandler,
-    dpi::{LogicalSize, PhysicalSize},
+    dpi::PhysicalSize,
     event::{self, ElementState, WindowEvent},
     event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
     keyboard::{Key, NamedKey},
@@ -53,11 +53,9 @@ impl ApplicationHandler for WindowState {
         let mut size = (self.prog.pix.width() as u32, self.prog.pix.height() as u32);
         size.0 *= scale;
         size.1 *= scale;
+        let win_size = PhysicalSize::<u32>::new(size.0, size.1);
 
-        let resizeable = self.prog.is_resizable();
         let de = std::env::var("XDG_CURRENT_DESKTOP").unwrap_or_default();
-
-        let win_size = LogicalSize::<u32>::new(size.0, size.1);
 
         let icon = read_icon().and_then(|(w, h, v)| {
             Icon::from_rgba(v, w, h)
@@ -102,7 +100,8 @@ impl ApplicationHandler for WindowState {
             ));
         }
 
-        if !resizeable {
+        // On XFCE this is needed to lock the size of the window.
+        if !self.prog.is_resizable() {
             window.set_min_inner_size(Some(win_size));
             window.set_max_inner_size(Some(win_size));
         }
