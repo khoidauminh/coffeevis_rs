@@ -56,9 +56,6 @@ impl ApplicationHandler for WindowState {
 
         let resizeable = self.prog.is_resizable();
         let de = std::env::var("XDG_CURRENT_DESKTOP").unwrap_or_default();
-        let is_gnome = de == "GNOME";
-        let is_wayland = self.prog.is_wayland();
-        let gnome_workaround = is_gnome && is_wayland;
 
         let win_size = LogicalSize::<u32>::new(size.0, size.1);
 
@@ -73,7 +70,6 @@ impl ApplicationHandler for WindowState {
             .with_inner_size(win_size)
             .with_window_level(WindowLevel::AlwaysOnTop)
             .with_transparent(false)
-            .with_decorations(!(is_gnome && is_wayland))
             .with_resizable(self.prog.is_resizable())
             .with_name("coffeevis", "cvis")
             .with_theme(Some(Theme::Dark))
@@ -106,11 +102,6 @@ impl ApplicationHandler for WindowState {
             ));
         }
 
-        if gnome_workaround {
-            sleep(Duration::from_millis(50));
-            window.set_decorations(true);
-        }
-
         if !resizeable {
             window.set_min_inner_size(Some(win_size));
             window.set_max_inner_size(Some(win_size));
@@ -129,8 +120,8 @@ impl ApplicationHandler for WindowState {
         // Secondly, coffeevis only does a request_redraw after
         // successfully rendering a frame, so if it's on idle
         // mode, no frame is drawn, no request is made and thus
-        // it will be stuck idling. This thread will send a
-        // request to kick start it.
+        // it will be stuck idling. This thread should occasionally
+        // send a request to kick start it.
         let _ = thread::Builder::new().stack_size(1024).spawn(move || {
             while exit_recv.recv_timeout(IDLE_INTERVAL).is_err() {
                 window.request_redraw();
