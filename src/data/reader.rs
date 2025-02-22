@@ -1,4 +1,4 @@
-use crate::data::{format_red, Program};
+use crate::data::{Program, format_red};
 
 impl Program {
     pub fn eval_args(mut self, args: &mut dyn Iterator<Item = &String>) -> Self {
@@ -125,7 +125,9 @@ impl Program {
                 }
 
                 "--no-display" => {
-                    eprintln_red!("You have told coffeevis to not present the buffer. Expect a black window (or no window on Wayland).");
+                    eprintln_red!(
+                        "You have told coffeevis to not present the buffer. Expect a black window (or no window on Wayland)."
+                    );
                     self.display = false;
                 }
 
@@ -166,10 +168,6 @@ impl Program {
 
         if std::env::var("WAYLAND_DISPLAY").is_err() {
             self.wayland = false;
-        } else if !self.wayland {
-            unsafe {
-                std::env::remove_var("WAYLAND_DISPLAY");
-            }
         }
 
         self

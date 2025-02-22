@@ -66,12 +66,17 @@ E.g:
 
 ```
 
+To force Coffeevis to run in Xwayland, unset `WAYLAND_DISPLAY`
+
+```
+WAYLAND_DISPLAY= coffeevis
+```
+
 ## Flags
 Coffeevis supports temporary options at launch
 
 | Option | Value (example) | Description |
 | ------ | ------ | ------ |
-| --x11 | | runs in X11 (Wayland is the default) |
 | --ascii<br />--block<br />--braille | | runs in the terminal |
 | --no-auto-switch | | disables automatic visualizer switching |
 | --size | 80x80 | sets resolution in window mode |
