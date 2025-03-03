@@ -41,10 +41,10 @@ impl ApplicationHandler for WindowState {
         self.prog.print_startup_info();
 
         let scale = self.prog.scale() as u32;
-        let mut size = (self.prog.pix.width() as u32, self.prog.pix.height() as u32);
-        size.0 *= scale;
-        size.1 *= scale;
-        let win_size = PhysicalSize::<u32>::new(size.0, size.1);
+        let win_size = PhysicalSize::<u32>::new(
+            self.prog.pix.width() as u32 * scale,
+            self.prog.pix.height() as u32 * scale,
+        );
 
         let de = std::env::var("XDG_CURRENT_DESKTOP").unwrap_or_default();
 
