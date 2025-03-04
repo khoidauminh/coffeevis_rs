@@ -18,7 +18,6 @@ use std::{
     num::NonZeroU32,
     sync::mpsc::{self, SyncSender},
     thread,
-    time::{Duration, Instant},
 };
 
 use crate::graphics::Pixel;
@@ -32,8 +31,6 @@ struct WindowState {
     pub surface: Option<WindowSurface>,
     pub exit_sender: Option<SyncSender<()>>,
     pub final_buffer_size: PhysicalSize<u32>,
-    pub poll_deadline: Instant,
-    pub refresh_rate_check_deadline: Instant,
 }
 
 impl ApplicationHandler for WindowState {
@@ -318,17 +315,12 @@ fn read_icon() -> Option<(u32, u32, Vec<u8>)> {
 pub fn winit_main(prog: Program) {
     let event_loop = EventLoop::new().unwrap();
 
-    let poll_deadline = Instant::now() + prog.get_rr_interval(0);
-    let refresh_rate_check_deadline = Instant::now() + Duration::from_secs(1);
-
     let mut state = WindowState {
         prog,
         window: None,
         surface: None,
         exit_sender: None,
         final_buffer_size: PhysicalSize::<u32>::new(0, 0),
-        poll_deadline,
-        refresh_rate_check_deadline,
     };
 
     event_loop.set_control_flow(ControlFlow::Wait);
