@@ -114,17 +114,7 @@ impl ApplicationHandler for WindowState {
 
         let intervals = self.prog.get_rr_intervals();
 
-        // Coffeevis needs to wind down as much as
-        // possble when hidden or there's no input
-        // received. However, sleeping in the main
-        // thread will block the program from properly
-        // processing other events.
-        //
-        // Secondly, coffeevis only does a request_redraw after
-        // successfully rendering a frame, so if it's on idle
-        // mode, no frame is drawn, no request is made and thus
-        // it will be stuck idling. This thread should occasionally
-        // send a request to kick start it.
+        // Thread so control requesting redraws.
         let _ = thread::Builder::new().stack_size(1024).spawn(move || {
             while exit_recv
                 .recv_timeout(intervals[(get_no_sample() > SLOW_DOWN_THRESHOLD) as usize])
