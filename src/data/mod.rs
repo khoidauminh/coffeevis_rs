@@ -214,6 +214,10 @@ impl Program {
         self.refresh_rate_intervals[rr_index]
     }
 
+    pub fn get_rr_intervals(&self) -> [Duration; 2] {
+        self.refresh_rate_intervals
+    }
+
     pub fn is_crt(&self) -> bool {
         self.crt
     }

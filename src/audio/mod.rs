@@ -6,8 +6,8 @@ use audio_buffer::AudioBuffer;
 
 use std::ops::*;
 use std::sync::{
-    atomic::{AtomicBool, AtomicU8, Ordering::Relaxed},
     Mutex, MutexGuard,
+    atomic::{AtomicBool, AtomicU8, Ordering::Relaxed},
 };
 
 /// Global sample array

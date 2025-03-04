@@ -17,7 +17,7 @@ use winit::{
 use std::{
     num::NonZeroU32,
     sync::mpsc::{self, SyncSender},
-    thread::{self, sleep},
+    thread,
     time::{Duration, Instant},
 };
 
@@ -111,6 +111,12 @@ impl ApplicationHandler for WindowState {
 
         self.exit_sender = Some(exit_send);
 
+        if self.prog.get_rr_mode() != RefreshRateMode::Specified {
+            Self::check_refresh_rate(window, &mut self.prog);
+        }
+
+        let intervals = self.prog.get_rr_intervals();
+
         // Coffeevis needs to wind down as much as
         // possble when hidden or there's no input
         // received. However, sleeping in the main
@@ -123,7 +129,10 @@ impl ApplicationHandler for WindowState {
         // it will be stuck idling. This thread should occasionally
         // send a request to kick start it.
         let _ = thread::Builder::new().stack_size(1024).spawn(move || {
-            while exit_recv.recv_timeout(IDLE_INTERVAL).is_err() {
+            while exit_recv
+                .recv_timeout(intervals[(get_no_sample() > SLOW_DOWN_THRESHOLD) as usize])
+                .is_err()
+            {
                 window.request_redraw();
             }
         });
@@ -221,14 +230,6 @@ impl ApplicationHandler for WindowState {
                     return;
                 }
 
-                if self.prog.get_rr_mode() != RefreshRateMode::Specified {
-                    let now = Instant::now();
-                    if now > self.refresh_rate_check_deadline {
-                        Self::check_refresh_rate(window, &mut self.prog);
-                        self.refresh_rate_check_deadline = now + Duration::from_secs(1);
-                    }
-                }
-
                 self.prog.update_vis();
                 self.prog.render();
 
@@ -250,10 +251,6 @@ impl ApplicationHandler for WindowState {
                         }
                     }
                 }
-
-                window.request_redraw();
-
-                self.wait();
             }
 
             _ => {}
@@ -262,15 +259,6 @@ impl ApplicationHandler for WindowState {
 }
 
 impl WindowState {
-    fn wait(&mut self) {
-        let now = Instant::now();
-        if now < self.poll_deadline {
-            sleep(self.poll_deadline - now);
-        }
-
-        self.poll_deadline = Instant::now() + self.prog.get_rr_interval(get_no_sample());
-    }
-
     fn resize_surface(surface: &mut WindowSurface, w: u32, h: u32) {
         surface
             .resize(
