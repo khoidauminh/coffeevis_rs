@@ -29,47 +29,51 @@ def read_to_array(f) -> tuple[list[float], list[float]]:
 
     return (arrayleft, arrayright)
 
-try:
-    smooth = 0.0
-    index = 0
 
-    arrayleft, arrayright = read_to_array(file_audio)
+smooth = 0.0
+index = 0
+rotate_size = 50
 
-    while True:
+arrayleft, arrayright = read_to_array(file_audio)
 
-        file_program.seek(0)
-        file_program_contents = file_program.read()
+while True:
 
-        if len(file_program_contents) == 0:
-            break
+    file_program.seek(0)
+    file_program_contents = file_program.read()
 
-        file_program_contents = file_program_contents.split()
-        program_w = int(file_program_contents[1])
-        program_h = int(file_program_contents[2])
+    if len(file_program_contents) == 0:
+        break
 
-        if index > 3:
-            arrayleft, arrayright = read_to_array(file_audio)
-            index = 0
-        else:
-            index += 1
-            arrayleft = arrayleft[100:] + arrayleft[:100]
+    file_program_contents = file_program_contents.split()
+    program_w = int(file_program_contents[1])
+    program_h = int(file_program_contents[2])
+    refresh_rate = int(file_program_contents[3]) / 1000
+    duration = 1 / refresh_rate
 
-        # res = math.fsum(arrayleft) / len(arrayleft)
+    if index > 3:
+        arrayleft, arrayright = read_to_array(file_audio)
+        index = 0
+    else:
+        index += 1
+        arrayleft = arrayleft[rotate_size:] + arrayleft[:rotate_size]
 
-        arr = arrayleft[:200]
+    # res = math.fsum(arrayleft) / len(arrayleft)
 
-        file_commands.seek(0)
+    arr = arrayleft[:200]
 
-        for i, sample in enumerate(arr):
-            sample = arr[i]
-            x = int(sample*program_h//2 + program_h//2)
-            string = "COMMAND FF FF FF FF over plot {:04x} {:04x}\n".format(i * program_w // len(arr), x)
-            file_commands.write(string)
+    file_commands.seek(0)
 
-        file_commands.flush()
+    for i, sample in enumerate(arr):
+        sample = arr[i]
+        x = int(sample*program_h//2 + program_h//2)
+        string = "COMMAND FF FF FF FF over plot {:04x} {:04x}\n".format(i * program_w // len(arr), x)
+        file_commands.write(string)
 
-        time.sleep(duration)
-finally:
-    print("Program file not found, empty, or an error has occured.")
-    file_audio.close()
-    file_commands.close()
+    file_commands.flush()
+
+    time.sleep(duration)
+
+print("Program file not found, empty, or an error has occured.")
+file_audio.close()
+file_commands.close()
+file_program.close()
