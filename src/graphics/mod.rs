@@ -292,6 +292,10 @@ impl<T: Pixel> PixelBuffer<T> {
         mixer: Option<Mixer<T>>,
         crt: bool,
     ) {
+        if self.width == 0 {
+            return;
+        }
+
         let mixer = mixer.unwrap_or(T::mix);
 
         let dst_width = width.unwrap_or(self.width * scale);

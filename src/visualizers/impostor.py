@@ -6,17 +6,33 @@ import time
 import struct
 import os
 import math
+import mmap
 
-incr = 8
+audio_path = '/tmp/coffeevis_audio.bin'
+program_path = '/tmp/coffeevis_program.txt'
+commadn_path = '/tmp/coffeevis_command.txt'
 
-file_audio = open('/tmp/coffeevis_audio.bin', mode='rb')
-file_commands = open('/tmp/coffeevis_command.txt', mode='w')
-file_program = open('/tmp/coffeevis_program.txt', mode='r')
+file_audio = open(audio_path, mode='rb')
+file_commands = open(commadn_path, mode='w')
+file_program = open(program_path, mode='r')
+
+audio_modified_time = 0.0
+program_modified_time = 0.0
+
+smooth = 0.0
+index = 0
+rotate_size = 300
+rotate_times = 0
+
+program_w = 50
+program_h = 50
 duration = 1 / 72
 
 def read_to_array(f) -> tuple[list[float], list[float]]:
-    f.seek(0)
-    fileContent = f.read()
+    incr = 8
+
+    file_audio.seek(0)
+    fileContent = file_audio.read()
 
     length = len(fileContent)
     arrayleft = []
@@ -29,35 +45,38 @@ def read_to_array(f) -> tuple[list[float], list[float]]:
 
     return (arrayleft, arrayright)
 
-
-smooth = 0.0
-index = 0
-rotate_size = 50
-
 arrayleft, arrayright = read_to_array(file_audio)
+
 
 while True:
 
-    file_program.seek(0)
-    file_program_contents = file_program.read()
+    mtime_prog = os.path.getmtime(program_path)
 
-    if len(file_program_contents) == 0:
-        break
+    if program_modified_time != mtime_prog:
+        program_modified_time = mtime_prog
+        file_program.seek(0)
+        file_program_contents = file_program.read()
 
-    file_program_contents = file_program_contents.split()
-    program_w = int(file_program_contents[1])
-    program_h = int(file_program_contents[2])
-    refresh_rate = int(file_program_contents[3]) / 1000
-    duration = 1 / refresh_rate
+        file_program_contents = file_program_contents.split()
 
-    if index > 3:
+        if len(file_program_contents) != 4:
+            break
+
+        program_w = int(file_program_contents[1])
+        program_h = int(file_program_contents[2])
+        refresh_rate = int(file_program_contents[3]) / 1000
+        duration = 1 / refresh_rate
+
+    mtime_audio = os.path.getmtime(audio_path)
+
+    if audio_modified_time != mtime_audio:
+        audio_modified_time = mtime_audio
         arrayleft, arrayright = read_to_array(file_audio)
-        index = 0
+        rotate_size = len(arrayleft) // (rotate_times+1)
+        rotate_times = 0
     else:
-        index += 1
+        rotate_times += 1
         arrayleft = arrayleft[rotate_size:] + arrayleft[:rotate_size]
-
-    # res = math.fsum(arrayleft) / len(arrayleft)
 
     arr = arrayleft[:200]
 

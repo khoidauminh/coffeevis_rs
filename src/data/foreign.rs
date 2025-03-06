@@ -1,9 +1,5 @@
 #![allow(unused_imports)]
 
-use std::fmt::Arguments;
-use std::fs::{File, OpenOptions};
-use std::io::{BufRead, ErrorKind, Seek, Write};
-use std::io::{Error, Read};
 /// The foreign communicator module.
 ///
 /// This allows for coffeevis to communicate with other
@@ -22,6 +18,11 @@ use std::io::{Error, Read};
 /// This allows writing visualizers in other languages.
 /// See an example in src/visualizers/milk/impostor.py
 ///
+use std::fmt::Arguments;
+use std::fs::{File, OpenOptions};
+use std::io::{BufRead, ErrorKind, Seek, Write};
+use std::io::{Error, Read};
+
 use std::slice::Split;
 use std::time::Duration;
 
@@ -36,6 +37,7 @@ const AUDIO_PATH: &str = "/tmp/coffeevis_audio.bin";
 const COMMAND_PATH: &str = "/tmp/coffeevis_command.txt";
 const PROGRAM_PATH: &str = "/tmp/coffeevis_program.txt";
 const DEFAULT_INTERVAL: Duration = Duration::from_millis(1000 / 60);
+const NUM_SAMPLES_TO_WRITE: usize = 1024;
 
 fn is_newline(x: &u8) -> bool {
     *x == b'\n'
@@ -224,32 +226,25 @@ impl ForeignAudioCommunicator {
             .create(true)
             .truncate(true)
             .open(AUDIO_PATH)
-            .inspect_err(|_| eprintln!("Can't open audio file for writing."));
+            .inspect_err(|_| eprintln!("Can't open audio file for writing."))
+            .ok()?;
 
-        Some(Self {
-            audio_file: audio_file.ok()?,
-        })
+        Some(Self { audio_file })
     }
 
-    pub fn send_audio<'a>(
-        &mut self,
-        data: &[Cplx],
-        offset: usize,
-        window: usize,
-    ) -> Result<(), Error> {
+    pub fn send_audio<'a>(&mut self, data: &[Cplx], offset: usize) -> Result<(), Error> {
         self.audio_file.rewind()?;
 
         let mut writer = std::io::BufWriter::new(&self.audio_file);
 
-        for i in 0..window {
+        for i in 0..NUM_SAMPLES_TO_WRITE {
             let index = (offset + i) % data.len();
-            let c = data[index];
-            let array = [c.x.to_bits().to_ne_bytes(), c.x.to_bits().to_be_bytes()];
-            let bits = array.as_flattened();
-            writer.write(bits)?;
+            for c in data[index].as_slice() {
+                writer.write(&c.to_ne_bytes())?;
+            }
         }
 
-        self.audio_file.sync_data()?;
+        self.audio_file.sync_all()?;
 
         Ok(())
     }
@@ -262,10 +257,11 @@ impl ForeignCommandsCommunicator {
             .write(true)
             .create(true)
             .open(COMMAND_PATH)
-            .inspect_err(|_| eprintln!("Can't open command file for reading."));
+            .inspect_err(|_| eprintln!("Can't open command file for reading."))
+            .ok()?;
 
         Some(Self {
-            command_file: command_file.ok()?,
+            command_file,
             input_cache: Vec::new(),
         })
     }
@@ -317,6 +313,7 @@ impl ForeignProgramCommunicator {
         self.program_file.rewind()?;
         self.program_file.set_len(0)?;
         self.program_file.write_fmt(a)?;
+        self.program_file.sync_all()?;
         Ok(())
     }
 }
