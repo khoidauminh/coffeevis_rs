@@ -1,4 +1,4 @@
-# The Forgein Communicator Module
+# The Foreign Communicator Module
 
 This is a method for coffeevis to communicate with other
 programs via tmp files without the complications of
@@ -7,7 +7,7 @@ Shared memory or IPC.
 This allows writing visualizers in other languages.
 See an example in [impostor.py](src/visualizers/milk/impostor.py)
 
-## How it's done 
+## How it's done
 
 When invoked (via the `--foreign` flag), coffeevis opens
 3 files: the audio binary file, the commands text file,
