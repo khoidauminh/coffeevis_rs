@@ -114,13 +114,20 @@ impl ApplicationHandler for WindowState {
 
         let intervals = self.prog.get_rr_intervals();
 
-        // Thread so control requesting redraws.
+        // Thread to control requesting redraws.
         let _ = thread::Builder::new().stack_size(1024).spawn(move || {
-            while exit_recv
-                .recv_timeout(intervals[(get_no_sample() > SLOW_DOWN_THRESHOLD) as usize])
-                .is_err()
-            {
-                window.request_redraw();
+            loop {
+                let s = get_no_sample();
+
+                let itvl = intervals[(s > SLOW_DOWN_THRESHOLD) as usize];
+
+                if exit_recv.recv_timeout(itvl).is_ok() {
+                    break;
+                }
+
+                if !window.is_minimized().unwrap_or(false) && s < STOP_RENDERING {
+                    window.request_redraw();
+                }
             }
         });
     }
@@ -137,6 +144,12 @@ impl ApplicationHandler for WindowState {
                         self.prog
                             .print_message(format!("Error dragging window: {err}"));
                     }
+                }
+            }
+
+            WindowEvent::Focused(_) => {
+                if let Some(w) = self.window.as_ref() {
+                    w.request_redraw()
                 }
             }
 
@@ -210,32 +223,34 @@ impl ApplicationHandler for WindowState {
                     return;
                 };
 
-                if window.is_minimized().unwrap_or(false)
-                    || self.prog.is_hidden()
-                    || get_no_sample() >= STOP_RENDERING
-                {
-                    return;
-                }
+                // if window.is_minimized().unwrap_or(false)
+                //     || self.prog.is_hidden()
+                //     || get_no_sample() >= STOP_RENDERING
+                // {
+                //     return;
+                // }
 
                 self.prog.update_vis();
                 self.prog.render();
 
-                if self.prog.is_display_enabled() {
-                    if let Some(Ok(mut buffer)) = self.surface.as_mut().map(|s| s.buffer_mut()) {
-                        self.prog.pix.scale_to(
-                            self.prog.scale() as usize,
-                            &mut buffer,
-                            Some(self.final_buffer_size.width as usize),
-                            Some(u32::mix),
-                            self.prog.is_crt(),
-                        );
+                if !self.prog.is_display_enabled() {
+                    return;
+                }
 
-                        window.pre_present_notify();
-                        if let Err(e) = buffer.present() {
-                            self.prog.print_message(format!(
-                                "Coffeevis is failing to present buffers to the window: {e}.\n"
-                            ));
-                        }
+                if let Some(Ok(mut buffer)) = self.surface.as_mut().map(|s| s.buffer_mut()) {
+                    self.prog.pix.scale_to(
+                        self.prog.scale() as usize,
+                        &mut buffer,
+                        Some(self.final_buffer_size.width as usize),
+                        Some(u32::mix),
+                        self.prog.is_crt(),
+                    );
+
+                    window.pre_present_notify();
+                    if let Err(e) = buffer.present() {
+                        self.prog.print_message(format!(
+                            "Coffeevis is failing to present buffers to the window: {e}.\n"
+                        ));
                     }
                 }
             }
