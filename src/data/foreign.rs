@@ -48,9 +48,9 @@ pub fn identify_line<'a, T: Pixel>(
 ) -> Option<DrawCommand<T>> {
     let head = inp.next()?;
 
-    if head.starts_with(b"COMMAND") {
+    if head.starts_with(b"C") {
         return parse_command(head);
-    } else if head.starts_with(b"IMAGEHEX") {
+    } else if head.starts_with(b"I") {
         return parse_image(inp, head);
     } else {
         return None;
@@ -60,7 +60,7 @@ pub fn identify_line<'a, T: Pixel>(
 pub fn parse_command<T: Pixel>(inp: &[u8]) -> Option<DrawCommand<T>> {
     let mut iter = inp.split(|&x| x == b' ');
 
-    iter.next()?; // Skips "COMMAND"
+    iter.next()?; // Skips C
 
     let mut color = [0u8; 4];
 
@@ -72,12 +72,12 @@ pub fn parse_command<T: Pixel>(inp: &[u8]) -> Option<DrawCommand<T>> {
     }
 
     let blending = match iter.next()? {
-        b"over" => T::over,
-        b"add" => <T as Pixel>::add,
-        b"sub" => <T as Pixel>::sub,
-        b"mix" => T::mix,
+        b"o" => T::over,
+        b"a" => <T as Pixel>::add,
+        b"s" => <T as Pixel>::sub,
+        b"m" => T::mix,
         other => {
-            eprintln!("Invalid token {:?}", other);
+            eprintln!("Invalid token {:?}. Expected blending", other);
             return None;
         }
     };
@@ -91,16 +91,16 @@ pub fn parse_command<T: Pixel>(inp: &[u8]) -> Option<DrawCommand<T>> {
     }
 
     let (param, func): (DrawParam, DrawFunction<T>) = match ident {
-        b"fill" => (DrawParam::Fill {}, fill),
+        b"f" => (DrawParam::Fill {}, fill),
 
-        b"plot" => (
+        b"p" => (
             DrawParam::Plot {
                 p: P2::new(num_array[0], num_array[1]),
             },
             set_pixel_xy_by,
         ),
 
-        b"line" => (
+        b"l" => (
             DrawParam::Line {
                 ps: P2::new(num_array[0], num_array[1]),
                 pe: P2::new(num_array[0], num_array[1]),
@@ -108,7 +108,7 @@ pub fn parse_command<T: Pixel>(inp: &[u8]) -> Option<DrawCommand<T>> {
             draw_line_by,
         ),
 
-        b"rect" => (
+        b"r" => (
             DrawParam::RectWh {
                 ps: P2::new(num_array[0], num_array[1]),
                 w: num_array[2].try_into().ok()?,
@@ -118,7 +118,7 @@ pub fn parse_command<T: Pixel>(inp: &[u8]) -> Option<DrawCommand<T>> {
         ),
 
         other => {
-            eprintln!("Invalid token {:?}", other);
+            eprintln!("Invalid token {:?}. Expected draw", other);
             return None;
         }
     };
@@ -137,7 +137,7 @@ pub fn parse_image<'a, T: Pixel>(
 ) -> Option<DrawCommand<T>> {
     let mut tokens = header.split(|&x| x == b' ');
 
-    tokens.next(); // Skips IMAGEHEX
+    tokens.next(); // Skips I
 
     let pos_x = i32::from_str_radix(std::str::from_utf8(tokens.next()?).ok()?, 16).ok()?;
     let pos_y = i32::from_str_radix(std::str::from_utf8(tokens.next()?).ok()?, 16).ok()?;
@@ -145,7 +145,7 @@ pub fn parse_image<'a, T: Pixel>(
     let mut vec = Vec::with_capacity(width * width);
 
     while let Some(line) = inp.next() {
-        if line.starts_with(b"END") {
+        if line.starts_with(b"C") {
             break;
         }
 
@@ -182,19 +182,21 @@ pub struct ForeignAudioCommunicator {
 ///
 /// Accepts these follwing formats
 /// ```
-/// COMMAND AA RR GG BB BLEND DRAW PARAMETERS
+/// C AA RR GG BB BLEND DRAW PARAMETERS
 ///
-/// IMAGEHEX XXXX YYYY WWWW
+/// I XXXX YYYY WWWW
 /// PIXELS
-/// END
 /// ```
 /// `RR`, `GG`, `BB`, `XXXX`, `YYYY`, `WWWW` must all be hex values.
 ///
-/// `BLEND` is one of the following: over, add, sub, mix
-/// `DRAW` is one of the following: plot, line, rect, fill,
+/// `C` lets coffeevis use the internal funtions to draw and render.
 ///
-/// `IMAGEHEX` instructs coffeevis to interpret the following
-/// stream as image data with `WWWW` width until `END`, then
+/// `BLEND` is one of the following: o, a, s, m
+/// `DRAW` is one of the following: p, l, r, f,
+///
+/// `I` instructs coffeevis to interpret the following
+/// stream as image data with `WWWW` width until EOF or a
+/// command is found, then
 /// draw it onto the screen at the `XXXX` `YYYY` coordinates.
 ///
 /// `PIXELS` is of format `AARRGGBB`.
@@ -273,6 +275,7 @@ impl ForeignCommandsCommunicator {
 
         self.input_cache.clear();
         self.command_file.read_to_end(&mut self.input_cache)?;
+        self.command_file.set_len(0)?;
 
         if self.input_cache.is_empty() {
             return Err(Error::new(ErrorKind::Other, "Empty file"));
@@ -287,8 +290,6 @@ impl ForeignCommandsCommunicator {
         if out_buffer.is_empty() {
             return Err(Error::new(ErrorKind::Other, "No parsing has been done"));
         }
-
-        self.command_file.set_len(0)?;
 
         Ok(DrawCommandBuffer::from(out_buffer))
     }

@@ -239,7 +239,7 @@ impl AudioBuffer {
         self.samples_scanned = 0;
 
         if let Some(c) = self.foreign_audio_communicator.as_mut() {
-            let _ = c.send_audio(&self.buffer, self.offset);
+            let _ = c.send_audio(&self.buffer[..self.size_mask + 1], self.offset);
         }
     }
 

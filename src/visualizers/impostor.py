@@ -77,16 +77,22 @@ while True:
     else:
         rotate_times += 1
         arrayleft = arrayleft[rotate_size:] + arrayleft[:rotate_size]
+        arrayright = arrayright[rotate_size:] + arrayright[:rotate_size]
 
-    arr = arrayleft[:200]
+    arrl = arrayleft[:200]
+    arrr = arrayright[:200]
+    length = len(arrl)
 
     file_commands.seek(0)
 
-    for i, sample in enumerate(arr):
-        sample = arr[i]
-        x = int(sample*program_h//2 + program_h//2)
-        string = "COMMAND FF FF FF FF over plot {:04x} {:04x}\n".format(i * program_w // len(arr), x)
-        file_commands.write(string)
+    for i in range(len(arrl)):
+        xl = int(arrl[i]*program_h//2 + program_h//2)
+        xr = int(arrr[i]*program_h//2 + program_h//2)
+        r = int(i * 255 // length)
+        gb = 255 - r
+        file_commands.write("C FF {:02x} FF {:02x} o p {:04x} {:04x}\n".format(r, gb, i * program_w // length, xl))
+        file_commands.write("C FF {:02x} {:02x} FF o p {:04x} {:04x}\n".format(r, gb, i * program_w // length, xr))
+
 
     file_commands.flush()
 
