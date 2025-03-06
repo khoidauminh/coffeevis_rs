@@ -11,6 +11,15 @@ This project also serves as my playground, so you'll see a lot of weird implemen
 
 ## What's new in v0.6.0
 
+#### YOU CAN NOW WRITE COFFEEVIS VISUALIZERS *OUTSIDE* OF COFFEEVIS
+
+Guess what? I got bored 4 something days before my statistsics exam and
+wrote an interface for foreign programs to communicate with coffeevis lol
+
+See [README.md](src/data/README.md)
+
+### Other changes
+
 Terminal mode is back and enabled by default!
 
 Minifb support has been removed!
@@ -22,6 +31,7 @@ A little post-processing effect has been added to window mode which should
 make the animations a little more smooth looking.
 
 New visualizers: TODO!
+
 Configuration changes: TODO!
 
 ## Examples:

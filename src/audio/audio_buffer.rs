@@ -1,4 +1,4 @@
-use crate::data::DEFAULT_ROTATE_SIZE;
+use crate::data::{DEFAULT_ROTATE_SIZE, foreign::ForeignAudioCommunicator};
 use crate::math::Cplx;
 
 const SILENCE_LIMIT: f32 = 0.001;
@@ -32,7 +32,7 @@ pub struct AudioBuffer {
 
     size_mask: usize,
 
-    /// Where offset [0] starts
+    /// Where offset 0 starts
     offset: usize,
 
     /// To prevent "audio tearing" when writing input,
@@ -69,6 +69,8 @@ pub struct AudioBuffer {
     /// Coffeevis will slow down when sufficient amount of silence
     /// has been passed into the program.
     silent: u8,
+
+    foreign_audio_communicator: Option<ForeignAudioCommunicator>,
 }
 
 impl std::ops::Index<usize> for AudioBuffer {
@@ -102,7 +104,13 @@ impl AudioBuffer {
             max: 0.0,
             average: 0.0,
             silent: 0,
+
+            foreign_audio_communicator: None,
         }
+    }
+
+    pub fn init_audio_communicator(&mut self) {
+        self.foreign_audio_communicator = ForeignAudioCommunicator::new();
     }
 
     pub fn input_size(&self) -> usize {
@@ -229,6 +237,10 @@ impl AudioBuffer {
 
         self.rotates_since_write = 0;
         self.samples_scanned = 0;
+
+        if let Some(c) = self.foreign_audio_communicator.as_mut() {
+            let _ = c.send_audio(&self.buffer, self.offset, self.input_size);
+        }
     }
 
     pub fn checked_normalize(&mut self) {

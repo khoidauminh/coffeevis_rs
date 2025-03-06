@@ -1,5 +1,5 @@
 use crate::math::{decrement, increment};
-use crate::visualizers::{classic::*, milk, VisFunc};
+use crate::visualizers::{VisFunc, classic::*, milk};
 
 #[derive(Copy, Clone)]
 pub struct Visualizer {

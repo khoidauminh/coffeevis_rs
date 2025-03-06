@@ -1,24 +1,24 @@
 use crossterm::{
     cursor::{self, Hide, Show},
-    event::{poll, read, Event, KeyCode},
+    event::{Event, KeyCode, poll, read},
     queue,
     style::{Attribute, Color, Print, SetAttribute, Stylize},
     terminal::{
-        disable_raw_mode, enable_raw_mode, size, Clear, ClearType, EnterAlternateScreen,
-        LeaveAlternateScreen,
+        Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode,
+        enable_raw_mode, size,
     },
 };
 
 use smallvec::{SmallVec, ToSmallVec};
 
-use std::io::{stdout, Error, Stdout, Write};
+use std::io::{Error, Stdout, Write, stdout};
 
 use crate::{
     audio::get_no_sample,
     data::*,
     graphics::{
-        blend::{grayb, Argb},
         Pixel,
+        blend::{Argb, grayb},
     },
     modes::Mode,
 };
@@ -326,6 +326,8 @@ pub fn control_key_events_con(prog: &mut Program, exit: &mut bool) -> Result<(),
         match read()? {
             Event::Key(event) => match event.code {
                 KeyCode::Char('b') => prog.change_visualizer(false),
+
+                KeyCode::Char('f') => prog.pix.toggle_running_foreign(),
 
                 KeyCode::Char(' ') => prog.change_visualizer(true),
 

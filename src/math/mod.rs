@@ -5,7 +5,7 @@ mod vec2;
 
 use std::ops;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct Vec2<T> {
     pub x: T,
     pub y: T,
@@ -148,11 +148,7 @@ pub mod interpolate {
     }
 
     pub fn nearest<T>(a: T, b: T, t: f32) -> T {
-        if t < 0.5 {
-            a
-        } else {
-            b
-        }
+        if t < 0.5 { a } else { b }
     }
 
     pub fn subtractive_fall(prev: f32, now: f32, min: f32, amount: f32) -> f32 {

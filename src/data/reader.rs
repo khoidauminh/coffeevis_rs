@@ -11,6 +11,12 @@ impl Program {
         while let Some(arg) = args.next() {
             let arg = arg.as_str();
             match arg {
+                "--foreign" => {
+                    crate::audio::get_buf().init_audio_communicator();
+                    self.pix.init_commands_communicator();
+                    self.init_program_communicator();
+                }
+
                 "--quiet" => self.quiet = true,
 
                 #[cfg(not(feature = "window_only"))]

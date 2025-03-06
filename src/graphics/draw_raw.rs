@@ -1,8 +1,9 @@
 #![allow(unused_variables)]
 
-use super::{blend::Mixer, Pixel, P2};
+use super::{P2, Pixel, blend::Mixer};
+use std::sync::Arc;
 
-#[derive(Copy, Clone)]
+#[derive(Clone, Debug)]
 pub enum DrawParam {
     Rect { ps: P2, pe: P2 },
     RectWh { ps: P2, w: usize, h: usize },
@@ -12,6 +13,7 @@ pub enum DrawParam {
     Fill {},
     Fade { a: u8 },
     Circle { p: P2, r: i32, f: bool },
+    Pix { p: P2, w: usize, v: Arc<[u32]> },
 }
 
 pub type DrawFunction<T> = fn(&mut [T], usize, usize, T, Mixer<T>, DrawParam);
@@ -255,6 +257,46 @@ pub fn draw_cirle_by<T: Pixel>(
 
         if x < y {
             break;
+        }
+    }
+}
+
+pub fn draw_pix_by<T: Pixel>(
+    canvas: &mut [T],
+    cwidth: usize,
+    cheight: usize,
+    color: T,
+    b: Mixer<T>,
+    param: DrawParam,
+) {
+    let DrawParam::Pix {
+        p: pix_pos,
+        w: pix_width,
+        v: pix_vec,
+    } = param
+    else {
+        return;
+    };
+
+    let pix_height = pix_vec.len() / pix_width;
+
+    let canvas_iter = canvas
+        .chunks_exact_mut(cwidth)
+        .skip(pix_pos.y.max(0) as usize);
+
+    let pix_iter = pix_vec
+        .chunks_exact(pix_width)
+        .skip((-pix_pos.y.min(0)) as usize);
+
+    let dest_x = pix_pos.x.max(0) as usize;
+    let src_x = (-pix_pos.x.min(0)) as usize;
+
+    for (line_dest, line_src) in canvas_iter.zip(pix_iter) {
+        let line_iter = line_dest.iter_mut().skip(dest_x).take(pix_width);
+        let src_iter = line_src.iter().skip(src_x);
+
+        for (p_dest, p_src) in line_iter.zip(src_iter) {
+            *p_dest = b(*p_dest, T::from(*p_src));
         }
     }
 }

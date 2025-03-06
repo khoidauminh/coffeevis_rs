@@ -2,7 +2,7 @@ pub mod blend;
 //pub mod draw;
 pub mod draw_raw;
 
-use crate::data::MAX_WIDTH;
+use crate::data::{MAX_WIDTH, foreign::ForeignCommandsCommunicator};
 use crate::math::Vec2;
 use blend::Mixer;
 use draw_raw::*;
@@ -23,6 +23,7 @@ pub(crate) trait Pixel:
     + ops::Add<Output = Self>
     + ops::Sub<Output = Self>
     + ops::Mul<Output = Self>
+    + std::fmt::Debug
 {
     fn black() -> Self;
     fn white() -> Self;
@@ -54,13 +55,15 @@ pub(crate) trait Pixel:
     fn compose(array: [u8; 4]) -> Self;
 }
 
-struct DrawCommand<T> {
+#[derive(Debug)]
+pub struct DrawCommand<T> {
     pub func: DrawFunction<T>,
     pub param: DrawParam,
     pub color: T,
     pub blending: Mixer<T>,
 }
 
+#[derive(Debug)]
 pub struct DrawCommandBuffer<T>(Vec<DrawCommand<T>>);
 
 pub struct PixelBuffer<T> {
@@ -71,6 +74,8 @@ pub struct PixelBuffer<T> {
     field: usize,
     background: T,
     command: DrawCommandBuffer<T>,
+    foreign_commands_communicator: Option<ForeignCommandsCommunicator>,
+    is_running_foreign: bool,
 }
 
 pub(crate) type Canvas = PixelBuffer<u32>;
@@ -92,6 +97,10 @@ macro_rules! make_draw_func {
 impl<T: Pixel> DrawCommandBuffer<T> {
     pub fn new() -> Self {
         Self(Vec::with_capacity(COMMAND_BUFFER_INIT_CAPACITY))
+    }
+
+    pub fn from(vec: Vec<DrawCommand<T>>) -> Self {
+        Self(vec)
     }
 
     make_draw_func!(rect, draw_rect_xy_by, Rect, ps: P2, pe: P2);
@@ -122,7 +131,7 @@ impl<T: Pixel> DrawCommandBuffer<T> {
         });
     }
 
-    pub fn execute(&mut self, canvas: &mut [T], cwidth: usize, cheight: usize) {
+    pub fn execute(&mut self, canvas: &mut [T], cwidth: usize, cheight: usize, clear: bool) {
         self.0.iter().for_each(|command| {
             (command.func)(
                 canvas,
@@ -130,10 +139,13 @@ impl<T: Pixel> DrawCommandBuffer<T> {
                 cheight,
                 command.color,
                 command.blending,
-                command.param,
+                command.param.clone(),
             );
         });
-        self.0.clear();
+
+        if clear {
+            self.0.clear();
+        }
     }
 }
 
@@ -160,7 +172,22 @@ impl<T: Pixel> PixelBuffer<T> {
             height: h,
             field: FIELD_START,
             background: T::from(0xFF_24_24_24),
+            foreign_commands_communicator: None,
+            is_running_foreign: false,
         }
+    }
+
+    pub fn init_commands_communicator(&mut self) {
+        self.foreign_commands_communicator = ForeignCommandsCommunicator::new();
+        self.is_running_foreign = true;
+    }
+
+    pub fn is_foreign(&self) -> bool {
+        self.foreign_commands_communicator.is_some() && self.is_running_foreign
+    }
+
+    pub fn toggle_running_foreign(&mut self) {
+        self.is_running_foreign ^= true;
     }
 
     pub fn as_slice(&self) -> &[T] {
@@ -172,8 +199,21 @@ impl<T: Pixel> PixelBuffer<T> {
     }
 
     pub fn draw_to_self(&mut self) {
+        if self.is_running_foreign {
+            if let Some(c) = self.foreign_commands_communicator.as_mut() {
+                if let Ok(v) = c.read_commands() {
+                    // dbg!(&v);
+                    self.command = v;
+                    self.clear();
+                    self.command
+                        .execute(&mut self.buffer, self.width, self.height, false);
+                }
+                return;
+            }
+        }
+
         self.command
-            .execute(&mut self.buffer, self.width, self.height);
+            .execute(&mut self.buffer, self.width, self.height, true);
     }
 
     pub fn width(&self) -> usize {
