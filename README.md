@@ -95,6 +95,7 @@ Coffeevis supports temporary options at launch
 | --resizable | | allows resizing in window mode |
 | --max-con-size | 50x50 | sets maximum resolution in terminal mode |
 | --vis | spectrum | launches coffeevis with the specified visualizer |
+| --foreign | | instructs coffeevis to send out audio and listens to input commands see [Foreign Communicator](src/data/README.md) |
 
 ## Notes
 

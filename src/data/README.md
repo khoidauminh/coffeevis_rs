@@ -28,4 +28,6 @@ This is where external programs send in draw commands for coffeevis to render.
 ```
 This is where information about the program will be stored.
 
+To get started, launch coffeevis with the `--foreign` flag and run [Impostor.py](../visualizers/impostor.py).
+
 For details, see [foreign.rs](foreign.rs)
