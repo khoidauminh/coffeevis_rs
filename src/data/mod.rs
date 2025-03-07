@@ -402,7 +402,7 @@ impl Program {
                 "0.6.0\n{} {}\n{}",
                 self.pix.width(),
                 self.pix.height(),
-                self.milli_hz
+                self.milli_hz / 1000
             ));
         }
     }
