@@ -33,9 +33,9 @@ use crate::math::Cplx;
 
 use super::Program;
 
-const AUDIO_PATH: &str = "/tmp/coffeevis_audio.bin";
-const COMMAND_PATH: &str = "/tmp/coffeevis_command.txt";
-const PROGRAM_PATH: &str = "/tmp/coffeevis_program.txt";
+const AUDIO_PATH: &str = "/dev/shm/coffeevis_audio.bin";
+const COMMAND_PATH: &str = "/dev/shm/coffeevis_command.txt";
+const PROGRAM_PATH: &str = "/dev/shm/coffeevis_program.txt";
 const DEFAULT_INTERVAL: Duration = Duration::from_millis(1000 / 60);
 const NUM_SAMPLES_TO_WRITE: usize = 1024;
 
@@ -191,13 +191,13 @@ pub struct ForeignAudioCommunicator {
 ///
 /// `C` lets coffeevis use the internal funtions to draw and render.
 ///
-/// `BLEND` is one of the following: o, a, s, m
-/// `DRAW` is one of the following: p, l, r, f,
+/// `BLEND` is one of the following: o (over), a (add), s (sub), m (mix)
+/// `DRAW` is one of the following: p (plot), l (line), r (rect), f (fill),
 ///
 /// `I` instructs coffeevis to interpret the following
 /// stream as image data with `WWWW` width until EOF or a
-/// command is found, then
-/// draw it onto the screen at the `XXXX` `YYYY` coordinates.
+/// command is found, then draw it onto the screen at the
+/// `XXXX` `YYYY` coordinates.
 ///
 /// `PIXELS` is of format `AARRGGBB`.
 ///

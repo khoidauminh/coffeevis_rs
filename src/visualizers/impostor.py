@@ -6,11 +6,10 @@ import time
 import struct
 import os
 import math
-import mmap
 
-audio_path = '/tmp/coffeevis_audio.bin'
-program_path = '/tmp/coffeevis_program.txt'
-commadn_path = '/tmp/coffeevis_command.txt'
+audio_path = '/dev/shm/coffeevis_audio.bin'
+program_path = '/dev/shm/coffeevis_program.txt'
+commadn_path = '/dev/shm/coffeevis_command.txt'
 
 file_audio = open(audio_path, mode='rb')
 file_commands = open(commadn_path, mode='w')
