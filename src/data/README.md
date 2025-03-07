@@ -13,17 +13,17 @@ When invoked (via the `--foreign` flag), coffeevis opens
 and the program text file.
 
 ```
-/tmp/coffeevis_audio.bin
+/dev/shm/coffeevis_audio.bin
 ```
 Periodically updates with a continuous audio data array (typically 2000 samples)
 
 ```
-/tmp/coffeevis_commands.txt
+/dev/shm/coffeevis_commands.txt
 ```
 This is where external programs send in draw commands for coffeevis to render.
 
 ```
-/tmp/coffeevis_program.txt
+/dev/shm/coffeevis_program.txt
 ```
 This is where information about the program will be stored.
 
