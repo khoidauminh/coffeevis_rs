@@ -29,7 +29,7 @@ fn main() {
             #[allow(unused_mut, unused_assignments)]
             let mut terminal = false;
 
-            #[cfg(not(feature = "window_only"))]
+            #[cfg(all(not(feature = "window_only"), target_os = "linux"))]
             {
                 terminal = true;
                 modes::console_mode::con_main(prog).unwrap();

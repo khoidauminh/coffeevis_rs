@@ -1,4 +1,4 @@
-#[cfg(not(feature = "window_only"))]
+#[cfg(all(not(feature = "window_only"), target_os = "linux"))]
 pub mod console_mode;
 
 #[cfg(not(feature = "console_only"))]

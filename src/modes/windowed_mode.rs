@@ -8,10 +8,17 @@ use winit::{
     event::{self, ElementState, WindowEvent},
     event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
     keyboard::{Key, NamedKey},
-    platform::{
-        modifier_supplement::KeyEventExtModifierSupplement, wayland::WindowAttributesExtWayland,
-    },
     window::{Icon, Theme, Window, WindowId, WindowLevel},
+};
+
+#[cfg(target_os = "linux")]
+use winit::platform::{
+    modifier_supplement::KeyEventExtModifierSupplement, wayland::WindowAttributesExtWayland,
+};
+
+#[cfg(target_os = "windows")]
+use winit::platform::{
+    modifier_supplement::KeyEventExtModifierSupplement, windows::WindowAttributesExtWindows,
 };
 
 use std::{
@@ -58,9 +65,14 @@ impl ApplicationHandler for WindowState {
             .with_window_level(WindowLevel::AlwaysOnTop)
             .with_transparent(false)
             .with_resizable(self.prog.is_resizable())
-            .with_name("coffeevis", "cvis")
             .with_theme(Some(Theme::Dark))
             .with_window_icon(icon);
+
+        #[cfg(target_os = "linux")]
+        let window_attributes = window_attributes.with_name("coffeevis", "cvis");
+
+        #[cfg(target_os = "windows")]
+        let window_attributes = window_attributes.with_class_name("coffeevis");
 
         // Since we are leaking the window into a static
         // reference, resumed() is not allowed to be

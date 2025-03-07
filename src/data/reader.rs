@@ -19,13 +19,13 @@ impl Program {
 
                 "--quiet" => self.quiet = true,
 
-                #[cfg(not(feature = "window_only"))]
+                #[cfg(all(not(feature = "window_only"), target_os = "linux"))]
                 "--braille" => (self.mode, self.flusher) = (ConBrail, Program::print_brail),
 
-                #[cfg(not(feature = "window_only"))]
+                #[cfg(all(not(feature = "window_only"), target_os = "linux"))]
                 "--ascii" => (self.mode, self.flusher) = (ConAscii, Program::print_ascii),
 
-                #[cfg(not(feature = "window_only"))]
+                #[cfg(all(not(feature = "window_only"), target_os = "linux"))]
                 "--block" => (self.mode, self.flusher) = (ConBlock, Program::print_block),
 
                 "--no-auto-switch" => self.auto_switch = false,
@@ -85,7 +85,7 @@ impl Program {
                     );
                 }
 
-                #[cfg(not(feature = "window_only"))]
+                #[cfg(all(not(feature = "window_only"), target_os = "linux"))]
                 "--max-con-size" => {
                     let s = args
                         .next()
@@ -207,6 +207,7 @@ impl Program {
                 self.mode.get_name()
             ));
         } else {
+            #[cfg(target_os = "linux")]
             self.print_message(format!(
                 "Running with: Winit, {}\n",
                 if self.mode == WinWayland {
@@ -214,7 +215,10 @@ impl Program {
                 } else {
                     "X11"
                 }
-            ))
+            ));
+
+            #[cfg(target_os = "windows")]
+            self.print_message("Running in Windows");
         }
 
         if self.resize {
