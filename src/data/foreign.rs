@@ -3,8 +3,7 @@
 /// The foreign communicator module.
 ///
 /// This allows for coffeevis to communicate with other
-/// programs via tmp files without the complications of
-/// Shared memory or IPC.
+/// programs via tmp files.
 ///
 /// When invoked (via the `--foreign` flag), coffeevis opens
 /// 3 files: the audio binary file, the commands text file,

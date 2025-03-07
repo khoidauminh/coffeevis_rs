@@ -1,7 +1,7 @@
 # The Foreign Communicator Module
 
 This is a method for coffeevis to communicate with other
-programs via tmpfs files without the complications of mmap or IPC.
+programs via tmpfs files.
 
 This allows writing visualizers in other languages.
 See an example in [impostor.py](src/visualizers/milk/impostor.py)
