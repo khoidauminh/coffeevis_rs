@@ -17,7 +17,7 @@ use winit::{
 use std::{
     num::NonZeroU32,
     sync::mpsc::{self, SyncSender},
-    thread,
+    thread::{self, JoinHandle},
 };
 
 use crate::graphics::Pixel;
@@ -30,6 +30,7 @@ struct WindowState {
     pub window: Option<&'static Window>,
     pub surface: Option<WindowSurface>,
     pub exit_sender: Option<SyncSender<()>>,
+    pub thread_control_draw_id: Option<JoinHandle<()>>,
     pub final_buffer_size: PhysicalSize<u32>,
 }
 
@@ -115,28 +116,29 @@ impl ApplicationHandler for WindowState {
         let intervals = self.prog.get_rr_intervals();
 
         // Thread to control requesting redraws.
-        let _ = thread::Builder::new().stack_size(1024).spawn(move || {
-            loop {
-                let s = get_no_sample();
+        self.thread_control_draw_id = thread::Builder::new()
+            .stack_size(1024)
+            .spawn(move || {
+                loop {
+                    let s = get_no_sample();
 
-                let itvl = intervals[(s > SLOW_DOWN_THRESHOLD) as usize];
+                    let itvl = intervals[(s > SLOW_DOWN_THRESHOLD) as usize];
 
-                if exit_recv.recv_timeout(itvl).is_ok() {
-                    break;
+                    if exit_recv.recv_timeout(itvl).is_ok() {
+                        break;
+                    }
+
+                    if !window.is_minimized().unwrap_or(false) && s < STOP_RENDERING {
+                        window.request_redraw();
+                    }
                 }
-
-                if !window.is_minimized().unwrap_or(false) && s < STOP_RENDERING {
-                    window.request_redraw();
-                }
-            }
-        });
+            })
+            .ok();
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _: WindowId, event: WindowEvent) {
         match event {
-            WindowEvent::CloseRequested => {
-                event_loop.exit();
-            }
+            WindowEvent::CloseRequested => self.call_exit(event_loop),
 
             WindowEvent::MouseInput { button, .. } => {
                 if button == event::MouseButton::Left {
@@ -193,7 +195,7 @@ impl ApplicationHandler for WindowState {
                 if event.state == ElementState::Pressed && !event.repeat =>
             {
                 match event.key_without_modifiers().as_ref() {
-                    Key::Named(NamedKey::Escape) => event_loop.exit(),
+                    Key::Named(NamedKey::Escape) => self.call_exit(event_loop),
 
                     Key::Named(NamedKey::Space) => self.prog.change_visualizer(true),
 
@@ -263,6 +265,14 @@ impl ApplicationHandler for WindowState {
 }
 
 impl WindowState {
+    fn call_exit(&mut self, event_loop: &ActiveEventLoop) {
+        self.exit_sender.as_ref().map(|x| x.send(()));
+        if let Some(t) = self.thread_control_draw_id.take() {
+            t.join().unwrap();
+        }
+        event_loop.exit();
+    }
+
     fn resize_surface(surface: &mut WindowSurface, w: u32, h: u32) {
         surface
             .resize(
@@ -327,10 +337,10 @@ pub fn winit_main(prog: Program) {
         window: None,
         surface: None,
         exit_sender: None,
+        thread_control_draw_id: None,
         final_buffer_size: PhysicalSize::<u32>::new(0, 0),
     };
 
     event_loop.set_control_flow(ControlFlow::Wait);
     event_loop.run_app(&mut state).unwrap();
-    state.exit_sender.as_ref().map(|x| x.send(()));
 }
