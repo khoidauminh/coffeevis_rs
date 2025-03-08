@@ -15,12 +15,14 @@ readme = "README.md"
 [dependencies]
 cpal = "0.15"
 softbuffer = "0.4"
-winit = "0.30"
+winit = { version =  "0.30", default-features = false }
 qoi = "0.4.1"
 crossterm = "0.28"
 smallvec = "1.13.2"
 
 [features]
+default = ["winit/rwh_06", "winit/wayland", "winit/x11", "winit/wayland-dlopen"]
+gnome_decor = ["winit/wayland-csd-adwaita"]
 window_only = []
 console_only = []
 fast_color = []
