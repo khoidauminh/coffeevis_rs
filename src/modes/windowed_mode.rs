@@ -267,22 +267,24 @@ impl ApplicationHandler for WindowState {
                     return;
                 }
 
-                if let Some(Ok(mut buffer)) = self.surface.as_mut().map(|s| s.buffer_mut()) {
-                    self.prog.pix.scale_to(
-                        self.prog.scale() as usize,
-                        &mut buffer,
-                        Some(self.final_buffer_size.width as usize),
-                        Some(u32::mix),
-                        self.prog.is_crt(),
-                    );
+                let Some(Ok(mut buffer)) = self.surface.as_mut().map(|s| s.buffer_mut()) else {
+                    return;
+                };
 
-                    window.pre_present_notify();
-                    if let Err(e) = buffer.present() {
-                        error!(
-                            "Coffeevis is failing to present buffers to the window: {}!",
-                            e
-                        );
-                    }
+                self.prog.pix.scale_to(
+                    self.prog.scale() as usize,
+                    &mut buffer,
+                    Some(self.final_buffer_size.width as usize),
+                    Some(u32::mix),
+                    self.prog.is_crt(),
+                );
+
+                window.pre_present_notify();
+                if let Err(e) = buffer.present() {
+                    error!(
+                        "Coffeevis is failing to present buffers to the window: {}!",
+                        e
+                    );
                 }
             }
 
@@ -294,9 +296,9 @@ impl ApplicationHandler for WindowState {
 impl WindowState {
     fn call_exit(&mut self, event_loop: &ActiveEventLoop) {
         self.exit_sender.as_ref().map(|x| x.send(()));
-        if let Some(t) = self.thread_control_draw_id.take() {
-            t.join().unwrap();
-        }
+        self.thread_control_draw_id
+            .take()
+            .map(|t| t.join().unwrap());
         event_loop.exit();
     }
 
