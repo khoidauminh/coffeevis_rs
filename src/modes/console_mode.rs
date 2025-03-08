@@ -225,6 +225,40 @@ impl Program {
         let _ = queue!(std::io::stdout(), Clear(ClearType::All));
     }
 
+    pub fn switch_con_mode(&mut self) {
+        self.set_mode(self.mode().next());
+        self.console_props.flusher = self.mode().get_flusher();
+        self.refresh_con();
+    }
+
+    pub fn change_con_max(&mut self, amount: i16, replace: bool) {
+        self.console_props.max_width = if replace {
+            amount as u16
+        } else {
+            self.console_props
+                .max_width
+                .saturating_add_signed(amount)
+                .clamp(0, MAX_CON_WIDTH)
+        };
+        self.console_props.max_height = self.console_props.max_width / 2;
+        self.clear_con();
+    }
+
+    pub fn refresh_con(&mut self) {
+        self.update_size((self.console_props.width, self.console_props.height));
+    }
+
+    pub fn get_center(&self, divider_x: u16, divider_y: u16) -> (u16, u16) {
+        (
+            (self.console_props.width / 2).saturating_sub(self.pix.width() as u16 / divider_x),
+            (self.console_props.height / 2).saturating_sub(self.pix.height() as u16 / divider_y),
+        )
+    }
+
+    pub fn console_size(&self) -> (u16, u16) {
+        (self.console_props.width, self.console_props.height)
+    }
+
     pub fn print_ascii(&self, stdout: &mut Stdout) {
         let center = self.get_center(2, 4);
 
