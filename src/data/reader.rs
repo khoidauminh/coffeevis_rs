@@ -20,13 +20,19 @@ impl Program {
                 "--quiet" => self.quiet = true,
 
                 #[cfg(all(not(feature = "window_only"), target_os = "linux"))]
-                "--braille" => (self.mode, self.flusher) = (ConBrail, Program::print_brail),
+                "--braille" => {
+                    (self.mode, self.console_props.flusher) = (ConBrail, Program::print_brail)
+                }
 
                 #[cfg(all(not(feature = "window_only"), target_os = "linux"))]
-                "--ascii" => (self.mode, self.flusher) = (ConAscii, Program::print_ascii),
+                "--ascii" => {
+                    (self.mode, self.console_props.flusher) = (ConAscii, Program::print_ascii)
+                }
 
                 #[cfg(all(not(feature = "window_only"), target_os = "linux"))]
-                "--block" => (self.mode, self.flusher) = (ConBlock, Program::print_block),
+                "--block" => {
+                    (self.mode, self.console_props.flusher) = (ConBlock, Program::print_block)
+                }
 
                 "--no-auto-switch" => self.auto_switch = false,
 
@@ -94,7 +100,7 @@ impl Program {
                         .map(|x| x.parse::<u16>().expect("Argument error: Invalid value"))
                         .collect::<Vec<_>>();
 
-                    (self.console_max_width, self.console_max_height) = (s[0], s[1]);
+                    self.console_props.set_max((s[0], s[1]));
                 }
 
                 "--x11" => {
@@ -239,8 +245,8 @@ impl Program {
 
         #[cfg(not(feature = "console_only"))]
         {
-            let w = self.window_width as u32 * self.scale as u32;
-            let h = self.window_height as u32 * self.scale as u32;
+            let w = self.window_props.width as u32 * self.scale as u32;
+            let h = self.window_props.height as u32 * self.scale as u32;
 
             if self.resize || w * h > 70000 {
                 alert!(

@@ -34,6 +34,22 @@ use crate::{audio::get_no_sample, data::*};
 
 type WindowSurface = Surface<&'static Window, &'static Window>;
 
+pub struct WindowProps {
+    pub width: u16,
+    pub height: u16,
+}
+
+impl WindowProps {
+    pub fn set_size<T: TryInto<u16>>(&mut self, s: (T, T)) {
+        self.width = s.0.try_into().ok().unwrap();
+        self.height = s.1.try_into().ok().unwrap();
+    }
+
+    pub fn getu(&self) -> (usize, usize) {
+        (self.width as usize, self.height as usize)
+    }
+}
+
 struct WindowState {
     pub prog: Program,
     pub window: Option<&'static Window>,

@@ -10,7 +10,7 @@ use std::time::{Duration, Instant};
 
 use crate::{graphics::Canvas, modes::Mode};
 
-use crate::VisFunc;
+use crate::{VisFunc, modes};
 
 pub const SAMPLE_RATE: usize = 44100;
 
@@ -90,29 +90,14 @@ pub(crate) struct Program {
     pub smoothing: f32,
 
     #[cfg(not(feature = "console_only"))]
-    window_width: u16,
-
-    #[cfg(not(feature = "console_only"))]
-    window_height: u16,
+    pub window_props: modes::windowed_mode::WindowProps,
 
     #[cfg(all(not(feature = "window_only"), target_os = "linux"))]
-    console_width: u16,
-
-    #[cfg(all(not(feature = "window_only"), target_os = "linux"))]
-    console_height: u16,
-
-    #[cfg(all(not(feature = "window_only"), target_os = "linux"))]
-    console_max_width: u16,
-
-    #[cfg(all(not(feature = "window_only"), target_os = "linux"))]
-    console_max_height: u16,
+    pub console_props: modes::console_mode::ConsoleProps,
 
     vis_navigator: vislist::VisNavigator,
 
     visualizer: VisFunc,
-
-    #[cfg(all(not(feature = "window_only"), target_os = "linux"))]
-    pub flusher: crate::modes::console_mode::Flusher,
 
     switch: Instant,
     auto_switch: bool,
@@ -152,9 +137,6 @@ impl Program {
 
             visualizer: vis.func(),
 
-            #[cfg(all(not(feature = "window_only"), target_os = "linux"))]
-            flusher: default_mode.get_flusher(),
-
             switch: Instant::now() + Duration::from_secs(8),
             auto_switch: true,
             auto_switch_interval: Duration::from_secs(8),
@@ -164,22 +146,19 @@ impl Program {
             smoothing: DEFAULT_SMOOTHING,
 
             #[cfg(not(feature = "console_only"))]
-            window_width: DEFAULT_SIZE_WIN,
-
-            #[cfg(not(feature = "console_only"))]
-            window_height: DEFAULT_SIZE_WIN,
-
-            #[cfg(all(not(feature = "window_only"), target_os = "linux"))]
-            console_width: 50,
+            window_props: modes::windowed_mode::WindowProps {
+                width: DEFAULT_SIZE_WIN,
+                height: DEFAULT_SIZE_WIN,
+            },
 
             #[cfg(all(not(feature = "window_only"), target_os = "linux"))]
-            console_height: 25,
-
-            #[cfg(all(not(feature = "window_only"), target_os = "linux"))]
-            console_max_width: 50,
-
-            #[cfg(all(not(feature = "window_only"), target_os = "linux"))]
-            console_max_height: 25,
+            console_props: modes::console_mode::ConsoleProps {
+                width: 50,
+                height: 25,
+                max_width: 50,
+                max_height: 25,
+                flusher: default_mode.get_flusher(),
+            },
 
             foreign_program_communicator: None,
         }
@@ -316,16 +295,13 @@ impl Program {
         match &self.mode {
             #[cfg(not(feature = "console_only"))]
             Mode::WinX11 | Mode::WinWayland => {
-                self.window_width = s.0;
-                self.window_height = s.1;
+                self.window_props.set_size(s);
             }
 
             _ => {
                 #[cfg(all(not(feature = "window_only"), target_os = "linux"))]
                 {
-                    self.console_width = s.0;
-                    self.console_height = s.1;
-                    s = self.rescale(s);
+                    s = self.console_props.set_size(s, self.mode());
                 }
             }
         }
@@ -349,13 +325,16 @@ impl Program {
     pub fn refresh(&mut self) {
         match &self.mode {
             #[cfg(not(feature = "console_only"))]
-            Mode::WinX11 | Mode::WinWayland => self
-                .pix
-                .resize(self.window_width as usize, self.window_height as usize),
+            Mode::WinX11 | Mode::WinWayland => self.pix.resize(
+                self.window_props.width as usize,
+                self.window_props.height as usize,
+            ),
             _ => {
                 #[cfg(all(not(feature = "window_only"), target_os = "linux"))]
-                self.pix
-                    .resize(self.console_width as usize, self.console_height as usize);
+                self.pix.resize(
+                    self.console_props.width as usize,
+                    self.console_props.height as usize,
+                );
             }
         }
     }
@@ -425,56 +404,39 @@ impl Program {
     #[cfg(all(not(feature = "window_only"), target_os = "linux"))]
     pub fn switch_con_mode(&mut self) {
         self.mode = self.mode.next();
-        self.flusher = self.mode.get_flusher();
+        self.console_props.flusher = self.mode.get_flusher();
         self.refresh_con();
     }
 
     #[cfg(all(not(feature = "window_only"), target_os = "linux"))]
     pub fn change_con_max(&mut self, amount: i16, replace: bool) {
-        self.console_max_width = if replace {
+        self.console_props.max_width = if replace {
             amount as u16
         } else {
-            self.console_max_width
+            self.console_props
+                .max_width
                 .saturating_add_signed(amount)
                 .clamp(0, MAX_CON_WIDTH)
         };
-        self.console_max_height = self.console_max_width / 2;
+        self.console_props.max_height = self.console_props.max_width / 2;
         self.clear_con();
     }
 
     #[cfg(all(not(feature = "window_only"), target_os = "linux"))]
     pub fn refresh_con(&mut self) {
-        self.update_size((self.console_width, self.console_height));
+        self.update_size((self.console_props.width, self.console_props.height));
     }
 
     #[cfg(all(not(feature = "window_only"), target_os = "linux"))]
     pub fn get_center(&self, divider_x: u16, divider_y: u16) -> (u16, u16) {
         (
-            (self.console_width / 2).saturating_sub(self.pix.width() as u16 / divider_x),
-            (self.console_height / 2).saturating_sub(self.pix.height() as u16 / divider_y),
+            (self.console_props.width / 2).saturating_sub(self.pix.width() as u16 / divider_x),
+            (self.console_props.height / 2).saturating_sub(self.pix.height() as u16 / divider_y),
         )
     }
 
     #[cfg(all(not(feature = "window_only"), target_os = "linux"))]
     pub fn console_size(&self) -> (u16, u16) {
-        (self.console_width, self.console_height)
-    }
-
-    #[cfg(all(not(feature = "window_only"), target_os = "linux"))]
-    pub fn rescale(&self, mut s: (u16, u16)) -> (u16, u16) {
-        s.0 = s.0.min(self.console_max_width);
-        s.1 = s.1.min(self.console_max_height);
-
-        match self.mode() {
-            Mode::ConBrail => {
-                s.0 *= 2;
-                s.1 *= 4;
-            }
-            _ => {
-                s.1 *= 2;
-            }
-        }
-
-        s
+        (self.console_props.width, self.console_props.height)
     }
 }
