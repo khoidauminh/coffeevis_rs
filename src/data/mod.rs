@@ -1,8 +1,10 @@
 pub mod foreign;
+
+#[macro_use]
+pub mod log;
+
 pub mod reader;
 pub mod vislist;
-
-use core::fmt;
 
 use std::time::{Duration, Instant};
 
@@ -52,37 +54,6 @@ pub enum RefreshRateMode {
     Sync,
     Specified,
 }
-
-macro_rules! eprintln_red {
-    () => {
-        eprintln!()
-    };
-    ($arg:tt) => {
-        eprintln!("\x1B[31;1m{}\x1B[0m", $arg)
-    };
-}
-
-macro_rules! format_red {
-    () => {
-        format!()
-    };
-    ($arg:tt) => {
-        format!("\x1B[31;1m{}\x1B[0m", $arg)
-    };
-}
-
-#[allow(unused_macros)]
-macro_rules! panic_red {
-    () => {
-        format!()
-    };
-    ($arg:tt) => {
-        panic!("\x1B[31;1m{}\x1B[0m", $arg)
-    };
-}
-
-pub(crate) use eprintln_red;
-pub(crate) use format_red;
 
 /// Main program struct
 ///
@@ -286,13 +257,18 @@ impl Program {
         self.change_fps_frac(self.milli_hz);
     }
 
-    pub fn change_fps_frac(&mut self, fps: u32) {
+    pub fn construct_intervals(fps: u32) -> [Duration; 2] {
         let fps_f = fps as f32 / 1000.0;
         let rate = (1_000_000_000.0 / fps_f) as u64;
-        self.milli_hz = fps;
+        // self.milli_hz = fps;
         let interval = Duration::from_nanos(rate);
 
-        self.refresh_rate_intervals = [interval, interval * 8];
+        [interval, interval * 8]
+    }
+
+    pub fn change_fps_frac(&mut self, fps: u32) {
+        self.milli_hz = fps;
+        self.refresh_rate_intervals = Self::construct_intervals(fps);
     }
 
     pub fn change_visualizer(&mut self, forward: bool) {
@@ -313,10 +289,7 @@ impl Program {
         let vis_name = self.vis_navigator.current_vis_name();
         let vis_list = self.vis_navigator.current_list_name();
 
-        self.print_message(format!(
-            "Switching to {} in list {}\r\n",
-            vis_name, vis_list
-        ))
+        info!("Switching to {} in list {}", vis_name, vis_list);
     }
 
     pub fn change_vislist(&mut self) {
@@ -335,41 +308,7 @@ impl Program {
         let vis_name = self.vis_navigator.current_vis_name();
         let vis_list = self.vis_navigator.current_list_name();
 
-        self.print_message(format!(
-            "Switching to {} in list {}\r\n",
-            vis_name, vis_list
-        ))
-    }
-
-    pub fn print_message<S: fmt::Display>(&self, message: S) {
-        if self.quiet {
-            return;
-        }
-
-        use std::io::Write;
-        let mut stdout = std::io::stdout();
-
-        if self.display && self.mode.is_con() {
-            #[cfg(all(not(feature = "window_only"), target_os = "linux"))]
-            {
-                use crossterm::{
-                    style::Print,
-                    terminal::{EnterAlternateScreen, LeaveAlternateScreen},
-                };
-
-                let _ = crossterm::queue!(
-                    stdout,
-                    LeaveAlternateScreen,
-                    Print(message),
-                    EnterAlternateScreen
-                );
-            }
-
-            return;
-        }
-
-        print!("{}", message);
-        let _ = stdout.flush();
+        info!("Switching to {} in list {}\r\n", vis_name, vis_list);
     }
 
     #[allow(unused_mut)]
@@ -456,10 +395,10 @@ impl Program {
     pub fn toggle_auto_switch(&mut self) {
         self.auto_switch ^= true;
 
-        self.print_message(format!(
-            "Auto switch is now {}\n",
+        info!(
+            "Auto switch is now {}",
             if self.auto_switch { "on" } else { "off" }
-        ));
+        );
     }
 
     pub fn reset_parameters(&mut self) {

@@ -10,7 +10,6 @@ mod visualizers;
 
 use audio::get_source;
 use cpal::traits::StreamTrait;
-use data::eprintln_red;
 use visualizers::VisFunc;
 
 fn main() {
@@ -36,10 +35,12 @@ fn main() {
             }
 
             if !terminal {
-                eprintln_red!("Unable to determine display mode!");
+                crate::data::log::error!("Unable to determine display mode!");
             }
         }
     }
 
     stream.pause().unwrap();
+
+    crate::data::log::info!("Bye!")
 }

@@ -79,9 +79,9 @@ impl Program {
                 }
 
                 "--transparent" => {
-                    eprintln_red!(
+                    error!(
                         "Transparency isn't supported by Softbuffer. \
-                        See https://github.com/rust-windowing/softbuffer/issues/215\n"
+                        See https://github.com/rust-windowing/softbuffer/issues/215"
                     );
                 }
 
@@ -98,11 +98,11 @@ impl Program {
                 }
 
                 "--x11" => {
-                    self.print_message(format_red!(
+                    alert!(
                         "This option no longer works as Rust 2024 Edition now marks \
                         set_var and remove_var as unsafe. Unset WAYLAND_DISPLAY to \
                         force running in Xwayland."
-                    ));
+                    );
                 }
 
                 "--vis" => {
@@ -124,7 +124,7 @@ impl Program {
                 }
 
                 ":3" => {
-                    eprintln_red!("\n:3");
+                    error!("\n:3");
                 }
 
                 "--crt" => {
@@ -132,8 +132,11 @@ impl Program {
                 }
 
                 "--no-display" => {
-                    eprintln_red!(
-                        "You have told coffeevis to not present the buffer. Expect a black window (or no window on Wayland)."
+                    alert!(
+                        "{}",
+                        format_red!(
+                            "You have told coffeevis to not present the buffer. Expect a black window (or no window on Wayland)."
+                        )
                     );
                     self.display = false;
                 }
@@ -164,14 +167,17 @@ impl Program {
                     }
 
                     &_ => {
-                        let msg = format!("Argument error: Unknown option {arg}");
-                        eprintln_red!(msg);
+                        error!("Argument error: Unknown option {}", arg);
                     }
                 },
             }
         }
 
         self.update_size(size);
+
+        if self.quiet || self.mode.is_con() {
+            super::log::set_log_enabled(false);
+        }
 
         if !self.mode.is_con() {
             self.mode = match std::env::var("WAYLAND_DISPLAY") {
@@ -184,48 +190,51 @@ impl Program {
     }
 
     pub fn print_startup_info(&self) {
-        self.print_message(
-            "\nWelcome to Coffeevis!\n\
-            Audio visualizer by khoidauminh (Cas Pascal on github)\n",
-        );
+        let mut string_out = String::new();
 
-        self.print_message("Startup configurations (may change):\n");
+        string_out += "Welcome to Coffeevis!\n\
+        Audio visualizer by khoidauminh (Cas Pascal on github)\n";
 
-        self.print_message(format!(
-            "Refresh rate: {}hz\n",
-            self.milli_hz as f32 / 1000.0
-        ));
+        string_out += "Startup configurations (may change):\n";
 
-        self.print_message(format!(
+        string_out += &format!("Refresh rate: {}hz\n", self.milli_hz as f32 / 1000.0);
+
+        string_out += &format!(
             "Auto switch: {}\n",
             if self.auto_switch { "on" } else { "off" }
-        ));
+        );
 
         if self.mode.is_con() {
-            self.print_message(format!(
+            string_out += &format!(
                 "Running in a terminal: {} rendering\n",
                 self.mode.get_name()
-            ));
+            );
         } else {
             #[cfg(target_os = "linux")]
-            self.print_message(format!(
-                "Running with: Winit, {}\n",
-                if self.mode == WinWayland {
-                    "Wayland"
-                } else {
-                    "X11"
-                }
-            ));
+            {
+                string_out += &format!(
+                    "Running with: Winit, {}",
+                    if self.mode == WinWayland {
+                        "Wayland"
+                    } else {
+                        "X11"
+                    }
+                );
+            }
 
             #[cfg(target_os = "windows")]
-            self.print_message("Running in Windows");
+            {
+                string_out += "Running in Windows";
+            }
         }
 
+        info!("{}", string_out);
+
         if self.resize {
-            self.print_message(format_red!(
+            alert!(
                 "Note: resizing is not thoroughly tested and can crash the program or \
-                result in artifacts.\n"
-            ));
+                result in artifacts."
+            );
         }
 
         #[cfg(not(feature = "console_only"))]
@@ -234,17 +243,17 @@ impl Program {
             let h = self.window_height as u32 * self.scale as u32;
 
             if self.resize || w * h > 70000 {
-                self.print_message(format_red!(
+                alert!(
                     "\
                 Coffeevis is a CPU program, it is not advised \
                 to run it at large a size.\
                 "
-                ));
+                );
             }
         }
 
         if self.milli_hz / 1000 >= 300 {
-            self.print_message(format_red!("\nHave fun cooking your CPU"));
+            alert!("\nHave fun cooking your CPU");
         }
 
         println!();

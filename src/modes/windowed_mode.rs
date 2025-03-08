@@ -1,5 +1,6 @@
 use softbuffer::{Context, Surface};
 
+use crate::data::log::{alert, error, info};
 use qoi::{Decoder, Header};
 
 use winit::{
@@ -25,6 +26,7 @@ use std::{
     num::NonZeroU32,
     sync::mpsc::{self, SyncSender},
     thread::{self, JoinHandle},
+    time::{Duration, Instant},
 };
 
 use crate::graphics::Pixel;
@@ -55,7 +57,7 @@ impl ApplicationHandler for WindowState {
 
         let icon = read_icon().and_then(|(w, h, v)| {
             Icon::from_rgba(v, w, h)
-                .inspect_err(|_| self.prog.print_message("Failed to create window icon.\n"))
+                .inspect_err(|_| error!("Failed to create window icon."))
                 .ok()
         });
 
@@ -105,10 +107,7 @@ impl ApplicationHandler for WindowState {
         };
 
         if !de.is_empty() {
-            self.prog.print_message(format!(
-                "Running in the {} desktop (XDG_CURRENT_DESKTOP).\n",
-                de
-            ));
+            info!("Running in the {} desktop (XDG_CURRENT_DESKTOP).", de);
         }
 
         // On XFCE this is needed to lock the size of the window.
@@ -121,16 +120,17 @@ impl ApplicationHandler for WindowState {
 
         self.exit_sender = Some(exit_send);
 
-        if self.prog.get_rr_mode() != RefreshRateMode::Specified {
-            Self::check_refresh_rate(window, &mut self.prog);
-        }
-
-        let intervals = self.prog.get_rr_intervals();
+        let mut intervals = self.prog.get_rr_intervals();
+        let mut milli_hz = self.prog.get_milli_hz();
+        let rr_mode = self.prog.get_rr_mode();
 
         // Thread to control requesting redraws.
         self.thread_control_draw_id = thread::Builder::new()
             .stack_size(1024)
             .spawn(move || {
+                let fps_poll_deadline = Instant::now() + Duration::from_secs(1);
+                let mut fps_query_done = false;
+
                 loop {
                     let s = get_no_sample();
 
@@ -138,6 +138,16 @@ impl ApplicationHandler for WindowState {
 
                     if exit_recv.recv_timeout(itvl).is_ok() {
                         break;
+                    }
+
+                    // Check for refresh rates at most 5 times.
+                    if rr_mode != RefreshRateMode::Specified && !fps_query_done {
+                        let now = Instant::now();
+                        if now > fps_poll_deadline {
+                            Self::check_refresh_rate(window, &mut milli_hz);
+                            intervals = Program::construct_intervals(milli_hz);
+                            fps_query_done = true;
+                        }
                     }
 
                     if !window.is_minimized().unwrap_or(false) && s < STOP_RENDERING {
@@ -155,8 +165,7 @@ impl ApplicationHandler for WindowState {
             WindowEvent::MouseInput { button, .. } => {
                 if button == event::MouseButton::Left {
                     if let Some(err) = self.window.as_ref().and_then(|f| f.drag_window().err()) {
-                        self.prog
-                            .print_message(format!("Error dragging window: {err}"));
+                        error!("Error dragging window: {}", err);
                     }
                 }
             }
@@ -173,8 +182,7 @@ impl ApplicationHandler for WindowState {
 
             WindowEvent::Resized(PhysicalSize { width, height }) => {
                 let Some(surface) = self.surface.as_mut() else {
-                    self.prog
-                        .print_message("Coffeevis is unable to resize the buffer!\n");
+                    error!("Coffeevis is unable to resize the buffer!");
                     return;
                 };
 
@@ -184,9 +192,7 @@ impl ApplicationHandler for WindowState {
                 let h = u16::min(MAX_HEIGHT, height as u16);
 
                 if w == MAX_WIDTH || h == MAX_HEIGHT {
-                    self.prog.print_message(format_red!(
-                        "You are hitting the resolution limit of Coffeevis!\n"
-                    ));
+                    alert!("You are hitting the resolution limit of Coffeevis!");
                 }
 
                 self.prog.update_size((w / scale, h / scale));
@@ -239,13 +245,6 @@ impl ApplicationHandler for WindowState {
                     return;
                 };
 
-                // if window.is_minimized().unwrap_or(false)
-                //     || self.prog.is_hidden()
-                //     || get_no_sample() >= STOP_RENDERING
-                // {
-                //     return;
-                // }
-
                 self.prog.update_vis();
                 self.prog.render();
 
@@ -264,9 +263,10 @@ impl ApplicationHandler for WindowState {
 
                     window.pre_present_notify();
                     if let Err(e) = buffer.present() {
-                        self.prog.print_message(format!(
-                            "Coffeevis is failing to present buffers to the window: {e}.\n"
-                        ));
+                        error!(
+                            "Coffeevis is failing to present buffers to the window: {}!",
+                            e
+                        );
                     }
                 }
             }
@@ -294,38 +294,39 @@ impl WindowState {
             .expect("Failed to resize surface buffer");
     }
 
-    fn check_refresh_rate(window: &Window, prog: &mut Program) {
+    fn check_refresh_rate(window: &Window, milli_hz_out: &mut u32) -> bool {
         let Some(Some(mut milli_hz)) = window
             .current_monitor()
             .map(|m| m.refresh_rate_millihertz())
         else {
-            prog.print_message("Coffeevis is unable to query your monitor's refresh rate.\n");
-            return;
+            alert!("Coffeevis is unable to query your monitor's refresh rate.");
+            return false;
         };
 
-        if milli_hz == prog.get_milli_hz() {
-            return;
+        if *milli_hz_out == milli_hz {
+            return true;
         }
 
-        prog.print_message(format!(
+        info!(
             "\
         Detected rate to be {}hz.\n\
         Note: Coffeevis relies on Winit to detect refresh rates.\n\
         Run with --fps flag if you want to lock fps.\n\
-        Refresh rate changed.\n\
+        Refresh rate changed.\
         ",
             milli_hz as f32 / 1000.0
-        ));
+        );
 
         if milli_hz > CAP_MILLI_HZ {
             milli_hz = CAP_MILLI_HZ;
-            prog.print_message(format!(
-                "(Refresh rate has been capped to {}.)\n",
-                CAP_MILLI_HZ
-            ));
+            info!("(Refresh rate has been capped to {}.)", CAP_MILLI_HZ);
         }
 
-        prog.change_fps_frac(milli_hz);
+        info!("");
+
+        *milli_hz_out = milli_hz;
+
+        true
     }
 }
 

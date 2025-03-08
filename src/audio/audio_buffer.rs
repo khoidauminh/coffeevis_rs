@@ -71,6 +71,7 @@ pub struct AudioBuffer {
     silent: u8,
 
     foreign_audio_communicator: Option<ForeignAudioCommunicator>,
+    is_running_foreign: bool,
 }
 
 impl std::ops::Index<usize> for AudioBuffer {
@@ -106,11 +107,17 @@ impl AudioBuffer {
             silent: 0,
 
             foreign_audio_communicator: None,
+            is_running_foreign: false,
         }
     }
 
     pub fn init_audio_communicator(&mut self) {
         self.foreign_audio_communicator = ForeignAudioCommunicator::new();
+        self.is_running_foreign = true;
+    }
+
+    pub fn set_is_running_foreign(&mut self, b: bool) {
+        self.is_running_foreign = b;
     }
 
     pub fn input_size(&self) -> usize {
@@ -238,8 +245,10 @@ impl AudioBuffer {
         self.rotates_since_write = 0;
         self.samples_scanned = 0;
 
-        if let Some(c) = self.foreign_audio_communicator.as_mut() {
-            let _ = c.send_audio(&self.buffer[..self.size_mask + 1], self.offset);
+        if self.is_running_foreign {
+            if let Some(c) = self.foreign_audio_communicator.as_mut() {
+                let _ = c.send_audio(&self.buffer[..self.size_mask + 1], self.offset);
+            }
         }
     }
 
