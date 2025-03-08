@@ -56,12 +56,6 @@ pub enum RefreshRateMode {
 }
 
 /// Main program struct
-///
-/// Notes:
-/// Windowed mode resolution will be stored in `window_width` and `window_height`.
-/// Console mode reolution are stored in `console_width` and `console_height`,
-/// with special fields: `console_max_width` and `console_max_height` for maximum
-/// console resolution allowed.
 pub(crate) struct Program {
     /// for experimental purposes. Console mode only.
     display: bool,

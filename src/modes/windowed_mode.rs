@@ -156,7 +156,6 @@ impl ApplicationHandler for WindowState {
                         break;
                     }
 
-                    // Check for refresh rates at most 5 times.
                     if rr_mode != RefreshRateMode::Specified && !fps_query_done {
                         let now = Instant::now();
                         if now > fps_poll_deadline {
