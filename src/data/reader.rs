@@ -52,7 +52,7 @@ impl Program {
                         .next()
                         .expect("Argument error: Expected u8 value for scale")
                         .parse::<u8>()
-                        .expect("Argument error: Invalid value");
+                        .expect("Argument error: Scale must be a positive integer");
 
                     if self.scale > MAX_SCALE_FACTOR {
                         panic!("Argument error: scale exceeds maximum allowed {MAX_SCALE_FACTOR}.");
@@ -62,12 +62,9 @@ impl Program {
                 }
 
                 "--fps" => {
-                    let rate = args.next().expect(
-                        "\
-                            Argument error: Expected value for refresh rate.\n\
-                            Available values: {float} or inf\
-                        ",
-                    );
+                    let rate = args
+                        .next()
+                        .expect("Argument error: Expected value for refresh rate.");
 
                     let rate = rate.parse::<f32>().expect("Argument error: Invalid value.");
 
@@ -86,7 +83,7 @@ impl Program {
 
                 "--transparent" => {
                     error!(
-                        "Transparency isn't supported by Softbuffer. \
+                        "Transparency isn't supported by Softbuffer.\n\
                         See https://github.com/rust-windowing/softbuffer/issues/215"
                     );
                 }
@@ -139,10 +136,7 @@ impl Program {
 
                 "--no-display" => {
                     alert!(
-                        "{}",
-                        format_red!(
-                            "You have told coffeevis to not present the buffer. Expect a black window (or no window on Wayland)."
-                        )
+                        "You have told coffeevis to not present the buffer. Expect a black window (or no window on Wayland)."
                     );
                     self.display = false;
                 }
@@ -238,8 +232,8 @@ impl Program {
 
         if self.resize {
             alert!(
-                "Note: resizing is not thoroughly tested and can crash the program or \
-                result in artifacts."
+                "Note: resizing is not thoroughly tested and \
+                can crash the program or result in artifacts."
             );
         }
 
@@ -259,7 +253,7 @@ impl Program {
         }
 
         if self.milli_hz / 1000 >= 300 {
-            alert!("\nHave fun cooking your CPU");
+            alert!("Have fun cooking your CPU");
         }
 
         println!();

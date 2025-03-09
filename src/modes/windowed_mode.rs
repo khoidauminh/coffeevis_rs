@@ -142,7 +142,7 @@ impl ApplicationHandler for WindowState {
 
         // Thread to control requesting redraws.
         self.thread_control_draw_id = thread::Builder::new()
-            .stack_size(1024)
+            .name("coffeevis draw control".into())
             .spawn(move || {
                 window.request_redraw();
 
