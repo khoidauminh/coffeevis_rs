@@ -26,7 +26,7 @@ use std::{
     num::NonZeroU32,
     sync::mpsc::{self, SyncSender},
     thread::{self, JoinHandle},
-    time::{Duration, Instant},
+    time::Duration,
 };
 
 use crate::graphics::Pixel;
@@ -144,8 +144,14 @@ impl ApplicationHandler for WindowState {
         self.thread_control_draw_id = thread::Builder::new()
             .stack_size(1024)
             .spawn(move || {
-                let fps_poll_deadline = Instant::now() + Duration::from_secs(1);
-                let mut fps_query_done = false;
+                window.request_redraw();
+
+                if rr_mode == RefreshRateMode::Sync {
+                    // Wait for a little before querying for monitor refresh rate.
+                    thread::sleep(Duration::from_millis(100));
+                    Self::check_refresh_rate(window, &mut milli_hz);
+                    intervals = Program::construct_intervals(milli_hz);
+                }
 
                 loop {
                     let s = get_no_sample();
@@ -154,15 +160,6 @@ impl ApplicationHandler for WindowState {
 
                     if exit_recv.recv_timeout(itvl).is_ok() {
                         break;
-                    }
-
-                    if rr_mode != RefreshRateMode::Specified && !fps_query_done {
-                        let now = Instant::now();
-                        if now > fps_poll_deadline {
-                            Self::check_refresh_rate(window, &mut milli_hz);
-                            intervals = Program::construct_intervals(milli_hz);
-                            fps_query_done = true;
-                        }
                     }
 
                     if !window.is_minimized().unwrap_or(false) && s < STOP_RENDERING {
