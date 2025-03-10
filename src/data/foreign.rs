@@ -25,6 +25,7 @@ use std::io::{Error, Read};
 use std::slice::Split;
 use std::time::Duration;
 
+use crate::data::log::alert;
 use crate::graphics::blend::Mixer;
 use crate::graphics::draw_raw::*;
 use crate::graphics::{DrawCommand, DrawCommandBuffer, P2, Pixel};
@@ -32,11 +33,19 @@ use crate::math::Cplx;
 
 use super::Program;
 
-const AUDIO_PATH: &str = "/dev/shm/coffeevis_audio.bin";
-const COMMAND_PATH: &str = "/dev/shm/coffeevis_command.txt";
-const PROGRAM_PATH: &str = "/dev/shm/coffeevis_program.txt";
+const AUDIO_PATH: &str = "coffeevis_audio.bin";
+const COMMAND_PATH: &str = "coffeevis_command.txt";
+const PROGRAM_PATH: &str = "coffeevis_program.txt";
 const DEFAULT_INTERVAL: Duration = Duration::from_millis(1000 / 60);
 const NUM_SAMPLES_TO_WRITE: usize = 1024;
+
+pub fn get_path(s: &str) -> std::path::PathBuf {
+    #[cfg(target_os = "windows")]
+    return std::env::temp_dir().join(s);
+
+    #[cfg(not(target_os = "windows"))]
+    std::path::PathBuf::from("/dev/shm/").join(s)
+}
 
 fn is_newline(x: &u8) -> bool {
     *x == b'\n'
@@ -221,14 +230,18 @@ pub struct ForeignProgramCommunicator {
 
 impl ForeignAudioCommunicator {
     pub fn new() -> Option<Self> {
+        let path = get_path(AUDIO_PATH);
+
         let audio_file = OpenOptions::new()
             .read(false)
             .write(true)
             .create(true)
             .truncate(true)
-            .open(AUDIO_PATH)
+            .open(&path)
             .inspect_err(|_| eprintln!("Can't open audio file for writing."))
             .ok()?;
+
+        alert!("File opened at path {:?}", path);
 
         Some(Self { audio_file })
     }
@@ -253,13 +266,17 @@ impl ForeignAudioCommunicator {
 
 impl ForeignCommandsCommunicator {
     pub fn new() -> Option<Self> {
+        let path = get_path(COMMAND_PATH);
+
         let command_file = OpenOptions::new()
             .read(true)
             .write(true)
             .create(true)
-            .open(COMMAND_PATH)
+            .open(&path)
             .inspect_err(|_| eprintln!("Can't open command file for reading."))
             .ok()?;
+
+        alert!("File opened at path {:?}", path);
 
         Some(Self {
             command_file,
@@ -296,13 +313,17 @@ impl ForeignCommandsCommunicator {
 
 impl ForeignProgramCommunicator {
     pub fn new() -> Option<Self> {
+        let path = get_path(PROGRAM_PATH);
+
         let program_file = OpenOptions::new()
             .read(false)
             .write(true)
             .create(true)
             .truncate(true)
-            .open(PROGRAM_PATH)
+            .open(&path)
             .inspect_err(|_| eprintln!("Can't open program file for writing."));
+
+        alert!("File opened at path {:?}", path);
 
         Some(Self {
             program_file: program_file.ok()?,
