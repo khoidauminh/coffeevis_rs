@@ -96,15 +96,11 @@ impl ApplicationHandler for WindowState {
         // reference, resumed() is not allowed to be
         // called again as it would cause the build up
         // of leaked windows and potentially flood RAM.
-        match self.window {
-            None => {
-                self.window = Some(Box::leak(Box::new(
-                    event_loop.create_window(window_attributes).unwrap(),
-                )))
-            }
+        assert!(self.window.is_none());
 
-            Some(_) => panic!("Resume being called the 2nd time!"),
-        }
+        self.window = Some(Box::leak(Box::new(
+            event_loop.create_window(window_attributes).unwrap(),
+        )));
 
         let window = self
             .window
