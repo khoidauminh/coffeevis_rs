@@ -1,5 +1,7 @@
 pub mod foreign;
 
+pub mod desktop;
+
 #[macro_use]
 pub mod log;
 

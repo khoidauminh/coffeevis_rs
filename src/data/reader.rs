@@ -1,4 +1,7 @@
-use crate::{data::*, modes::Mode::*};
+use crate::{
+    data::{desktop::create_tmp_desktop_file, *},
+    modes::Mode::*,
+};
 
 impl Program {
     pub fn eval_args(mut self, args: &mut dyn Iterator<Item = &String>) -> Self {
@@ -11,6 +14,12 @@ impl Program {
         while let Some(arg) = args.next() {
             let arg = arg.as_str();
             match arg {
+                #[cfg(all(not(feature = "console_only"), target_os = "linux"))]
+                "--desktop-file" => {
+                    alert!("Attempting to create a desktop file!! This is experimental!!");
+                    create_tmp_desktop_file();
+                }
+
                 "--foreign" => {
                     crate::audio::get_buf().init_audio_communicator();
                     self.pix.init_commands_communicator();
