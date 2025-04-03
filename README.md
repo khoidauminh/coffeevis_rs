@@ -99,6 +99,7 @@ Coffeevis supports temporary options at launch
 ## Experimental
 
 | Option | Value (example) | Description |
+| ------ | ------ | ------ |
 | --foreign | | instructs coffeevis to send out audio and listens to input commands see [Foreign Communicator](src/data/README.md) |
 | --desktop-file | | (Specifically for GNOME) creates a desktop file so that it gets an icon |
 
