@@ -17,7 +17,7 @@ cpal = "0.15"
 softbuffer = "0.4"
 winit = "0.30"
 qoi = "0.4.1"
-crossterm = "0.28"
+crossterm = "0.29"
 smallvec = "1.13.2"
 xdg = "^2.1"
 
