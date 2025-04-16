@@ -98,8 +98,7 @@ impl VisNavigator {
         let list_size = self.current_list_len();
         self.index_vis = decrement(self.index_vis, list_size);
         let current = self.current_vis();
-        crate::audio::set_normalizer(current.request());
-        current
+        Self::return_apply(current)
     }
 
     pub fn save_index(&mut self) {
@@ -129,11 +128,9 @@ impl VisNavigator {
 
         if let Some(_vis) = current_list.get(index) {
             self.index_vis = index;
-
-            return self.current_vis();
         }
 
-        self.current_vis()
+        Self::return_apply(self.current_vis())
     }
 
     pub fn switch_by_name(&mut self, name: &str) -> Visualizer {
@@ -166,7 +163,7 @@ impl VisNavigator {
 
             eprintln!();
 
-            return selected_vis;
+            return Self::return_apply(selected_vis);
         }
 
         if selected_vis_index < VIS_CLASSIC.len() {
@@ -177,7 +174,12 @@ impl VisNavigator {
             self.index_list = 1;
         }
 
-        selected_vis
+        Self::return_apply(selected_vis)
+    }
+
+    fn return_apply(v: Visualizer) -> Visualizer {
+        crate::audio::set_normalizer(v.request());
+        return v;
     }
 }
 

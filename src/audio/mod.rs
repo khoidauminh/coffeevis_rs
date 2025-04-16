@@ -52,7 +52,9 @@ pub fn get_source() -> cpal::Stream {
             |data: &[f32], _| {
                 let mut b = get_buf();
                 b.read_from_input(data);
-                b.checked_normalize();
+                if NORMALIZE.load(Relaxed) {
+                    b.checked_normalize();
+                }
                 set_no_sample(b.silent());
             },
             |err| eprintln!("an error occurred on the input audio stream: {}", err),
