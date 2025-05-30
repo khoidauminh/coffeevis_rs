@@ -1,6 +1,6 @@
 #![allow(unused_variables)]
 
-use super::{P2, Pixel, blend::Mixer};
+use super::{Argb, P2, Pixel, blend::Mixer};
 use std::sync::Arc;
 
 #[derive(Clone, Debug)]
@@ -13,11 +13,11 @@ pub enum DrawParam {
     Fill {},
     Fade { a: u8 },
     Circle { p: P2, r: i32, f: bool },
-    Pix { p: P2, w: usize, v: Arc<[u32]> },
+    Pix { p: P2, w: usize, v: Arc<[Argb]> },
 }
 
 trait Draw {
-    fn draw(&self, canvas: &mut [u32], cwidth: usize, cheight: usize, c: u32, b: Mixer);
+    fn draw(&self, canvas: &mut [Argb], cwidth: usize, cheight: usize, c: Argb, b: Mixer);
 }
 
 struct Rect {
@@ -59,11 +59,11 @@ struct Circle {
 struct Pix {
     p: P2,
     w: usize,
-    v: Arc<[u32]>,
+    v: Arc<[Argb]>,
 }
 
 impl Draw for Rect {
-    fn draw(&self, canvas: &mut [u32], cwidth: usize, cheight: usize, c: u32, b: Mixer) {
+    fn draw(&self, canvas: &mut [Argb], cwidth: usize, cheight: usize, c: Argb, b: Mixer) {
         let [xs, ys] = [self.ps.x as usize, self.ps.y as usize];
 
         let [xe, ye] = [self.pe.x as usize, self.pe.y as usize];
@@ -80,19 +80,19 @@ impl Draw for Rect {
     }
 }
 
-pub type DrawFunction = fn(&mut [u32], usize, usize, u32, Mixer, DrawParam);
+pub type DrawFunction = fn(&mut [Argb], usize, usize, Argb, Mixer, DrawParam);
 
 pub fn get_idx_fast(cwidth: usize, p: P2) -> usize {
-    let x = p.x as u32;
-    let y = p.y as u32;
-    y.wrapping_mul(cwidth as u32).wrapping_add(x) as usize
+    let x = p.x as Argb;
+    let y = p.y as Argb;
+    y.wrapping_mul(cwidth as Argb).wrapping_add(x) as usize
 }
 
 pub fn set_pixel_by(
-    canvas: &mut [u32],
+    canvas: &mut [Argb],
     _cwidth: usize,
     _cheight: usize,
-    c: u32,
+    c: Argb,
     b: Mixer,
     param: DrawParam,
 ) {
@@ -106,10 +106,10 @@ pub fn set_pixel_by(
 }
 
 pub fn set_pixel_xy_by(
-    canvas: &mut [u32],
+    canvas: &mut [Argb],
     cwidth: usize,
     cheight: usize,
-    c: u32,
+    c: Argb,
     b: Mixer,
     param: DrawParam,
 ) {
@@ -120,10 +120,10 @@ pub fn set_pixel_xy_by(
 }
 
 pub fn draw_rect_xy_by(
-    canvas: &mut [u32],
+    canvas: &mut [Argb],
     cwidth: usize,
     cheight: usize,
-    c: u32,
+    c: Argb,
     b: Mixer,
     param: DrawParam,
 ) {
@@ -147,10 +147,10 @@ pub fn draw_rect_xy_by(
 }
 
 pub fn fade(
-    canvas: &mut [u32],
+    canvas: &mut [Argb],
     _cwidth: usize,
     _cheight: usize,
-    c: u32,
+    c: Argb,
     b: Mixer,
     param: DrawParam,
 ) {
@@ -159,10 +159,10 @@ pub fn fade(
 }
 
 pub fn fill(
-    canvas: &mut [u32],
+    canvas: &mut [Argb],
     _cwidth: usize,
     _cheight: usize,
-    c: u32,
+    c: Argb,
     _b: Mixer,
     _param: DrawParam,
 ) {
@@ -170,10 +170,10 @@ pub fn fill(
 }
 
 pub fn draw_rect_wh_by(
-    canvas: &mut [u32],
+    canvas: &mut [Argb],
     cwidth: usize,
     cheight: usize,
-    c: u32,
+    c: Argb,
     b: Mixer,
     param: DrawParam,
 ) {
@@ -191,10 +191,10 @@ pub fn draw_rect_wh_by(
 
 // Using Bresenham's line algorithm.
 pub fn draw_line_by(
-    canvas: &mut [u32],
+    canvas: &mut [Argb],
     cwidth: usize,
     cheight: usize,
-    c: u32,
+    c: Argb,
     b: Mixer,
     param: DrawParam,
 ) {
@@ -238,10 +238,10 @@ pub fn draw_line_by(
 }
 
 pub fn draw_cirle_by(
-    canvas: &mut [u32],
+    canvas: &mut [Argb],
     cwidth: usize,
     cheight: usize,
-    color: u32,
+    color: Argb,
     b: Mixer,
     param: DrawParam,
 ) {
@@ -326,10 +326,10 @@ pub fn draw_cirle_by(
 }
 
 pub fn draw_pix_by(
-    canvas: &mut [u32],
+    canvas: &mut [Argb],
     cwidth: usize,
     cheight: usize,
-    color: u32,
+    color: Argb,
     b: Mixer,
     param: DrawParam,
 ) {

@@ -1,5 +1,6 @@
-pub type Mixer = fn(u32, u32) -> u32;
 pub type Argb = u32;
+
+pub type Mixer = fn(Argb, Argb) -> Argb;
 
 use super::Pixel;
 
@@ -11,9 +12,9 @@ pub fn u8_mul(a: u8, b: u8) -> u8 {
     (a as u16 * b as u16).to_be_bytes()[0]
 }
 
-pub fn u32_fade(this: u32, other: u8) -> u32 {
+pub fn argb_fade(this: Argb, other: u8) -> Argb {
     let [aa, r, g, b] = this.decompose();
-    u32::compose([u8_mul(aa, other), r, g, b])
+    Argb::compose([u8_mul(aa, other), r, g, b])
 }
 
 pub fn alpha_mix(a: u8, b: u8) -> u8 {
@@ -53,11 +54,11 @@ impl Pixel for Argb {
         x
     }
 
-    fn blend(self, other: u32) -> u32 {
+    fn blend(self, other: Argb) -> Argb {
         self.over(other)
     }
 
-    fn copy_alpha(self, other: u32) -> u32 {
+    fn copy_alpha(self, other: Argb) -> Argb {
         (self & 0x00_FF_FF_FF) | (other & 0xFF_00_00_00)
     }
 
@@ -66,54 +67,54 @@ impl Pixel for Argb {
         grayb(r, g, b)
     }
 
-    fn premultiply(self) -> u32 {
+    fn premultiply(self) -> Argb {
         let [a, ar, ag, ab] = self.decompose();
-        u32::from_be_bytes([a, u8_mul(ar, a), u8_mul(ag, a), u8_mul(ab, a)])
+        Argb::from_be_bytes([a, u8_mul(ar, a), u8_mul(ag, a), u8_mul(ab, a)])
     }
 
-    fn mul_alpha(self, a: u8) -> u32 {
+    fn mul_alpha(self, a: u8) -> Argb {
         let [aa, ar, ag, ab] = self.decompose();
-        u32::from_be_bytes([u8_mul(aa, a), ar, ag, ab])
+        Argb::from_be_bytes([u8_mul(aa, a), ar, ag, ab])
     }
 
-    fn set_alpha(self, alpha: u8) -> u32 {
-        self & 0x00_FF_FF_FF | (alpha as u32) << 24
+    fn set_alpha(self, alpha: u8) -> Argb {
+        self & 0x00_FF_FF_FF | (alpha as Argb) << 24
     }
 
-    fn or(self, other: u32) -> u32 {
+    fn or(self, other: Argb) -> Argb {
         self | other
     }
 
-    fn fade(self, alpha: u8) -> u32 {
-        u32_fade(self, alpha)
+    fn fade(self, alpha: u8) -> Argb {
+        argb_fade(self, alpha)
     }
 
     fn decompose(self) -> [u8; 4] {
         self.to_be_bytes()
     }
 
-    fn compose(array: [u8; 4]) -> u32 {
-        u32::from_be_bytes(array)
+    fn compose(array: [u8; 4]) -> Argb {
+        Argb::from_be_bytes(array)
     }
 
-    fn over(self, other: u32) -> u32 {
+    fn over(self, other: Argb) -> Argb {
         other
     }
 
-    fn mix(self, other: u32) -> u32 {
+    fn mix(self, other: Argb) -> Argb {
         let [_aa, ar, ag, ab] = self.decompose();
         let [ba, br, bg, bb] = other.decompose();
-        u32::from_be_bytes([
+        Argb::from_be_bytes([
             ba, // alpha_mix(aa, ba),
             channel_mix(ar, br, ba),
             channel_mix(ag, bg, ba),
             channel_mix(ab, bb, ba),
         ])
     }
-    fn add(self, other: u32) -> u32 {
+    fn add(self, other: Argb) -> Argb {
         let [aa, ar, ag, ab] = self.decompose();
         let [ba, br, bg, bb] = other.decompose();
-        u32::from_be_bytes([
+        Argb::from_be_bytes([
             aa,
             ar.saturating_add(u8_mul(br, ba)),
             ag.saturating_add(u8_mul(bg, ba)),
@@ -121,10 +122,10 @@ impl Pixel for Argb {
         ])
     }
 
-    fn sub(self, other: u32) -> u32 {
+    fn sub(self, other: Argb) -> Argb {
         let [aa, ar, ag, ab] = self.decompose();
         let [ba, br, bg, bb] = other.decompose();
-        u32::from_be_bytes([
+        Argb::from_be_bytes([
             aa,
             ar.saturating_sub(u8_mul(br, ba)),
             ag.saturating_sub(u8_mul(bg, ba)),
@@ -132,9 +133,9 @@ impl Pixel for Argb {
         ])
     }
 
-    fn sub_by_alpha(self, other: u8) -> u32 {
+    fn sub_by_alpha(self, other: u8) -> Argb {
         let [aa, ar, ag, ab] = self.decompose();
-        u32::from_be_bytes([
+        Argb::from_be_bytes([
             aa,
             ar.saturating_sub(other),
             ag.saturating_sub(other),

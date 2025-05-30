@@ -4,7 +4,7 @@ pub mod draw_raw;
 
 use crate::data::{MAX_WIDTH, foreign::ForeignCommandsCommunicator};
 use crate::math::Vec2;
-use blend::Mixer;
+use blend::{Argb, Mixer};
 use draw_raw::*;
 
 const FIELD_START: usize = 64;
@@ -59,7 +59,7 @@ pub(crate) trait Pixel:
 pub struct DrawCommand {
     pub func: DrawFunction,
     pub param: DrawParam,
-    pub color: u32,
+    pub color: Argb,
     pub blending: Mixer,
 }
 
@@ -67,12 +67,12 @@ pub struct DrawCommand {
 pub struct DrawCommandBuffer(Vec<DrawCommand>);
 
 pub struct PixelBuffer {
-    out_buffer: Vec<u32>,
-    buffer: Vec<u32>,
+    out_buffer: Vec<Argb>,
+    buffer: Vec<Argb>,
     width: usize,
     height: usize,
     field: usize,
-    background: u32,
+    background: Argb,
     command: DrawCommandBuffer,
     foreign_commands_communicator: Option<ForeignCommandsCommunicator>,
     is_running_foreign: bool,
@@ -82,7 +82,7 @@ pub(crate) type P2 = crate::math::Vec2<i32>;
 
 macro_rules! make_draw_func {
     ($fn_name:ident, $func:ident, $param_struct:ident $(, $param:ident: $type:ty)*) => {
-        pub fn $fn_name(&mut self, $($param: $type), *, c: u32, b: Mixer) {
+        pub fn $fn_name(&mut self, $($param: $type), *, c: Argb, b: Mixer) {
            	self.0.push(DrawCommand {
           		func: $func,
           		param: DrawParam::$param_struct{ $($param), * },
@@ -109,7 +109,7 @@ impl DrawCommandBuffer {
     make_draw_func!(plot_index, set_pixel_by, PlotIdx, i: usize);
     make_draw_func!(circle, draw_cirle_by, Circle, p: P2, r: i32, f: bool);
 
-    pub fn fill(&mut self, c: u32) {
+    pub fn fill(&mut self, c: Argb) {
         // Discards all previous commands since this
         // fill overwrites the entire buffer.
         self.0.clear();
@@ -125,12 +125,12 @@ impl DrawCommandBuffer {
         self.0.push(DrawCommand {
             func: fade,
             param: DrawParam::Fade { a },
-            color: u32::trans(),
+            color: Argb::trans(),
             blending: Pixel::over,
         });
     }
 
-    pub fn execute(&mut self, canvas: &mut [u32], cwidth: usize, cheight: usize, clear: bool) {
+    pub fn execute(&mut self, canvas: &mut [Argb], cwidth: usize, cheight: usize, clear: bool) {
         self.0.iter().for_each(|command| {
             (command.func)(
                 canvas,
@@ -165,7 +165,7 @@ impl PixelBuffer {
     pub fn new(w: usize, h: usize) -> Self {
         Self {
             out_buffer: Vec::new(),
-            buffer: vec![u32::trans(); w * h],
+            buffer: vec![Argb::trans(); w * h],
             command: DrawCommandBuffer::new(),
             width: w,
             height: h,
@@ -189,11 +189,11 @@ impl PixelBuffer {
         self.is_running_foreign ^= true;
     }
 
-    pub fn as_slice(&self) -> &[u32] {
+    pub fn as_slice(&self) -> &[Argb] {
         self.buffer.as_slice()
     }
 
-    pub fn set_background(&mut self, bg: u32) {
+    pub fn set_background(&mut self, bg: Argb) {
         self.background = bg;
     }
 
@@ -239,7 +239,7 @@ impl PixelBuffer {
     }
 
     pub fn clear(&mut self) {
-        self.buffer.fill(u32::trans());
+        self.buffer.fill(Argb::trans());
     }
 
     pub fn resize(&mut self, w: usize, h: usize) {
@@ -260,17 +260,17 @@ impl PixelBuffer {
     }
 
     pub fn get_idx_fast(&self, p: P2) -> usize {
-        let x = p.x as u32;
-        let y = p.y as u32;
+        let x = p.x as Argb;
+        let y = p.y as Argb;
 
-        y.wrapping_mul(self.width as u32).wrapping_add(x) as usize
+        y.wrapping_mul(self.width as Argb).wrapping_add(x) as usize
     }
 
-    pub fn pixel(&self, i: usize) -> u32 {
+    pub fn pixel(&self, i: usize) -> Argb {
         self.buffer[i]
     }
 
-    pub fn to_rgba(i: &[u32], o: &mut [u8]) {
+    pub fn to_rgba(i: &[Argb], o: &mut [u8]) {
         for (pin, pout) in i.iter().zip(o.chunks_exact_mut(4)) {
             let mut a = pin.decompose();
 
@@ -286,7 +286,7 @@ impl PixelBuffer {
     pub fn scale_to(
         &mut self,
         scale: usize,
-        dest: &mut [u32],
+        dest: &mut [Argb],
         width: Option<usize>,
         mixer: Option<Mixer>,
         crt: bool,
@@ -295,14 +295,14 @@ impl PixelBuffer {
             return;
         }
 
-        let mixer = mixer.unwrap_or(u32::mix);
+        let mixer = mixer.unwrap_or(Argb::mix);
 
         let dst_width = width.unwrap_or(self.width * scale);
 
         let new_len = dest.len() + FIELD_START * dst_width;
 
         if self.out_buffer.len() < new_len {
-            self.out_buffer.resize(new_len, u32::trans());
+            self.out_buffer.resize(new_len, Argb::trans());
         }
 
         if !crt {
