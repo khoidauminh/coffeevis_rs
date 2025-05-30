@@ -19,9 +19,9 @@ pub enum DrawParam {
 pub type DrawFunction = fn(&mut [Argb], usize, usize, Argb, Mixer, DrawParam);
 
 pub fn get_idx_fast(cwidth: usize, p: P2) -> usize {
-    let x = p.x as Argb;
-    let y = p.y as Argb;
-    y.wrapping_mul(cwidth as Argb).wrapping_add(x) as usize
+    let x = p.x.cast_unsigned();
+    let y = p.y.cast_unsigned();
+    y.wrapping_mul(cwidth as u32).wrapping_add(x) as usize
 }
 
 pub fn set_pixel_by(
