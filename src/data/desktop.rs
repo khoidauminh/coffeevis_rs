@@ -11,10 +11,7 @@ use std::{
 use xdg;
 
 pub fn create_tmp_desktop_file() {
-    let Some(xdg_dirs) = xdg::BaseDirectories::new().ok() else {
-        error!("Can't determine xdg directories.\n");
-        return;
-    };
+    let xdg_dirs = xdg::BaseDirectories::new();
 
     let args = {
         let args = std::env::args().collect::<Vec<_>>();
@@ -34,7 +31,11 @@ pub fn create_tmp_desktop_file() {
         exec.to_owned() + &args.iter().skip(1).fold(String::new(), |a, x| a + " " + &x)
     };
 
-    let share_path = xdg_dirs.get_data_home();
+    let Some(share_path) = xdg_dirs.get_data_home() else {
+        error!("Local share path not found.");
+        return;
+    };
+
     let mut icon_path = share_path.clone();
     let mut desktop_path = share_path.clone();
 
