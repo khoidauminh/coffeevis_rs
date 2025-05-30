@@ -27,8 +27,8 @@ use std::time::Duration;
 
 use crate::data::log::alert;
 use crate::graphics::blend::Mixer;
-use crate::graphics::draw_raw::*;
-use crate::graphics::{DrawCommand, DrawCommandBuffer, P2, Pixel};
+use crate::graphics::draw::*;
+use crate::graphics::{P2, Pixel};
 use crate::math::Cplx;
 
 use super::Program;

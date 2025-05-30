@@ -1,11 +1,11 @@
 pub mod blend;
 //pub mod draw;
-pub mod draw_raw;
+pub mod draw;
 
 use crate::data::{MAX_WIDTH, foreign::ForeignCommandsCommunicator};
 use crate::math::Vec2;
 use blend::{Argb, Mixer};
-use draw_raw::*;
+use draw::*;
 
 const FIELD_START: usize = 64;
 const COMMAND_BUFFER_INIT_CAPACITY: usize = MAX_WIDTH as usize;
@@ -55,17 +55,6 @@ pub(crate) trait Pixel:
     fn compose(array: [u8; 4]) -> Self;
 }
 
-#[derive(Debug)]
-pub struct DrawCommand {
-    pub func: DrawFunction,
-    pub param: DrawParam,
-    pub color: Argb,
-    pub blending: Mixer,
-}
-
-#[derive(Debug)]
-pub struct DrawCommandBuffer(Vec<DrawCommand>);
-
 pub struct PixelBuffer {
     out_buffer: Vec<Argb>,
     buffer: Vec<Argb>,
@@ -79,74 +68,6 @@ pub struct PixelBuffer {
 }
 
 pub(crate) type P2 = crate::math::Vec2<i32>;
-
-macro_rules! make_draw_func {
-    ($fn_name:ident, $func:ident, $param_struct:ident $(, $param:ident: $type:ty)*) => {
-        pub fn $fn_name(&mut self, $($param: $type), *, c: Argb, b: Mixer) {
-           	self.0.push(DrawCommand {
-          		func: $func,
-          		param: DrawParam::$param_struct{ $($param), * },
-          		color: c,
-          		blending: b
-           	});
-        }
-	}
-}
-
-impl DrawCommandBuffer {
-    pub fn new() -> Self {
-        Self(Vec::with_capacity(COMMAND_BUFFER_INIT_CAPACITY))
-    }
-
-    pub fn from(vec: Vec<DrawCommand>) -> Self {
-        Self(vec)
-    }
-
-    make_draw_func!(rect, draw_rect_xy_by, Rect, ps: P2, pe: P2);
-    make_draw_func!(rect_wh, draw_rect_wh_by, RectWh, ps: P2, w: usize, h: usize);
-    make_draw_func!(line, draw_line_by, Line, ps: P2, pe: P2);
-    make_draw_func!(plot, set_pixel_xy_by, Plot, p: P2);
-    make_draw_func!(plot_index, set_pixel_by, PlotIdx, i: usize);
-    make_draw_func!(circle, draw_cirle_by, Circle, p: P2, r: i32, f: bool);
-
-    pub fn fill(&mut self, c: Argb) {
-        // Discards all previous commands since this
-        // fill overwrites the entire buffer.
-        self.0.clear();
-        self.0.push(DrawCommand {
-            func: fill,
-            param: DrawParam::Fill {},
-            color: c,
-            blending: Pixel::over,
-        });
-    }
-
-    pub fn fade(&mut self, a: u8) {
-        self.0.push(DrawCommand {
-            func: fade,
-            param: DrawParam::Fade { a },
-            color: Argb::trans(),
-            blending: Pixel::over,
-        });
-    }
-
-    pub fn execute(&mut self, canvas: &mut [Argb], cwidth: usize, cheight: usize, clear: bool) {
-        self.0.iter().for_each(|command| {
-            (command.func)(
-                canvas,
-                cwidth,
-                cheight,
-                command.color,
-                command.blending,
-                command.param.clone(),
-            );
-        });
-
-        if clear {
-            self.0.clear();
-        }
-    }
-}
 
 impl Deref for PixelBuffer {
     type Target = DrawCommandBuffer;
@@ -205,14 +126,16 @@ impl PixelBuffer {
                     self.command = v;
                     self.clear();
                     self.command
-                        .execute(&mut self.buffer, self.width, self.height, false);
+                        .execute(&mut self.buffer, self.width, self.height);
                 }
                 return;
             }
         }
 
         self.command
-            .execute(&mut self.buffer, self.width, self.height, true);
+            .execute(&mut self.buffer, self.width, self.height);
+
+        self.reset();
     }
 
     pub fn width(&self) -> usize {
