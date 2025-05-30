@@ -1,4 +1,4 @@
-pub type Mixer<T> = fn(T, T) -> T;
+pub type Mixer = fn(u32, u32) -> u32;
 pub type Argb = u32;
 
 use super::Pixel;
@@ -140,86 +140,5 @@ impl Pixel for Argb {
             ag.saturating_sub(other),
             ab.saturating_sub(other),
         ])
-    }
-}
-
-impl Pixel for u8 {
-    fn black() -> Self {
-        0
-    }
-
-    fn white() -> Self {
-        0xFF
-    }
-
-    fn trans() -> Self {
-        0
-    }
-
-    fn from(x: u32) -> Self {
-        x as u8
-    }
-
-    fn blend(self, other: Self) -> Self {
-        other
-    }
-
-    fn over(self, other: Self) -> Self {
-        other
-    }
-
-    fn mix(self, other: Self) -> Self {
-        let a = self as u16;
-        let b = other as u16;
-
-        a.wrapping_add(b).wrapping_shr(1) as Self
-    }
-
-    fn add(self, other: Self) -> Self {
-        self.saturating_add(other)
-    }
-
-    fn sub(self, other: Self) -> Self {
-        self.saturating_sub(other)
-    }
-
-    fn grayb(self) -> Self {
-        self
-    }
-
-    fn premultiply(self) -> Self {
-        unimplemented!()
-    }
-
-    fn set_alpha(self, _alpha: u8) -> Self {
-        unimplemented!()
-    }
-
-    fn copy_alpha(self, _other: Self) -> Self {
-        unimplemented!()
-    }
-
-    fn mul_alpha(self, a: u8) -> Self {
-        u8_mul(self, a)
-    }
-
-    fn sub_by_alpha(self, _other: u8) -> Self {
-        unimplemented!()
-    }
-
-    fn or(self, other: Self) -> Self {
-        self | other
-    }
-
-    fn fade(self, alpha: u8) -> Self {
-        u8_mul(self, alpha)
-    }
-
-    fn decompose(self) -> [u8; 4] {
-        unimplemented!()
-    }
-
-    fn compose(array: [u8; 4]) -> Self {
-        grayb(array[1], array[2], array[3])
     }
 }

@@ -16,7 +16,71 @@ pub enum DrawParam {
     Pix { p: P2, w: usize, v: Arc<[u32]> },
 }
 
-pub type DrawFunction<T> = fn(&mut [T], usize, usize, T, Mixer<T>, DrawParam);
+trait Draw {
+    fn draw(&self, canvas: &mut [u32], cwidth: usize, cheight: usize, c: u32, b: Mixer);
+}
+
+struct Rect {
+    ps: P2,
+    pe: P2,
+}
+
+struct RectWh {
+    ps: P2,
+    w: usize,
+    h: usize,
+}
+
+struct Line {
+    ps: P2,
+    pe: P2,
+}
+
+struct Plot {
+    p: P2,
+}
+
+struct PlotIdx {
+    i: usize,
+}
+
+struct Fill {}
+
+struct Fade {
+    a: u8,
+}
+
+struct Circle {
+    p: P2,
+    r: i32,
+    f: bool,
+}
+
+struct Pix {
+    p: P2,
+    w: usize,
+    v: Arc<[u32]>,
+}
+
+impl Draw for Rect {
+    fn draw(&self, canvas: &mut [u32], cwidth: usize, cheight: usize, c: u32, b: Mixer) {
+        let [xs, ys] = [self.ps.x as usize, self.ps.y as usize];
+
+        let [xe, ye] = [self.pe.x as usize, self.pe.y as usize];
+
+        let xe = xe.min(cwidth);
+
+        canvas
+            .chunks_exact_mut(cwidth)
+            .skip(ys)
+            .take(ye.saturating_sub(ys).wrapping_add(1))
+            .flat_map(|l| l.get_mut(xs..xe))
+            .flatten()
+            .for_each(|p| *p = b(*p, c));
+    }
+}
+
+pub type DrawFunction = fn(&mut [u32], usize, usize, u32, Mixer, DrawParam);
 
 pub fn get_idx_fast(cwidth: usize, p: P2) -> usize {
     let x = p.x as u32;
@@ -24,12 +88,12 @@ pub fn get_idx_fast(cwidth: usize, p: P2) -> usize {
     y.wrapping_mul(cwidth as u32).wrapping_add(x) as usize
 }
 
-pub fn set_pixel_by<T: Pixel>(
-    canvas: &mut [T],
+pub fn set_pixel_by(
+    canvas: &mut [u32],
     _cwidth: usize,
     _cheight: usize,
-    c: T,
-    b: Mixer<T>,
+    c: u32,
+    b: Mixer,
     param: DrawParam,
 ) {
     let DrawParam::PlotIdx { i } = param else {
@@ -41,12 +105,12 @@ pub fn set_pixel_by<T: Pixel>(
     }
 }
 
-pub fn set_pixel_xy_by<T: Pixel>(
-    canvas: &mut [T],
+pub fn set_pixel_xy_by(
+    canvas: &mut [u32],
     cwidth: usize,
     cheight: usize,
-    c: T,
-    b: Mixer<T>,
+    c: u32,
+    b: Mixer,
     param: DrawParam,
 ) {
     let DrawParam::Plot { p } = param else { return };
@@ -55,12 +119,12 @@ pub fn set_pixel_xy_by<T: Pixel>(
     set_pixel_by(canvas, cwidth, cheight, c, b, DrawParam::PlotIdx { i });
 }
 
-pub fn draw_rect_xy_by<T: Pixel>(
-    canvas: &mut [T],
+pub fn draw_rect_xy_by(
+    canvas: &mut [u32],
     cwidth: usize,
     cheight: usize,
-    c: T,
-    b: Mixer<T>,
+    c: u32,
+    b: Mixer,
     param: DrawParam,
 ) {
     let DrawParam::Rect { ps, pe } = param else {
@@ -82,35 +146,35 @@ pub fn draw_rect_xy_by<T: Pixel>(
         .for_each(|p| *p = b(*p, c));
 }
 
-pub fn fade<T: Pixel>(
-    canvas: &mut [T],
+pub fn fade(
+    canvas: &mut [u32],
     _cwidth: usize,
     _cheight: usize,
-    c: T,
-    b: Mixer<T>,
+    c: u32,
+    b: Mixer,
     param: DrawParam,
 ) {
     let DrawParam::Fade { a } = param else { return };
     canvas.iter_mut().for_each(|smp| *smp = smp.fade(255 - a));
 }
 
-pub fn fill<T: Pixel>(
-    canvas: &mut [T],
+pub fn fill(
+    canvas: &mut [u32],
     _cwidth: usize,
     _cheight: usize,
-    c: T,
-    _b: Mixer<T>,
+    c: u32,
+    _b: Mixer,
     _param: DrawParam,
 ) {
     canvas.fill(c);
 }
 
-pub fn draw_rect_wh_by<T: Pixel>(
-    canvas: &mut [T],
+pub fn draw_rect_wh_by(
+    canvas: &mut [u32],
     cwidth: usize,
     cheight: usize,
-    c: T,
-    b: Mixer<T>,
+    c: u32,
+    b: Mixer,
     param: DrawParam,
 ) {
     let DrawParam::RectWh { ps, w, h } = param else {
@@ -126,12 +190,12 @@ pub fn draw_rect_wh_by<T: Pixel>(
 }
 
 // Using Bresenham's line algorithm.
-pub fn draw_line_by<T: Pixel>(
-    canvas: &mut [T],
+pub fn draw_line_by(
+    canvas: &mut [u32],
     cwidth: usize,
     cheight: usize,
-    c: T,
-    b: Mixer<T>,
+    c: u32,
+    b: Mixer,
     param: DrawParam,
 ) {
     let DrawParam::Line { ps, pe } = param else {
@@ -173,12 +237,12 @@ pub fn draw_line_by<T: Pixel>(
     }
 }
 
-pub fn draw_cirle_by<T: Pixel>(
-    canvas: &mut [T],
+pub fn draw_cirle_by(
+    canvas: &mut [u32],
     cwidth: usize,
     cheight: usize,
-    color: T,
-    b: Mixer<T>,
+    color: u32,
+    b: Mixer,
     param: DrawParam,
 ) {
     let DrawParam::Circle {
@@ -261,12 +325,12 @@ pub fn draw_cirle_by<T: Pixel>(
     }
 }
 
-pub fn draw_pix_by<T: Pixel>(
-    canvas: &mut [T],
+pub fn draw_pix_by(
+    canvas: &mut [u32],
     cwidth: usize,
     cheight: usize,
-    color: T,
-    b: Mixer<T>,
+    color: u32,
+    b: Mixer,
     param: DrawParam,
 ) {
     let DrawParam::Pix {
@@ -296,7 +360,7 @@ pub fn draw_pix_by<T: Pixel>(
         let src_iter = line_src.iter().skip(src_x);
 
         for (p_dest, p_src) in line_iter.zip(src_iter) {
-            *p_dest = b(*p_dest, T::from(*p_src));
+            *p_dest = b(*p_dest, *p_src);
         }
     }
 }

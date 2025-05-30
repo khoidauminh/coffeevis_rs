@@ -3,11 +3,11 @@ use std::sync::Mutex;
 
 use crate::{
     audio::SampleArr,
-    data::{Program, DEFAULT_SIZE_WIN},
-    graphics::{Canvas, Pixel, P2},
+    data::{DEFAULT_SIZE_WIN, Program},
+    graphics::{P2, Pixel, PixelBuffer},
     math::{
-        rng::{random_float, random_int},
         Cplx,
+        rng::{random_float, random_int},
     },
 };
 
@@ -80,7 +80,7 @@ impl RainDrop {
         (self.position.y as u16) < self.bound_height
     }
 
-    pub fn draw(&mut self, canvas: &mut Canvas) {
+    pub fn draw(&mut self, canvas: &mut PixelBuffer) {
         let _w = canvas.width();
         let _h = canvas.height();
 

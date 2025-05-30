@@ -221,7 +221,7 @@ impl ApplicationHandler for WindowState {
                 if event.state == ElementState::Pressed && !event.repeat =>
             {
                 match event.key_without_modifiers().as_ref() {
-                    Key::Named(NamedKey::Escape) => self.call_exit(event_loop),
+                    Key::Character("q") => self.call_exit(event_loop),
 
                     Key::Named(NamedKey::Space) => self.prog.change_visualizer(true),
 

@@ -56,34 +56,33 @@ pub(crate) trait Pixel:
 }
 
 #[derive(Debug)]
-pub struct DrawCommand<T> {
-    pub func: DrawFunction<T>,
+pub struct DrawCommand {
+    pub func: DrawFunction,
     pub param: DrawParam,
-    pub color: T,
-    pub blending: Mixer<T>,
+    pub color: u32,
+    pub blending: Mixer,
 }
 
 #[derive(Debug)]
-pub struct DrawCommandBuffer<T>(Vec<DrawCommand<T>>);
+pub struct DrawCommandBuffer(Vec<DrawCommand>);
 
-pub struct PixelBuffer<T> {
-    out_buffer: Vec<T>,
-    buffer: Vec<T>,
+pub struct PixelBuffer {
+    out_buffer: Vec<u32>,
+    buffer: Vec<u32>,
     width: usize,
     height: usize,
     field: usize,
-    background: T,
-    command: DrawCommandBuffer<T>,
+    background: u32,
+    command: DrawCommandBuffer,
     foreign_commands_communicator: Option<ForeignCommandsCommunicator>,
     is_running_foreign: bool,
 }
 
-pub(crate) type Canvas = PixelBuffer<u32>;
 pub(crate) type P2 = crate::math::Vec2<i32>;
 
 macro_rules! make_draw_func {
     ($fn_name:ident, $func:ident, $param_struct:ident $(, $param:ident: $type:ty)*) => {
-        pub fn $fn_name(&mut self, $($param: $type), *, c: T, b: Mixer<T>) {
+        pub fn $fn_name(&mut self, $($param: $type), *, c: u32, b: Mixer) {
            	self.0.push(DrawCommand {
           		func: $func,
           		param: DrawParam::$param_struct{ $($param), * },
@@ -94,12 +93,12 @@ macro_rules! make_draw_func {
 	}
 }
 
-impl<T: Pixel> DrawCommandBuffer<T> {
+impl DrawCommandBuffer {
     pub fn new() -> Self {
         Self(Vec::with_capacity(COMMAND_BUFFER_INIT_CAPACITY))
     }
 
-    pub fn from(vec: Vec<DrawCommand<T>>) -> Self {
+    pub fn from(vec: Vec<DrawCommand>) -> Self {
         Self(vec)
     }
 
@@ -110,7 +109,7 @@ impl<T: Pixel> DrawCommandBuffer<T> {
     make_draw_func!(plot_index, set_pixel_by, PlotIdx, i: usize);
     make_draw_func!(circle, draw_cirle_by, Circle, p: P2, r: i32, f: bool);
 
-    pub fn fill(&mut self, c: T) {
+    pub fn fill(&mut self, c: u32) {
         // Discards all previous commands since this
         // fill overwrites the entire buffer.
         self.0.clear();
@@ -126,12 +125,12 @@ impl<T: Pixel> DrawCommandBuffer<T> {
         self.0.push(DrawCommand {
             func: fade,
             param: DrawParam::Fade { a },
-            color: T::trans(),
+            color: u32::trans(),
             blending: Pixel::over,
         });
     }
 
-    pub fn execute(&mut self, canvas: &mut [T], cwidth: usize, cheight: usize, clear: bool) {
+    pub fn execute(&mut self, canvas: &mut [u32], cwidth: usize, cheight: usize, clear: bool) {
         self.0.iter().for_each(|command| {
             (command.func)(
                 canvas,
@@ -149,29 +148,29 @@ impl<T: Pixel> DrawCommandBuffer<T> {
     }
 }
 
-impl<T: Pixel> Deref for PixelBuffer<T> {
-    type Target = DrawCommandBuffer<T>;
+impl Deref for PixelBuffer {
+    type Target = DrawCommandBuffer;
     fn deref(&self) -> &Self::Target {
         &self.command
     }
 }
 
-impl<T: Pixel> DerefMut for PixelBuffer<T> {
+impl DerefMut for PixelBuffer {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.command
     }
 }
 
-impl<T: Pixel> PixelBuffer<T> {
+impl PixelBuffer {
     pub fn new(w: usize, h: usize) -> Self {
         Self {
             out_buffer: Vec::new(),
-            buffer: vec![T::trans(); w * h],
+            buffer: vec![u32::trans(); w * h],
             command: DrawCommandBuffer::new(),
             width: w,
             height: h,
             field: FIELD_START,
-            background: T::from(0xFF_24_24_24),
+            background: 0xFF_24_24_24,
             foreign_commands_communicator: None,
             is_running_foreign: false,
         }
@@ -190,11 +189,11 @@ impl<T: Pixel> PixelBuffer<T> {
         self.is_running_foreign ^= true;
     }
 
-    pub fn as_slice(&self) -> &[T] {
+    pub fn as_slice(&self) -> &[u32] {
         self.buffer.as_slice()
     }
 
-    pub fn set_background(&mut self, bg: T) {
+    pub fn set_background(&mut self, bg: u32) {
         self.background = bg;
     }
 
@@ -240,13 +239,13 @@ impl<T: Pixel> PixelBuffer<T> {
     }
 
     pub fn clear(&mut self) {
-        self.buffer.fill(T::trans());
+        self.buffer.fill(u32::trans());
     }
 
     pub fn resize(&mut self, w: usize, h: usize) {
         let len = w * h;
         if len > self.buffer.len() {
-            self.buffer.resize(len, T::from(0));
+            self.buffer.resize(len, 0);
         }
         self.width = w;
         self.height = h;
@@ -267,7 +266,7 @@ impl<T: Pixel> PixelBuffer<T> {
         y.wrapping_mul(self.width as u32).wrapping_add(x) as usize
     }
 
-    pub fn pixel(&self, i: usize) -> T {
+    pub fn pixel(&self, i: usize) -> u32 {
         self.buffer[i]
     }
 
@@ -287,23 +286,23 @@ impl<T: Pixel> PixelBuffer<T> {
     pub fn scale_to(
         &mut self,
         scale: usize,
-        dest: &mut [T],
+        dest: &mut [u32],
         width: Option<usize>,
-        mixer: Option<Mixer<T>>,
+        mixer: Option<Mixer>,
         crt: bool,
     ) {
         if self.width == 0 {
             return;
         }
 
-        let mixer = mixer.unwrap_or(T::mix);
+        let mixer = mixer.unwrap_or(u32::mix);
 
         let dst_width = width.unwrap_or(self.width * scale);
 
         let new_len = dest.len() + FIELD_START * dst_width;
 
         if self.out_buffer.len() < new_len {
-            self.out_buffer.resize(new_len, T::trans());
+            self.out_buffer.resize(new_len, u32::trans());
         }
 
         if !crt {

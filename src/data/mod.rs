@@ -10,7 +10,7 @@ pub mod vislist;
 
 use std::time::{Duration, Instant};
 
-use crate::{graphics::Canvas, modes::Mode};
+use crate::{graphics::PixelBuffer, modes::Mode};
 
 use crate::{VisFunc, modes};
 
@@ -73,7 +73,7 @@ pub(crate) struct Program {
 
     crt: bool,
 
-    pub pix: crate::graphics::Canvas,
+    pub pix: crate::graphics::PixelBuffer,
 
     mode: Mode,
 
@@ -122,7 +122,7 @@ impl Program {
 
             mode: default_mode,
 
-            pix: Canvas::new(DEFAULT_SIZE_WIN as usize, DEFAULT_SIZE_WIN as usize),
+            pix: PixelBuffer::new(DEFAULT_SIZE_WIN as usize, DEFAULT_SIZE_WIN as usize),
 
             milli_hz: DEFAULT_MILLI_HZ,
             refresh_rate_mode: RefreshRateMode::Sync,

@@ -1,7 +1,7 @@
 use std::sync::Mutex;
 
 use crate::data::FFT_SIZE;
-use crate::graphics::{Pixel, P2};
+use crate::graphics::{P2, Pixel};
 use crate::math::{self, Cplx};
 
 const COLOR: [u32; 3] = [0x66ff66, 0xaaffff, 0xaaaaff];
@@ -10,7 +10,7 @@ const FFT_SIZE_HALF: usize = FFT_SIZE / 2;
 
 const FFT_SIZE_RECIP: f32 = 1.4 / FFT_SIZE as f32;
 const NORMALIZE_FACTOR: f32 = FFT_SIZE_RECIP;
-const BARS: usize = 48;
+const BARS: usize = 36;
 const MAX_BARS: usize = 144;
 const MAX_BARS1: usize = MAX_BARS + 1;
 

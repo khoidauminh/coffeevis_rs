@@ -1,6 +1,6 @@
 use crate::{
     data::DEFAULT_ROTATE_SIZE,
-    graphics::{Canvas, Pixel, P2},
+    graphics::{P2, Pixel, PixelBuffer},
     math::Cplx,
 };
 
@@ -38,7 +38,7 @@ impl WaveletTable {
         depth_width + index
     }
 
-    pub fn draw(&self, canvas: &mut Canvas) {
+    pub fn draw(&self, canvas: &mut PixelBuffer) {
         let ch = canvas.height();
         let cw = canvas.width();
         for canvas_y in 0..ch {

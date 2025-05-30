@@ -51,9 +51,7 @@ fn is_newline(x: &u8) -> bool {
     *x == b'\n'
 }
 
-pub fn identify_line<'a, T: Pixel>(
-    inp: &mut Split<'a, u8, impl Fn(&u8) -> bool>,
-) -> Option<DrawCommand<T>> {
+pub fn identify_line<'a>(inp: &mut Split<'a, u8, impl Fn(&u8) -> bool>) -> Option<DrawCommand> {
     let head = inp.next()?;
 
     if head.starts_with(b"C") {
@@ -65,7 +63,7 @@ pub fn identify_line<'a, T: Pixel>(
     }
 }
 
-pub fn parse_command<T: Pixel>(inp: &[u8]) -> Option<DrawCommand<T>> {
+pub fn parse_command(inp: &[u8]) -> Option<DrawCommand> {
     let mut iter = inp.split(|&x| x == b' ');
 
     iter.next()?; // Skips C
@@ -80,10 +78,10 @@ pub fn parse_command<T: Pixel>(inp: &[u8]) -> Option<DrawCommand<T>> {
     }
 
     let blending = match iter.next()? {
-        b"o" => T::over,
-        b"a" => <T as Pixel>::add,
-        b"s" => <T as Pixel>::sub,
-        b"m" => T::mix,
+        b"o" => u32::over,
+        b"a" => <u32 as Pixel>::add,
+        b"s" => <u32 as Pixel>::sub,
+        b"m" => u32::mix,
         other => {
             eprintln!("Invalid token {:?}. Expected blending", other);
             return None;
@@ -98,7 +96,7 @@ pub fn parse_command<T: Pixel>(inp: &[u8]) -> Option<DrawCommand<T>> {
         *n = i32::from_str_radix(std::str::from_utf8(i).ok()?, 16).ok()?;
     }
 
-    let (param, func): (DrawParam, DrawFunction<T>) = match ident {
+    let (param, func): (DrawParam, DrawFunction) = match ident {
         b"f" => (DrawParam::Fill {}, fill),
 
         b"p" => (
@@ -131,18 +129,18 @@ pub fn parse_command<T: Pixel>(inp: &[u8]) -> Option<DrawCommand<T>> {
         }
     };
 
-    Some(DrawCommand::<T> {
+    Some(DrawCommand {
         func,
         param,
-        color: T::compose(color),
+        color: u32::compose(color),
         blending,
     })
 }
 
-pub fn parse_image<'a, T: Pixel>(
+pub fn parse_image<'a>(
     inp: &mut Split<'a, u8, impl Fn(&u8) -> bool>,
     header: &[u8],
-) -> Option<DrawCommand<T>> {
+) -> Option<DrawCommand> {
     let mut tokens = header.split(|&x| x == b' ');
 
     tokens.next(); // Skips I
@@ -166,10 +164,10 @@ pub fn parse_image<'a, T: Pixel>(
         }
     }
 
-    Some(DrawCommand::<T> {
+    Some(DrawCommand {
         func: draw_pix_by,
-        color: T::trans(),
-        blending: T::mix,
+        color: u32::trans(),
+        blending: u32::mix,
         param: DrawParam::Pix {
             p: P2::new(pos_x, pos_y),
             w: width,
@@ -284,10 +282,10 @@ impl ForeignCommandsCommunicator {
         })
     }
 
-    pub fn read_commands<T: Pixel>(&mut self) -> Result<DrawCommandBuffer<T>, Error> {
+    pub fn read_commands(&mut self) -> Result<DrawCommandBuffer, Error> {
         self.command_file.rewind()?;
 
-        let mut out_buffer = Vec::<DrawCommand<T>>::new();
+        let mut out_buffer = Vec::<DrawCommand>::new();
 
         self.input_cache.clear();
         self.command_file.read_to_end(&mut self.input_cache)?;
