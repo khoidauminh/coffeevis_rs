@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 const COMMAND_BUFFER_INIT_CAPACITY: usize = super::MAX_WIDTH as usize;
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub enum DrawParam {
     Rect { ps: P2, pe: P2 },
     RectWh { ps: P2, w: usize, h: usize },
@@ -18,7 +18,7 @@ pub enum DrawParam {
     Pix { p: P2, w: usize, v: Arc<[Argb]> },
 }
 
-pub type DrawFunction = fn(&mut [Argb], usize, usize, Argb, Mixer, DrawParam);
+pub type DrawFunction = fn(&mut [Argb], usize, usize, Argb, Mixer, &DrawParam);
 
 #[derive(Debug)]
 pub struct DrawCommand {
@@ -89,7 +89,7 @@ impl DrawCommandBuffer {
                 cheight,
                 command.color,
                 command.blending,
-                command.param.clone(),
+                &command.param,
             );
         });
     }
@@ -111,13 +111,13 @@ pub fn set_pixel_by(
     _cheight: usize,
     c: Argb,
     b: Mixer,
-    param: DrawParam,
+    param: &DrawParam,
 ) {
     let DrawParam::PlotIdx { i } = param else {
         return;
     };
 
-    if let Some(p) = canvas.get_mut(i) {
+    if let Some(p) = canvas.get_mut(*i) {
         *p = b(*p, c);
     }
 }
@@ -128,12 +128,12 @@ pub fn set_pixel_xy_by(
     cheight: usize,
     c: Argb,
     b: Mixer,
-    param: DrawParam,
+    param: &DrawParam,
 ) {
     let DrawParam::Plot { p } = param else { return };
 
-    let i = get_idx_fast(cwidth, p);
-    set_pixel_by(canvas, cwidth, cheight, c, b, DrawParam::PlotIdx { i });
+    let i = get_idx_fast(cwidth, *p);
+    set_pixel_by(canvas, cwidth, cheight, c, b, &DrawParam::PlotIdx { i });
 }
 
 pub fn draw_rect_xy_by(
@@ -142,7 +142,7 @@ pub fn draw_rect_xy_by(
     cheight: usize,
     c: Argb,
     b: Mixer,
-    param: DrawParam,
+    param: &DrawParam,
 ) {
     let DrawParam::Rect { ps, pe } = param else {
         return;
@@ -169,7 +169,7 @@ pub fn fade(
     _cheight: usize,
     c: Argb,
     b: Mixer,
-    param: DrawParam,
+    param: &DrawParam,
 ) {
     let DrawParam::Fade { a } = param else { return };
     canvas.iter_mut().for_each(|smp| *smp = smp.fade(255 - a));
@@ -181,7 +181,7 @@ pub fn fill(
     _cheight: usize,
     c: Argb,
     _b: Mixer,
-    _param: DrawParam,
+    _param: &DrawParam,
 ) {
     canvas.fill(c);
 }
@@ -192,18 +192,25 @@ pub fn draw_rect_wh_by(
     cheight: usize,
     c: Argb,
     b: Mixer,
-    param: DrawParam,
+    param: &DrawParam,
 ) {
     let DrawParam::RectWh { ps, w, h } = param else {
         return;
     };
 
     let pe = P2::new(
-        ps.x.wrapping_add(w as i32),
-        ps.y.wrapping_add(h as i32).wrapping_sub(1),
+        ps.x.wrapping_add(*w as i32),
+        ps.y.wrapping_add(*h as i32).wrapping_sub(1),
     );
 
-    draw_rect_xy_by(canvas, cwidth, cheight, c, b, DrawParam::Rect { ps, pe });
+    draw_rect_xy_by(
+        canvas,
+        cwidth,
+        cheight,
+        c,
+        b,
+        &DrawParam::Rect { ps: *ps, pe },
+    );
 }
 
 // Using Bresenham's line algorithm.
@@ -213,7 +220,7 @@ pub fn draw_line_by(
     cheight: usize,
     c: Argb,
     b: Mixer,
-    param: DrawParam,
+    param: &DrawParam,
 ) {
     let DrawParam::Line { ps, pe } = param else {
         return;
@@ -225,10 +232,10 @@ pub fn draw_line_by(
     let sy = if ps.y < pe.y { 1 } else { -1 };
     let mut error = dx + dy;
 
-    let mut p = ps;
+    let mut p = *ps;
 
     loop {
-        set_pixel_xy_by(canvas, cwidth, cheight, c, b, DrawParam::Plot { p });
+        set_pixel_xy_by(canvas, cwidth, cheight, c, b, &DrawParam::Plot { p });
 
         if p.x == pe.x && p.y == pe.y {
             return;
@@ -260,7 +267,7 @@ pub fn draw_cirle_by(
     cheight: usize,
     color: Argb,
     b: Mixer,
-    param: DrawParam,
+    param: &DrawParam,
 ) {
     let DrawParam::Circle {
         p: center,
@@ -273,7 +280,7 @@ pub fn draw_cirle_by(
 
     let mut t1 = radius / 16;
     let mut t2;
-    let mut x = radius;
+    let mut x = *radius;
     let mut y = 0;
 
     let half_center = P2::new(center.x / 2, center.y / 2);
@@ -290,7 +297,7 @@ pub fn draw_cirle_by(
             (y, -x),
         ];
 
-        if filled {
+        if *filled {
             coords.chunks_exact(2).for_each(|pair| {
                 let [c1, c2] = pair[0..2] else {
                     return;
@@ -305,7 +312,7 @@ pub fn draw_cirle_by(
                     cheight,
                     color,
                     b,
-                    DrawParam::Rect { ps, pe },
+                    &DrawParam::Rect { ps, pe },
                 );
             });
         } else {
@@ -316,7 +323,7 @@ pub fn draw_cirle_by(
                     cheight,
                     color,
                     b,
-                    DrawParam::Plot {
+                    &DrawParam::Plot {
                         p: P2::new(center.x + c.0, center.y + c.1),
                     },
                 )
@@ -348,7 +355,7 @@ pub fn draw_pix_by(
     cheight: usize,
     color: Argb,
     b: Mixer,
-    param: DrawParam,
+    param: &DrawParam,
 ) {
     let DrawParam::Pix {
         p: pix_pos,
@@ -366,14 +373,14 @@ pub fn draw_pix_by(
         .skip(pix_pos.y.max(0) as usize);
 
     let pix_iter = pix_vec
-        .chunks_exact(pix_width)
+        .chunks_exact(*pix_width)
         .skip((-pix_pos.y.min(0)) as usize);
 
     let dest_x = pix_pos.x.max(0) as usize;
     let src_x = (-pix_pos.x.min(0)) as usize;
 
     for (line_dest, line_src) in canvas_iter.zip(pix_iter) {
-        let line_iter = line_dest.iter_mut().skip(dest_x).take(pix_width);
+        let line_iter = line_dest.iter_mut().skip(dest_x).take(*pix_width);
         let src_iter = line_src.iter().skip(src_x);
 
         for (p_dest, p_src) in line_iter.zip(src_iter) {
