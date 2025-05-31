@@ -125,13 +125,14 @@ A maximum resolution is built into the console mode (default: 50x50). Coffeevis 
 | ------ | ------ |
 | <kbd>Space</kbd> | iterates forward through visualizers (wraps around) |
 | <kbd>b</kbd> | iterates backward (wraps around) |
-| <kbd>Esc</kbd> | exits |
+| <kbd>q</kbd> | exits |
 | <kbd>/</kbd> | resets all settings |
 | <kbd>-</kbd> / <kbd>+</kbd> | decreases/increases input volume |
 | <kbd>\[</kbd> / <kbd>\]</kbd> | decreases/increases spectrum roughness |
 | <kbd>;</kbd> / <kbd>'</kbd> | decreases/increases amount of samples into input (works for some wave-based visualizers only) |
 | <kbd>\\</bkd> | toggles auto switching (default: ON, 8 seconds) |
 | <kbd>n</kbd> | switches through sets of visualizers (wraps around) |
+| <kbd>f</kbd> | (when launched with foreign communicator) switches between foreign visualizer and built-in. |
 
 ### Terminal
 |  Key | Description |
