@@ -8,7 +8,6 @@ use blend::{Argb, Mixer};
 use draw::*;
 
 const FIELD_START: usize = 64;
-const COMMAND_BUFFER_INIT_CAPACITY: usize = MAX_WIDTH as usize;
 
 use std::ops::{self, Deref, DerefMut};
 
@@ -114,8 +113,24 @@ impl PixelBuffer {
         self.buffer.as_slice()
     }
 
+    pub fn as_mut_slide(&mut self) -> &mut [Argb] {
+        self.buffer.as_mut_slice()
+    }
+
     pub fn set_background(&mut self, bg: Argb) {
         self.background = bg;
+    }
+
+    pub fn execute(&mut self) {
+        for i in 0..self.command.0.len() {
+            let command = &self.command.0[i];
+            (command.func)(
+                self,
+                command.color,
+                command.blending,
+                &command.param.clone(),
+            );
+        }
     }
 
     pub fn draw_to_self(&mut self) {
@@ -125,15 +140,13 @@ impl PixelBuffer {
                     // dbg!(&v);
                     self.command = v;
                     self.clear();
-                    self.command
-                        .execute(&mut self.buffer, self.width, self.height);
+                    self.execute();
                 }
                 return;
             }
         }
 
-        self.command
-            .execute(&mut self.buffer, self.width, self.height);
+        self.execute();
 
         self.reset();
     }

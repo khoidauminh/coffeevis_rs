@@ -27,8 +27,8 @@ use std::time::Duration;
 
 use crate::data::log::alert;
 use crate::graphics::blend::Mixer;
-use crate::graphics::draw::*;
 use crate::graphics::{P2, Pixel};
+use crate::graphics::{PixelBuffer, draw::*};
 use crate::math::Cplx;
 
 use super::Program;
@@ -97,13 +97,13 @@ pub fn parse_command(inp: &[u8]) -> Option<DrawCommand> {
     }
 
     let (param, func): (DrawParam, DrawFunction) = match ident {
-        b"f" => (DrawParam::Fill {}, fill),
+        b"f" => (DrawParam::Fill {}, PixelBuffer::pix_fill),
 
         b"p" => (
             DrawParam::Plot {
                 p: P2::new(num_array[0], num_array[1]),
             },
-            set_pixel_xy_by,
+            PixelBuffer::set_pixel_xy_by,
         ),
 
         b"l" => (
@@ -111,7 +111,7 @@ pub fn parse_command(inp: &[u8]) -> Option<DrawCommand> {
                 ps: P2::new(num_array[0], num_array[1]),
                 pe: P2::new(num_array[0], num_array[1]),
             },
-            draw_line_by,
+            PixelBuffer::draw_line_by,
         ),
 
         b"r" => (
@@ -120,7 +120,7 @@ pub fn parse_command(inp: &[u8]) -> Option<DrawCommand> {
                 w: num_array[2].try_into().ok()?,
                 h: num_array[3].try_into().ok()?,
             },
-            draw_rect_wh_by,
+            PixelBuffer::draw_rect_wh_by,
         ),
 
         other => {
@@ -165,7 +165,7 @@ pub fn parse_image<'a>(
     }
 
     Some(DrawCommand {
-        func: draw_pix_by,
+        func: PixelBuffer::draw_pix_by,
         color: u32::trans(),
         blending: u32::mix,
         param: DrawParam::Pix {

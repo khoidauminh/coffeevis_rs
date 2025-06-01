@@ -183,7 +183,7 @@ where
     }
 
     pub fn update(&mut self, new: T) -> T {
-        self.push(NumPair::<T> {
+        self.push(NumPair {
             index: self.index,
             value: new,
         });
@@ -207,7 +207,7 @@ pub fn limiter<T, const N: usize>(
     gain: f32,
     flattener: fn(T) -> f32,
 ) where
-    T: Into<f32> + std::ops::Mul<f32, Output = T> + std::marker::Copy,
+    T: Into<f32> + Mul<f32, Output = T> + Copy,
 {
     assert!(a.len() <= N);
 
