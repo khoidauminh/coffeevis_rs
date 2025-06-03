@@ -121,32 +121,25 @@ impl PixelBuffer {
         self.background = bg;
     }
 
-    pub fn execute(&mut self) {
-        for i in 0..self.command.0.len() {
-            let command = &self.command.0[i];
-            (command.func)(
-                self,
-                command.color,
-                command.blending,
-                &command.param.clone(),
-            );
-        }
-    }
-
     pub fn draw_to_self(&mut self) {
+        let mut painter = Painter {
+            buffer: self.buffer.as_mut_slice(),
+            width: self.width,
+            height: self.height,
+        };
+
         if self.is_running_foreign {
             if let Some(c) = self.foreign_commands_communicator.as_mut() {
                 if let Ok(v) = c.read_commands() {
                     // dbg!(&v);
                     self.command = v;
-                    self.clear();
-                    self.execute();
+                    self.command.execute(&mut painter);
                 }
                 return;
             }
         }
 
-        self.execute();
+        self.command.execute(&mut painter);
 
         self.reset();
     }

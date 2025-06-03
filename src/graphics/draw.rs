@@ -1,6 +1,6 @@
 #![allow(unused_variables)]
 
-use super::{Argb, P2, Pixel, PixelBuffer, blend::Mixer};
+use super::{Argb, P2, Pixel, blend::Mixer};
 use std::sync::Arc;
 
 const COMMAND_BUFFER_INIT_CAPACITY: usize = super::MAX_WIDTH as usize;
@@ -18,7 +18,7 @@ pub enum DrawParam {
     Pix { p: P2, w: usize, v: Arc<[Argb]> },
 }
 
-pub type DrawFunction = fn(&mut PixelBuffer, Argb, Mixer, &DrawParam);
+pub type DrawFunction = fn(&mut Painter, Argb, Mixer, &DrawParam);
 
 #[derive(Debug)]
 pub struct DrawCommand {
@@ -29,7 +29,7 @@ pub struct DrawCommand {
 }
 
 #[derive(Debug)]
-pub struct DrawCommandBuffer(pub Vec<DrawCommand>);
+pub struct DrawCommandBuffer(Vec<DrawCommand>);
 
 macro_rules! make_draw_func {
     ($fn_name:ident, $func:expr, $param_struct:ident $(, $param:ident: $type:ty)*) => {
@@ -53,19 +53,19 @@ impl DrawCommandBuffer {
         Self(vec)
     }
 
-    make_draw_func!(rect, PixelBuffer::draw_rect_xy_by, Rect, ps: P2, pe: P2);
-    make_draw_func!(rect_wh, PixelBuffer::draw_rect_wh_by, RectWh, ps: P2, w: usize, h: usize);
-    make_draw_func!(line, PixelBuffer::draw_line_by, Line, ps: P2, pe: P2);
-    make_draw_func!(plot, PixelBuffer::set_pixel_xy_by, Plot, p: P2);
-    make_draw_func!(plot_index, PixelBuffer::set_pixel_by, PlotIdx, i: usize);
-    make_draw_func!(circle, PixelBuffer::draw_cirle_by, Circle, p: P2, r: i32, f: bool);
+    make_draw_func!(rect, DRAW_RECT_XY, Rect, ps: P2, pe: P2);
+    make_draw_func!(rect_wh, DRAW_RECT_WH, RectWh, ps: P2, w: usize, h: usize);
+    make_draw_func!(line, DRAW_LINE, Line, ps: P2, pe: P2);
+    make_draw_func!(plot, DRAW_PLOT, Plot, p: P2);
+    make_draw_func!(plot_index, DRAW_PLOT_I, PlotIdx, i: usize);
+    make_draw_func!(circle, DRAW_CIRCLE, Circle, p: P2, r: i32, f: bool);
 
     pub fn fill(&mut self, c: Argb) {
         // Discards all previous commands since this
         // fill overwrites the entire buffer.
         self.0.clear();
         self.0.push(DrawCommand {
-            func: PixelBuffer::pix_fill,
+            func: DRAW_FILL,
             param: DrawParam::Fill {},
             color: c,
             blending: Pixel::over,
@@ -74,11 +74,17 @@ impl DrawCommandBuffer {
 
     pub fn fade(&mut self, a: u8) {
         self.0.push(DrawCommand {
-            func: PixelBuffer::pix_fade,
+            func: DRAW_FADE,
             param: DrawParam::Fade { a },
             color: Argb::trans(),
             blending: Pixel::over,
         });
+    }
+
+    pub fn execute<'a>(&mut self, p: &mut Painter<'a>) {
+        self.0
+            .iter()
+            .for_each(|c| ((c.func)(p, c.color, c.blending, &c.param)));
     }
 
     pub fn reset(&mut self) {
@@ -92,7 +98,29 @@ pub fn get_idx_fast(cwidth: usize, p: P2) -> usize {
     y.wrapping_mul(cwidth as u32).wrapping_add(x) as usize
 }
 
-impl PixelBuffer {
+pub struct Painter<'a> {
+    pub buffer: &'a mut [Argb],
+    pub width: usize,
+    pub height: usize,
+}
+
+macro_rules! gen_const {
+    ($name:ident, $func:expr) => {
+        pub static $name: DrawFunction = |p, a, m, r| $func(p, a, m, r);
+    };
+}
+
+gen_const!(DRAW_PLOT, Painter::set_pixel_by);
+gen_const!(DRAW_PLOT_I, Painter::set_pixel_by);
+gen_const!(DRAW_RECT_XY, Painter::draw_rect_xy_by);
+gen_const!(DRAW_RECT_WH, Painter::draw_rect_wh_by);
+gen_const!(DRAW_LINE, Painter::draw_line_by);
+gen_const!(DRAW_CIRCLE, Painter::draw_cirle_by);
+gen_const!(DRAW_FILL, Painter::pix_fill);
+gen_const!(DRAW_FADE, Painter::pix_fade);
+gen_const!(DRAW_PIX, Painter::draw_pix_by);
+
+impl<'a> Painter<'a> {
     pub fn set_pixel_by(&mut self, c: Argb, b: Mixer, param: &DrawParam) {
         let DrawParam::PlotIdx { i } = param else {
             return;
@@ -106,7 +134,7 @@ impl PixelBuffer {
     pub fn set_pixel_xy_by(&mut self, c: Argb, b: Mixer, param: &DrawParam) {
         let DrawParam::Plot { p } = param else { return };
 
-        let i = get_idx_fast(self.width(), *p);
+        let i = get_idx_fast(self.width, *p);
         self.set_pixel_by(c, b, &DrawParam::PlotIdx { i });
     }
 

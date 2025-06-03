@@ -97,13 +97,13 @@ pub fn parse_command(inp: &[u8]) -> Option<DrawCommand> {
     }
 
     let (param, func): (DrawParam, DrawFunction) = match ident {
-        b"f" => (DrawParam::Fill {}, PixelBuffer::pix_fill),
+        b"f" => (DrawParam::Fill {}, DRAW_FILL),
 
         b"p" => (
             DrawParam::Plot {
                 p: P2::new(num_array[0], num_array[1]),
             },
-            PixelBuffer::set_pixel_xy_by,
+            DRAW_PLOT,
         ),
 
         b"l" => (
@@ -111,7 +111,7 @@ pub fn parse_command(inp: &[u8]) -> Option<DrawCommand> {
                 ps: P2::new(num_array[0], num_array[1]),
                 pe: P2::new(num_array[0], num_array[1]),
             },
-            PixelBuffer::draw_line_by,
+            DRAW_LINE,
         ),
 
         b"r" => (
@@ -120,7 +120,7 @@ pub fn parse_command(inp: &[u8]) -> Option<DrawCommand> {
                 w: num_array[2].try_into().ok()?,
                 h: num_array[3].try_into().ok()?,
             },
-            PixelBuffer::draw_rect_wh_by,
+            DRAW_RECT_WH,
         ),
 
         other => {
@@ -165,7 +165,7 @@ pub fn parse_image<'a>(
     }
 
     Some(DrawCommand {
-        func: PixelBuffer::draw_pix_by,
+        func: DRAW_PIX,
         color: u32::trans(),
         blending: u32::mix,
         param: DrawParam::Pix {
