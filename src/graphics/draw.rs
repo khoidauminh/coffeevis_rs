@@ -121,7 +121,7 @@ gen_const!(DRAW_FADE, Painter::pix_fade);
 gen_const!(DRAW_PIX, Painter::draw_pix_by);
 
 impl<'a> Painter<'a> {
-    pub fn set_pixel_by(&mut self, c: Argb, b: Mixer, param: &DrawParam) {
+    fn set_pixel_by(&mut self, c: Argb, b: Mixer, param: &DrawParam) {
         let DrawParam::PlotIdx { i } = param else {
             return;
         };
@@ -131,14 +131,14 @@ impl<'a> Painter<'a> {
         }
     }
 
-    pub fn set_pixel_xy_by(&mut self, c: Argb, b: Mixer, param: &DrawParam) {
+    fn set_pixel_xy_by(&mut self, c: Argb, b: Mixer, param: &DrawParam) {
         let DrawParam::Plot { p } = param else { return };
 
         let i = get_idx_fast(self.width, *p);
         self.set_pixel_by(c, b, &DrawParam::PlotIdx { i });
     }
 
-    pub fn draw_rect_xy_by(&mut self, c: Argb, b: Mixer, param: &DrawParam) {
+    fn draw_rect_xy_by(&mut self, c: Argb, b: Mixer, param: &DrawParam) {
         let DrawParam::Rect { ps, pe } = param else {
             return;
         };
@@ -158,18 +158,18 @@ impl<'a> Painter<'a> {
             .for_each(|p| *p = b(*p, c));
     }
 
-    pub fn pix_fade(&mut self, c: Argb, b: Mixer, param: &DrawParam) {
+    fn pix_fade(&mut self, c: Argb, b: Mixer, param: &DrawParam) {
         let DrawParam::Fade { a } = param else { return };
         self.buffer
             .iter_mut()
             .for_each(|smp| *smp = smp.fade(255 - a));
     }
 
-    pub fn pix_fill(&mut self, c: Argb, _b: Mixer, _param: &DrawParam) {
+    fn pix_fill(&mut self, c: Argb, _b: Mixer, _param: &DrawParam) {
         self.buffer.fill(c);
     }
 
-    pub fn draw_rect_wh_by(&mut self, c: Argb, b: Mixer, param: &DrawParam) {
+    fn draw_rect_wh_by(&mut self, c: Argb, b: Mixer, param: &DrawParam) {
         let DrawParam::RectWh { ps, w, h } = param else {
             return;
         };
@@ -183,7 +183,7 @@ impl<'a> Painter<'a> {
     }
 
     // Using Bresenham's line algorithm.
-    pub fn draw_line_by(&mut self, c: Argb, b: Mixer, param: &DrawParam) {
+    fn draw_line_by(&mut self, c: Argb, b: Mixer, param: &DrawParam) {
         let DrawParam::Line { ps, pe } = param else {
             return;
         };
@@ -223,7 +223,7 @@ impl<'a> Painter<'a> {
         }
     }
 
-    pub fn draw_cirle_by(&mut self, color: Argb, b: Mixer, param: &DrawParam) {
+    fn draw_cirle_by(&mut self, color: Argb, b: Mixer, param: &DrawParam) {
         let DrawParam::Circle {
             p: center,
             r: radius,
@@ -294,7 +294,7 @@ impl<'a> Painter<'a> {
         }
     }
 
-    pub fn draw_pix_by(&mut self, color: Argb, b: Mixer, param: &DrawParam) {
+    fn draw_pix_by(&mut self, color: Argb, b: Mixer, param: &DrawParam) {
         let DrawParam::Pix {
             p: pix_pos,
             w: pix_width,
