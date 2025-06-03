@@ -110,7 +110,7 @@ macro_rules! gen_const {
     };
 }
 
-gen_const!(DRAW_PLOT, Painter::set_pixel_by);
+gen_const!(DRAW_PLOT, Painter::set_pixel_xy_by);
 gen_const!(DRAW_PLOT_I, Painter::set_pixel_by);
 gen_const!(DRAW_RECT_XY, Painter::draw_rect_xy_by);
 gen_const!(DRAW_RECT_WH, Painter::draw_rect_wh_by);
