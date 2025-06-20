@@ -189,10 +189,7 @@ impl Program {
         }
 
         if !self.mode.is_con() {
-            self.mode = match std::env::var("WAYLAND_DISPLAY") {
-                Ok(s) if s.len() != 0 => WinWayland,
-                _ => WinX11,
-            }
+            self.mode = Win;
         }
 
         self
@@ -209,32 +206,17 @@ impl Program {
         string_out += &format!("Refresh rate: {}hz\n", self.milli_hz as f32 / 1000.0);
 
         string_out += &format!(
-            "Auto switch: {}\n",
+            "Auto-switch: {}\n",
             if self.auto_switch { "on" } else { "off" }
         );
 
         if self.mode.is_con() {
             string_out += &format!(
-                "Running in a terminal: {} rendering\n",
+                "Running in terminal, renderer: {}\n",
                 self.mode.get_name()
             );
         } else {
-            #[cfg(target_os = "linux")]
-            {
-                string_out += &format!(
-                    "Running with: Winit, {}",
-                    if self.mode == WinWayland {
-                        "Wayland"
-                    } else {
-                        "X11"
-                    }
-                );
-            }
-
-            #[cfg(target_os = "windows")]
-            {
-                string_out += "Running in Windows";
-            }
+            string_out += "Running graphically";
         }
 
         info!("{}", string_out);

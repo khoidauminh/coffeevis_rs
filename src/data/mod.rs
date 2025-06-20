@@ -290,7 +290,7 @@ impl Program {
     pub fn update_size(&mut self, mut s: (u16, u16)) {
         match &self.mode {
             #[cfg(not(feature = "console_only"))]
-            Mode::WinX11 | Mode::WinWayland => {
+            Mode::Win => {
                 self.window_props.set_size(s);
             }
 
@@ -321,7 +321,7 @@ impl Program {
     pub fn refresh(&mut self) {
         match &self.mode {
             #[cfg(not(feature = "console_only"))]
-            Mode::WinX11 | Mode::WinWayland => self.pix.resize(
+            Mode::Win => self.pix.resize(
                 self.window_props.width as usize,
                 self.window_props.height as usize,
             ),
