@@ -171,10 +171,10 @@ impl ApplicationHandler for WindowState {
             WindowEvent::CloseRequested => self.call_exit(event_loop),
 
             WindowEvent::MouseInput { button, .. } => {
-                if button == event::MouseButton::Left {
-                    if let Some(err) = self.window.as_ref().and_then(|f| f.drag_window().err()) {
-                        error!("Error dragging window: {}", err);
-                    }
+                if button == event::MouseButton::Left
+                    && let Some(err) = self.window.as_ref().and_then(|f| f.drag_window().err())
+                {
+                    error!("Error dragging window: {}", err);
                 }
             }
 

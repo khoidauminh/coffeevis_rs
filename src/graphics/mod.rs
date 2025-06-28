@@ -129,12 +129,12 @@ impl PixelBuffer {
         };
 
         if self.is_running_foreign {
-            if let Some(c) = self.foreign_commands_communicator.as_mut() {
-                if let Ok(v) = c.read_commands() {
-                    // dbg!(&v);
-                    self.command = v;
-                    self.command.execute(&mut painter);
-                }
+            if let Some(c) = self.foreign_commands_communicator.as_mut()
+                && let Ok(v) = c.read_commands()
+            {
+                // dbg!(&v);
+                self.command = v;
+                self.command.execute(&mut painter);
                 return;
             }
         }

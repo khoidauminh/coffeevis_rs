@@ -169,20 +169,20 @@ impl StyledLine for SmallVec<[ColoredString; MAX_SEGMENTS]> {
     }
 
     fn push_pixel(&mut self, ch: char, fg: Argb) {
-        if let Some(last) = self.last_mut() {
-            if last.append(ch, fg) {
-                return;
-            }
+        if let Some(last) = self.last_mut()
+            && last.append(ch, fg)
+        {
+            return;
         }
 
         self.push(ColoredString::new(ch, fg, ERROR));
     }
 
     fn push_pixel_bg(&mut self, ch: char, fg: Argb, bg: Argb) {
-        if let Some(last) = self.last_mut() {
-            if last.append_bg(ch, fg, bg) {
-                return;
-            }
+        if let Some(last) = self.last_mut()
+            && last.append_bg(ch, fg, bg)
+        {
+            return;
         }
 
         self.push(ColoredString::new_bg(ch, fg, bg, ERROR));
