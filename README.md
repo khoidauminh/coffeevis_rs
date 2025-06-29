@@ -118,6 +118,8 @@ A terminal with GPU-accelerated support is recommended (i.e Alacritty, Kitty, We
 
 A maximum resolution is built into the console mode (default: 50x50). Coffeevis will render in the center of the screen if terminal dimensions are larger than the limit.
 
+It looks the smoothest when you're in a dark room with low monitor brightness. But don't do that lol
+
 ## Keyboard shortcuts
 
 ### Global
