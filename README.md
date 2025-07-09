@@ -13,9 +13,6 @@ This project also serves as my playground, so you'll see a lot of weird implemen
 
 #### YOU CAN NOW WRITE COFFEEVIS VISUALIZERS *OUTSIDE* OF COFFEEVIS
 
-Guess what? I got bored 4 something days before my statistsics exam and
-wrote an interface for foreign programs to communicate with coffeevis lol
-
 See [README.md](src/data/README.md)
 
 ### Other changes
