@@ -135,7 +135,7 @@ pub fn compute_fft_iterative(a: &mut [Cplx]) {
 //
 // This leverages the the linear and symetric
 // property of the FFT.
-pub fn compute_fft_stereo(a: &mut [Cplx], up_to: usize, normalize: bool) {
+pub fn compute_fft_stereo(a: &mut [Cplx], up_to: usize, normalize: super::Normalize) {
     super::fft(a);
 
     let l = a.len();
@@ -148,7 +148,7 @@ pub fn compute_fft_stereo(a: &mut [Cplx], up_to: usize, normalize: bool) {
         a[i] = Cplx::new((bin1 + bin2).l1_norm(), (bin1 - bin2).l1_norm());
     }
 
-    if normalize {
+    if normalize == super::Normalize::Yes {
         let norm = 1.0 / l as f32;
         for smp in a.iter_mut().take(bound) {
             *smp *= norm;

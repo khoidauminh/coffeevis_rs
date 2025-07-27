@@ -5,6 +5,12 @@ mod vec2;
 
 use std::ops;
 
+#[derive(PartialEq)]
+pub enum Normalize {
+    Yes,
+    No,
+}
+
 #[derive(Copy, Clone, Debug)]
 pub struct Vec2<T> {
     pub x: T,
@@ -21,7 +27,7 @@ pub const fn ideal_fft_bound(up_to: usize) -> usize {
     (up_to * 3 / 2).next_power_of_two() * 2
 }
 
-pub fn fft_stereo(a: &mut [Cplx], up_to: usize, norm: bool) {
+pub fn fft_stereo(a: &mut [Cplx], up_to: usize, norm: Normalize) {
     fft::compute_fft_stereo(a, up_to, norm);
 }
 
@@ -58,7 +64,7 @@ pub fn squish(x: f32, scale: f32, limit: f32) -> f32 {
     (-scale * (x.abs() + scale).recip() + 1.0) * limit * x.signum()
 }
 
-pub fn integrate_inplace(a: &mut [Cplx], factor: usize, norm: bool) {
+pub fn integrate_inplace(a: &mut [Cplx], factor: usize, norm: Normalize) {
     if factor < 2 {
         return;
     }
@@ -103,7 +109,7 @@ pub fn integrate_inplace(a: &mut [Cplx], factor: usize, norm: bool) {
         fi = increment(fi, factor);
     }
 
-    if norm {
+    if norm == Normalize::Yes {
         let div = 1.0 / factor as f32;
         let mut i = 0;
         while i < first_iter {
