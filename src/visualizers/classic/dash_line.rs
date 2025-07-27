@@ -6,7 +6,7 @@ const C: u32 = 0x00_FF_20_C0;
 
 pub fn draw_dash_line(
     para: &mut crate::data::Program,
-    stream: &mut crate::audio::SampleArr,
+    stream: &mut crate::audio::AudioBuffer,
     horizontal: bool,
     offset: usize,
     flip_side: bool,

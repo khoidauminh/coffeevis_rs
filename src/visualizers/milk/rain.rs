@@ -2,9 +2,9 @@ use core::f32;
 use std::sync::Mutex;
 
 use crate::{
-    audio::SampleArr,
+    audio::AudioBuffer,
     data::{DEFAULT_SIZE_WIN, Program},
-    graphics::{P2, Pixel, PixelBuffer},
+    graphics::{P2, Pixel, PixelBuffer, blend::Argb},
     math::{
         Cplx,
         rng::{random_float, random_int},
@@ -21,24 +21,58 @@ struct RainDrop {
     fall_amount: f32,
 }
 
+const MAX_THUNDER_TRAILS: usize = 8;
+const MAX_THUNDER_TRAIL_LENGTH: usize = 8;
+
+#[derive(Copy, Clone)]
+struct ThunderTrail {
+    positions: [P2; MAX_THUNDER_TRAIL_LENGTH],
+    size: usize,
+}
+
+impl ThunderTrail {
+    pub fn new(start: Option<P2>) -> Self {
+        let mut positions = [P2::new(0, 0); MAX_THUNDER_TRAIL_LENGTH];
+        positions[0] = start.unwrap_or(P2::new(0, 0));
+        Self { positions, size: 0 }
+    }
+
+    pub fn advance(&mut self) {
+        if self.size == MAX_THUNDER_TRAIL_LENGTH {
+            return;
+        }
+
+        let dx = random_int(3) as i32 - 1;
+        let dy = random_int(3) as i32 - 1;
+
+        let new_position = self.positions[self.size - 1] + P2::new(dx, dy);
+
+        self.positions[self.size] = new_position;
+
+        self.size += 1;
+    }
+}
+
 struct Thunder {
-    color: u32,
-    sheer: u8,
-    branching: u8,
-    max_branches: u8,
+    trails: [Option<ThunderTrail>; MAX_THUNDER_TRAILS],
+    color: Argb,
+    split_every: u16,
 }
 
 impl Thunder {
-    pub const fn new(color: u32, sheer: u8, branching: u8, max_branches: u8) -> Self {
+    pub fn new(split_every: u16, color: Argb, start: P2) -> Self {
+        let mut trails = [None; MAX_THUNDER_TRAILS];
+
+        trails[0] = Some(ThunderTrail::new(Some(start)));
+
         Self {
+            trails,
             color,
-            sheer,
-            branching,
-            max_branches,
+            split_every,
         }
     }
 
-    //pub const draw<T: Pixel>(canvas: &mut[T]
+    pub fn draw(&mut self, pix: &mut PixelBuffer) {}
 }
 
 impl RainDrop {
@@ -110,7 +144,7 @@ const DEFAULT_BOUND: P2 = P2 {
 
 // static mut drop: RainDrop = RainDrop::new(0xFF_FF_FF_FF, 8, 0.2, DEFAULT_SIZE_WIN as usize, DEFAULT_SIZE_WIN as usize);
 
-pub fn draw(prog: &mut Program, stream: &mut SampleArr) {
+pub fn draw(prog: &mut Program, stream: &mut AudioBuffer) {
     static LIST_OF_DROPS: Mutex<[RainDrop; NUM_OF_DROPS]> =
         Mutex::new([RainDrop::new(0xFF_FF_FF_FF, 8, 0.2, DEFAULT_BOUND); NUM_OF_DROPS]);
 

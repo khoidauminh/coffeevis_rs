@@ -1,9 +1,9 @@
 use std::f32::consts::LN_2;
 
-use std::sync::{Mutex, MutexGuard};
+use std::sync::Mutex;
 
-use crate::graphics::{Pixel, P2};
-use crate::math::{self, interpolate::*, Cplx};
+use crate::graphics::{P2, Pixel};
+use crate::math::{self, Cplx, interpolate::*};
 
 const FFT_SIZE: usize = crate::data::FFT_SIZE / 2;
 const RANGE: usize = 64;
@@ -27,8 +27,8 @@ fn index_scale_derivative(x: f32) -> f32 {
 
 fn prepare(
     prog: &mut crate::data::Program,
-    stream: &mut crate::audio::SampleArr,
-    local: &mut MutexGuard<LocalType>,
+    stream: &mut crate::audio::AudioBuffer,
+    local: &mut LocalType,
 ) {
     let accel = 0.28 * prog.smoothing.powi(2);
     let mut fft = [Cplx::zero(); FFT_SIZE];
@@ -42,7 +42,7 @@ fn prepare(
             *smp = stream[idx];
         });
 
-    math::fft_stereo(&mut fft, RANGE, true);
+    math::fft_stereo(&mut fft, RANGE, math::Normalize::Yes);
 
     fft.iter_mut().take(RANGE).enumerate().for_each(|(i, smp)| {
         let scalef = math::fast::ilog2(i + 1) as f32 * (1.5 - i as f32 / RANGEF) * 1.621;
@@ -59,7 +59,7 @@ fn prepare(
     stream.auto_rotate();
 }
 
-pub fn draw_spectrum(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
+pub fn draw_spectrum(prog: &mut crate::data::Program, stream: &mut crate::audio::AudioBuffer) {
     static DATA: Mutex<LocalType> = Mutex::new([Cplx::zero(); RANGE + 1]);
 
     let Ok(mut local) = DATA.try_lock() else {

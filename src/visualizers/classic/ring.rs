@@ -1,7 +1,7 @@
-use crate::graphics::{Pixel, P2};
+use crate::graphics::{P2, Pixel};
 use crate::math::Cplx;
 
-pub fn draw_ring(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
+pub fn draw_ring(prog: &mut crate::data::Program, stream: &mut crate::audio::AudioBuffer) {
     let range = prog.wav_win;
 
     let size = prog.pix.height().min(prog.pix.width()) as i32;

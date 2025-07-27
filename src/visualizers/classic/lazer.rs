@@ -1,6 +1,6 @@
 use crate::data::SAMPLE_SIZE;
 use crate::graphics::Pixel;
-use crate::math::{interpolate::linearf, Cplx};
+use crate::math::{Cplx, interpolate::linearf};
 
 struct LocalData {
     p0: Cplx,
@@ -12,7 +12,7 @@ static DATA: std::sync::Mutex<LocalData> = std::sync::Mutex::new(LocalData {
     p1: Cplx { x: 1.0, y: 1.0 },
 });
 
-pub fn draw_lazer(para: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
+pub fn draw_lazer(para: &mut crate::data::Program, stream: &mut crate::audio::AudioBuffer) {
     let w = para.pix.width() as f32;
     let h = para.pix.height() as f32;
 

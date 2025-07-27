@@ -1,8 +1,8 @@
 use cpal::traits::{DeviceTrait, HostTrait};
 
-mod audio_buffer;
+pub mod audio_buffer;
 use crate::math::increment;
-use audio_buffer::AudioBuffer;
+pub(crate) use audio_buffer::AudioBuffer;
 
 use std::ops::*;
 use std::sync::{
@@ -10,15 +10,10 @@ use std::sync::{
     atomic::{AtomicBool, AtomicU8, Ordering::Relaxed},
 };
 
-/// Global sample array
-type GlobalSampleBuffer = Mutex<AudioBuffer>;
-
-pub(crate) type SampleArr<'a> = MutexGuard<'a, AudioBuffer>;
-
 static NO_SAMPLE: AtomicU8 = AtomicU8::new(0);
 
-pub(crate) fn get_buf() -> SampleArr<'static> {
-    static BUFFER: GlobalSampleBuffer = Mutex::new(AudioBuffer::new());
+pub(crate) fn get_buf<'a>() -> MutexGuard<'a, AudioBuffer> {
+    static BUFFER: Mutex<AudioBuffer> = Mutex::new(AudioBuffer::new());
     BUFFER.lock().unwrap()
 }
 

@@ -1,6 +1,6 @@
 use crate::data::SAMPLE_SIZE;
-use crate::graphics::Pixel;
 use crate::graphics::P2;
+use crate::graphics::Pixel;
 use crate::math::fast::sin_norm;
 use std::sync::Mutex;
 
@@ -16,7 +16,7 @@ static DATA: Mutex<LocalData> = Mutex::new(LocalData {
     pong: false,
 });
 
-pub fn draw_vol_sweeper(para: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
+pub fn draw_vol_sweeper(para: &mut crate::data::Program, stream: &mut crate::audio::AudioBuffer) {
     para.pix.fade(3);
 
     let w = {

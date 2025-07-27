@@ -1,7 +1,7 @@
 use std::{f32::consts::FRAC_PI_2, sync::Mutex};
 
 use crate::graphics::Pixel;
-use crate::math::{self, fast, Cplx};
+use crate::math::{self, Cplx, fast};
 
 // soft shaking
 const INCR: f32 = 0.0001;
@@ -37,7 +37,7 @@ fn triangle_wav(amp: f32, prd: f32, t: f32) -> f32 {
     (4.0 * (t / prd - (t / prd + 0.5).trunc()).abs() - 1.0) * amp
 }
 
-pub fn draw_shaky(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
+pub fn draw_shaky(prog: &mut crate::data::Program, stream: &mut crate::audio::AudioBuffer) {
     let mut localdata = DATA.lock().unwrap();
 
     let mut data_f = [Cplx::zero(); 512];
@@ -48,7 +48,7 @@ pub fn draw_shaky(prog: &mut crate::data::Program, stream: &mut crate::audio::Sa
         .iter_mut()
         .enumerate()
         .for_each(|(i, x)| *x = stream[i]);
-    math::integrate_inplace(&mut data_f, 128, false);
+    math::integrate_inplace(&mut data_f, 128, math::Normalize::No);
 
     let amplitude = data_f.iter().fold(0f32, |acc, x| acc + x.l1_norm()) * sizef;
 

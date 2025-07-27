@@ -1,12 +1,12 @@
 use std::sync::Mutex;
 
 use crate::{
-    audio::SampleArr,
-    data::{Program, DEFAULT_SIZE_WIN},
-    graphics::{blend::Blend, Canvas, P2},
+    audio::AudioBuffer,
+    data::{DEFAULT_SIZE_WIN, Program},
+    graphics::{Canvas, P2, blend::Blend},
     math::{
-        rng::{random_float, random_int},
         Cplx,
+        rng::{random_float, random_int},
     },
 };
 

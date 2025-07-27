@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 
-from ast import arg
 import time
 import struct
 import os
-import math
 
 # Paths to the coffeevis files.
 audio_path = '/dev/shm/coffeevis_audio.bin'

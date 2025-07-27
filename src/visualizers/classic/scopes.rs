@@ -1,6 +1,6 @@
 use std::sync::{
-    atomic::{AtomicUsize, Ordering::Relaxed},
     Mutex,
+    atomic::{AtomicUsize, Ordering::Relaxed},
 };
 
 use crate::graphics::Pixel;
@@ -11,7 +11,7 @@ use crate::audio::MovingAverage;
 use crate::data::{INCREMENT, PHASE_OFFSET};
 use crate::graphics::P2;
 use crate::math::interpolate::linearfc;
-use crate::visualizers::classic::cross::{draw_cross, CROSS_COL};
+use crate::visualizers::classic::cross::{CROSS_COL, draw_cross};
 
 use crate::math::{self, Cplx};
 
@@ -24,7 +24,7 @@ fn to_color(s: i32, size: i32) -> u8 {
     (s.abs() * 256 / size).min(255) as u8
 }
 
-pub fn draw_vectorscope(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
+pub fn draw_vectorscope(prog: &mut crate::data::Program, stream: &mut crate::audio::AudioBuffer) {
     let range = prog.wav_win;
     let _l = stream.len();
 
@@ -72,7 +72,7 @@ pub fn draw_vectorscope(prog: &mut crate::data::Program, stream: &mut crate::aud
     stream.rotate_left(prog.wav_win);
 }
 
-pub fn draw_oscilloscope(prog: &mut crate::data::Program, stream: &mut crate::audio::SampleArr) {
+pub fn draw_oscilloscope(prog: &mut crate::data::Program, stream: &mut crate::audio::AudioBuffer) {
     let Ok(mut wave_scale_factor) = WAVE_SCALE_FACTOR.try_lock() else {
         return;
     };
