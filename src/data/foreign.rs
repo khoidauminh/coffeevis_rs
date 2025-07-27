@@ -145,9 +145,9 @@ pub fn parse_image<'a>(
 
     tokens.next(); // Skips I
 
-    let pos_x = i32::from_str_radix(std::str::from_utf8(tokens.next()?).ok()?, 16).ok()?;
-    let pos_y = i32::from_str_radix(std::str::from_utf8(tokens.next()?).ok()?, 16).ok()?;
-    let width = usize::from_str_radix(std::str::from_utf8(tokens.next()?).ok()?, 16).ok()?;
+    let pos_x = i32::from_str_radix(str::from_utf8(tokens.next()?).ok()?, 16).ok()?;
+    let pos_y = i32::from_str_radix(str::from_utf8(tokens.next()?).ok()?, 16).ok()?;
+    let width = usize::from_str_radix(str::from_utf8(tokens.next()?).ok()?, 16).ok()?;
     let mut vec = Vec::with_capacity(width * width);
 
     while let Some(line) = inp.next() {
