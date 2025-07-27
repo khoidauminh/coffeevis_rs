@@ -88,6 +88,8 @@ while True:
     # Prefer to write everything to file at once
     string_out = ''
 
+    string_out += 'C 00 00 00 00 o f\n'
+
     for i in range(length):
         xl = int(sample_array[i][0]*program_h / 2 + program_h /2)
         xr = int(sample_array[i][1]*program_h / 2 + program_h / 2)
