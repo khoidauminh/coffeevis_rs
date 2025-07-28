@@ -28,7 +28,7 @@ const REACT_SPEED: f32 = 0.025;
 /// size is provided, it uses its closest smaller
 /// power of 2 value.
 pub struct AudioBuffer {
-    pub buffer: [Cplx; BUFFER_CAPACITY],
+    buffer: [Cplx; BUFFER_CAPACITY],
 
     size_mask: usize,
 
