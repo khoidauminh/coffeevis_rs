@@ -73,7 +73,7 @@ fn prepare(
             *smp = smp_f32 * volume_scale * scl * NORM;
         });
 
-    crate::audio::limiter::<_, MAX_BARS1>(&mut data_f[..bar_num], 1.0, 10, 0.98, |x| x);
+    crate::audio::limiter::<_, MAX_BARS1>(&mut data_f[..bar_num], 0.8, 10, 0.98, |x| x);
 
     let bnf = 1.0 / bnf;
 
@@ -84,7 +84,7 @@ fn prepare(
         .take(bar_num)
         .enumerate()
         .for_each(|(i, (w, r))| {
-            let i_ = i as f32 * bnf;
+            let i_ = (i + 1) as f32 * bnf;
             let accel = (0.090 - 0.055 * i_) * prog_smoothing;
             *w = math::interpolate::multiplicative_fall(*w, *r, 0.0, accel);
         });
