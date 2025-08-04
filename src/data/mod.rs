@@ -1,5 +1,6 @@
 pub mod foreign;
 
+#[cfg(not(target_os = "windows"))]
 pub mod desktop;
 
 #[macro_use]

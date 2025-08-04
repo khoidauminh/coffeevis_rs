@@ -1,7 +1,7 @@
-use crate::{
-    data::{desktop::create_tmp_desktop_file, *},
-    modes::Mode::*,
-};
+use crate::{data::*, modes::Mode::*};
+
+#[cfg(target_os = "linux")]
+use desktop::create_tmp_desktop_file;
 
 impl Program {
     pub fn eval_args(mut self, args: &mut dyn Iterator<Item = &String>) -> Self {
@@ -211,10 +211,7 @@ impl Program {
         );
 
         if self.mode.is_con() {
-            string_out += &format!(
-                "Running in terminal, renderer: {}\n",
-                self.mode.get_name()
-            );
+            string_out += &format!("Running in terminal, renderer: {}\n", self.mode.get_name());
         } else {
             string_out += "Running graphically";
         }

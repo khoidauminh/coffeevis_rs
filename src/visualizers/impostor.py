@@ -3,11 +3,19 @@
 import time
 import struct
 import os
+from sys import platform
+import tempfile
+
+def get_shared_path(filename):
+    if platform == "win32":
+        return tempfile.gettempdir() + filename
+    else:
+        return '/dev/shm/' + filename
 
 # Paths to the coffeevis files.
-audio_path = '/dev/shm/coffeevis_audio.bin'
-program_path = '/dev/shm/coffeevis_program.txt'
-commadn_path = '/dev/shm/coffeevis_command.txt'
+audio_path = get_shared_path('coffeevis_audio.bin')
+program_path = get_shared_path('coffeevis_program.txt')
+commadn_path = get_shared_path('coffeevis_command.txt')
 
 file_audio = open(audio_path, mode='rb')
 file_commands = open(commadn_path, mode='w')
