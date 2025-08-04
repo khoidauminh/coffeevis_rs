@@ -7,4 +7,4 @@ use crate::{
 
 pub mod rain;
 
-pub fn draw_bubbles(_prog: &mut crate::data::Program, _stream: &mut crate::audio::AudioBuffer) {}
+pub fn draw_bubbles(_prog: &mut crate::Program, _stream: &mut crate::AudioBuffer) {}

@@ -16,7 +16,7 @@ static DATA: Mutex<LocalData> = Mutex::new(LocalData {
     pong: false,
 });
 
-pub fn draw_vol_sweeper(para: &mut crate::data::Program, stream: &mut crate::audio::AudioBuffer) {
+pub fn draw_vol_sweeper(para: &mut crate::Program, stream: &mut crate::AudioBuffer) {
     para.pix.fade(3);
 
     let w = {

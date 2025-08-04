@@ -206,7 +206,7 @@ impl StyledLine for SmallVec<[ColoredString; MAX_SEGMENTS]> {
 
 impl Mode {
     pub fn get_flusher(&self) -> Flusher {
-        use crate::data::Program;
+        use crate::Program;
 
         match *self {
             Mode::ConAscii => Program::print_ascii,

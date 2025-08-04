@@ -33,7 +33,7 @@ fn dynamic_smooth2(t: f32, b: f32) -> f32 {
 }
 
 fn prepare(
-    stream: &mut crate::audio::AudioBuffer,
+    stream: &mut crate::AudioBuffer,
     bar_num: usize,
     volume_scale: f32,
     prog_smoothing: f32,
@@ -92,7 +92,7 @@ fn prepare(
     stream.rotate_left(FFT_SIZE_HALF / 2);
 }
 
-pub fn draw_bars(prog: &mut crate::data::Program, stream: &mut crate::audio::AudioBuffer) {
+pub fn draw_bars(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
     use crate::math::{fast::cubed_sqrt, interpolate::smooth_step};
 
     let bar_num = (prog.pix.width() / 2).min(MAX_BARS);
@@ -166,7 +166,7 @@ pub fn draw_bars(prog: &mut crate::data::Program, stream: &mut crate::audio::Aud
     }
 }
 
-pub fn draw_bars_circle(prog: &mut crate::data::Program, stream: &mut crate::audio::AudioBuffer) {
+pub fn draw_bars_circle(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
     let size = prog.pix.height().min(prog.pix.width()) as i32;
     let sizef = size as f32;
 

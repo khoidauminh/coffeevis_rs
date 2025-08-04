@@ -2,7 +2,7 @@ use crate::graphics::{P2, Pixel};
 
 const PERBYTE: usize = 16; // like percent but ranges from 0..256
 
-pub fn draw_wave(para: &mut crate::data::Program, stream: &mut crate::audio::AudioBuffer) {
+pub fn draw_wave(para: &mut crate::Program, stream: &mut crate::AudioBuffer) {
     let l = (stream.len() * PERBYTE) >> 8;
     let _random = 0usize;
 

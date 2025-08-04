@@ -13,7 +13,7 @@ struct WaveletTable {
 }
 
 impl WaveletTable {
-    pub fn init(inp: &mut crate::audio::AudioBuffer) -> Self {
+    pub fn init(inp: &mut crate::AudioBuffer) -> Self {
         let mut cloned = [Cplx::zero(); WT_SIZE];
         for i in 0..WT_SIZE {
             cloned[i] = inp[i >> 2];
@@ -64,7 +64,7 @@ impl WaveletTable {
     }
 }
 
-pub fn draw_wavelet(prog: &mut crate::data::Program, stream: &mut crate::audio::AudioBuffer) {
+pub fn draw_wavelet(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
     let mut w = [Cplx::zero(); WT_SIZE];
     let l = stream.len();
 

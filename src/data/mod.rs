@@ -52,6 +52,9 @@ pub const MAX_CON_HEIGHT: u16 = 96;
 pub const MAX_SCALE_FACTOR: u8 = 8;
 pub const CRT_EFFECT: bool = false;
 
+type Real = f64;
+type Int = i32;
+
 #[derive(PartialEq, Clone, Copy)]
 pub enum RefreshRateMode {
     Sync,

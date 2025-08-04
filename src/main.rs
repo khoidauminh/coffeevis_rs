@@ -12,6 +12,9 @@ use audio::get_source;
 use cpal::traits::StreamTrait;
 use visualizers::VisFunc;
 
+use crate::audio::AudioBuffer;
+use crate::data::Program;
+
 fn main() {
     let args = env::args().collect::<Vec<String>>();
 

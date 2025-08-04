@@ -25,11 +25,7 @@ fn index_scale_derivative(x: f32) -> f32 {
     (math::fast::unit_exp2_0(x) + 1.0) * LN_2
 }
 
-fn prepare(
-    prog: &mut crate::data::Program,
-    stream: &mut crate::audio::AudioBuffer,
-    local: &mut LocalType,
-) {
+fn prepare(prog: &mut crate::Program, stream: &mut crate::AudioBuffer, local: &mut LocalType) {
     let accel = 0.28 * prog.smoothing.powi(2);
     let mut fft = [Cplx::zero(); FFT_SIZE];
     const UP: usize = 2 * FFT_SIZE / (RANGE * 3 / 2);
@@ -59,7 +55,7 @@ fn prepare(
     stream.auto_rotate();
 }
 
-pub fn draw_spectrum(prog: &mut crate::data::Program, stream: &mut crate::audio::AudioBuffer) {
+pub fn draw_spectrum(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
     static DATA: Mutex<LocalType> = Mutex::new([Cplx::zero(); RANGE + 1]);
 
     let Ok(mut local) = DATA.try_lock() else {

@@ -11,7 +11,7 @@ fn blend(c1: u32, c2: u32) -> u32 {
 
 const GREEN: u32 = 0xFF_00_FF_00;
 
-pub fn draw_slice(prog: &mut crate::data::Program, stream: &mut crate::audio::AudioBuffer) {
+pub fn draw_slice(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
     let center = prog.pix.size().center();
     let radius = prog.pix.width().min(prog.pix.height());
     let small_radius = radius as i32 / 16;

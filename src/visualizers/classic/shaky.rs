@@ -37,7 +37,7 @@ fn triangle_wav(amp: f32, prd: f32, t: f32) -> f32 {
     (4.0 * (t / prd - (t / prd + 0.5).trunc()).abs() - 1.0) * amp
 }
 
-pub fn draw_shaky(prog: &mut crate::data::Program, stream: &mut crate::audio::AudioBuffer) {
+pub fn draw_shaky(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
     let mut localdata = DATA.lock().unwrap();
 
     let mut data_f = [Cplx::zero(); 512];

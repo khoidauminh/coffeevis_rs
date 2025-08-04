@@ -24,7 +24,7 @@ fn to_color(s: i32, size: i32) -> u8 {
     (s.abs() * 256 / size).min(255) as u8
 }
 
-pub fn draw_vectorscope(prog: &mut crate::data::Program, stream: &mut crate::audio::AudioBuffer) {
+pub fn draw_vectorscope(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
     let range = prog.wav_win;
     let _l = stream.len();
 
@@ -72,7 +72,7 @@ pub fn draw_vectorscope(prog: &mut crate::data::Program, stream: &mut crate::aud
     stream.rotate_left(prog.wav_win);
 }
 
-pub fn draw_oscilloscope(prog: &mut crate::data::Program, stream: &mut crate::audio::AudioBuffer) {
+pub fn draw_oscilloscope(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
     let Ok(mut wave_scale_factor) = WAVE_SCALE_FACTOR.try_lock() else {
         return;
     };
