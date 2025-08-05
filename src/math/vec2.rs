@@ -256,6 +256,11 @@ impl Vec2<f32> {
             y: self.y * r,
         }
     }
+
+    pub fn euler(angle: f32) -> Vec2<f32> {
+        let (y, x) = angle.sin_cos();
+        Vec2 { x, y }
+    }
 }
 
 impl Vec2<i32> {
