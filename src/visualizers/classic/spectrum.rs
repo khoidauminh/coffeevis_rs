@@ -45,11 +45,11 @@ fn prepare(prog: &mut crate::Program, stream: &mut crate::AudioBuffer, local: &m
         *smp *= scalef;
     });
 
-    crate::audio::limiter::<_, RANGE>(&mut fft[0..RANGE], 1.5, 7, prog.vol_scl * 2.0, |x| x.max());
+    crate::audio::limiter::<_, RANGE>(&mut fft[0..RANGE], 1.0, 7, prog.vol_scl * 2.0, |x| x.max());
 
     local.iter_mut().zip(fft.iter()).for_each(|(smp, si)| {
-        smp.x = multiplicative_fall(smp.x, si.x, 0.0, accel);
-        smp.y = multiplicative_fall(smp.y, si.y, 0.0, accel);
+        smp.x = multiplicative_fall(smp.x, si.x.abs(), 0.0, accel);
+        smp.y = multiplicative_fall(smp.y, si.y.abs(), 0.0, accel);
     });
 
     stream.auto_rotate();
