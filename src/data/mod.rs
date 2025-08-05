@@ -19,6 +19,7 @@ pub const SAMPLE_RATE: usize = 44100;
 
 pub const POWER: usize = 13;
 pub const FFT_POWER: usize = 9;
+pub const MAX_FFT_POWER: usize = 13;
 pub const SAMPLE_SIZE: usize = 1 << POWER;
 pub const FFT_SIZE: usize = 1 << FFT_POWER;
 

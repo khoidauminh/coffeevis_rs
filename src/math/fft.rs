@@ -1,4 +1,6 @@
-use std::{f32::consts::PI, sync::Mutex};
+use std::{f32::consts::PI, sync::LazyLock};
+
+use crate::data::MAX_FFT_POWER;
 
 use super::Cplx;
 
@@ -42,18 +44,13 @@ pub fn compute_fft_iterative(a: &mut [Cplx]) {
 
     let length = a.len();
 
-    static TWIDDLE_MAP: Mutex<Vec<Cplx>> = Mutex::new(Vec::new());
-
-    let mut twiddles = TWIDDLE_MAP.try_lock().unwrap();
-
-    if twiddles.len() < length {
-        let mut k = twiddles.len().max(2);
-
-        twiddles.resize(length, Cplx::zero());
+    static TWIDDLE_MAP: LazyLock<Vec<Cplx>> = LazyLock::new(|| {
+        let mut twiddles = vec![Cplx::zero(); 1 << MAX_FFT_POWER];
 
         twiddles[1] = Cplx::one();
 
-        while k < length {
+        let mut k = 2;
+        while k < twiddles.len() {
             let z = Cplx::euler(-PI / k as f32);
             for j in k / 2..k {
                 twiddles[2 * j] = twiddles[j];
@@ -61,25 +58,24 @@ pub fn compute_fft_iterative(a: &mut [Cplx]) {
             }
             k *= 2;
         }
-    }
+
+        twiddles
+    });
 
     let mut halfsize = 4usize;
     while halfsize < length {
-        let root = &twiddles[halfsize..];
+        let root = &TWIDDLE_MAP[halfsize..];
 
         let size = halfsize * 2;
 
         a.chunks_exact_mut(size).for_each(|chunk| {
             let (l, r) = chunk.split_at_mut(halfsize);
 
-            l.iter_mut()
-                .zip(r.iter_mut())
-                .zip(root.iter())
-                .for_each(|((l, r), &f)| {
-                    let z = *r * f;
-                    *r = *l - z;
-                    *l += z;
-                });
+            for j in 0..halfsize {
+                let z = r[j] * root[j];
+                r[j] = l[j] - z;
+                l[j] += z;
+            }
         });
 
         halfsize *= 2;
