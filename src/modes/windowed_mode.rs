@@ -61,6 +61,12 @@ struct WindowState {
 
 impl ApplicationHandler for WindowState {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
+        // Since we are leaking the window into a static
+        // reference, resumed() is not allowed to be
+        // called again as it would cause the build up
+        // of leaked windows and potentially flood RAM.
+        assert!(self.window.is_none());
+
         self.prog.print_startup_info();
 
         let scale = self.prog.scale() as u32;
@@ -91,12 +97,6 @@ impl ApplicationHandler for WindowState {
 
         #[cfg(target_os = "windows")]
         let window_attributes = window_attributes.with_class_name("coffeevis");
-
-        // Since we are leaking the window into a static
-        // reference, resumed() is not allowed to be
-        // called again as it would cause the build up
-        // of leaked windows and potentially flood RAM.
-        assert!(self.window.is_none());
 
         self.window = Some(Box::leak(Box::new(
             event_loop.create_window(window_attributes).unwrap(),
