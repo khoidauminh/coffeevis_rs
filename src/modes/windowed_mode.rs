@@ -248,6 +248,11 @@ impl ApplicationHandler for WindowState {
 
                     Key::Character("/") => self.prog.reset_parameters(),
 
+                    Key::Character("c") => {
+                        self.prog.pix.clear_out_buffer();
+                        self.prog.set_crt(!self.prog.is_crt());
+                    }
+
                     _ => {}
                 }
             }

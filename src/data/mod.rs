@@ -182,6 +182,10 @@ impl Program {
         self.crt
     }
 
+    pub fn set_crt(&mut self, b: bool) {
+        self.crt = b;
+    }
+
     pub fn is_resizable(&self) -> bool {
         self.resize
     }

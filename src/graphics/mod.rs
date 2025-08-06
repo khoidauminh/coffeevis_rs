@@ -209,6 +209,10 @@ impl PixelBuffer {
         }
     }
 
+    pub fn clear_out_buffer(&mut self) {
+        self.out_buffer.clear();
+    }
+
     // On Winit Wayland, resize increments hasn't been implemented,
     // So the width parameter is there to ensure that the horizontal
     // lines are aligned.
