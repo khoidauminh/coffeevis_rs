@@ -167,6 +167,7 @@ impl ApplicationHandler for WindowState {
             .ok();
 
         window.set_visible(true);
+        window.set_window_level(WindowLevel::AlwaysOnTop);
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _: WindowId, event: WindowEvent) {
