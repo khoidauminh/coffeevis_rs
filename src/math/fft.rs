@@ -14,17 +14,6 @@ pub fn butterfly<T>(a: &mut [T], power: u32) {
     }
 }
 
-pub fn twiddle_norm(x: f32) -> Cplx {
-    let x = x * std::f32::consts::TAU;
-    let y = x.sin_cos();
-    Cplx::new(y.1, y.0)
-}
-
-pub fn twiddle(x: f32) -> Cplx {
-    let y = x.sin_cos();
-    Cplx::new(y.1, y.0)
-}
-
 pub fn compute_fft_iterative(a: &mut [Cplx]) {
     for pair in a.chunks_exact_mut(2) {
         let q = pair[1];
