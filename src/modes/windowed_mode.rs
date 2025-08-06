@@ -90,6 +90,7 @@ impl ApplicationHandler for WindowState {
             .with_transparent(false)
             .with_resizable(self.prog.is_resizable())
             .with_theme(Some(Theme::Dark))
+            .with_visible(false)
             .with_window_icon(icon);
 
         #[cfg(target_os = "linux")]
@@ -164,6 +165,8 @@ impl ApplicationHandler for WindowState {
                 }
             })
             .ok();
+
+        window.set_visible(true);
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _: WindowId, event: WindowEvent) {
