@@ -1,3 +1,4 @@
+use cpal::SampleRate;
 use cpal::traits::{DeviceTrait, HostTrait};
 
 pub mod audio_buffer;
@@ -36,10 +37,12 @@ pub fn get_source() -> cpal::Stream {
         .default_input_device()
         .expect("no input device available");
 
-    let config: cpal::StreamConfig = device
+    let mut config: cpal::StreamConfig = device
         .default_input_config()
         .expect("error while querying configs")
         .config();
+
+    config.sample_rate = SampleRate(crate::data::SAMPLE_RATE as u32);
 
     device
         .build_input_stream(
