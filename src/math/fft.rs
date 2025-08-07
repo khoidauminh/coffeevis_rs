@@ -1,6 +1,4 @@
-use std::{f32::consts::PI, sync::LazyLock};
-
-use crate::data::MAX_FFT_POWER;
+use super::twiddle_map::TWIDDLE_MAP;
 
 use super::Cplx;
 
@@ -32,24 +30,6 @@ pub fn compute_fft_iterative(a: &mut [Cplx]) {
     }
 
     let length = a.len();
-
-    static TWIDDLE_MAP: LazyLock<Vec<Cplx>> = LazyLock::new(|| {
-        let mut twiddles = vec![Cplx::zero(); 1 << MAX_FFT_POWER];
-
-        twiddles[1] = Cplx::one();
-
-        let mut k = 2;
-        while k < twiddles.len() {
-            let z = Cplx::euler(-PI / k as f32);
-            for j in k / 2..k {
-                twiddles[2 * j] = twiddles[j];
-                twiddles[2 * j + 1] = twiddles[j] * z;
-            }
-            k *= 2;
-        }
-
-        twiddles
-    });
 
     let mut halfsize = 4usize;
     while halfsize < length {
