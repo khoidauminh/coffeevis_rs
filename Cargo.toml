@@ -14,8 +14,8 @@ readme = "README.md"
 
 [dependencies]
 cpal = "0.16"
-softbuffer = "0.4"
-winit = "0.30"
+softbuffer = { version = "0.4", default-features = false, features = [ "wayland", "x11"] }
+winit = { version = "0.30", default-features = false, features = [ "rwh_06", "wayland", "x11" ] }
 crossterm = "0.29"
 smallvec = "1.15"
 xdg = "3"
