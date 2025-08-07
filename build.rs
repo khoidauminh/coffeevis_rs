@@ -1,12 +1,14 @@
 const FFT_MAX_POWER: usize = 13;
 
-fn main() {
+use qoi::{Decoder, Header};
+
+fn generate_twiddles() -> String {
     let length = 1 << FFT_MAX_POWER;
 
     let mut out = String::new();
 
     out += "use crate::math::Cplx;\n";
-    out += "pub const TWIDDLE_MAP: &'static [Cplx] = &[\n";
+    out += "pub static TWIDDLE_MAP: &'static [Cplx] = &[\n";
 
     out += "Cplx { x: 0.0, y: 0.0 }";
 
@@ -24,5 +26,42 @@ fn main() {
 
     out += "\n];\n";
 
-    std::fs::write("src/math/twiddle_map.rs", out).unwrap();
+    out
+}
+
+fn create_icon_const() -> String {
+    let icon_file = include_bytes!("assets/coffeevis_icon_128x128.qoi");
+
+    let mut icon = Decoder::new(icon_file)
+        .map(|i| i.with_channels(qoi::Channels::Rgba))
+        .ok()
+        .unwrap();
+
+    let &Header { width, height, .. } = icon.header();
+
+    let buffer = icon.decode_to_vec().unwrap();
+
+    let mut out = String::new();
+
+    out += &format!("pub const ICON_WIDTH: u32 = {width};\n");
+    out += &format!("pub const ICON_HEIGHT: u32 = {height};\n");
+
+    out += &format!("pub static ICON_BUFFER: &'static [u8] = &[");
+
+    for (i, c) in buffer.iter().enumerate() {
+        if i != 0 {
+            out += ", ";
+        }
+        out += &format!("0x{:x}", c);
+    }
+
+    out += "];\n";
+
+    out
+}
+
+fn main() {
+    let out = generate_twiddles() + &create_icon_const();
+
+    std::fs::write("src/data/gen_const.rs", out).unwrap();
 }

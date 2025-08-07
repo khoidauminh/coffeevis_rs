@@ -1,7 +1,7 @@
 use softbuffer::{Context, Surface};
 
+use crate::data::gen_const::{ICON_BUFFER, ICON_HEIGHT, ICON_WIDTH};
 use crate::data::log::{alert, error, info};
-use qoi::{Decoder, Header};
 
 use winit::{
     application::ApplicationHandler,
@@ -77,11 +77,9 @@ impl ApplicationHandler for WindowState {
 
         let de = std::env::var("XDG_CURRENT_DESKTOP").unwrap_or_default();
 
-        let icon = read_icon().and_then(|(w, h, v)| {
-            Icon::from_rgba(v, w, h)
-                .inspect_err(|_| error!("Failed to create window icon."))
-                .ok()
-        });
+        let icon = Icon::from_rgba(ICON_BUFFER.to_vec(), ICON_WIDTH, ICON_HEIGHT)
+            .inspect_err(|_| error!("Failed to create window icon."))
+            .ok();
 
         let window_attributes = Window::default_attributes()
             .with_title("cvis")
@@ -347,18 +345,6 @@ impl WindowState {
 
         true
     }
-}
-
-fn read_icon() -> Option<(u32, u32, Vec<u8>)> {
-    let icon_file = include_bytes!("../../assets/coffeevis_icon_128x128.qoi");
-
-    let mut icon = Decoder::new(icon_file)
-        .map(|i| i.with_channels(qoi::Channels::Rgba))
-        .ok()?;
-
-    let &Header { width, height, .. } = icon.header();
-
-    icon.decode_to_vec().ok().map(|v| (width, height, v))
 }
 
 pub fn winit_main(prog: Program) {

@@ -40,8 +40,8 @@ pub struct ConsoleProps {
 
 impl ConsoleProps {
     pub fn set_size(&mut self, s: (u16, u16), m: Mode) -> (u16, u16) {
-        self.width = s.0.try_into().ok().unwrap();
-        self.height = s.1.try_into().ok().unwrap();
+        self.width = s.0;
+        self.height = s.1;
         self.rescale(s, m)
     }
 

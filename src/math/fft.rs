@@ -1,4 +1,4 @@
-use super::twiddle_map::TWIDDLE_MAP;
+use crate::data::gen_const::TWIDDLE_MAP;
 
 use super::Cplx;
 
