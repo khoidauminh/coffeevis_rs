@@ -235,7 +235,7 @@ impl PixelBuffer {
         let new_len = dest.len() + FIELD_START * dst_width;
 
         if self.out_buffer.len() < new_len {
-            self.out_buffer.resize(new_len, Argb::trans());
+            self.out_buffer.resize(new_len, self.background);
         }
 
         if !crt {

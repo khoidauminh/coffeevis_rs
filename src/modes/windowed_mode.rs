@@ -214,9 +214,7 @@ impl ApplicationHandler for WindowState {
 
                 Self::resize_surface(surface, w, h);
 
-                if let Ok(mut buffer) = surface.buffer_mut() {
-                    buffer.fill(0x0);
-                }
+                self.prog.pix.clear_out_buffer();
             }
 
             WindowEvent::KeyboardInput { event, .. }
