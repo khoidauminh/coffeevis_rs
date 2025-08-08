@@ -26,7 +26,7 @@ fn index_scale_derivative(x: f32) -> f32 {
 }
 
 fn prepare(prog: &mut crate::Program, stream: &mut crate::AudioBuffer, local: &mut LocalType) {
-    let accel = 0.28 * prog.smoothing.powi(2);
+    let accel = 0.3 * prog.smoothing.powi(2);
     let mut fft = [Cplx::zero(); FFT_SIZE];
     const UP: usize = 2 * FFT_SIZE / (RANGE * 3 / 2);
 
