@@ -9,7 +9,7 @@ use winit::{
     event::{self, ElementState, WindowEvent},
     event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
     keyboard::{Key, NamedKey},
-    window::{Icon, Theme, Window, WindowId, WindowLevel},
+    window::{Icon, Window, WindowId, WindowLevel},
 };
 
 #[cfg(target_os = "linux")]
@@ -87,7 +87,6 @@ impl ApplicationHandler for WindowState {
             .with_window_level(WindowLevel::AlwaysOnTop)
             .with_transparent(self.prog.is_transparent())
             .with_resizable(self.prog.is_resizable())
-            .with_theme(Some(Theme::Dark))
             .with_visible(false)
             .with_window_icon(icon);
 

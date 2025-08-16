@@ -111,8 +111,8 @@ pub fn draw_spectrum(prog: &mut crate::Program, stream: &mut crate::AudioBuffer)
         let color = u32::from_be_bytes([
             0xFF,
             (255 - 255 * i_rev / h) as u8,
-            0,
-            (128 + 96 * i_rev / h) as u8,
+            16,
+            (128 + 128 * i_rev / h) as u8,
         ]);
 
         let color1 = color | channel_l << 8;
