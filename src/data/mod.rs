@@ -83,6 +83,8 @@ pub(crate) struct Program {
 
     mode: Mode,
 
+    transparent: bool,
+
     milli_hz: u32,
     refresh_rate_mode: RefreshRateMode,
     refresh_rate_intervals: [Duration; 2],
@@ -127,6 +129,8 @@ impl Program {
             crt: false,
 
             mode: default_mode,
+
+            transparent: false,
 
             pix: PixelBuffer::new(DEFAULT_SIZE_WIN as usize, DEFAULT_SIZE_WIN as usize),
 
@@ -201,6 +205,10 @@ impl Program {
 
     pub fn is_hidden(&self) -> bool {
         self.hidden
+    }
+
+    pub fn is_transparent(&self) -> bool {
+        self.transparent
     }
 
     pub fn reset_switch(&mut self) {

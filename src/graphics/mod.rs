@@ -48,6 +48,8 @@ pub(crate) trait Pixel:
 
     fn set_alpha(self, alpha: u8) -> Self;
 
+    fn alpha(self) -> u8;
+
     fn or(self, other: Self) -> Self;
     fn fade(self, alpha: u8) -> Self;
     fn decompose(self) -> [u8; 4];

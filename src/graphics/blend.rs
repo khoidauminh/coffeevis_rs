@@ -123,6 +123,11 @@ impl Pixel for Argb {
         composite_u32(self, other)
     }
 
+    fn alpha(self) -> u8 {
+        let [a, _, _, _] = self.decompose();
+        a
+    }
+
     fn add(self, other: Argb) -> Argb {
         let [aa, ar, ag, ab] = self.decompose();
         let [ba, br, bg, bb] = other.decompose();

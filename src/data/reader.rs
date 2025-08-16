@@ -1,4 +1,4 @@
-use crate::{data::*, modes::Mode::*};
+use crate::{data::*, graphics::Pixel, modes::Mode::*};
 
 #[cfg(target_os = "linux")]
 use desktop::create_tmp_desktop_file;
@@ -90,13 +90,6 @@ impl Program {
                     self.resize = true;
                 }
 
-                "--transparent" => {
-                    error!(
-                        "Transparency isn't supported by Softbuffer.\n\
-                        See https://github.com/rust-windowing/softbuffer/issues/215"
-                    );
-                }
-
                 #[cfg(all(not(feature = "window_only"), target_os = "linux"))]
                 "--max-con-size" => {
                     let s = args
@@ -126,13 +119,19 @@ impl Program {
                 }
 
                 "--background" => {
-                    self.pix.set_background(0xFF_00_00_00 | u32::from_str_radix(
-                        args.next().expect(
-                            &format_red!("Argument error: Expected hex value for background color. E.g 0022FF")
-                        ),
+                    let bg = u32::from_str_radix(
+                        args.next().expect(&format_red!(
+                            "Argument error: Expected hex value for background color. E.g 0022FF"
+                        )),
                         16,
-                    ).expect(&format_red!("Argument error: Invalid value for background color"))
-                    );
+                    )
+                    .expect(&format_red!(
+                        "Argument error: Invalid value for background color"
+                    ));
+
+                    self.pix.set_background(bg);
+
+                    self.transparent = bg.alpha() != 255;
                 }
 
                 ":3" => {
@@ -213,7 +212,11 @@ impl Program {
         if self.mode.is_con() {
             string_out += &format!("Running in terminal, renderer: {}\n", self.mode.get_name());
         } else {
-            string_out += "Running graphically";
+            string_out += "Running graphically\n";
+        }
+
+        if self.is_transparent() {
+            string_out += "Transparency is on";
         }
 
         info!("{}", string_out);
