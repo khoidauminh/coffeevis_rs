@@ -1,4 +1,7 @@
-use crate::{data::Program, graphics::P2};
+use crate::{
+    data::Program,
+    graphics::{P2, Pixel},
+};
 
 pub const CROSS_COL: u32 = 0xFF_44_44_44;
 
@@ -13,7 +16,7 @@ pub fn draw_cross(prog: &mut Program) {
             1,
             height - height / 5,
             CROSS_COL,
-            |_, y| y,
+            Pixel::over,
         );
     } else {
         prog.pix.rect_wh(
@@ -21,7 +24,7 @@ pub fn draw_cross(prog: &mut Program) {
             width - width / 5,
             1,
             CROSS_COL,
-            |_, y| y,
+            Pixel::over,
         );
     }
 }

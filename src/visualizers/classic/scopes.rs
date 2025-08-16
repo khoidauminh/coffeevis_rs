@@ -61,7 +61,7 @@ pub fn draw_vectorscope(prog: &mut crate::Program, stream: &mut crate::AudioBuff
         prog.pix.plot(
             P2::new(x + width_top_h, y + height_top_h),
             u32::from_be_bytes([255, to_color(amp, sizei), 255, 64]),
-            u32::mix,
+            Pixel::over,
         );
 
         di += INCREMENT;
@@ -180,11 +180,16 @@ pub fn draw_oscilloscope(prog: &mut crate::Program, stream: &mut crate::AudioBuf
         1,
         width - height / 4,
         CROSS_COL,
-        u32::max,
+        Pixel::over,
     );
 
-    prog.pix
-        .rect_wh(P2::new(rx, height / 2), width >> 3, 1, CROSS_COL, u32::mix);
+    prog.pix.rect_wh(
+        P2::new(rx, height / 2),
+        width >> 3,
+        1,
+        CROSS_COL,
+        Pixel::over,
+    );
 
     LOCALI.store(li, Relaxed);
 

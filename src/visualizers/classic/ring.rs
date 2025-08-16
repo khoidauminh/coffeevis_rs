@@ -38,7 +38,7 @@ pub fn draw_ring(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
                 255,
                 ((128 + y.abs() * 64 / size) as u8).saturating_add(int),
             ]),
-            u32::mix,
+            Pixel::over,
         );
     }
 

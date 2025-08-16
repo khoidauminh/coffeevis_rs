@@ -126,7 +126,7 @@ impl Program {
                 }
 
                 "--background" => {
-                    self.pix.set_background(u32::from_str_radix(
+                    self.pix.set_background(0xFF_00_00_00 | u32::from_str_radix(
                         args.next().expect(
                             &format_red!("Argument error: Expected hex value for background color. E.g 0022FF")
                         ),

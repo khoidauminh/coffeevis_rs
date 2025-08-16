@@ -123,8 +123,8 @@ pub fn draw_spectrum(prog: &mut crate::Program, stream: &mut crate::AudioBuffer)
 
         let middle = P2::new(winwh + 1, i);
 
-        prog.pix.rect(rect_l, middle, color1, u32::mix);
-        prog.pix.rect(middle, rect_r, color2, u32::mix);
+        prog.pix.rect(rect_l, middle, color1, u32::over);
+        prog.pix.rect(middle, rect_r, color2, u32::over);
 
         let alpha = (128.0 + stream[i as usize / 2].x * 32768.0) as u8;
         prog.pix

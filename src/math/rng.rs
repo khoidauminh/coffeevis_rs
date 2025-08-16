@@ -10,6 +10,24 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
+pub struct FastU32 {
+    state: u32,
+}
+
+impl FastU32 {
+    pub fn new(seed: u32) -> Self {
+        Self { state: seed }
+    }
+
+    pub fn next(&mut self) -> u32 {
+        let mut x = self.state | 1;
+        x ^= x.wrapping_shl(7);
+        x ^= x.wrapping_shr(9);
+        self.state = x;
+        x
+    }
+}
+
 pub fn random_int(bound: u32) -> u32 {
     let t = SystemTime::now()
         .duration_since(UNIX_EPOCH)

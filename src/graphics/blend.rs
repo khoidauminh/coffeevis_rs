@@ -17,20 +17,38 @@ pub fn argb_fade(this: Argb, other: u8) -> Argb {
     Argb::compose([u8_mul(aa, other), r, g, b])
 }
 
-pub fn alpha_mix(a: u8, b: u8) -> u8 {
-    let a = a as i16;
-    let b = b as i16;
+pub fn composite_u32(c1: Argb, c2: Argb) -> Argb {
+    let [a1, r1, g1, b1] = c1.decompose();
+    let [a2, r2, g2, b2] = c2.decompose();
 
-    ((a + (b * (256 - a))) >> 8) as u8
-}
+    let (a, a3) = {
+        let a1 = a1 as u16;
+        let a2 = a2 as u16;
 
-pub fn channel_mix(x: u8, y: u8, a: u8) -> u8 {
-    let [int, _] = (y as i16)
-        .wrapping_sub(x as i16)
-        .wrapping_mul(a as i16)
-        .to_be_bytes();
+        let a3 = (a1 * (255 - a2)) / 256;
 
-    int.wrapping_add(x).wrapping_add((x < y) as u8)
+        (a2 + a3, a3)
+    };
+
+    if a == 0 {
+        return Argb::compose([0, 0, 0, 0]);
+    }
+
+    let composite_channel = |c1: u8, c2: u8| -> u8 {
+        let c1 = c1 as u16;
+        let c2 = c2 as u16;
+        let a2 = a2 as u16;
+        let a = a as u16;
+
+        ((c2 * a2 + c1 * a3) / a) as u8
+    };
+
+    Argb::compose([
+        a as u8,
+        composite_channel(r1, r2),
+        composite_channel(g1, g2),
+        composite_channel(b1, b2),
+    ])
 }
 
 pub fn channel_add(x: u8, y: u8, a: u8) -> u8 {
@@ -78,7 +96,7 @@ impl Pixel for Argb {
     }
 
     fn set_alpha(self, alpha: u8) -> Argb {
-        self & 0x00_FF_FF_FF | (alpha as Argb) << 24
+        (self & 0x00_FF_FF_FF) | (alpha as Argb) << 24
     }
 
     fn or(self, other: Argb) -> Argb {
@@ -102,15 +120,9 @@ impl Pixel for Argb {
     }
 
     fn mix(self, other: Argb) -> Argb {
-        let [_aa, ar, ag, ab] = self.decompose();
-        let [ba, br, bg, bb] = other.decompose();
-        Argb::from_be_bytes([
-            ba, // alpha_mix(aa, ba),
-            channel_mix(ar, br, ba),
-            channel_mix(ag, bg, ba),
-            channel_mix(ab, bb, ba),
-        ])
+        composite_u32(self, other)
     }
+
     fn add(self, other: Argb) -> Argb {
         let [aa, ar, ag, ab] = self.decompose();
         let [ba, br, bg, bb] = other.decompose();

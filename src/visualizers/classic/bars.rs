@@ -155,7 +155,7 @@ pub fn draw_bars(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
             2,
             bar,
             u32::from_be_bytes([0xFF, 0xFF, (fade).max(peak), 0]),
-            u32::mix,
+            u32::over,
         );
 
         smoothed_smp = 0.0;
@@ -222,6 +222,6 @@ pub fn draw_bars_circle(prog: &mut crate::Program, stream: &mut crate::AudioBuff
         let b: u8 = 0xFF;
         let c = u32::compose([0xFF, r, g, b]);
 
-        prog.pix.line(p1, p2, c, u32::mix);
+        prog.pix.line(p1, p2, c, u32::over);
     }
 }

@@ -1,6 +1,6 @@
 // This visualizer is not intended to display on its own.
 
-use crate::graphics::P2;
+use crate::graphics::{P2, Pixel};
 
 const C: u32 = 0x00_FF_20_C0;
 
@@ -25,7 +25,7 @@ pub fn draw_dash_line(
                 2,
                 2,
                 C | (((stream[index].y * 32784.0 % 256.0) as u32) << 24),
-                |_, y| y,
+                Pixel::over,
             );
         }
     } else {
@@ -42,7 +42,7 @@ pub fn draw_dash_line(
                 2,
                 2,
                 C | (((stream[index].y * 32784.0 % 256.0) as u32) << 24),
-                |_, y| y,
+                Pixel::over,
             );
         }
     }
