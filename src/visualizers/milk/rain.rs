@@ -63,12 +63,12 @@ impl Thunder {
     }
 
     pub fn draw(&self, canvas: &mut PixelBuffer, fade: u8) {
-        for i in 1..MAX_THUNDER_SEGMENTS {
-            let p1 = self.segments[i - 1];
-            let p2 = self.segments[i];
+        self.segments.windows(2).for_each(|pair| {
+            let p1 = pair[0];
+            let p2 = pair[1];
 
             canvas.line(p1, p2, 0xFF_FF_FF_FF, u32::add);
-        }
+        });
     }
 }
 
