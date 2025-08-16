@@ -1,5 +1,7 @@
 use core::f32;
-use std::sync::Mutex;
+use std::sync::{LazyLock, Mutex};
+
+use smallvec::{SmallVec, smallvec};
 
 use crate::{
     audio::AudioBuffer,
@@ -21,58 +23,53 @@ struct RainDrop {
     fall_amount: f32,
 }
 
-const MAX_THUNDER_TRAILS: usize = 8;
-const MAX_THUNDER_TRAIL_LENGTH: usize = 8;
-
-#[derive(Copy, Clone)]
-struct ThunderTrail {
-    positions: [P2; MAX_THUNDER_TRAIL_LENGTH],
-    size: usize,
-}
-
-impl ThunderTrail {
-    pub fn new(start: Option<P2>) -> Self {
-        let mut positions = [P2::new(0, 0); MAX_THUNDER_TRAIL_LENGTH];
-        positions[0] = start.unwrap_or(P2::new(0, 0));
-        Self { positions, size: 0 }
-    }
-
-    pub fn advance(&mut self) {
-        if self.size == MAX_THUNDER_TRAIL_LENGTH {
-            return;
-        }
-
-        let dx = random_int(3) as i32 - 1;
-        let dy = random_int(3) as i32 - 1;
-
-        let new_position = self.positions[self.size - 1] + P2::new(dx, dy);
-
-        self.positions[self.size] = new_position;
-
-        self.size += 1;
-    }
-}
+const MAX_THUNDER_SEGMENTS: usize = 48;
 
 struct Thunder {
-    trails: [Option<ThunderTrail>; MAX_THUNDER_TRAILS],
-    color: Argb,
-    split_every: u16,
+    segments: [P2; MAX_THUNDER_SEGMENTS],
 }
 
 impl Thunder {
-    pub fn new(split_every: u16, color: Argb, start: P2) -> Self {
-        let mut trails = [None; MAX_THUNDER_TRAILS];
+    const SPREAD_WIDTH: u32 = 5;
+    const MAX_HEIGHT: u32 = 5;
 
-        trails[0] = Some(ThunderTrail::new(Some(start)));
+    const DX_MAP: &[i32] = &[-1, -1, -1, -1, 0, 1, 1, 2];
+    const DY_MAP: &[i32] = &[0, 1, 1, 1, 2, 5];
 
-        Self {
-            trails,
-            color,
-            split_every,
+    pub fn generate(seed: u32, canvas_width: i32) -> Self {
+        use crate::math::rng::FastU32;
+
+        let mut segs = [P2::new(0, 0); MAX_THUNDER_SEGMENTS];
+        let mut rng = FastU32::new(seed);
+
+        let mut location = P2::new(40, 0);
+
+        segs[0] = location;
+
+        for i in 1..MAX_THUNDER_SEGMENTS {
+            let ix = rng.next() as usize % Self::DX_MAP.len();
+            let iy = rng.next() as usize % Self::DY_MAP.len();
+
+            let dx = Self::DX_MAP[ix];
+            let dy = Self::DY_MAP[iy];
+
+            location.x += dx;
+            location.y += dy;
+
+            segs[i] = location;
         }
+
+        Self { segments: segs }
     }
 
-    pub fn draw(&mut self, pix: &mut PixelBuffer) {}
+    pub fn draw(&self, canvas: &mut PixelBuffer, fade: u8) {
+        for i in 1..MAX_THUNDER_SEGMENTS {
+            let p1 = self.segments[i - 1];
+            let p2 = self.segments[i];
+
+            canvas.line(p1, p2, 0xFF_FF_FF_FF, u32::add);
+        }
+    }
 }
 
 impl RainDrop {
@@ -126,9 +123,9 @@ impl RainDrop {
         let mut p = self.position.to_p2();
 
         while current_length > 0 && p.y >= 0 {
-            let fade = current_length * 256 / self.length;
+            let fade = current_length * 255 / self.length;
             let fade = fade as u8;
-            canvas.plot(p, self.color.fade(fade), u32::over);
+            canvas.plot(p, self.color.set_alpha(fade), u32::mix);
             p.y -= 1;
             current_length -= 1;
         }
@@ -147,6 +144,8 @@ const DEFAULT_BOUND: P2 = P2 {
 pub fn draw(prog: &mut Program, stream: &mut AudioBuffer) {
     static LIST_OF_DROPS: Mutex<[RainDrop; NUM_OF_DROPS]> =
         Mutex::new([RainDrop::new(0xFF_FF_FF_FF, 8, 0.2, DEFAULT_BOUND); NUM_OF_DROPS]);
+
+    //static THUNDER: LazyLock<Thunder> = LazyLock::new(|| Thunder::generate(0));
 
     static OLD_VOLUME: Mutex<f32> = Mutex::new(0.0);
 
@@ -191,6 +190,8 @@ pub fn draw(prog: &mut Program, stream: &mut AudioBuffer) {
             drop.randomize_start();
         }
     }
+
+    Thunder::generate(crate::math::rng::random_int(1000), size.x).draw(&mut prog.pix, 255);
 
     stream.auto_rotate();
 }
