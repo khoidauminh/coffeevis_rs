@@ -14,14 +14,14 @@ pub fn draw_cross(prog: &mut Program) {
         prog.pix.rect_wh(
             P2::new(width / 2, height / 10),
             1,
-            height - height / 5,
+            height - height / 5 + 1,
             CROSS_COL,
             Pixel::over,
         );
     } else {
         prog.pix.rect_wh(
             P2::new(width / 10, height / 2),
-            width - width / 5,
+            width - width / 5 + 1,
             1,
             CROSS_COL,
             Pixel::over,
