@@ -1,8 +1,6 @@
 use core::f32;
 use std::sync::{LazyLock, Mutex};
 
-use smallvec::{SmallVec, smallvec};
-
 use crate::{
     audio::AudioBuffer,
     data::{DEFAULT_SIZE_WIN, Program},

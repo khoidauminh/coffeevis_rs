@@ -5,8 +5,6 @@ use std::sync::{
 
 use crate::graphics::Pixel;
 
-use smallvec::SmallVec;
-
 use crate::audio::MovingAverage;
 use crate::data::{INCREMENT, PHASE_OFFSET};
 use crate::graphics::P2;
@@ -99,29 +97,33 @@ pub fn draw_oscilloscope(prog: &mut crate::Program, stream: &mut crate::AudioBuf
         i = i.wrapping_add(1);
     }
 
-    let mut zeros = SmallVec::<[usize; 6]>::new();
-    zeros.push(0);
+    let zeroi = {
+        let mut zeros = [0usize; 6];
+        let mut zeros_len = 1;
 
-    for i in 0..l {
-        let t = stream[i];
-        ssmp = linearfc(ssmp, t, 0.01);
+        for i in 0..l {
+            let t = stream[i];
+            ssmp = linearfc(ssmp, t, 0.01);
 
-        if zeros.len() < 5 {
-            if old2.x > 0.0 && ssmp.x < 0.0 {
-                zeros.push(i);
+            if zeros_len < 5 {
+                if old2.x > 0.0 && ssmp.x < 0.0 {
+                    zeros[zeros_len] = i;
+                    zeros_len += 1;
+                }
+                if old2.y > 0.0 && ssmp.y < 0.0 {
+                    zeros[zeros_len] = i;
+                    zeros_len += 1;
+                }
             }
-            if old2.y > 0.0 && ssmp.y < 0.0 {
-                zeros.push(i);
-            }
+
+            old2 = old;
+            old = ssmp;
+
+            bass_sum += ssmp.x.powi(2) + ssmp.y.powi(2);
         }
 
-        old2 = old;
-        old = ssmp;
-
-        bass_sum += ssmp.x.powi(2) + ssmp.y.powi(2);
-    }
-
-    let zeroi = zeros[zeros.len() - 1] - 50;
+        zeros[zeros_len - 1] - 50
+    };
 
     let bass = (bass_sum / l as f32).sqrt();
 

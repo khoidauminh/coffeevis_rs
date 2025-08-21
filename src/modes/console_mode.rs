@@ -2,14 +2,12 @@ use crossterm::{
     cursor::{self, Hide, Show},
     event::{Event, KeyCode, poll, read},
     queue,
-    style::{Attribute, Color, Print, SetAttribute, Stylize},
+    style::{Attribute, Color, Print, SetAttribute, SetForegroundColor},
     terminal::{
         Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode,
         enable_raw_mode, size,
     },
 };
-
-use smallvec::{SmallVec, ToSmallVec};
 
 use std::io::{Error, Stdout, Write, stdout};
 
@@ -73,29 +71,23 @@ impl ConsoleProps {
 }
 
 struct ColoredString {
-    pub string: SmallVec<[char; MAX_CON_WIDTH as usize]>,
+    pub string: String,
     pub fg: Argb,
-    pub bg: Argb,
     error: u8,
 }
 
+/// Compress similar pixels into one string with the same
+/// color. Hopefully this reduces IO performance cost.
 impl ColoredString {
     pub fn new(ch: char, fg: Argb, error: u8) -> Self {
-        Self {
-            string: [ch].to_smallvec(),
-            fg,
-            bg: Argb::black(),
-            error,
-        }
+        let mut string = String::with_capacity(MAX_CON_WIDTH as usize);
+        string.push(ch);
+
+        Self { string, fg, error }
     }
 
-    pub fn new_bg(ch: char, fg: Argb, bg: Argb, error: u8) -> Self {
-        Self {
-            string: [ch].to_smallvec(),
-            fg,
-            bg,
-            error,
-        }
+    pub fn default() -> Self {
+        ColoredString::new('\0', Argb::black(), ERROR)
     }
 
     pub fn append(&mut self, ch: char, fg: Argb) -> bool {
@@ -114,93 +106,30 @@ impl ColoredString {
         false
     }
 
-    pub fn append_bg(&mut self, ch: char, fg: Argb, bg: Argb) -> bool {
-        let mergable_fg = {
-            let [_, r, g, b] = self.fg.decompose();
-            let [_, nr, ng, nb] = fg.decompose();
-
-            let er = r.abs_diff(nr);
-            let eg = g.abs_diff(ng);
-            let eb = b.abs_diff(nb);
-
-            er <= self.error && eg <= self.error && eb <= self.error
-        };
-
-        let mergable_bg = {
-            let [_, r, g, b] = self.bg.decompose();
-            let [_, nr, ng, nb] = bg.decompose();
-
-            let er = r.abs_diff(nr);
-            let eg = g.abs_diff(ng);
-            let eb = b.abs_diff(nb);
-
-            er <= self.error && eg <= self.error && eb <= self.error
-        };
-
-        if mergable_fg && mergable_bg {
-            self.string.push(ch);
-            return true;
-        }
-
-        false
-    }
-}
-
-/// Compress similar pixels into one string with the same
-/// color. Hopefully this reduces IO performance cost.
-trait StyledLine {
-    fn init() -> Self;
-    fn clear_line(&mut self);
-    fn push_pixel(&mut self, ch: char, fg: Argb);
-    fn push_pixel_bg(&mut self, ch: char, fg: Argb, bg: Argb);
-    fn queue_print(&self);
-}
-
-impl StyledLine for SmallVec<[ColoredString; MAX_SEGMENTS]> {
-    fn init() -> Self {
-        let mut out = Self::new();
-        out.push(ColoredString::new('\0', Argb::black(), ERROR));
-        out
-    }
-
-    fn clear_line(&mut self) {
-        self.clear();
-        self.push(ColoredString::new('\0', Argb::black(), ERROR));
+    pub fn replace(&mut self, ch: char, fg: Argb) {
+        self.string.clear();
+        self.string.push(ch);
+        self.fg = fg;
     }
 
     fn push_pixel(&mut self, ch: char, fg: Argb) {
-        if let Some(last) = self.last_mut()
-            && last.append(ch, fg)
-        {
-            return;
+        if !self.append(ch, fg) {
+            self.queue_print();
+            self.replace(ch, fg);
         }
-
-        self.push(ColoredString::new(ch, fg, ERROR));
     }
 
-    fn push_pixel_bg(&mut self, ch: char, fg: Argb, bg: Argb) {
-        if let Some(last) = self.last_mut()
-            && last.append_bg(ch, fg, bg)
-        {
-            return;
-        }
-
-        self.push(ColoredString::new_bg(ch, fg, bg, ERROR));
+    fn queue_print(&mut self) {
+        let [_, r, g, b] = self.fg.decompose();
+        let _ = queue!(
+            stdout(),
+            SetForegroundColor(Color::Rgb { r, g, b }),
+            Print(&self.string)
+        );
     }
 
-    fn queue_print(&self) {
-        for ColoredString { string, fg, .. } in self {
-            let [_, r, g, b] = fg.decompose();
-            let _ = queue!(
-                stdout(),
-                Print(
-                    string
-                        .iter()
-                        .collect::<String>()
-                        .with(Color::Rgb { r, g, b })
-                )
-            );
-        }
+    fn reset(&mut self) {
+        self.replace('\0', Argb::trans());
     }
 }
 
@@ -262,7 +191,7 @@ impl Program {
     pub fn print_ascii(&self, stdout: &mut Stdout) {
         let center = self.get_center(2, 4);
 
-        let mut line = SmallVec::<[ColoredString; MAX_SEGMENTS]>::init();
+        let mut line = ColoredString::default();
 
         for y in (0..self.pix.height()).step_by(2) {
             let cy = center.1 + y as u16 / 2;
@@ -287,14 +216,14 @@ impl Program {
             }
 
             line.queue_print();
-            line.clear_line();
+            line.reset();
         }
     }
 
     pub fn print_block(&self, stdout: &mut Stdout) {
         let center = self.get_center(2, 4);
 
-        let mut line = SmallVec::<[ColoredString; MAX_SEGMENTS]>::init();
+        let mut line = ColoredString::default();
 
         for y_base in (0..self.pix.height()).step_by(2) {
             let cy = center.1 + y_base as u16 / 2;
@@ -304,25 +233,18 @@ impl Program {
                 let idx_base = y_base * self.pix.width() + x_base;
                 let [_, mut r, mut g, mut b] = self.pix.pixel(idx_base).to_be_bytes();
 
-                let mut bg = Argb::black();
-
                 let bx = (0..2).fold(0, |acc, i| {
                     let idx = idx_base + i * self.pix.width(); // iterate horizontally, then jump to the nex row;
                     let [_, pr, pg, pb] = self.pix.pixel(idx).to_be_bytes();
 
                     match grayb(pr, pg, pb) {
+                        // Values smaller than this becomes transparent.
                         48.. => {
                             r = r.max(pr);
                             g = g.max(pg);
                             b = b.max(pb);
 
                             return acc | (1 << (1 - i));
-                        }
-
-                        32..=47 => {
-                            bg = Argb::compose([0, pr, pg, pb]);
-                            // blocks that aren't drawn can still be displayed
-                            // by addding background color
                         }
 
                         _ => {}
@@ -333,18 +255,18 @@ impl Program {
 
                 let block_char = ([' ', '▄', '▀', '█'])[bx as usize];
 
-                line.push_pixel_bg(block_char, Argb::compose([0, r, g, b]), bg);
+                line.push_pixel(block_char, Argb::compose([0, r, g, b]));
             }
 
             line.queue_print();
-            line.clear_line();
+            line.reset();
         }
     }
 
     pub fn print_brail(&self, stdout: &mut Stdout) {
         let center = self.get_center(4, 8);
 
-        let mut line = SmallVec::<[ColoredString; MAX_SEGMENTS]>::init();
+        let mut line = ColoredString::default();
 
         for y_base in (0..self.pix.height()).step_by(4) {
             let cy = center.1 + y_base as u16 / 4;
@@ -384,7 +306,7 @@ impl Program {
             }
 
             line.queue_print();
-            line.clear_line();
+            line.reset();
         }
     }
 }
