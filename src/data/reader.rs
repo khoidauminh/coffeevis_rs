@@ -138,8 +138,16 @@ impl Program {
                     error!("\n:3");
                 }
 
-                "--crt" => {
-                    self.crt = true;
+                "--effect" => {
+                    let val = args
+                        .next()
+                        .expect("Expecting values of the following: crt, interlaced.");
+
+                    match val.as_str() {
+                        "crt" => self.set_win_render_effect(RenderEffect::Crt),
+                        "interlaced" => self.set_win_render_effect(RenderEffect::Interlaced),
+                        _ => panic!("Invalid value for effect."),
+                    }
                 }
 
                 "--no-display" => {

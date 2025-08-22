@@ -13,6 +13,7 @@ pub mod vislist;
 
 use std::time::{Duration, Instant};
 
+use crate::graphics::RenderEffect;
 use crate::{graphics::PixelBuffer, modes::Mode};
 
 use crate::{VisFunc, modes};
@@ -77,7 +78,8 @@ pub(crate) struct Program {
 
     hidden: bool,
 
-    crt: bool,
+    #[cfg(not(feature = "console_only"))]
+    win_render_effect: crate::graphics::RenderEffect,
 
     pub pix: crate::graphics::PixelBuffer,
 
@@ -126,7 +128,7 @@ impl Program {
             resize: false,
 
             hidden: false,
-            crt: false,
+            win_render_effect: RenderEffect::None,
 
             mode: default_mode,
 
@@ -183,12 +185,14 @@ impl Program {
         self.refresh_rate_intervals
     }
 
-    pub fn is_crt(&self) -> bool {
-        self.crt
+    #[cfg(not(feature = "console_only"))]
+    pub fn get_win_render_effect(&self) -> RenderEffect {
+        self.win_render_effect
     }
 
-    pub fn set_crt(&mut self, b: bool) {
-        self.crt = b;
+    #[cfg(not(feature = "console_only"))]
+    pub fn set_win_render_effect(&mut self, e: RenderEffect) {
+        self.win_render_effect = e;
     }
 
     pub fn is_resizable(&self) -> bool {

@@ -243,11 +243,6 @@ impl ApplicationHandler for WindowState {
 
                     Key::Character("/") => self.prog.reset_parameters(),
 
-                    Key::Character("c") => {
-                        self.prog.pix.clear_out_buffer();
-                        self.prog.set_crt(!self.prog.is_crt());
-                    }
-
                     _ => {}
                 }
             }
@@ -273,7 +268,7 @@ impl ApplicationHandler for WindowState {
                     &mut buffer,
                     Some(self.final_buffer_size.width as usize),
                     Some(u32::mix),
-                    self.prog.is_crt(),
+                    self.prog.get_win_render_effect(),
                 );
 
                 window.pre_present_notify();
