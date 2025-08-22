@@ -4,7 +4,7 @@ use std::sync::{LazyLock, Mutex};
 use crate::{
     audio::AudioBuffer,
     data::{DEFAULT_SIZE_WIN, Program},
-    graphics::{P2, Pixel, PixelBuffer, blend::Argb},
+    graphics::{Argb, P2, Pixel, PixelBuffer},
     math::{
         Cplx,
         rng::{random_float, random_int},

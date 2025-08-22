@@ -14,10 +14,7 @@ use std::io::{Error, Stdout, Write, stdout};
 use crate::{
     audio::get_no_sample,
     data::*,
-    graphics::{
-        Pixel,
-        blend::{Argb, grayb},
-    },
+    graphics::{Argb, Pixel, blend::grayb},
     modes::Mode,
 };
 

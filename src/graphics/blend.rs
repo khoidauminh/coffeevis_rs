@@ -1,4 +1,4 @@
-pub type Argb = u32;
+use super::Argb;
 
 pub type Mixer = fn(Argb, Argb) -> Argb;
 

@@ -4,7 +4,7 @@ pub mod draw;
 
 use crate::data::{MAX_WIDTH, foreign::ForeignCommandsCommunicator};
 use crate::math::Vec2;
-use blend::{Argb, Mixer};
+use blend::Mixer;
 use draw::*;
 
 const FIELD_START: usize = 64;
@@ -17,6 +17,8 @@ pub enum RenderEffect {
     Crt,
     Interlaced,
 }
+
+pub type Argb = u32;
 
 pub(crate) trait Pixel:
     Copy
