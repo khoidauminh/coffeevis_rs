@@ -98,7 +98,7 @@ impl ColoredString {
         let eb = b.abs_diff(nb);
 
         if er <= self.error && eg <= self.error && eb <= self.error {
-            self.string.push(ch);
+            _ = self.string.try_push(ch);
             return true;
         }
 
