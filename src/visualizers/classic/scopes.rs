@@ -3,6 +3,8 @@ use std::sync::{
     atomic::{AtomicUsize, Ordering::Relaxed},
 };
 
+use arrayvec::ArrayVec;
+
 use crate::graphics::Pixel;
 
 use crate::audio::MovingAverage;
@@ -98,21 +100,19 @@ pub fn draw_oscilloscope(prog: &mut crate::Program, stream: &mut crate::AudioBuf
     }
 
     let zeroi = {
-        let mut zeros = [0usize; 6];
-        let mut zeros_len = 1;
+        let mut zeros = ArrayVec::<usize, 6>::new();
+        zeros.push(0);
 
         for i in 0..l {
             let t = stream[i];
             ssmp = linearfc(ssmp, t, 0.01);
 
-            if zeros_len < 5 {
+            if zeros.len() < 5 {
                 if old2.x > 0.0 && ssmp.x < 0.0 {
-                    zeros[zeros_len] = i;
-                    zeros_len += 1;
+                    zeros.push(i);
                 }
                 if old2.y > 0.0 && ssmp.y < 0.0 {
-                    zeros[zeros_len] = i;
-                    zeros_len += 1;
+                    zeros.push(i);
                 }
             }
 
@@ -122,7 +122,7 @@ pub fn draw_oscilloscope(prog: &mut crate::Program, stream: &mut crate::AudioBuf
             bass_sum += ssmp.x.powi(2) + ssmp.y.powi(2);
         }
 
-        zeros[zeros_len - 1] - 50
+        zeros[zeros.len() - 1] - 50
     };
 
     let bass = (bass_sum / l as f32).sqrt();

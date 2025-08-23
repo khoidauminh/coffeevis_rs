@@ -18,6 +18,7 @@ softbuffer = { version = "0.4", default-features = false, features = [ "wayland"
 winit = { version = "0.30", default-features = false, features = [ "rwh_06", "wayland", "x11", "wayland-csd-adwaita" ] }
 crossterm = "0.29"
 xdg = "3"
+arrayvec = "0.7.6"
 
 [build-dependencies]
 qoi = "0.4.1"

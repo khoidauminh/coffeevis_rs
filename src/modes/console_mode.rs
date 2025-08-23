@@ -9,6 +9,8 @@ use crossterm::{
     },
 };
 
+use arrayvec::ArrayString;
+
 use std::io::{Error, Stdout, Write, stdout};
 
 use crate::{
@@ -68,7 +70,7 @@ impl ConsoleProps {
 }
 
 struct ColoredString {
-    pub string: String,
+    pub string: ArrayString<{ MAX_CON_WIDTH as usize }>,
     pub fg: Argb,
     error: u8,
 }
@@ -77,7 +79,7 @@ struct ColoredString {
 /// color. Hopefully this reduces IO performance cost.
 impl ColoredString {
     pub fn new(ch: char, fg: Argb, error: u8) -> Self {
-        let mut string = String::with_capacity(MAX_CON_WIDTH as usize);
+        let mut string = ArrayString::new();
         string.push(ch);
 
         Self { string, fg, error }
