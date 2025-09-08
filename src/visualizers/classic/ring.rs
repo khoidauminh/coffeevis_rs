@@ -21,7 +21,7 @@ pub fn draw_ring(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
     for i in 1..loop_range {
         let di = i * range / loop_range;
 
-        let smp = stream[di] - stream[di.saturating_sub(1)].scale(0.7);
+        let smp = stream.get(di) - stream.get(di.saturating_sub(1)).scale(0.7);
 
         let p = (smp * Cplx::new(prog.vol_scl * 0.65, 0.0) + Cplx::new(0.4, 0.4))
             * crate::math::cos_sin(di as f32 * rate);
@@ -42,5 +42,5 @@ pub fn draw_ring(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
         );
     }
 
-    stream.auto_rotate();
+    stream.autoslide();
 }

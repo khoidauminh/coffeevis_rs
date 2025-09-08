@@ -5,7 +5,7 @@ use std::sync::Mutex;
 use crate::graphics::{P2, Pixel};
 use crate::math::{self, Cplx, interpolate::*};
 
-const FFT_SIZE: usize = crate::data::FFT_SIZE / 2;
+const FFT_SIZE: usize = 1 << 10;
 const RANGE: usize = 64;
 const RANGEF: f32 = RANGE as f32;
 const FFT_SIZEF: f32 = FFT_SIZE as f32;
@@ -28,16 +28,9 @@ fn index_scale_derivative(x: f32) -> f32 {
 fn prepare(prog: &mut crate::Program, stream: &mut crate::AudioBuffer, local: &mut LocalType) {
     let accel = 0.3 * prog.smoothing.powi(2);
     let mut fft = [Cplx::zero(); FFT_SIZE];
-    const UP: usize = 2 * FFT_SIZE / (RANGE * 3 / 2);
+    // const UP: usize = 2 * FFT_SIZE / (RANGE * 3 / 2);
 
-    fft.iter_mut()
-        .take(FFT_SIZE)
-        .enumerate()
-        .for_each(|(i, smp)| {
-            let idx = i * UP;
-            *smp = stream[idx];
-        });
-
+    stream.read(&mut fft[..FFT_SIZE/2]);
     math::fft_stereo(&mut fft, RANGE, math::Normalize::Yes);
 
     fft.iter_mut().take(RANGE).enumerate().for_each(|(i, smp)| {
@@ -52,7 +45,7 @@ fn prepare(prog: &mut crate::Program, stream: &mut crate::AudioBuffer, local: &m
         smp.y = multiplicative_fall(smp.y, si.y.abs(), 0.0, accel);
     });
 
-    stream.auto_rotate();
+    stream.autoslide();
 }
 
 pub fn draw_spectrum(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
@@ -126,7 +119,7 @@ pub fn draw_spectrum(prog: &mut crate::Program, stream: &mut crate::AudioBuffer)
         prog.pix.rect(rect_l, middle, color1, u32::over);
         prog.pix.rect(middle, rect_r, color2, u32::over);
 
-        let alpha = (128.0 + stream[i as usize / 2].x * 32768.0) as u8;
+        let alpha = (128.0 + stream.get(i as usize / 2).x * 32768.0) as u8;
         prog.pix
             .rect_wh(P2::new(winwh - 1, i), 2, 1, color.fade(alpha), u32::over);
     }

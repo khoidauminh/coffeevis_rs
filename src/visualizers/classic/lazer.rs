@@ -25,14 +25,14 @@ pub fn draw_lazer(para: &mut crate::Program, stream: &mut crate::AudioBuffer) {
         let mut smooth = 0.0;
 
         for i in left {
-            smooth = linearf(smooth, stream[i].x, 0.1);
+            smooth = linearf(smooth, stream.get(i).x, 0.1);
             sum.x += smooth;
         }
 
         let mut smooth = 0.0;
 
         for i in right {
-            smooth = linearf(smooth, stream[i].y, 0.1);
+            smooth = linearf(smooth, stream.get(i).y, 0.1);
             sum.y += smooth;
         }
 

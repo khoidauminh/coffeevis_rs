@@ -10,7 +10,7 @@ pub fn draw_wave(para: &mut crate::Program, stream: &mut crate::AudioBuffer) {
 
     for x in 0..width {
         let i = l * x / width;
-        let smp = stream[i];
+        let smp = stream.get(i);
 
         let r: u8 = (smp.x * 144.0 + 128.0) as u8;
         let b: u8 = (smp.y * 144.0 + 128.0) as u8;
@@ -25,5 +25,5 @@ pub fn draw_wave(para: &mut crate::Program, stream: &mut crate::AudioBuffer) {
         );
     }
 
-    stream.rotate_left(l >> 1);
+    stream.autoslide();
 }

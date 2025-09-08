@@ -22,7 +22,7 @@ pub fn draw_vol_sweeper(para: &mut crate::Program, stream: &mut crate::AudioBuff
     let w = {
         let mut sum = 0.0;
         for i in 0..SAMPLE_SIZE / 4 {
-            sum += stream[i].l1_norm();
+            sum += stream.get(i).l1_norm();
         }
         (sum / (SAMPLE_SIZE / 3) as f32 * para.vol_scl * para.pix.width() as f32) as usize
     };
@@ -59,5 +59,5 @@ pub fn draw_vol_sweeper(para: &mut crate::Program, stream: &mut crate::AudioBuff
         }
     }
 
-    stream.auto_rotate();
+    stream.autoslide();
 }

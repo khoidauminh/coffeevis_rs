@@ -46,13 +46,7 @@ fn prepare(
     let mut local = DATA_MAX.try_lock().unwrap();
 
     let mut data_c = [Cplx::zero(); FFT_SIZE];
-
-    const UP: usize = FFT_SIZE / (BARS * 3 / 2);
-    data_c
-        .iter_mut()
-        .take(FFT_SIZE_HALF)
-        .enumerate()
-        .for_each(|(i, smp)| *smp = stream[i * UP]);
+    stream.read(&mut data_c);
 
     let bound = data_c.len().min(math::ideal_fft_bound(BARS));
 
@@ -89,7 +83,7 @@ fn prepare(
             *w = math::interpolate::multiplicative_fall(*w, *r, 0.0, accel);
         });
 
-    stream.rotate_left(FFT_SIZE_HALF / 2);
+    stream.autoslide();
 }
 
 pub fn draw_bars(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
@@ -143,7 +137,7 @@ pub fn draw_bars(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
 
         let bar = (bar as usize).clamp(1, prog.pix.height());
 
-        let fade = (128.0 + stream[idx * 3 / 2].x * 256.0) as u8;
+        let fade = (128.0 + stream.get(idx * 3 / 2).x * 256.0) as u8;
         let peak = (bar * 255 / prog.pix.height()) as u8;
         let _red = (fade.wrapping_mul(2) / 3).saturating_add(128).max(peak);
 
@@ -214,7 +208,7 @@ pub fn draw_bars_circle(prog: &mut crate::Program, stream: &mut crate::AudioBuff
 
         let _i2 = i << 2;
 
-        let pulse = (stream[i * 3 / 2].x * 32768.0) as u8;
+        let pulse = (stream.get(i * 3 / 2).x * 32768.0) as u8;
         let peak = (bar as i32 * 255 / size).min(255) as u8;
 
         let r: u8 = 0;

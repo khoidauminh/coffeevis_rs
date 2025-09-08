@@ -24,7 +24,7 @@ pub fn draw_dash_line(
                 P2::new(i, o),
                 2,
                 2,
-                C | (((stream[index].y * 32784.0 % 256.0) as u32) << 24),
+                C | (((stream.get(index).y * 32784.0 % 256.0) as u32) << 24),
                 Pixel::over,
             );
         }
@@ -41,7 +41,7 @@ pub fn draw_dash_line(
                 P2::new(o, i),
                 2,
                 2,
-                C | (((stream[index].y * 32784.0 % 256.0) as u32) << 24),
+                C | (((stream.get(index).y * 32784.0 % 256.0) as u32) << 24),
                 Pixel::over,
             );
         }

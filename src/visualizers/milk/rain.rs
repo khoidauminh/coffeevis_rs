@@ -153,9 +153,9 @@ pub fn draw(prog: &mut Program, stream: &mut AudioBuffer) {
 
     let mut new_volume: f32 = 0.0;
     {
-        let mut y: f32 = stream[0].into();
+        let mut y: f32 = stream.get(0).into();
         for i in 1..200 {
-            y = y + 0.25 * (stream[i].max() - y);
+            y = y + 0.25 * (stream.get(i).max() - y);
             new_volume += y;
         }
     }
@@ -191,5 +191,5 @@ pub fn draw(prog: &mut Program, stream: &mut AudioBuffer) {
 
     Thunder::generate(crate::math::rng::random_int(1000), size.x).draw(&mut prog.pix, 255);
 
-    stream.auto_rotate();
+    stream.autoslide();
 }

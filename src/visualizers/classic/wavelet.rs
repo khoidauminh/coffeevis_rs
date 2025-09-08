@@ -16,9 +16,9 @@ impl WaveletTable {
     pub fn init(inp: &mut crate::AudioBuffer) -> Self {
         let mut cloned = [Cplx::zero(); WT_SIZE];
         for i in 0..WT_SIZE {
-            cloned[i] = inp[i >> 2];
+            cloned[i] = inp.get(i >> 2);
         }
-        inp.rotate_left(WT_SIZE / 8);
+        inp.autoslide();
         hwt(&mut cloned);
         Self { table: cloned }
     }
@@ -77,7 +77,7 @@ pub fn draw_wavelet(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) 
         let iceil = start + inew.ceil() as usize;
 
         let t = inew.fract();
-        *smp = crate::math::interpolate::linearfc(stream[ifloor], stream[iceil], t);
+        *smp = crate::math::interpolate::linearfc(stream.get(ifloor), stream.get(iceil), t);
     });
 
     haar_wavelet_fast(&mut w);
@@ -104,7 +104,7 @@ pub fn draw_wavelet(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) 
         }
     }
 
-    stream.rotate_left(DEFAULT_ROTATE_SIZE);
+    stream.autoslide();
 }
 
 fn hwt(a: &mut [Cplx; WT_SIZE]) {

@@ -41,13 +41,10 @@ pub fn draw_shaky(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
     let mut localdata = DATA.lock().unwrap();
 
     let mut data_f = [Cplx::zero(); 512];
+    stream.read(&mut data_f);
 
     let sizef = prog.pix.width().min(prog.pix.height()) as f32;
 
-    data_f
-        .iter_mut()
-        .enumerate()
-        .for_each(|(i, x)| *x = stream[i]);
     math::integrate_inplace(&mut data_f, 128, math::Normalize::No);
 
     let amplitude = data_f.iter().fold(0f32, |acc, x| acc + x.l1_norm()) * sizef;

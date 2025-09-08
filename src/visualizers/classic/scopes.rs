@@ -44,13 +44,13 @@ pub fn draw_vectorscope(prog: &mut crate::Program, stream: &mut crate::AudioBuff
     let mut smoothed_sample = MovingAverage::<_, SMOOTH_SIZE>::init(Cplx::zero(), SMOOTH_SIZE);
 
     for _ in 0..SMOOTH_SIZE {
-        let sample = Cplx::new(stream[di].x, stream[di + PHASE_OFFSET].y);
+        let sample = Cplx::new(stream.get(di).x, stream.get(di + PHASE_OFFSET).y);
         _ = smoothed_sample.update(sample);
         di += INCREMENT;
     }
 
     while di < range {
-        let sample = Cplx::new(stream[di].x, stream[di + PHASE_OFFSET].y);
+        let sample = Cplx::new(stream.get(di).x, stream.get(di + PHASE_OFFSET).y);
 
         let sample = smoothed_sample.update(sample);
 
@@ -69,7 +69,7 @@ pub fn draw_vectorscope(prog: &mut crate::Program, stream: &mut crate::AudioBuff
 
     draw_cross(prog);
 
-    stream.rotate_left(prog.wav_win);
+    stream.autoslide();
 }
 
 pub fn draw_oscilloscope(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
@@ -88,12 +88,12 @@ pub fn draw_oscilloscope(prog: &mut crate::Program, stream: &mut crate::AudioBuf
 
     let mut i = (-20_isize) as usize;
 
-    let mut ssmp = stream[i];
+    let mut ssmp = stream.get(i);
     let mut old = ssmp;
     let mut old2 = old;
 
     while i != 0 {
-        ssmp = linearfc(ssmp, stream[i], 0.01);
+        ssmp = linearfc(ssmp, stream.get(i), 0.01);
         old2 = old;
         old = ssmp;
         i = i.wrapping_add(1);
@@ -104,7 +104,7 @@ pub fn draw_oscilloscope(prog: &mut crate::Program, stream: &mut crate::AudioBuf
         zeros.push(0);
 
         for i in 0..l {
-            let t = stream[i];
+            let t = stream.get(i);
             ssmp = linearfc(ssmp, t, 0.01);
 
             if zeros.len() < 5 {
@@ -142,7 +142,7 @@ pub fn draw_oscilloscope(prog: &mut crate::Program, stream: &mut crate::AudioBuf
         let mut smp_min = Cplx::new(1000.0, 1000.0);
 
         for i in di..di + wave_scale_factor {
-            let smp = &stream[i as usize];
+            let smp = stream.get(i as usize);
 
             smp_max.x = smp_max.x.max(smp.x);
             smp_min.x = smp_min.x.min(smp.x);
@@ -195,5 +195,5 @@ pub fn draw_oscilloscope(prog: &mut crate::Program, stream: &mut crate::AudioBuf
 
     LOCALI.store(li, Relaxed);
 
-    stream.rotate_left(zeroi / 2);
+    stream.autoslide();
 }

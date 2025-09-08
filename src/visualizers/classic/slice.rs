@@ -38,8 +38,8 @@ pub fn draw_slice(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
                 )
             };
 
-            high += stream[i] * j_high;
-            bin += stream[i] * j;
+            high += stream.get(i) * j_high;
+            bin += stream.get(i) * j;
         }
 
         ((bin.l1_norm() / sizef * 2.).min(TAU), high.l1_norm())
@@ -76,5 +76,5 @@ pub fn draw_slice(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
     prog.pix
         .circle(center, small_radius, true, 0xFF_FF_FF_FF, u32::over);
 
-    stream.auto_rotate();
+    stream.autoslide();
 }
