@@ -5,7 +5,7 @@ pub mod audio_buffer;
 use crate::math::increment;
 pub(crate) use audio_buffer::AudioBuffer;
 
-use std::ops::*;
+use std::{default, ops::*};
 use std::sync::{
     Mutex, MutexGuard,
     atomic::{AtomicBool, AtomicU8, Ordering::Relaxed},
@@ -62,12 +62,10 @@ pub fn get_source() -> cpal::Stream {
 }
 
 pub struct MovingAverage<T, const N: usize> {
-    size: usize,
     index: usize,
-    vec: [T; N],
+    data: [T; N],
     sum: T,
     denominator: f32,
-    average: T,
 }
 
 impl<T, const N: usize> MovingAverage<T, N>
@@ -75,35 +73,26 @@ where
     T: Add<Output = T> + Sub<Output = T> + Mul<f32, Output = T> + Copy,
     f32: Mul<T, Output = T>,
 {
-    pub fn init(val: T, size: usize) -> Self {
+    pub fn init(val: T) -> Self {
         Self {
-            size,
             index: 0,
-            vec: [val; N],
-            denominator: (size as f32).recip(),
-            sum: size as f32 * val,
-            average: val,
+            data: [val; N],
+            denominator: (N as f32).recip(),
+            sum: N as f32 * val,
         }
     }
 
-    fn pop(&mut self, val: T) -> T {
-        let out = self.vec[self.index];
-
-        self.vec[self.index] = val;
-
-        self.index = increment(self.index, self.size);
-
-        out
-    }
-
     pub fn update(&mut self, val: T) -> T {
-        let old = self.pop(val);
+        self.sum = self.sum - self.data[self.index] + val;
+        
+        self.data[self.index] = val;
 
-        self.sum = self.sum - old + val;
+        self.index += 1;
+        if self.index == N {
+            self.index = 0;
+        }
 
-        self.average = self.denominator * self.sum;
-
-        self.average
+        self.denominator * self.sum
     }
 }
 
@@ -114,120 +103,108 @@ struct NumPair<T> {
 }
 
 struct MovingMaximum<T, const N: usize> {
-    pub heap: [NumPair<T>; N],
+    data: [NumPair<T>; N],
+
+    head: usize,
+    tail: usize,
+
     len: usize,
     index: usize,
-    size: usize,
 }
 
-impl<T, const N: usize> MovingMaximum<T, N>
-where
-    T: Default + Copy + PartialOrd,
-{
-    pub fn init(size: usize) -> Self {
+impl<T: Default + Copy + PartialOrd, const N: usize> MovingMaximum<T, N> {
+    pub fn init() -> Self {
         Self {
-            heap: [NumPair::default(); N],
+            data: [NumPair::default() ; N],
+            head: 0,
+            tail: N-1,
             len: 0,
             index: 0,
-            size,
         }
     }
 
-    pub fn push(&mut self, new: NumPair<T>) {
-        let mut i = self.len;
+    fn enqueue_tail(&mut self, value: T) {
         self.len += 1;
-        while i > 0 {
-            let p = (i - 1) / 2;
-            if self.heap[p].value >= new.value {
-                break;
-            }
 
-            self.heap[i] = self.heap[p];
-
-            i = p;
+        self.tail += 1;
+        if self.tail == N {
+            self.tail = 0;
         }
 
-        self.heap[i] = new;
+        self.data[self.tail] = NumPair { index: self.index, value };
+
+        self.index += 1;
     }
 
-    pub fn peek(&self) -> &NumPair<T> {
-        &self.heap[0]
-    }
-
-    pub fn pop(&mut self, mut p: usize) -> NumPair<T> {
+    fn dequeue_head(&mut self) {
         self.len -= 1;
-        let out = self.heap[0];
-        self.heap[0] = self.heap[self.len];
-
-        let bound = self.len - 2;
-        let mut i = 2 * p + 1;
-        while i < bound {
-            i += (self.heap[i].value <= self.heap[i + 1].value) as usize;
-
-            if self.heap[p].value >= self.heap[i].value {
-                return out;
-            }
-
-            self.heap[p] = self.heap[i];
-            p = i;
-            i = i * 2 + 1;
+        
+        self.head += 1;
+        if self.head == N {
+            self.head = 0;
         }
+    }
 
-        if i == self.len - 1 && self.heap[p].value < self.heap[i].value {
-            self.heap[p] = self.heap[i];
+    fn dequeue_tail(&mut self) {
+        self.len -= 1;
+        
+        if self.tail == 0 {
+            self.tail = N;
         }
-
-        out
+    
+        self.tail -= 1;
     }
 
     pub fn update(&mut self, new: T) -> T {
-        self.push(NumPair {
-            index: self.index,
-            value: new,
-        });
-
-        let max_age = self.peek().index.wrapping_add(self.size - 1);
-
-        if max_age <= self.index {
-            self.pop(0);
+        if self.len > 0 && self.data[self.head].index + N <= self.index {
+            self.dequeue_head();
         }
 
-        self.index += 1;
+        while self.len > 0 && self.data[self.tail].value < new {
+            self.dequeue_tail();
+        }
 
-        self.peek().value
-    }
+        self.enqueue_tail(new);
+
+        return self.data[self.head].value;
+    } 
 }
 
-pub fn limiter<T, const N: usize>(
+pub fn limiter<T>(
     a: &mut [T],
-    limit: f32,
-    window: usize,
-    gain: f32,
+    lo: f32,
+    hi: f32,
     flattener: fn(T) -> f32,
 ) where
     T: Into<f32> + Mul<f32, Output = T> + Copy,
 {
-    assert!(a.len() <= N);
+    const SMOOTHING: usize = 10;
+    const DELAY: usize = SMOOTHING - 1;
 
-    let smoothing = window * 3 / 4;
+    let mut mave = MovingAverage::<_, SMOOTHING>::init(0.0);
+    let mut mmax = MovingMaximum::<_, SMOOTHING>::init();
 
-    let mut mave = MovingAverage::<_, N>::init(limit, smoothing);
-    let mut mmax = MovingMaximum::<_, N>::init(window);
-
-    for i in 0..a.len() + smoothing {
+    for i in 0..a.len() + SMOOTHING {
         let smp = if let Some(ele) = a.get(i) {
-            flattener(*ele).abs().max(limit)
+            flattener(*ele).abs()
         } else {
-            limit
+            0.0
         };
 
-        let mult = mave.update(mmax.update(smp));
+        let smp2 = mave.update(mmax.update(smp));
 
-        let j = i.wrapping_sub(smoothing);
+        let scale = if smp2 > hi {
+            hi / smp2
+        } else if smp2 < lo {
+            lo / smp2.max(0.001)
+        } else {
+            1.0
+        };
+
+        let j = i.wrapping_sub(DELAY);
 
         if let Some(ele) = a.get_mut(j) {
-            let mult = gain / mult;
-            *ele = *ele * mult;
+            *ele = *ele * scale;
         }
     }
 }

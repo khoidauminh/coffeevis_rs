@@ -41,7 +41,7 @@ pub fn draw_vectorscope(prog: &mut crate::Program, stream: &mut crate::AudioBuff
 
     prog.pix.clear();
 
-    let mut smoothed_sample = MovingAverage::<_, SMOOTH_SIZE>::init(Cplx::zero(), SMOOTH_SIZE);
+    let mut smoothed_sample = MovingAverage::<_, SMOOTH_SIZE>::init(Cplx::zero());
 
     for _ in 0..SMOOTH_SIZE {
         let sample = Cplx::new(stream.get(di).x, stream.get(di + PHASE_OFFSET).y);
@@ -129,7 +129,7 @@ pub fn draw_oscilloscope(prog: &mut crate::Program, stream: &mut crate::AudioBuf
 
     let wsf = bass * 10.0 + 2.0;
 
-    *wave_scale_factor = math::interpolate::subtractive_fall(*wave_scale_factor, wsf, 1.0, 0.5);
+    *wave_scale_factor = math::interpolate::linear_decay(*wave_scale_factor, wsf, 0.5).max(1.0);
 
     prog.pix.clear();
 

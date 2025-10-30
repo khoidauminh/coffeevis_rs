@@ -128,7 +128,7 @@ impl Program {
             resize: false,
 
             hidden: false,
-            win_render_effect: RenderEffect::None,
+            win_render_effect: RenderEffect::Interlaced,
 
             mode: default_mode,
 

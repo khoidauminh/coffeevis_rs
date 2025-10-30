@@ -62,7 +62,12 @@ pub fn compute_fft_stereo(a: &mut [Cplx], up_to: usize, normalize: super::Normal
     let bound = up_to.min(l / 2);
 
     for i in 1..bound {
-        a[i] += a[l - i];
+        let z1 = a[i];
+        let z2 = a[l - i].conj();
+        a[i] = Cplx { 
+            x: (z1 + z2).l1_norm(),
+            y: (z1 - z2).l1_norm(),
+        };
     }
 
     if normalize == super::Normalize::Yes {

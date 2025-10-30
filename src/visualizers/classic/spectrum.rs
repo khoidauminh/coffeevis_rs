@@ -10,6 +10,7 @@ const RANGE: usize = 64;
 const RANGEF: f32 = RANGE as f32;
 const FFT_SIZEF: f32 = FFT_SIZE as f32;
 const FFT_SIZEF_RECIP: f32 = 1.0 / FFT_SIZEF;
+const SMOOTHING: f32 = 0.91;
 
 type LocalType = [Cplx; RANGE + 1];
 
@@ -26,23 +27,21 @@ fn index_scale_derivative(x: f32) -> f32 {
 }
 
 fn prepare(prog: &mut crate::Program, stream: &mut crate::AudioBuffer, local: &mut LocalType) {
-    let accel = 0.3 * prog.smoothing.powi(2);
     let mut fft = [Cplx::zero(); FFT_SIZE];
-    // const UP: usize = 2 * FFT_SIZE / (RANGE * 3 / 2);
 
     stream.read(&mut fft[..FFT_SIZE/2]);
-    math::fft_stereo(&mut fft, RANGE, math::Normalize::Yes);
+    math::fft_stereo(&mut fft, RANGE, math::Normalize::No);
 
     fft.iter_mut().take(RANGE).enumerate().for_each(|(i, smp)| {
-        let scalef = math::fast::ilog2(i + 1) as f32 * (1.5 - i as f32 / RANGEF) * 1.621;
+        let scalef = 2.0 / FFT_SIZE as f32 * math::fast::ilog2(i + 1) as f32;
         *smp *= scalef;
     });
 
-    crate::audio::limiter::<_, RANGE>(&mut fft[0..RANGE], 1.0, 7, prog.vol_scl * 2.0, |x| x.max());
+    crate::audio::limiter(&mut fft[0..RANGE], 0.0, 0.90, |x| x.max());
 
     local.iter_mut().zip(fft.iter()).for_each(|(smp, si)| {
-        smp.x = multiplicative_fall(smp.x, si.x.abs(), 0.0, accel);
-        smp.y = multiplicative_fall(smp.y, si.y.abs(), 0.0, accel);
+        smp.x = decay(smp.x, si.x.abs(), SMOOTHING);
+        smp.y = decay(smp.y, si.y.abs(), SMOOTHING);
     });
 
     stream.autoslide();
@@ -71,56 +70,49 @@ pub fn draw_spectrum(prog: &mut crate::Program, stream: &mut crate::AudioBuffer)
 
     prog.pix.clear();
 
-    for i in 0..h {
-        let i_rev = h - i;
+    for y in 0..h {
+        //let i_rev = h - i;
+        let ifrac = (y as f32 / hf).exp2() - 1.0f32;
+        let ifloat = ifrac * RANGEF;
+        let ifloor = ifloat as usize;
+        let iceil = ifloat.ceil() as usize;
+        let ti = ifloat.fract(); 
+        
+        let sfloor = local[ifloor];
+        let sceil = local[iceil];
 
-        let i_ratio = i_rev as f32 * hf_recip;
+        let sl = smooth_step(sfloor.x, sceil.x, ti);
+        let sr = smooth_step(sfloor.y, sceil.y, ti);
+    
+        let sl = sl.powf(1.3) * whf;
+        let sr = sr.powf(1.3) * whf;
 
-        let slide_output = index_scale(i_ratio);
-        let idxf = slide_output * RANGEF;
-        let idx = idxf as usize;
-        let idx_next = idx + 1;
-
-        let bar_width_l;
-        let bar_width_r;
-
-        if idx_next < RANGE {
-            let t = idxf.fract();
-
-            bar_width_l = smooth_step(local[idx].x, local[idx_next].x, t);
-            bar_width_r = smooth_step(local[idx].y, local[idx_next].y, t);
-        } else {
-            const LAST: usize = RANGE - 1;
-            bar_width_l = local[LAST].x;
-            bar_width_r = local[LAST].y;
-        }
-
-        let bar_width_l = bar_width_l * whf;
-        let bar_width_r = bar_width_r * whf;
-
-        let channel_l = (255.0 * bar_width_l.min(wf) * wf_recip) as u32;
-        let channel_r = (255.0 * bar_width_r.min(wf) * wf_recip) as u32;
+        let channel = (y  * 255 / h) as u8;
+        let green = 255.min(16 + (3.0f32 * (sl + sr)) as u32) as u8;
 
         let color = u32::from_be_bytes([
             0xFF,
-            (255 - 255 * i_rev / h) as u8,
-            16,
-            (128 + 128 * i_rev / h) as u8,
+            255 - channel,
+            green,
+            128 + channel / 2,
         ]);
 
-        let color1 = color | channel_l << 8;
-        let color2 = color | channel_r << 8;
+        let yf = y as f32;
+        let ry = h - y;
+      
+        let rect_l = P2::new((whf - sl) as i32, ry);
+        let rect_r = P2::new((whf + sr) as i32, ry);
 
-        let rect_l = P2::new((wf - bar_width_l).max(0.0) as i32 / 2, i);
-        let rect_r = P2::new(((bar_width_r as i32 + 1) / 2 + winwh).min(w), i);
+        let middle = P2::new(winwh + 1, h - y);
 
-        let middle = P2::new(winwh + 1, i);
+        prog.pix.rect(rect_l, middle, color, u32::over);
+        prog.pix.rect(middle, rect_r, color, u32::over);
 
-        prog.pix.rect(rect_l, middle, color1, u32::over);
-        prog.pix.rect(middle, rect_r, color2, u32::over);
+        let s = stream.get((h - y) as usize);
+        let c1 = if s.x > 0.0 { 255 } else { 0 };
+        let c2 = if s.y > 0.0 { 255 } else { 0 };
 
-        let alpha = (128.0 + stream.get(i as usize / 2).x * 32768.0) as u8;
         prog.pix
-            .rect_wh(P2::new(winwh - 1, i), 2, 1, color.fade(alpha), u32::over);
+            .rect_wh(P2::new(winwh - 1, ry), 2, 1, u32::from_be_bytes([255, c1, 0, c2]), u32::over);
     }
 }

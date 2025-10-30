@@ -52,7 +52,7 @@ fn prepare(
 
     math::fft(&mut data_c[0..bound]);
 
-    const NORM: f32 = FFT_SIZE_RECIP;
+    let NORM: f32 = 1.0 / bound as f32;
 
     let mut data_f = [0f32; MAX_BARS1];
     data_f
@@ -67,7 +67,7 @@ fn prepare(
             *smp = smp_f32 * volume_scale * scl * NORM;
         });
 
-    crate::audio::limiter::<_, MAX_BARS1>(&mut data_f[..bar_num], 0.8, 10, 0.98, |x| x);
+    crate::audio::limiter(&mut data_f[..bar_num], 0.0, 0.95, |x| x);
 
     let bnf = 1.0 / bnf;
 
@@ -79,8 +79,8 @@ fn prepare(
         .enumerate()
         .for_each(|(i, (w, r))| {
             let i_ = (i + 1) as f32 * bnf;
-            let accel = (0.090 - 0.055 * i_) * prog_smoothing;
-            *w = math::interpolate::multiplicative_fall(*w, *r, 0.0, accel);
+            let accel = (0.99 - 0.055 * i_) * prog_smoothing;
+            *w = math::interpolate::decay(*w, *r, accel);
         });
 
     stream.autoslide();
@@ -94,7 +94,7 @@ pub fn draw_bars(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
     let bnf_recip = 1.0 / bnf;
     let _l = stream.len();
 
-    prepare(stream, bar_num, prog.vol_scl, prog.smoothing);
+    prepare(stream, bar_num, prog.vol_scl, 0.95);
 
     let local = DATA_MAX.lock().unwrap();
 

@@ -1,5 +1,6 @@
 use crate::data::{DEFAULT_ROTATE_SIZE, foreign::ForeignAudioCommunicator};
 use crate::math::Cplx;
+use crate::math::interpolate::decay;
 
 const SILENCE_LIMIT: f32 = 0.001;
 const AMP_PERSIST_LIMIT: f32 = 0.05;
@@ -14,6 +15,7 @@ pub struct AudioBuffer {
     data: [Cplx; BUFFER_CAPACITY],
 
     writeend: usize,
+    oldwriteend: usize,
     readend: usize,
 
     autorotatesize: usize,
@@ -32,6 +34,7 @@ impl AudioBuffer {
             data: [Cplx::zero(); _],
             
             writeend: 0,
+            oldwriteend: 0,
             readend: 0,
 
             autorotatesize: DEFAULT_ROTATE_SIZE,
@@ -61,6 +64,7 @@ impl AudioBuffer {
 
         let inputsize = inputlen / 2;
 
+        self.oldwriteend = self.writeend;
         let mut writeend = self.writeend;
         
         in_buffer.chunks_exact(2).for_each(|chunk| {
@@ -72,10 +76,34 @@ impl AudioBuffer {
         self.writeend = writeend;
         self.readend = writeend.wrapping_sub(inputsize) & BUFFER_MASK;
 
-        self.autorotatesize = inputsize / self.rotatessincewrite.next_power_of_two();
+        self.autorotatesize = inputsize / (self.rotatessincewrite.next_power_of_two()*2);
         self.rotatessincewrite = 0;
 
         self.lastinputsize = inputsize;
+
+        self.normalize();
+    }
+
+    fn normalize(&mut self) {
+        let mut max = 0.0;
+        for i in 0..self.lastinputsize {
+            let i = (i + self.oldwriteend) & BUFFER_MASK;
+            max = self.data[i].max();
+        }
+
+        self.max = decay(self.max, max, 0.99);
+
+        
+        if self.max < 0.0001 {
+            return
+        }
+        
+        let scale: f32 = 1.0 / self.max.max(0.001);
+
+        for i in 0..self.lastinputsize {
+            let i = (i + self.oldwriteend) & BUFFER_MASK;
+            self.data[i] *= scale;
+        }
     }
 
     pub fn read(&self, out: &mut [Cplx]) {
@@ -108,7 +136,7 @@ impl AudioBuffer {
     pub fn checked_normalize(&mut self) {}
 
     pub fn get(&self, i: usize) -> Cplx {
-        self.data[(self.readend + i) & BUFFER_CAPACITY]
+        self.data[(self.readend + i) & BUFFER_MASK]
     }
 }
 

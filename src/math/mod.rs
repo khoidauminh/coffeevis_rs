@@ -157,32 +157,12 @@ pub mod interpolate {
         if t < 0.5 { a } else { b }
     }
 
-    pub fn subtractive_fall(prev: f32, now: f32, min: f32, amount: f32) -> f32 {
-        if now > prev {
-            return now;
-        }
-        let new = prev - amount;
-        if new < min {
-            return min;
-        }
-        if new < now {
-            return now;
-        }
-        new
+    pub fn linear_decay(prev: f32, now: f32, amount: f32) -> f32 {
+        now.max(prev - amount)
     }
 
-    pub fn multiplicative_fall(prev: f32, now: f32, min: f32, factor: f32) -> f32 {
-        if now > prev {
-            return now;
-        }
-        let new = prev * (1.0 - factor);
-        if new < min {
-            return min;
-        }
-        if new < now {
-            return now;
-        }
-        new
+    pub fn decay(prev: f32, now: f32, factor: f32) -> f32 {
+        now.max(prev * factor)
     }
 
     pub fn step(mut a: f32, b: f32, ladder_step: f32) -> f32 {
