@@ -131,7 +131,6 @@ It looks the smoothest when you're in a dark room with low monitor brightness. B
 | <kbd>;</kbd> / <kbd>'</kbd> | decreases/increases amount of samples into input (works for some wave-based visualizers only) |
 | <kbd>\\</bkd> | toggles auto switching (default: ON, 8 seconds) |
 | <kbd>n</kbd> | switches through sets of visualizers (wraps around) |
-| <kbd>f</kbd> | (when launched with foreign communicator) switches between foreign visualizer and built-in. |
 
 ### Terminal
 |  Key | Description |

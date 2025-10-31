@@ -324,8 +324,6 @@ pub fn control_key_events_con(prog: &mut Program, exit: &mut bool) -> Result<(),
             Event::Key(event) => match event.code {
                 KeyCode::Char('b') => prog.change_visualizer(false),
 
-                KeyCode::Char('f') => prog.pix.toggle_running_foreign(),
-
                 KeyCode::Char(' ') => prog.change_visualizer(true),
 
                 KeyCode::Char('q') => *exit = true,

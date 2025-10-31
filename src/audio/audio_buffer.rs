@@ -1,4 +1,4 @@
-use crate::data::{DEFAULT_ROTATE_SIZE, foreign::ForeignAudioCommunicator};
+use crate::data::DEFAULT_ROTATE_SIZE;
 use crate::math::Cplx;
 use crate::math::interpolate::decay;
 
@@ -26,8 +26,6 @@ pub struct AudioBuffer {
     silent: u8,
 
     max: f32,
-
-    communicator: Option<ForeignAudioCommunicator>,
 }
 
 impl AudioBuffer {
@@ -47,12 +45,8 @@ impl AudioBuffer {
             silent: 0,
 
             max: 0.0,
-
-            communicator: None
         }
     }
-
-    pub fn init_audio_communicator(&mut self) {}
 
     pub fn silent(&self) -> u8 {
         self.silent

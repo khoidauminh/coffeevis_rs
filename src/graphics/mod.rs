@@ -2,7 +2,7 @@ pub mod blend;
 //pub mod draw;
 pub mod draw;
 
-use crate::data::{MAX_WIDTH, foreign::ForeignCommandsCommunicator};
+use crate::data::MAX_WIDTH;
 use crate::math::Vec2;
 use blend::Mixer;
 
@@ -75,7 +75,6 @@ pub struct PixelBuffer {
 
     field: usize,
     background: Argb,
-    foreign_commands_communicator: Option<ForeignCommandsCommunicator>,
     is_running_foreign: bool,
 }
 
@@ -94,7 +93,6 @@ impl PixelBuffer {
 
             field: FIELD_START,
             background: 0xFF_24_24_24,
-            foreign_commands_communicator: None,
             is_running_foreign: false,
         }
     }
@@ -113,19 +111,6 @@ impl PixelBuffer {
 
     pub fn mixerm(&mut self) {
         self.mixer = u32::mix;
-    }
-
-    pub fn init_commands_communicator(&mut self) {
-        self.foreign_commands_communicator = ForeignCommandsCommunicator::new();
-        self.is_running_foreign = true;
-    }
-
-    pub fn is_foreign(&self) -> bool {
-        self.foreign_commands_communicator.is_some() && self.is_running_foreign
-    }
-
-    pub fn toggle_running_foreign(&mut self) {
-        self.is_running_foreign ^= true;
     }
 
     pub fn as_slice(&self) -> &[Argb] {

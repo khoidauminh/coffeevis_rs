@@ -225,8 +225,6 @@ impl ApplicationHandler for WindowState {
 
                     Key::Character("b") => self.prog.change_visualizer(false),
 
-                    Key::Character("f") => self.prog.pix.toggle_running_foreign(),
-
                     Key::Character("n") => self.prog.change_vislist(),
 
                     Key::Character("-") => self.prog.decrease_vol_scl(),

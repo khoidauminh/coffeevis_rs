@@ -20,12 +20,6 @@ impl Program {
                     create_tmp_desktop_file();
                 }
 
-                "--foreign" => {
-                    crate::audio::get_buf().init_audio_communicator();
-                    self.pix.init_commands_communicator();
-                    self.init_program_communicator();
-                }
-
                 "--quiet" => self.quiet = true,
 
                 #[cfg(all(not(feature = "window_only"), target_os = "linux"))]

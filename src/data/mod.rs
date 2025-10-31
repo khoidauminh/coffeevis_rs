@@ -1,7 +1,5 @@
 pub mod gen_const;
 
-pub mod foreign;
-
 #[cfg(not(target_os = "windows"))]
 pub mod desktop;
 
@@ -108,8 +106,6 @@ pub(crate) struct Program {
     switch: Instant,
     auto_switch: bool,
     auto_switch_interval: Duration,
-
-    foreign_program_communicator: Option<foreign::ForeignProgramCommunicator>,
 }
 
 impl Program {
@@ -167,13 +163,7 @@ impl Program {
                 max_height: 25,
                 flusher: default_mode.get_flusher(),
             },
-
-            foreign_program_communicator: None,
         }
-    }
-
-    pub fn init_program_communicator(&mut self) {
-        self.foreign_program_communicator = foreign::ForeignProgramCommunicator::new();
     }
 
     pub fn get_rr_interval(&self, no_sample: u8) -> Duration {
@@ -325,19 +315,6 @@ impl Program {
         }
 
         self.pix.resize(s.0 as usize, s.1 as usize);
-
-        self.write_to_foreign_communicator();
-    }
-
-    pub fn write_to_foreign_communicator(&mut self) {
-        if let Some(c) = self.foreign_program_communicator.as_mut() {
-            let _ = c.write(format_args!(
-                "0.6.0\n{} {}\n{}",
-                self.pix.width(),
-                self.pix.height(),
-                self.milli_hz / 1000
-            ));
-        }
     }
 
     pub fn refresh(&mut self) {
@@ -358,10 +335,7 @@ impl Program {
     }
 
     pub fn render(&mut self) {
-        if !self.pix.is_foreign() {
-            let mut buf = crate::audio::get_buf();
-            (self.visualizer)(self, &mut buf);
-        }
+        (self.visualizer)(self, &mut crate::audio::get_buf());
     }
 
     pub fn increase_vol_scl(&mut self) {
