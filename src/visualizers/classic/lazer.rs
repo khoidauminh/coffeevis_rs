@@ -1,5 +1,4 @@
 use crate::data::SAMPLE_SIZE;
-use crate::graphics::Pixel;
 use crate::math::{Cplx, interpolate::linearf};
 
 struct LocalData {
@@ -54,9 +53,10 @@ pub fn draw_lazer(para: &mut crate::Program, stream: &mut crate::AudioBuffer) {
     ]);
 
     para.pix.fade(3);
-
+    para.pix.color(color);
+    para.pix.mixerd();
     para.pix
-        .line(local.p1.to_p2(), local.p0.to_p2(), color, Pixel::over);
+        .line(local.p1.to_p2(), local.p0.to_p2());
 
     local.p1 = local.p0;
 }

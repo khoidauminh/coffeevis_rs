@@ -1,4 +1,4 @@
-use crate::graphics::{P2, Pixel};
+use crate::graphics::P2;
 use crate::math::Cplx;
 
 pub fn draw_ring(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
@@ -30,16 +30,14 @@ pub fn draw_ring(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
 
         let int = (smp.l1_norm() * 128.0) as u8;
 
-        prog.pix.plot(
-            P2::new(x / 2 + width_top_h, y / 2 + height_top_h),
-            u32::from_be_bytes([
+        prog.pix.color(u32::from_be_bytes([
                 255,
                 ((128 + x.abs() * 64 / size) as u8).saturating_sub(int),
                 255,
                 ((128 + y.abs() * 64 / size) as u8).saturating_add(int),
-            ]),
-            Pixel::over,
-        );
+            ]));
+        prog.pix.mixerd();
+        prog.pix.plot(P2::new(x / 2 + width_top_h, y / 2 + height_top_h));
     }
 
     stream.autoslide();

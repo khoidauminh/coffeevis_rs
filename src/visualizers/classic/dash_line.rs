@@ -1,6 +1,6 @@
 // This visualizer is not intended to display on its own.
 
-use crate::graphics::{P2, Pixel};
+use crate::graphics::P2;
 
 const C: u32 = 0x00_FF_20_C0;
 
@@ -11,6 +11,8 @@ pub fn draw_dash_line(
     offset: usize,
     flip_side: bool,
 ) {
+    para.pix.mixerd();
+
     if horizontal {
         let o = if flip_side {
             para.pix.height() - offset - 1
@@ -20,12 +22,11 @@ pub fn draw_dash_line(
 
         for i in 0..para.pix.width() {
             let index = (i / 10 + i) % stream.len();
-            para.pix.rect_wh(
+            para.pix.color(C | (((stream.get(index).y * 32784.0 % 256.0) as u32) << 24));
+            para.pix.rect(
                 P2::new(i, o),
                 2,
                 2,
-                C | (((stream.get(index).y * 32784.0 % 256.0) as u32) << 24),
-                Pixel::over,
             );
         }
     } else {
@@ -37,12 +38,11 @@ pub fn draw_dash_line(
 
         for i in 0..para.pix.height() {
             let index = (i / 10 + i) % stream.len();
-            para.pix.rect_wh(
+            para.pix.color(C | (((stream.get(index).y * 32784.0 % 256.0) as u32) << 24));
+            para.pix.rect(
                 P2::new(o, i),
                 2,
                 2,
-                C | (((stream.get(index).y * 32784.0 % 256.0) as u32) << 24),
-                Pixel::over,
             );
         }
     }

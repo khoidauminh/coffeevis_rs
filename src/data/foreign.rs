@@ -51,129 +51,112 @@ fn is_newline(x: &u8) -> bool {
     *x == b'\n'
 }
 
-pub fn identify_line<'a>(inp: &mut Split<'a, u8, impl Fn(&u8) -> bool>) -> Option<DrawCommand> {
-    let head = inp.next()?;
+impl PixelBuffer {
 
-    if head.starts_with(b"C") {
-        return parse_command(head);
-    } else if head.starts_with(b"I") {
-        return parse_image(inp, head);
-    } else {
-        return None;
-    }
-}
+    pub fn identify_line<'a>(&mut self, inp: &mut Split<'a, u8, impl Fn(&u8) -> bool>) -> Result<(), ()> {
+        let head = inp.next().unwrap();
 
-pub fn parse_command(inp: &[u8]) -> Option<DrawCommand> {
-    let mut iter = inp.split(|&x| x == b' ');
-
-    iter.next()?; // Skips C
-
-    let mut color = [0u8; 4];
-
-    for c in color.iter_mut() {
-        let Some(i) = iter.next() else {
-            break;
-        };
-        *c = u8::from_str_radix(std::str::from_utf8(i).ok()?, 16).ok()?;
-    }
-
-    let blending = match iter.next()? {
-        b"o" => u32::over,
-        b"a" => <u32 as Pixel>::add,
-        b"s" => <u32 as Pixel>::sub,
-        b"m" => u32::mix,
-        other => {
-            eprintln!("Invalid token {:?}. Expected blending", other);
-            return None;
-        }
-    };
-
-    let ident = iter.next()?;
-
-    let mut num_array = [0i32; 4];
-
-    for (i, n) in iter.zip(num_array.iter_mut()) {
-        *n = i32::from_str_radix(std::str::from_utf8(i).ok()?, 16).ok()?;
-    }
-
-    let (param, func): (DrawParam, DrawFunction) = match ident {
-        b"f" => (DrawParam::Fill {}, DRAW_FILL),
-
-        b"p" => (
-            DrawParam::Plot {
-                p: P2::new(num_array[0], num_array[1]),
-            },
-            DRAW_PLOT,
-        ),
-
-        b"l" => (
-            DrawParam::Line {
-                ps: P2::new(num_array[0], num_array[1]),
-                pe: P2::new(num_array[0], num_array[1]),
-            },
-            DRAW_LINE,
-        ),
-
-        b"r" => (
-            DrawParam::RectWh {
-                ps: P2::new(num_array[0], num_array[1]),
-                w: num_array[2].try_into().ok()?,
-                h: num_array[3].try_into().ok()?,
-            },
-            DRAW_RECT_WH,
-        ),
-
-        other => {
-            eprintln!("Invalid token {:?}. Expected draw", other);
-            return None;
-        }
-    };
-
-    Some(DrawCommand {
-        func,
-        param,
-        color: u32::compose(color),
-        blending,
-    })
-}
-
-pub fn parse_image<'a>(
-    inp: &mut Split<'a, u8, impl Fn(&u8) -> bool>,
-    header: &[u8],
-) -> Option<DrawCommand> {
-    let mut tokens = header.split(|&x| x == b' ');
-
-    tokens.next(); // Skips I
-
-    let pos_x = i32::from_str_radix(str::from_utf8(tokens.next()?).ok()?, 16).ok()?;
-    let pos_y = i32::from_str_radix(str::from_utf8(tokens.next()?).ok()?, 16).ok()?;
-    let width = usize::from_str_radix(str::from_utf8(tokens.next()?).ok()?, 16).ok()?;
-    let mut vec = Vec::with_capacity(width * width);
-
-    while let Some(line) = inp.next() {
-        if line.starts_with(b"C") {
-            break;
+        if head.starts_with(b"C") {
+            self.parse_command(head).ok_or(())?
+        } else if head.starts_with(b"I") {
+            self.parse_image(inp, head).ok_or(())?
         }
 
-        for pixel in line.chunks_exact(8) {
-            let mut color = [0u8; 4];
-            for (num, c) in pixel.chunks_exact(2).zip(color.iter_mut()) {
-                *c = num[0] * 16 + num[1];
+        Ok(())
+    }
+
+    pub fn parse_command(&mut self, inp: &[u8]) -> Option<()> {
+        let mut iter = inp.split(|&x| x == b' ');
+
+        iter.next()?; // Skips C
+
+        let mut color = [0u8; 4];
+
+        for c in color.iter_mut() {
+            let Some(i) = iter.next() else {
+                break;
+            };
+            *c = u8::from_str_radix(std::str::from_utf8(i).ok()?, 16).ok()?;
+        }
+
+        // let blending = match iter.next()? {
+        //     b"o" => u32::over,
+        //     b"a" => <u32 as Pixel>::add,
+        //     b"s" => <u32 as Pixel>::sub,
+        //     b"m" => u32::mix,
+        //     other => {
+        //         eprintln!("Invalid token {:?}. Expected blending", other);
+        //         return None;
+        //     }
+        // };
+
+        let ident = iter.next()?;
+
+        let mut num_array = [0i32; 4];
+
+        for (i, n) in iter.zip(num_array.iter_mut()) {
+            *n = i32::from_str_radix(std::str::from_utf8(i).ok()?, 16).ok()?;
+        }
+
+        match ident {
+            b"f" => self.fill(),
+
+            b"p" =>
+                self.plot(P2::new(num_array[0], num_array[1])),
+
+            b"l" => 
+                self.line(
+                    P2::new(num_array[0], num_array[1]),
+                    P2::new(num_array[0], num_array[1]),
+                ),
+
+            b"r" => 
+                self.rect(
+                    P2::new(num_array[0], num_array[1]),
+                    num_array[2].try_into().ok()?,
+                    num_array[3].try_into().ok()?,
+                ),
+
+            other =>
+                eprintln!("Invalid token {:?}. Expected draw", other),
+        }
+
+        Some(())
+    }
+
+    pub fn parse_image<'a>(
+        &mut self,
+        inp: &mut Split<'a, u8, impl Fn(&u8) -> bool>,
+        header: &[u8],
+    ) -> Option<()> {
+        let mut tokens = header.split(|&x| x == b' ');
+
+        tokens.next(); // Skips I
+
+        let pos_x = i32::from_str_radix(str::from_utf8(tokens.next()?).ok()?, 16).ok()?;
+        let pos_y = i32::from_str_radix(str::from_utf8(tokens.next()?).ok()?, 16).ok()?;
+        let width = usize::from_str_radix(str::from_utf8(tokens.next()?).ok()?, 16).ok()?;
+        let mut vec = Vec::with_capacity(width * width);
+
+        while let Some(line) = inp.next() {
+            if line.starts_with(b"C") {
+                break;
             }
-            vec.push(u32::compose(color));
+
+            for pixel in line.chunks_exact(8) {
+                let mut color = [0u8; 4];
+                for (num, c) in pixel.chunks_exact(2).zip(color.iter_mut()) {
+                    *c = num[0] * 16 + num[1];
+                }
+                vec.push(u32::compose(color));
+            }
         }
+
+        self.paste(P2::new(pos_x, pos_y), width, &vec);
+
+        Some(())
     }
 
-    Some(DrawCommand {
-        func: DRAW_PIX,
-        color: u32::trans(),
-        blending: u32::mix,
-        param: DrawParam::Pix {
-            p: P2::new(pos_x, pos_y),
-            w: width,
-            v: std::sync::Arc::from(vec),
-        },
-    })
 }
 
 /// Sends audio data to a tmp file
@@ -282,10 +265,8 @@ impl ForeignCommandsCommunicator {
         })
     }
 
-    pub fn read_commands(&mut self) -> Result<DrawCommandBuffer, Error> {
+    pub fn read_commands(&mut self, p: &mut PixelBuffer) -> Result<(), Error> {
         self.command_file.rewind()?;
-
-        let mut out_buffer = Vec::<DrawCommand>::new();
 
         self.input_cache.clear();
         self.command_file.read_to_end(&mut self.input_cache)?;
@@ -297,15 +278,9 @@ impl ForeignCommandsCommunicator {
 
         let mut lines = self.input_cache.split(is_newline);
 
-        while let Some(cmd) = identify_line(&mut lines) {
-            out_buffer.push(cmd);
-        }
+        while p.identify_line(&mut lines).is_ok() {}
 
-        if out_buffer.is_empty() {
-            return Err(Error::new(ErrorKind::Other, "No parsing has been done"));
-        }
-
-        Ok(DrawCommandBuffer::from(out_buffer))
+        Ok(())
     }
 }
 

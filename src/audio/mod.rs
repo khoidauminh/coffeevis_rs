@@ -2,10 +2,9 @@ use cpal::SampleRate;
 use cpal::traits::{DeviceTrait, HostTrait};
 
 pub mod audio_buffer;
-use crate::math::increment;
 pub(crate) use audio_buffer::AudioBuffer;
 
-use std::{default, ops::*};
+use std::ops::*;
 use std::sync::{
     Mutex, MutexGuard,
     atomic::{AtomicBool, AtomicU8, Ordering::Relaxed},
@@ -50,9 +49,6 @@ pub fn get_source() -> cpal::Stream {
             |data: &[f32], _| {
                 let mut b = get_buf();
                 b.read_from_input(data);
-                if NORMALIZE.load(Relaxed) {
-                    b.checked_normalize();
-                }
                 set_no_sample(b.silent());
             },
             |err| eprintln!("an error occurred on the input audio stream: {}", err),

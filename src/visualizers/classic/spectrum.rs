@@ -2,7 +2,7 @@ use std::f32::consts::LN_2;
 
 use std::sync::Mutex;
 
-use crate::graphics::{P2, Pixel};
+use crate::graphics::P2;
 use crate::math::{self, Cplx, interpolate::*};
 
 const FFT_SIZE: usize = 1 << 10;
@@ -26,7 +26,7 @@ fn index_scale_derivative(x: f32) -> f32 {
     (math::fast::unit_exp2_0(x) + 1.0) * LN_2
 }
 
-fn prepare(prog: &mut crate::Program, stream: &mut crate::AudioBuffer, local: &mut LocalType) {
+fn prepare(stream: &mut crate::AudioBuffer, local: &mut LocalType) {
     let mut fft = [Cplx::zero(); FFT_SIZE];
 
     stream.read(&mut fft[..FFT_SIZE/2]);
@@ -54,7 +54,7 @@ pub fn draw_spectrum(prog: &mut crate::Program, stream: &mut crate::AudioBuffer)
         return;
     };
 
-    prepare(prog, stream, &mut local);
+    prepare(stream, &mut local);
 
     let _l = stream.len();
     let (w, h) = prog.pix.size().as_tuple();
@@ -65,10 +65,8 @@ pub fn draw_spectrum(prog: &mut crate::Program, stream: &mut crate::AudioBuffer)
 
     let whf = wf * 0.5;
 
-    let wf_recip = 1.0 / wf;
-    let hf_recip = 1.0 / hf;
-
     prog.pix.clear();
+    prog.pix.mixerd();
 
     for y in 0..h {
         //let i_rev = h - i;
@@ -97,7 +95,6 @@ pub fn draw_spectrum(prog: &mut crate::Program, stream: &mut crate::AudioBuffer)
             128 + channel / 2,
         ]);
 
-        let yf = y as f32;
         let ry = h - y;
       
         let rect_l = P2::new((whf - sl) as i32, ry);
@@ -105,14 +102,15 @@ pub fn draw_spectrum(prog: &mut crate::Program, stream: &mut crate::AudioBuffer)
 
         let middle = P2::new(winwh + 1, h - y);
 
-        prog.pix.rect(rect_l, middle, color, u32::over);
-        prog.pix.rect(middle, rect_r, color, u32::over);
+        prog.pix.color(color);
+        prog.pix.rect_xy(rect_l, middle);
+        prog.pix.rect_xy(middle, rect_r);
 
         let s = stream.get((h - y) as usize);
         let c1 = if s.x > 0.0 { 255 } else { 0 };
         let c2 = if s.y > 0.0 { 255 } else { 0 };
 
-        prog.pix
-            .rect_wh(P2::new(winwh - 1, ry), 2, 1, u32::from_be_bytes([255, c1, 0, c2]), u32::over);
+        prog.pix.color(u32::from_be_bytes([255, c1, 0, c2]));
+        prog.pix.rect(P2::new(winwh - 1, ry), 2, 1);
     }
 }

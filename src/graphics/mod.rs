@@ -5,11 +5,10 @@ pub mod draw;
 use crate::data::{MAX_WIDTH, foreign::ForeignCommandsCommunicator};
 use crate::math::Vec2;
 use blend::Mixer;
-use draw::*;
 
 const FIELD_START: usize = 64;
 
-use std::ops::{self, Deref, DerefMut};
+use std::ops;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum RenderEffect {
@@ -70,41 +69,50 @@ pub struct PixelBuffer {
     buffer: Vec<Argb>,
     width: usize,
     height: usize,
+
+    color: Argb,
+    mixer: Mixer,
+
     field: usize,
     background: Argb,
-    command: DrawCommandBuffer,
     foreign_commands_communicator: Option<ForeignCommandsCommunicator>,
     is_running_foreign: bool,
 }
 
 pub(crate) type P2 = crate::math::Vec2<i32>;
 
-impl Deref for PixelBuffer {
-    type Target = DrawCommandBuffer;
-    fn deref(&self) -> &Self::Target {
-        &self.command
-    }
-}
-
-impl DerefMut for PixelBuffer {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.command
-    }
-}
-
 impl PixelBuffer {
     pub fn new(w: usize, h: usize) -> Self {
         Self {
             out_buffer: Vec::new(),
             buffer: vec![Argb::trans(); w * h],
-            command: DrawCommandBuffer::new(),
             width: w,
             height: h,
+
+            color: Argb::white(),
+            mixer: u32::over,
+
             field: FIELD_START,
             background: 0xFF_24_24_24,
             foreign_commands_communicator: None,
             is_running_foreign: false,
         }
+    }
+
+    pub fn color(&mut self, c: Argb) {
+        self.color = c;
+    }
+
+    pub fn mixer(&mut self, mixer: Mixer) {
+        self.mixer = mixer;
+    }
+
+    pub fn mixerd(&mut self) {
+        self.mixer = u32::over;
+    }
+
+    pub fn mixerm(&mut self) {
+        self.mixer = u32::mix;
     }
 
     pub fn init_commands_communicator(&mut self) {
@@ -130,29 +138,6 @@ impl PixelBuffer {
 
     pub fn set_background(&mut self, bg: Argb) {
         self.background = bg;
-    }
-
-    pub fn draw_to_self(&mut self) {
-        let mut painter = Painter {
-            buffer: self.buffer.as_mut_slice(),
-            width: self.width,
-            height: self.height,
-        };
-
-        if self.is_running_foreign {
-            if let Some(c) = self.foreign_commands_communicator.as_mut()
-                && let Ok(v) = c.read_commands()
-            {
-                // dbg!(&v);
-                self.command = v;
-                self.command.execute(&mut painter);
-                return;
-            }
-        }
-
-        self.command.execute(&mut painter);
-
-        self.reset();
     }
 
     pub fn width(&self) -> usize {
@@ -232,14 +217,11 @@ impl PixelBuffer {
         scale: usize,
         dest: &mut [Argb],
         width: Option<usize>,
-        mixer: Option<Mixer>,
         effect: RenderEffect,
     ) {
         if self.width == 0 {
             return;
         }
-
-        let mixer = mixer.unwrap_or(Argb::mix);
 
         let dst_width = width.unwrap_or(self.width * scale);
 
@@ -255,7 +237,7 @@ impl PixelBuffer {
                     src_row.iter().cycle().zip(dst_row.chunks_exact_mut(scale))
                 })
                 .for_each(|(src_pixel, dst_chunk)| {
-                    dst_chunk.fill(mixer(self.background, *src_pixel))
+                    dst_chunk.fill((self.mixer)(self.background, *src_pixel))
                 });
 
             dest.copy_from_slice(&self.out_buffer);
@@ -309,7 +291,7 @@ impl PixelBuffer {
                 .zip(out_buffer.chunks_exact_mut(dst_width).step_by(scale)) // with destination lines
                 .flat_map(|(src_row, dst_row)| src_row.iter().zip(dst_row.chunks_exact_mut(scale)))
                 .for_each(|(src_pixel, dst_chunk)| {
-                    dst_chunk.fill(mixer(self.background, *src_pixel))
+                    dst_chunk.fill((self.mixer)(self.background, *src_pixel))
                 });
 
             dest.copy_from_slice(out_buffer);

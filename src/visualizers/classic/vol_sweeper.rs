@@ -1,6 +1,5 @@
 use crate::data::SAMPLE_SIZE;
 use crate::graphics::P2;
-use crate::graphics::Pixel;
 use crate::math::fast::sin_norm;
 use std::sync::Mutex;
 
@@ -39,10 +38,11 @@ pub fn draw_vol_sweeper(para: &mut crate::Program, stream: &mut crate::AudioBuff
 
     let width = para.pix.width();
 
-    para.pix
-        .rect_wh(P2::new(0, local.sweepi as i32), width, 1, 0, u32::mix);
-    para.pix
-        .rect_wh(P2::new(0, local.sweepi as i32), w, 1, color, u32::mix);
+    para.pix.color(0);
+    para.pix.mixerm();
+    para.pix.rect(P2::new(0, local.sweepi as i32), width, 1);
+    para.pix.color(color);
+    para.pix.rect(P2::new(0, local.sweepi as i32), w, 1);
 
     match (local.sweepi >= para.pix.height(), local.pong) {
         (false, true) => local.sweepi = local.sweepi.wrapping_add(1),

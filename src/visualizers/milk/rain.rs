@@ -65,7 +65,9 @@ impl Thunder {
             let p1 = pair[0];
             let p2 = pair[1];
 
-            canvas.line(p1, p2, 0xFF_FF_FF_FF, u32::add);
+            canvas.color(0xFF_FF_FF_FF);
+            canvas.mixer(u32::add);
+            canvas.line(p1, p2);
         });
     }
 }
@@ -123,7 +125,9 @@ impl RainDrop {
         while current_length > 0 && p.y >= 0 {
             let fade = current_length * 255 / self.length;
             let fade = fade as u8;
-            canvas.plot(p, self.color.set_alpha(fade), u32::mix);
+            canvas.color(self.color.set_alpha(fade));
+            canvas.mixerm();
+            canvas.plot(p);
             p.y -= 1;
             current_length -= 1;
         }
@@ -164,12 +168,14 @@ pub fn draw(prog: &mut Program, stream: &mut AudioBuffer) {
     *old = crate::math::interpolate::linearf(*old, new_volume, 0.2);
 
     let blue = 0.7 - *old * 0.005;
-    prog.pix.fill(u32::from_be_bytes([
+
+    prog.pix.color(u32::from_be_bytes([
         0xFF,
         0,
         (119.0 * blue) as u8,
         (255.0 * blue) as u8,
     ]));
+    prog.pix.fill();
 
     let size = prog.pix.size();
 

@@ -29,7 +29,6 @@ use std::{
     time::Duration,
 };
 
-use crate::graphics::Pixel;
 use crate::{audio::get_no_sample, data::*};
 
 type WindowSurface = Surface<&'static Window, &'static Window>;
@@ -267,7 +266,6 @@ impl ApplicationHandler for WindowState {
                     self.prog.scale() as usize,
                     &mut buffer,
                     Some(self.final_buffer_size.width as usize),
-                    Some(u32::mix),
                     self.prog.get_win_render_effect(),
                 );
 

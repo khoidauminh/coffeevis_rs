@@ -32,7 +32,7 @@ pub const DEFAULT_MILLI_HZ: u32 = 60 * 1000;
 pub const DEFAULT_HZ: u64 = DEFAULT_MILLI_HZ as u64 / 1000;
 pub const IDLE_INTERVAL: Duration = Duration::from_millis(1000 / 5);
 
-pub const DEFAULT_WAV_WIN: usize = 144 * INCREMENT;
+pub const DEFAULT_WAV_WIN: usize = 64 * INCREMENT;
 pub const DEFAULT_ROTATE_SIZE: usize = 289; // 3539;
 pub const PHASE_OFFSET: usize = SAMPLE_RATE / 50 / 4;
 pub const DEFAULT_VOL_SCL: f32 = 0.86;
@@ -362,7 +362,6 @@ impl Program {
             let mut buf = crate::audio::get_buf();
             (self.visualizer)(self, &mut buf);
         }
-        self.pix.draw_to_self();
     }
 
     pub fn increase_vol_scl(&mut self) {

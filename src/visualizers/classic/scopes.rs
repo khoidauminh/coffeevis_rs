@@ -1,6 +1,6 @@
 use std::sync::{
     Mutex,
-    atomic::{AtomicUsize, Ordering::Relaxed},
+    atomic::AtomicUsize,
 };
 
 use arrayvec::ArrayVec;
@@ -11,9 +11,9 @@ use crate::audio::MovingAverage;
 use crate::data::{INCREMENT, PHASE_OFFSET};
 use crate::graphics::P2;
 use crate::math::interpolate::linearfc;
-use crate::visualizers::classic::cross::{CROSS_COL, draw_cross};
+use crate::visualizers::classic::cross::draw_cross;
 
-use crate::math::{self, Cplx};
+use crate::math::Cplx;
 
 static LOCALI: AtomicUsize = AtomicUsize::new(0);
 static WAVE_SCALE_FACTOR: Mutex<f32> = Mutex::new(1.0);
@@ -58,11 +58,9 @@ pub fn draw_vectorscope(prog: &mut crate::Program, stream: &mut crate::AudioBuff
         let y = (sample.y * scale) as i32;
         let amp = (x.abs() + y.abs()) * 3 / 2;
 
-        prog.pix.plot(
-            P2::new(x + width_top_h, y + height_top_h),
-            u32::from_be_bytes([255, to_color(amp, sizei), 255, 64]),
-            Pixel::over,
-        );
+        prog.pix.color(u32::from_be_bytes([255, to_color(amp, sizei), 255, 64]));
+        prog.pix.mixerd();
+        prog.pix.plot(P2::new(x + width_top_h, y + height_top_h));
 
         di += INCREMENT;
     }
@@ -72,128 +70,223 @@ pub fn draw_vectorscope(prog: &mut crate::Program, stream: &mut crate::AudioBuff
     stream.autoslide();
 }
 
+// pub fn draw_oscilloscope(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
+//     let Ok(mut wave_scale_factor) = WAVE_SCALE_FACTOR.try_lock() else {
+//         return;
+//     };
+
+//     let l = stream.input_size() * 2 / 3;
+//     let (width, height) = prog.pix.size().as_tuple();
+//     let width_top_h = width / 2;
+//     let height_top_h = height / 2;
+
+//     let scale = prog.pix.height() as f32 * prog.vol_scl * 0.45;
+
+//     let mut bass_sum = 0.0;
+
+//     let mut i = (-20_isize) as usize;
+
+//     let mut ssmp = stream.get(i);
+//     let mut old = ssmp;
+//     let mut old2 = old;
+
+//     while i != 0 {
+//         ssmp = linearfc(ssmp, stream.get(i), 0.01);
+//         old2 = old;
+//         old = ssmp;
+//         i = i.wrapping_add(1);
+//     }
+
+//     let zeroi = {
+//         let mut zeros = ArrayVec::<usize, 6>::new();
+//         zeros.push(0);
+
+//         for i in 0..l {
+//             let t = stream.get(i);
+//             ssmp = linearfc(ssmp, t, 0.01);
+
+//             if zeros.len() < 5 {
+//                 if old2.x > 0.0 && ssmp.x < 0.0 {
+//                     zeros.push(i);
+//                 }
+//                 if old2.y > 0.0 && ssmp.y < 0.0 {
+//                     zeros.push(i);
+//                 }
+//             }
+
+//             old2 = old;
+//             old = ssmp;
+
+//             bass_sum += ssmp.x.powi(2) + ssmp.y.powi(2);
+//         }
+
+//         zeros[zeros.len() - 1] - 50
+//     };
+
+//     let bass = (bass_sum / l as f32).sqrt();
+
+//     let wsf = bass * 20.0 + 2.0;
+
+//     *wave_scale_factor = math::interpolate::linear_decay(*wave_scale_factor, wsf, 0.5).max(2.0);
+
+//     prog.pix.clear();
+
+//     let wave_scale_factor = *wave_scale_factor as isize;
+
+//     for x in 0..prog.pix.width() as i32 {
+//         let di = (x - width_top_h) as isize * wave_scale_factor + zeroi as isize;
+
+//         let mut smp_max = Cplx::new(-1000.0, -1000.0);
+//         let mut smp_min = Cplx::new(1000.0, 1000.0);
+
+//         for i in di..di + wave_scale_factor {
+//             let smp = stream.get(i as usize);
+
+//             smp_max.x = smp_max.x.max(smp.x);
+//             smp_min.x = smp_min.x.min(smp.x);
+
+//             smp_max.y = smp_max.y.max(smp.y);
+//             smp_min.y = smp_min.y.min(smp.y);
+//         }
+
+//         let y1_max = height_top_h + (smp_max.x * scale) as i32;
+//         let y1_min = height_top_h + (smp_min.x * scale) as i32;
+
+//         let y2_max = height_top_h + (smp_max.y * scale) as i32;
+//         let y2_min = height_top_h + (smp_min.y * scale) as i32;
+
+//         let p1_max = P2::new(x, y1_max);
+//         let p1_min = P2::new(x, y1_min);
+
+//         let p2_max = P2::new(x, y2_max);
+//         let p2_min = P2::new(x, y2_min);
+
+//         prog.pix.line(p1_max, p1_min, 0xFF_55_FF_55, |a, b| a | b);
+//         prog.pix.line(p2_max, p2_min, 0xFF_55_55_FF, |a, b| a | b);
+//     }
+
+//     let mut li = LOCALI.load(Relaxed);
+//     let random = math::rng::random_int(3) as usize;
+
+//     li = (li + random + 3) % prog.pix.width();
+
+//     let rx = width - li as i32 - 1;
+
+//     let width = width as usize;
+//     let height = height as usize;
+
+//     prog.pix.rect_wh(
+//         P2::new(rx, height / 10),
+//         1,
+//         width - height / 4,
+//         CROSS_COL,
+//         Pixel::over,
+//     );
+
+//     prog.pix.rect_wh(
+//         P2::new(rx, height / 2),
+//         width >> 3,
+//         1,
+//         CROSS_COL,
+//         Pixel::over,
+//     );
+
+//     LOCALI.store(li, Relaxed);
+
+//     stream.autoslide();
+// }
+
+
+const BUFFER_SIZE: usize = 1024;
+const PADDING: usize = BUFFER_SIZE;
+const START: usize = BUFFER_SIZE / 2;
+const PRESMOOTH: usize = BUFFER_SIZE / 16;
+const LOWPASS_FACTOR: f32 = 0.01;
+const SHIFTBACK: usize = 50;
+const STORESIZE: usize = 6;
+
 pub fn draw_oscilloscope(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
-    let Ok(mut wave_scale_factor) = WAVE_SCALE_FACTOR.try_lock() else {
-        return;
-    };
+    let mut buffer= [Cplx::zero(); BUFFER_SIZE + PADDING];
+    stream.read(&mut buffer);
 
-    let l = stream.input_size() * 2 / 3;
-    let (width, height) = prog.pix.size().as_tuple();
-    let width_top_h = width / 2;
-    let height_top_h = height / 2;
+    let mut indices = ArrayVec::<usize, STORESIZE>::new();
+    let mut smp1 = Cplx::zero();
+    let mut smp2 = Cplx::zero();
+    let mut smp3 = Cplx::zero();
 
-    let scale = prog.pix.height() as f32 * prog.vol_scl * 0.45;
-
-    let mut bass_sum = 0.0;
-
-    let mut i = (-20_isize) as usize;
-
-    let mut ssmp = stream.get(i);
-    let mut old = ssmp;
-    let mut old2 = old;
-
-    while i != 0 {
-        ssmp = linearfc(ssmp, stream.get(i), 0.01);
-        old2 = old;
-        old = ssmp;
-        i = i.wrapping_add(1);
+    for i in START-PRESMOOTH..START {
+        smp3 = linearfc(smp3, buffer[i], LOWPASS_FACTOR);
+        smp1 = smp2;
+        smp2 = smp3;
     }
 
-    let zeroi = {
-        let mut zeros = ArrayVec::<usize, 6>::new();
-        zeros.push(0);
-
-        for i in 0..l {
-            let t = stream.get(i);
-            ssmp = linearfc(ssmp, t, 0.01);
-
-            if zeros.len() < 5 {
-                if old2.x > 0.0 && ssmp.x < 0.0 {
-                    zeros.push(i);
-                }
-                if old2.y > 0.0 && ssmp.y < 0.0 {
-                    zeros.push(i);
-                }
-            }
-
-            old2 = old;
-            old = ssmp;
-
-            bass_sum += ssmp.x.powi(2) + ssmp.y.powi(2);
+    indices.push(START);
+    for i in START..PADDING + START {
+        if smp1.x >= 0.0 && smp3.x < 0.0 {
+            indices.push(i);
         }
 
-        zeros[zeros.len() - 1] - 50
-    };
+        if indices.is_full() { break }
 
-    let bass = (bass_sum / l as f32).sqrt();
+        if smp1.x >= 0.0 && smp3.x < 0.0 {
+            indices.push(i);
+        }
 
-    let wsf = bass * 10.0 + 2.0;
+        if indices.is_full() { break }
 
-    *wave_scale_factor = math::interpolate::linear_decay(*wave_scale_factor, wsf, 0.5).max(1.0);
+        smp3 = linearfc(smp3, buffer[i], LOWPASS_FACTOR);
+        smp1 = smp2;
+        smp2 = smp3;
+    }
+
+    let indexstart = indices.last().unwrap() - START - SHIFTBACK;
+
+    stream.autoslide();
 
     prog.pix.clear();
 
-    let wave_scale_factor = *wave_scale_factor as isize;
+    let size = prog.pix.size();
 
-    for x in 0..prog.pix.width() as i32 {
-        let di = (x - width_top_h) as isize * wave_scale_factor + zeroi as isize;
+    let center = size.y as f32 * 0.5;
+    let scale = center * 0.7;
+    let w = size.x.max(1) as usize;
 
-        let mut smp_max = Cplx::new(-1000.0, -1000.0);
-        let mut smp_min = Cplx::new(1000.0, 1000.0);
+    let buffer_size_smaller = BUFFER_SIZE as f32 * 0.8;
+    let index_scale = buffer_size_smaller / w as f32;
+    let base = (BUFFER_SIZE as f32 * 0.1) as usize;
 
-        for i in di..di + wave_scale_factor {
-            let smp = stream.get(i as usize);
+    let samplexperpixel = (BUFFER_SIZE + w) / w;
 
-            smp_max.x = smp_max.x.max(smp.x);
-            smp_min.x = smp_min.x.min(smp.x);
+    for x in 0..size.x as usize {
+        let istart = (x as f32 * index_scale) as usize + indexstart + base;
+        let iend = istart + samplexperpixel;
 
-            smp_max.y = smp_max.y.max(smp.y);
-            smp_min.y = smp_min.y.min(smp.y);
+        let mut lmin = 100.0f32;
+        let mut lmax = -100.0f32;
+        let mut rmin = 100.0f32;
+        let mut rmax = -100.0f32;
+
+        for i in istart..iend {
+            let l = buffer[i].x;
+            let r = buffer[i].y;
+
+            lmin = lmin.min(l);
+            lmax = lmax.max(l);
+
+            rmin = rmin.min(r);
+            rmax = rmax.max(r);
         }
 
-        let y1_max = height_top_h + (smp_max.x * scale) as i32;
-        let y1_min = height_top_h + (smp_min.x * scale) as i32;
+        lmin = lmin * scale + center;
+        lmax = lmax * scale + center;
 
-        let y2_max = height_top_h + (smp_max.y * scale) as i32;
-        let y2_min = height_top_h + (smp_min.y * scale) as i32;
+        rmin = rmin * scale + center;
+        rmax = rmax * scale + center;
 
-        let p1_max = P2::new(x, y1_max);
-        let p1_min = P2::new(x, y1_min);
-
-        let p2_max = P2::new(x, y2_max);
-        let p2_min = P2::new(x, y2_min);
-
-        prog.pix.line(p1_max, p1_min, 0xFF_55_FF_55, |a, b| a | b);
-        prog.pix.line(p2_max, p2_min, 0xFF_55_55_FF, |a, b| a | b);
+        prog.pix.mixer(|a, b| a | b);
+        prog.pix.color(u32::compose([255, 0,  55, 255]));
+        prog.pix.rect(P2::new(x, lmin as i32), 1, (lmax - lmin) as usize);
+        prog.pix.color(u32::compose([255, 0, 255, 55]));
+        prog.pix.rect(P2::new(x, rmin as i32), 1, (rmax - rmin) as usize);
     }
-
-    let mut li = LOCALI.load(Relaxed);
-    let random = math::rng::random_int(3) as usize;
-
-    li = (li + random + 3) % prog.pix.width();
-
-    let rx = width - li as i32 - 1;
-
-    let width = width as usize;
-    let height = height as usize;
-
-    prog.pix.rect_wh(
-        P2::new(rx, height / 10),
-        1,
-        width - height / 4,
-        CROSS_COL,
-        Pixel::over,
-    );
-
-    prog.pix.rect_wh(
-        P2::new(rx, height / 2),
-        width >> 3,
-        1,
-        CROSS_COL,
-        Pixel::over,
-    );
-
-    LOCALI.store(li, Relaxed);
-
-    stream.autoslide();
 }
