@@ -25,7 +25,9 @@ pub struct AudioBuffer {
 
     silent: u8,
 
-    max: f32
+    max: f32,
+
+    communicator: Option<ForeignAudioCommunicator>,
 }
 
 impl AudioBuffer {
@@ -45,6 +47,8 @@ impl AudioBuffer {
             silent: 0,
 
             max: 0.0,
+
+            communicator: None
         }
     }
 
