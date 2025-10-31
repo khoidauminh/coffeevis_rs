@@ -32,7 +32,7 @@ pub fn draw_vectorscope(prog: &mut crate::Program, stream: &mut crate::AudioBuff
     let sizei = size;
     let scale = size as f32 * prog.vol_scl * 0.5;
 
-    let (width, height) = prog.pix.size().as_tuple();
+    let P2(width, height) = prog.pix.size();
 
     let width_top_h = width >> 1;
     let height_top_h = height >> 1;
@@ -44,23 +44,23 @@ pub fn draw_vectorscope(prog: &mut crate::Program, stream: &mut crate::AudioBuff
     let mut smoothed_sample = MovingAverage::<_, SMOOTH_SIZE>::init(Cplx::zero());
 
     for _ in 0..SMOOTH_SIZE {
-        let sample = Cplx::new(stream.get(di).x, stream.get(di + PHASE_OFFSET).y);
+        let sample = Cplx::new(stream.get(di).0, stream.get(di + PHASE_OFFSET).1);
         _ = smoothed_sample.update(sample);
         di += INCREMENT;
     }
 
     while di < range {
-        let sample = Cplx::new(stream.get(di).x, stream.get(di + PHASE_OFFSET).y);
+        let sample = Cplx::new(stream.get(di).0, stream.get(di + PHASE_OFFSET).1);
 
         let sample = smoothed_sample.update(sample);
 
-        let x = (sample.x * scale) as i32;
-        let y = (sample.y * scale) as i32;
+        let x = (sample.0 * scale) as i32;
+        let y = (sample.1 * scale) as i32;
         let amp = (x.abs() + y.abs()) * 3 / 2;
 
         prog.pix.color(u32::from_be_bytes([255, to_color(amp, sizei), 255, 64]));
         prog.pix.mixerd();
-        prog.pix.plot(P2::new(x + width_top_h, y + height_top_h));
+        prog.pix.plot(P2(x + width_top_h, y + height_top_h));
 
         di += INCREMENT;
     }
@@ -106,10 +106,10 @@ pub fn draw_vectorscope(prog: &mut crate::Program, stream: &mut crate::AudioBuff
 //             ssmp = linearfc(ssmp, t, 0.01);
 
 //             if zeros.len() < 5 {
-//                 if old2.x > 0.0 && ssmp.x < 0.0 {
+//                 if old2.0 > 0.0 && ssmp.0 < 0.0 {
 //                     zeros.push(i);
 //                 }
-//                 if old2.y > 0.0 && ssmp.y < 0.0 {
+//                 if old2.1 > 0.0 && ssmp.1 < 0.0 {
 //                     zeros.push(i);
 //                 }
 //             }
@@ -117,7 +117,7 @@ pub fn draw_vectorscope(prog: &mut crate::Program, stream: &mut crate::AudioBuff
 //             old2 = old;
 //             old = ssmp;
 
-//             bass_sum += ssmp.x.powi(2) + ssmp.y.powi(2);
+//             bass_sum += ssmp.0.powi(2) + ssmp.1.powi(2);
 //         }
 
 //         zeros[zeros.len() - 1] - 50
@@ -142,18 +142,18 @@ pub fn draw_vectorscope(prog: &mut crate::Program, stream: &mut crate::AudioBuff
 //         for i in di..di + wave_scale_factor {
 //             let smp = stream.get(i as usize);
 
-//             smp_max.x = smp_max.x.max(smp.x);
-//             smp_min.x = smp_min.x.min(smp.x);
+//             smp_max.0 = smp_max.0.max(smp.0);
+//             smp_min.0 = smp_min.0.min(smp.0);
 
-//             smp_max.y = smp_max.y.max(smp.y);
-//             smp_min.y = smp_min.y.min(smp.y);
+//             smp_max.1 = smp_max.1.max(smp.1);
+//             smp_min.1 = smp_min.1.min(smp.1);
 //         }
 
-//         let y1_max = height_top_h + (smp_max.x * scale) as i32;
-//         let y1_min = height_top_h + (smp_min.x * scale) as i32;
+//         let y1_max = height_top_h + (smp_max.0 * scale) as i32;
+//         let y1_min = height_top_h + (smp_min.0 * scale) as i32;
 
-//         let y2_max = height_top_h + (smp_max.y * scale) as i32;
-//         let y2_min = height_top_h + (smp_min.y * scale) as i32;
+//         let y2_max = height_top_h + (smp_max.1 * scale) as i32;
+//         let y2_min = height_top_h + (smp_min.1 * scale) as i32;
 
 //         let p1_max = P2::new(x, y1_max);
 //         let p1_min = P2::new(x, y1_min);
@@ -222,13 +222,13 @@ pub fn draw_oscilloscope(prog: &mut crate::Program, stream: &mut crate::AudioBuf
 
     indices.push(START);
     for i in START..PADDING + START {
-        if smp1.x >= 0.0 && smp3.x < 0.0 {
+        if smp1.0 >= 0.0 && smp3.0 < 0.0 {
             indices.push(i);
         }
 
         if indices.is_full() { break }
 
-        if smp1.x >= 0.0 && smp3.x < 0.0 {
+        if smp1.0 >= 0.0 && smp3.0 < 0.0 {
             indices.push(i);
         }
 
@@ -247,9 +247,9 @@ pub fn draw_oscilloscope(prog: &mut crate::Program, stream: &mut crate::AudioBuf
 
     let size = prog.pix.size();
 
-    let center = size.y as f32 * 0.5;
+    let center = size.1 as f32 * 0.5;
     let scale = center * 0.7;
-    let w = size.x.max(1) as usize;
+    let w = size.0.max(1) as usize;
 
     let buffer_size_smaller = BUFFER_SIZE as f32 * 0.8;
     let index_scale = buffer_size_smaller / w as f32;
@@ -257,7 +257,7 @@ pub fn draw_oscilloscope(prog: &mut crate::Program, stream: &mut crate::AudioBuf
 
     let samplexperpixel = (BUFFER_SIZE + w) / w;
 
-    for x in 0..size.x as usize {
+    for x in 0..size.0 as usize {
         let istart = (x as f32 * index_scale) as usize + indexstart + base;
         let iend = istart + samplexperpixel;
 
@@ -267,8 +267,8 @@ pub fn draw_oscilloscope(prog: &mut crate::Program, stream: &mut crate::AudioBuf
         let mut rmax = -100.0f32;
 
         for i in istart..iend {
-            let l = buffer[i].x;
-            let r = buffer[i].y;
+            let l = buffer[i].0;
+            let r = buffer[i].1;
 
             lmin = lmin.min(l);
             lmax = lmax.max(l);
@@ -285,8 +285,8 @@ pub fn draw_oscilloscope(prog: &mut crate::Program, stream: &mut crate::AudioBuf
 
         prog.pix.mixer(|a, b| a | b);
         prog.pix.color(u32::compose([255, 0,  55, 255]));
-        prog.pix.rect(P2::new(x, lmin as i32), 1, (lmax - lmin) as usize);
+        prog.pix.rect(P2(x as i32, lmin as i32), 1, (lmax - lmin) as usize);
         prog.pix.color(u32::compose([255, 0, 255, 55]));
-        prog.pix.rect(P2::new(x, rmin as i32), 1, (rmax - rmin) as usize);
+        prog.pix.rect(P2(x as i32, rmin as i32), 1, (rmax - rmin) as usize);
     }
 }

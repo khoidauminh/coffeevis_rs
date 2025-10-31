@@ -82,7 +82,7 @@ pub fn draw_shaky(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
     prog.pix.color(u32::compose([0xFF, red, green, blue]));
     prog.pix.mixerm();
     prog.pix.rect(
-        crate::graphics::P2::new(final_x + width / 2 - 1, final_y + height / 2 - 1),
+        crate::graphics::P2(final_x + width / 2 - 1, final_y + height / 2 - 1),
         3,
         3,
     );

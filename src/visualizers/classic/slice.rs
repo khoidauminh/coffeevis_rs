@@ -64,7 +64,7 @@ pub fn draw_slice(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
         let x = o.cos() * big_radius_f;
         let y = o.sin() * big_radius_f;
 
-        let p = P2::new(center.x + x as i32, center.y + y as i32);
+        let p = P2(center.0 + x as i32, center.1 + y as i32);
 
         prog.pix.color(color);
         prog.pix.mixer(blend);

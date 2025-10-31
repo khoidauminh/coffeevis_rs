@@ -5,8 +5,8 @@ use super::{P2, Pixel};
 const COMMAND_BUFFER_INIT_CAPACITY: usize = super::MAX_WIDTH as usize;
 
 pub fn get_idx_fast(cwidth: usize, p: P2) -> usize {
-    let x = p.x.cast_unsigned();
-    let y = p.y.cast_unsigned();
+    let x = p.0.cast_unsigned();
+    let y = p.1.cast_unsigned();
     y.wrapping_mul(cwidth as u32).wrapping_add(x) as usize
 }
 
@@ -23,9 +23,9 @@ impl PixelBuffer {
     }
 
     pub fn rect_xy(&mut self, ps: P2, pe: P2) {
-        let [xs, ys] = [ps.x as usize, ps.y as usize];
+        let [xs, ys] = [ps.0 as usize, ps.1 as usize];
 
-        let [xe, ye] = [pe.x as usize, pe.y as usize];
+        let [xe, ye] = [pe.0 as usize, pe.1 as usize];
 
         let xe = xe.min(self.width);
 
@@ -49,9 +49,9 @@ impl PixelBuffer {
     }
 
     pub fn rect(&mut self, ps: P2, w: usize, h: usize) {
-        let pe = P2::new(
-            ps.x.wrapping_add(w as i32),
-            ps.y.wrapping_add(h as i32).wrapping_sub(1),
+        let pe = P2(
+            ps.0.wrapping_add(w as i32),
+            ps.1.wrapping_add(h as i32).wrapping_sub(1),
         );
 
         self.rect_xy(ps, pe);
@@ -59,10 +59,10 @@ impl PixelBuffer {
 
     // Using Bresenham's line algorithm.
     pub fn line(&mut self, ps: P2, pe: P2) {
-        let dx = (pe.x - ps.x).abs();
-        let sx = if ps.x < pe.x { 1 } else { -1 };
-        let dy = -(pe.y - ps.y).abs();
-        let sy = if ps.y < pe.y { 1 } else { -1 };
+        let dx = (pe.0 - ps.0).abs();
+        let sx = if ps.0 < pe.0 { 1 } else { -1 };
+        let dy = -(pe.1 - ps.1).abs();
+        let sy = if ps.1 < pe.1 { 1 } else { -1 };
         let mut error = dx + dy;
 
         let mut p = ps;
@@ -70,26 +70,26 @@ impl PixelBuffer {
         loop {
             self.plot(p);
 
-            if p.x == pe.x && p.y == pe.y {
+            if p.0 == pe.0 && p.1 == pe.1 {
                 return;
             }
 
             let e2 = error * 2;
 
             if e2 >= dy {
-                if p.x == pe.x {
+                if p.0 == pe.0 {
                     return;
                 }
                 error += dy;
-                p.x += sx;
+                p.0 += sx;
             }
 
             if e2 <= dx {
-                if p.y == pe.y {
+                if p.1 == pe.1 {
                     return;
                 }
                 error += dx;
-                p.y += sy;
+                p.1 += sy;
             }
         }
     }
@@ -118,14 +118,14 @@ impl PixelBuffer {
                         return;
                     };
 
-                    let ps = P2::new(center.x + c1.0, center.y + c1.1);
-                    let pe = P2::new(center.x + c2.0, center.y + c2.1);
+                    let ps = P2(center.0 + c1.0, center.1 + c1.1);
+                    let pe = P2(center.0 + c2.0, center.1 + c2.1);
 
                     self.rect_xy(ps, pe);
                 });
             } else {
                 coords.iter().for_each(|c| {
-                    self.plot(P2::new(center.x + c.0, center.y + c.1));
+                    self.plot(P2(center.0 + c.0, center.1 + c.1));
                 });
             }
         };
@@ -152,14 +152,14 @@ impl PixelBuffer {
         let canvas_iter = self
             .buffer
             .chunks_exact_mut(self.width)
-            .skip(pix_pos.y.max(0) as usize);
+            .skip(pix_pos.1.max(0) as usize);
 
         let pix_iter = pix_vec
             .chunks_exact(pix_width)
-            .skip((-pix_pos.y.min(0)) as usize);
+            .skip((-pix_pos.1.min(0)) as usize);
 
-        let dest_x = pix_pos.x.max(0) as usize;
-        let src_x = (-pix_pos.x.min(0)) as usize;
+        let dest_x = pix_pos.0.max(0) as usize;
+        let src_x = (-pix_pos.0.min(0)) as usize;
 
         for (line_dest, line_src) in canvas_iter.zip(pix_iter) {
             let line_iter = line_dest.iter_mut().skip(dest_x).take(pix_width);

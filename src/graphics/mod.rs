@@ -3,7 +3,6 @@ pub mod blend;
 pub mod draw;
 
 use crate::data::MAX_WIDTH;
-use crate::math::Vec2;
 use blend::Mixer;
 
 const FIELD_START: usize = 64;
@@ -78,7 +77,14 @@ pub struct PixelBuffer {
     is_running_foreign: bool,
 }
 
-pub(crate) type P2 = crate::math::Vec2<i32>;
+#[derive(Debug, Clone, Copy)]
+pub struct P2(pub i32, pub i32);
+
+impl P2 {
+    pub fn center(self) -> P2 {
+        P2(self.0 / 2, self.1 / 2)
+    }
+}
 
 impl PixelBuffer {
     pub fn new(w: usize, h: usize) -> Self {
@@ -134,14 +140,11 @@ impl PixelBuffer {
     }
 
     pub fn size(&self) -> P2 {
-        P2::new(self.width as i32, self.height as i32)
+        P2(self.width as i32, self.height as i32)
     }
 
-    pub fn sizeu(&self) -> Vec2<usize> {
-        Vec2::<usize> {
-            x: self.width as usize,
-            y: self.height as usize,
-        }
+    pub fn sizeu(&self) -> (usize, usize) {
+        (self.width as usize, self.height as usize)
     }
 
     pub fn sizel(&self) -> usize {
@@ -166,12 +169,12 @@ impl PixelBuffer {
     }
 
     pub fn is_in_bound(&self, p: P2) -> bool {
-        (p.x as usize) < self.width && (p.y as usize) < self.height
+        (p.0 as usize) < self.width && (p.1 as usize) < self.height
     }
 
     pub fn get_idx_fast(&self, p: P2) -> usize {
-        let x = p.x as Argb;
-        let y = p.y as Argb;
+        let x = p.0 as Argb;
+        let y = p.1 as Argb;
 
         y.wrapping_mul(self.width as Argb).wrapping_add(x) as usize
     }

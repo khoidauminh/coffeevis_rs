@@ -60,7 +60,7 @@ impl WaveletTable {
 
                 canvas.color(color);
                 canvas.mixerm();
-                canvas.plot(P2::new(canvas_x as i32, canvas_y as i32));
+                canvas.plot(P2(canvas_x as i32, canvas_y as i32));
             }
         }
     }
@@ -96,8 +96,8 @@ pub fn draw_wavelet(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) 
 
             let smp = wavelet_xy_interpolated(&w, Cplx::new(xt, yt), WT_POWER);
 
-            let r = crate::math::squish(smp.x, 0.25, 255.9) as u8;
-            let b = crate::math::squish(smp.y, 0.25, 255.9) as u8;
+            let r = crate::math::squish(smp.0, 0.25, 255.9) as u8;
+            let b = crate::math::squish(smp.1, 0.25, 255.9) as u8;
             let g = ((r as u16 + b as u16) / 2) as u8;
 
             let pi = y * pw + x;
@@ -156,10 +156,10 @@ fn wavelet_xy_interpolated(w: &[Cplx], p: Cplx, pow: usize) -> Cplx {
         iy + ix
     };
 
-    let y = p.y * pf / lf;
+    let y = p.1 * pf / lf;
 
-    let i0 = idx(p.x, y.floor());
-    let i2 = idx(p.x, y.ceil());
+    let i0 = idx(p.0, y.floor());
+    let i2 = idx(p.0, y.ceil());
 
     let i1 = i0.ceil();
     let i3 = i2.ceil();

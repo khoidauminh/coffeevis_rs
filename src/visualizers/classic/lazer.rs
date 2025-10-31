@@ -7,8 +7,8 @@ struct LocalData {
 }
 
 static DATA: std::sync::Mutex<LocalData> = std::sync::Mutex::new(LocalData {
-    p0: Cplx { x: 1.0, y: 1.0 },
-    p1: Cplx { x: 1.0, y: 1.0 },
+    p0: Cplx(1.0, 1.0),
+    p1: Cplx(1.0, 1.0),
 });
 
 pub fn draw_lazer(para: &mut crate::Program, stream: &mut crate::AudioBuffer) {
@@ -24,32 +24,32 @@ pub fn draw_lazer(para: &mut crate::Program, stream: &mut crate::AudioBuffer) {
         let mut smooth = 0.0;
 
         for i in left {
-            smooth = linearf(smooth, stream.get(i).x, 0.1);
-            sum.x += smooth;
+            smooth = linearf(smooth, stream.get(i).0, 0.1);
+            sum.0 += smooth;
         }
 
         let mut smooth = 0.0;
 
         for i in right {
-            smooth = linearf(smooth, stream.get(i).y, 0.1);
-            sum.y += smooth;
+            smooth = linearf(smooth, stream.get(i).1, 0.1);
+            sum.1 += smooth;
         }
 
-        Cplx::new(sum.x * para.vol_scl * 0.0035, sum.y * para.vol_scl * 0.0035)
+        Cplx(sum.0 * para.vol_scl * 0.0035, sum.1 * para.vol_scl * 0.0035)
     };
 
     let mut local = DATA.lock().unwrap();
 
     a *= local.p0;
 
-    local.p0.x = (local.p0.x + a.x + w) % w;
-    local.p0.y = (local.p0.y + a.y + h) % h;
+    local.p0.0 = (local.p0.0 + a.0 + w) % w;
+    local.p0.1 = (local.p0.1 + a.1 + h) % h;
 
     let color = u32::from_be_bytes([
         0xff,
-        (48.0 + local.p0.x * 255.0 / w).min(255.0) as u8,
-        (48.0 + local.p0.y * 255.0 / h).min(255.0) as u8,
-        ((255.0 - a.x * a.y * 2.0).abs().min(255.0)) as u8,
+        (48.0 + local.p0.0 * 255.0 / w).min(255.0) as u8,
+        (48.0 + local.p0.1 * 255.0 / h).min(255.0) as u8,
+        ((255.0 - a.0 * a.1 * 2.0).abs().min(255.0)) as u8,
     ]);
 
     para.pix.fade(3);

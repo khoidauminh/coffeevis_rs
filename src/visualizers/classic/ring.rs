@@ -25,8 +25,8 @@ pub fn draw_ring(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
 
         let p = (smp * Cplx::new(prog.vol_scl * 0.65, 0.0) + Cplx::new(0.4, 0.4))
             * crate::math::cos_sin(di as f32 * rate);
-        let x = (p.x * size as f32) as i32;
-        let y = (p.y * size as f32) as i32;
+        let x = (p.0 * size as f32) as i32;
+        let y = (p.1 * size as f32) as i32;
 
         let int = (smp.l1_norm() * 128.0) as u8;
 
@@ -37,7 +37,7 @@ pub fn draw_ring(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
                 ((128 + y.abs() * 64 / size) as u8).saturating_add(int),
             ]));
         prog.pix.mixerd();
-        prog.pix.plot(P2::new(x / 2 + width_top_h, y / 2 + height_top_h));
+        prog.pix.plot(P2(x / 2 + width_top_h, y / 2 + height_top_h));
     }
 
     stream.autoslide();

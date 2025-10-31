@@ -15,7 +15,7 @@ const SMOOTHING: f32 = 0.91;
 type LocalType = [Cplx; RANGE + 1];
 
 fn l1_norm_slide(a: Cplx, t: f32) -> f32 {
-    a.x.abs() * t + a.y.abs() * (1.0 - t)
+    a.0.abs() * t + a.1.abs() * (1.0 - t)
 }
 
 fn index_scale(x: f32) -> f32 {
@@ -40,8 +40,8 @@ fn prepare(stream: &mut crate::AudioBuffer, local: &mut LocalType) {
     crate::audio::limiter(&mut fft[0..RANGE], 0.0, 0.90, |x| x.max());
 
     local.iter_mut().zip(fft.iter()).for_each(|(smp, si)| {
-        smp.x = decay(smp.x, si.x.abs(), SMOOTHING);
-        smp.y = decay(smp.y, si.y.abs(), SMOOTHING);
+        smp.0 = decay(smp.0, si.0.abs(), SMOOTHING);
+        smp.1 = decay(smp.1, si.1.abs(), SMOOTHING);
     });
 
     stream.autoslide();
@@ -57,7 +57,7 @@ pub fn draw_spectrum(prog: &mut crate::Program, stream: &mut crate::AudioBuffer)
     prepare(stream, &mut local);
 
     let _l = stream.len();
-    let (w, h) = prog.pix.size().as_tuple();
+    let P2(w, h) = prog.pix.size();
     let winwh = w >> 1;
 
     let wf = w as f32;
@@ -79,8 +79,8 @@ pub fn draw_spectrum(prog: &mut crate::Program, stream: &mut crate::AudioBuffer)
         let sfloor = local[ifloor];
         let sceil = local[iceil];
 
-        let sl = smooth_step(sfloor.x, sceil.x, ti);
-        let sr = smooth_step(sfloor.y, sceil.y, ti);
+        let sl = smooth_step(sfloor.0, sceil.0, ti);
+        let sr = smooth_step(sfloor.1, sceil.1, ti);
     
         let sl = sl.powf(1.3) * whf;
         let sr = sr.powf(1.3) * whf;
@@ -97,20 +97,19 @@ pub fn draw_spectrum(prog: &mut crate::Program, stream: &mut crate::AudioBuffer)
 
         let ry = h - y;
       
-        let rect_l = P2::new((whf - sl) as i32, ry);
-        let rect_r = P2::new((whf + sr) as i32, ry);
-
-        let middle = P2::new(winwh + 1, h - y);
+        let rect_l = P2((whf - sl) as i32, ry);
+        let rect_r = P2((whf + sr) as i32, ry);
+        let middle = P2(winwh + 1, h - y);
 
         prog.pix.color(color);
         prog.pix.rect_xy(rect_l, middle);
         prog.pix.rect_xy(middle, rect_r);
 
         let s = stream.get((h - y) as usize);
-        let c1 = if s.x > 0.0 { 255 } else { 0 };
-        let c2 = if s.y > 0.0 { 255 } else { 0 };
+        let c1 = if s.0 > 0.0 { 255 } else { 0 };
+        let c2 = if s.1 > 0.0 { 255 } else { 0 };
 
         prog.pix.color(u32::from_be_bytes([255, c1, 0, c2]));
-        prog.pix.rect(P2::new(winwh - 1, ry), 2, 1);
+        prog.pix.rect(P2(winwh - 1, ry), 2, 1);
     }
 }

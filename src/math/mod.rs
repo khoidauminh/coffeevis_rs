@@ -1,7 +1,7 @@
 pub mod fast;
 mod fft;
 pub mod rng;
-mod vec2;
+mod cplx;
 
 use std::ops;
 
@@ -12,12 +12,7 @@ pub enum Normalize {
 }
 
 #[derive(Copy, Clone, Debug)]
-pub struct Vec2<T> {
-    pub x: T,
-    pub y: T,
-}
-
-pub type Cplx = Vec2<f32>;
+pub struct Cplx(pub f32, pub f32);
 
 pub trait ToUsize<T> {
     fn new(value: T) -> Self;

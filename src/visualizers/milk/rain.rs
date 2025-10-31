@@ -37,10 +37,10 @@ impl Thunder {
     pub fn generate(seed: u32, canvas_width: i32) -> Self {
         use crate::math::rng::FastU32;
 
-        let mut segs = [P2::new(0, 0); MAX_THUNDER_SEGMENTS];
+        let mut segs = [P2(0, 0); MAX_THUNDER_SEGMENTS];
         let mut rng = FastU32::new(seed);
 
-        let mut location = P2::new(40, 0);
+        let mut location = P2(40, 0);
 
         segs[0] = location;
 
@@ -51,8 +51,8 @@ impl Thunder {
             let dx = Self::DX_MAP[ix];
             let dy = Self::DY_MAP[iy];
 
-            location.x += dx;
-            location.y += dy;
+            location.0 += dx;
+            location.1 += dy;
 
             segs[i] = location;
         }
@@ -77,12 +77,9 @@ impl RainDrop {
         Self {
             color,
             length,
-            bound_width: size.x as u16,
-            bound_height: size.y as u16 + length,
-            position: Cplx {
-                x: 0.0,
-                y: f32::MAX,
-            },
+            bound_width: size.0 as u16,
+            bound_height: size.1 as u16 + length,
+            position: Cplx(0.0, f32::MAX),
             fall_amount: fall,
         }
     }
@@ -91,24 +88,24 @@ impl RainDrop {
         let wf = self.bound_width as f32;
         let hf = self.bound_height as f32;
         let r = random_float(wf);
-        self.position.x = r;
+        self.position.0 = r;
         self.fall_amount = 0.5 + random_int(128) as f32 * 0.02;
-        self.position.y = -hf - random_float(hf);
+        self.position.1 = -hf - random_float(hf);
     }
 
     pub fn set_bound(&mut self, size: P2) {
-        self.bound_width = size.x as u16;
-        self.bound_height = size.y as u16;
+        self.bound_width = size.0 as u16;
+        self.bound_height = size.1 as u16;
     }
 
     pub fn is_bounds_match(&self, size: P2) -> bool {
-        self.bound_width == size.x as u16 && self.bound_height == size.y as u16
+        self.bound_width == size.0 as u16 && self.bound_height == size.1 as u16
     }
 
     pub fn fall(&mut self, factor: f32) -> bool {
-        self.position.y += self.fall_amount * factor;
+        self.position.1 += self.fall_amount * factor;
 
-        (self.position.y as u16) < self.bound_height
+        (self.position.1 as u16) < self.bound_height
     }
 
     pub fn draw(&mut self, canvas: &mut PixelBuffer) {
@@ -117,18 +114,18 @@ impl RainDrop {
 
         let mut current_length = self.length;
 
-        if self.position.x as usize >= _w {
+        if self.position.0 as usize >= _w {
             return;
         }
         let mut p = self.position.to_p2();
 
-        while current_length > 0 && p.y >= 0 {
+        while current_length > 0 && p.1 >= 0 {
             let fade = current_length * 255 / self.length;
             let fade = fade as u8;
             canvas.color(self.color.set_alpha(fade));
             canvas.mixerm();
             canvas.plot(p);
-            p.y -= 1;
+            p.1 -= 1;
             current_length -= 1;
         }
     }
@@ -136,10 +133,7 @@ impl RainDrop {
 
 const NUM_OF_DROPS: usize = 64;
 
-const DEFAULT_BOUND: P2 = P2 {
-    x: DEFAULT_SIZE_WIN as i32,
-    y: DEFAULT_SIZE_WIN as i32,
-};
+const DEFAULT_BOUND: P2 = P2(DEFAULT_SIZE_WIN as i32, DEFAULT_SIZE_WIN as i32);
 
 // static mut drop: RainDrop = RainDrop::new(0xFF_FF_FF_FF, 8, 0.2, DEFAULT_SIZE_WIN as usize, DEFAULT_SIZE_WIN as usize);
 
@@ -195,7 +189,7 @@ pub fn draw(prog: &mut Program, stream: &mut AudioBuffer) {
         }
     }
 
-    Thunder::generate(crate::math::rng::random_int(1000), size.x).draw(&mut prog.pix, 255);
+    Thunder::generate(crate::math::rng::random_int(1000), size.0).draw(&mut prog.pix, 255);
 
     stream.autoslide();
 }

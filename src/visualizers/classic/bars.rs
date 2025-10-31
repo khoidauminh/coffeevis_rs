@@ -81,7 +81,7 @@ fn prepare(
         .enumerate()
         .for_each(|(i, (w, r))| {
             let i_ = (i + 1) as f32 * bnf;
-            let accel = (0.99 - 0.055 * i_) * prog_smoothing;
+            let accel = (0.99 - 0.015 * i_) * prog_smoothing;
             *w = math::interpolate::decay(*w, *r, accel);
         });
 
@@ -102,7 +102,7 @@ pub fn draw_bars(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
 
     prog.pix.clear();
     let size = prog.pix.sizeu();
-    let sizef = Cplx::new(prog.pix.width() as f32, prog.pix.height() as f32);
+    let sizef = Cplx(prog.pix.width() as f32, prog.pix.height() as f32);
 
     let _bnfh = bnf * 0.5;
 
@@ -135,19 +135,19 @@ pub fn draw_bars(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
 
         let idx = idx - 1;
 
-        let bar = smoothed_smp * sizef.y;
+        let bar = smoothed_smp * sizef.1;
 
         let bar = (bar as usize).clamp(1, prog.pix.height());
 
-        let fade = (128.0 + stream.get(idx * 3 / 2).x * 256.0) as u8;
+        let fade = (128.0 + stream.get(idx * 3 / 2).0 * 256.0) as u8;
         let peak = (bar * 255 / prog.pix.height()) as u8;
         let _red = (fade.wrapping_mul(2) / 3).saturating_add(128).max(peak);
 
         prog.pix.color(u32::from_be_bytes([0xFF, 0xFF, (fade).max(peak), 0]));
         prog.pix.rect(
-            P2::new(
-                (size.x * idx / bar_num) as i32,
-                (size.y - bar.min(size.y - 1)) as i32,
+            P2(
+                (size.0 * idx / bar_num) as i32,
+                (size.1 - bar.min(size.1 - 1)) as i32,
             ),
             2,
             bar,
@@ -198,18 +198,18 @@ pub fn draw_bars_circle(prog: &mut crate::Program, stream: &mut crate::AudioBuff
         let bar = math::interpolate::linearf(local.data[i], local.data[i_next], t) * sizef;
         let bar = bar * 0.7;
 
-        let p1 = P2::new(
-            wh + (sizef * angle.x) as i32 / 2,
-            hh + (sizef * angle.y) as i32 / 2,
+        let p1 = P2(
+            wh + (sizef * angle.0) as i32 / 2,
+            hh + (sizef * angle.1) as i32 / 2,
         );
-        let p2 = P2::new(
-            wh + ((sizef - bar) * angle.x) as i32 / 2,
-            hh + ((sizef - bar) * angle.y) as i32 / 2,
+        let p2 = P2(
+            wh + ((sizef - bar) * angle.0) as i32 / 2,
+            hh + ((sizef - bar) * angle.1) as i32 / 2,
         );
 
         let _i2 = i << 2;
 
-        let pulse = (stream.get(i * 3 / 2).x * 32768.0) as u8;
+        let pulse = (stream.get(i * 3 / 2).0 * 32768.0) as u8;
         let peak = (bar as i32 * 255 / size).min(255) as u8;
 
         let r: u8 = 0;
