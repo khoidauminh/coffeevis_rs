@@ -83,9 +83,12 @@ impl AudioBuffer {
 
         self.max = decay(self.max, max, 0.99);
 
-        if self.max < 0.0001 || self.max >= 1.0 {
+        if self.max < 0.0001 {
+            self.silent = self.silent.saturating_add(1);
             return
         }
+
+        self.silent = 0;
         
         let scale: f32 = 1.0 / self.max.max(0.001);
 
