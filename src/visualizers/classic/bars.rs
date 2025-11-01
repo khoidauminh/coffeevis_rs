@@ -63,7 +63,7 @@ fn prepare(
         .zip(data_c.iter())
         .enumerate()
         .for_each(|(i, (smp, cplx))| {
-            let scl = ((i + 2) as f32).log2().powi(2);
+            let scl = ((i + 1) as f32).log2().powi(2);
             let smp_f32: f32 = cplx.mag();
 
             *smp = smp_f32 * volume_scale * scl * norm;
@@ -82,7 +82,7 @@ fn prepare(
         .enumerate()
         .for_each(|(i, (w, r))| {
             let i_ = (i + 1) as f32 * bnf;
-            let accel = (0.99 - 0.015 * i_) * prog_smoothing;
+            let accel = (0.99 + 0.005 * i_) * prog_smoothing;
             *w = math::interpolate::decay(*w, *r, accel);
         })
     );
