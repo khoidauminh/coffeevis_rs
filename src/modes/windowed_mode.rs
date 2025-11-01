@@ -1,7 +1,8 @@
 use softbuffer::{Context, Surface};
 
-use crate::data::gen_const::{ICON_BUFFER, ICON_HEIGHT, ICON_WIDTH};
 use crate::data::log::{alert, error, info};
+
+use qoi;
 
 use winit::{
     application::ApplicationHandler,
@@ -26,12 +27,30 @@ use std::{
     num::NonZeroU32,
     sync::mpsc::{self, SyncSender},
     thread::{self, JoinHandle},
+    cell::LazyCell,
     time::Duration,
 };
 
 use crate::{audio::get_no_sample, data::*};
 
 type WindowSurface = Surface<&'static Window, &'static Window>;
+
+const ICON_FILE: &'static [u8] = include_bytes!("../../assets/coffeevis_icon_128x128.qoi");
+
+thread_local! {
+    static ICON: LazyCell<(u32, u32, Vec<u8>)> = LazyCell::new(|| {
+        use qoi::{Decoder, Header};
+
+        let mut icon = Decoder::new(ICON_FILE)
+            .map(|i| i.with_channels(qoi::Channels::Rgba))
+            .ok()
+            .unwrap();
+
+        let &Header { width, height, .. } = icon.header();
+
+        (width, height, icon.decode_to_vec().unwrap())
+    });
+}
 
 pub struct WindowProps {
     pub width: u16,
@@ -76,9 +95,14 @@ impl ApplicationHandler for WindowState {
 
         let de = std::env::var("XDG_CURRENT_DESKTOP").unwrap_or_default();
 
-        let icon = Icon::from_rgba(ICON_BUFFER.to_vec(), ICON_WIDTH, ICON_HEIGHT)
-            .inspect_err(|_| error!("Failed to create window icon."))
-            .ok();
+        let icon = 
+        
+        ICON.with(|icon|
+            Icon::from_rgba(icon.2.to_vec(), icon.0, icon.1)
+                .inspect_err(|_| error!("Failed to create window icon."))
+                .ok()
+        );
+
 
         let window_attributes = Window::default_attributes()
             .with_title("cvis")

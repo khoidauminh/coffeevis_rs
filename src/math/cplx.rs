@@ -3,6 +3,12 @@ use std::ops::*;
 use super::Cplx;
 use crate::graphics::P2;
 
+impl std::default::Default for Cplx {
+    fn default() -> Self {
+        return Self(0.0, 0.0)
+    }   
+}
+
 impl Neg for Cplx {
     type Output = Cplx;
     fn neg(self) -> Cplx {

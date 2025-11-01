@@ -1,4 +1,6 @@
-use crate::data::gen_const::TWIDDLE_MAP;
+// use crate::data::gen_const::TWIDDLE_MAP;
+
+use std::cell::LazyCell;
 
 use super::Cplx;
 
@@ -10,6 +12,28 @@ pub fn butterfly<T>(a: &mut [T], power: u32) {
             a.swap(ni, i)
         }
     }
+}
+
+thread_local! {
+    static TWIDDLE_MAP: LazyCell<[Cplx; 1 << 13]> = LazyCell::new(||{ 
+        let mut out = [Cplx::default(); 1 << 13];
+
+        let mut k = 1;
+        let mut i = 1;
+        while k < out.len() {
+            let angle = -std::f32::consts::PI / k as f32;
+ 
+            for j in 0..k {
+                let (y, x) = (j as f32 * angle).sin_cos();
+                out[i] = Cplx(x, y);
+                i += 1;
+            }
+
+            k *= 2;
+        }
+
+        out
+    });
 }
 
 pub fn compute_fft_iterative(a: &mut [Cplx]) {
@@ -32,23 +56,28 @@ pub fn compute_fft_iterative(a: &mut [Cplx]) {
     let length = a.len();
 
     let mut halfsize = 4usize;
-    while halfsize < length {
-        let root = &TWIDDLE_MAP[halfsize..];
 
-        let size = halfsize * 2;
+    TWIDDLE_MAP.with(|twiddlemap| {
+        while halfsize < length {
 
-        a.chunks_exact_mut(size).for_each(|chunk| {
-            let (l, r) = chunk.split_at_mut(halfsize);
+            let root = &twiddlemap[halfsize..];
 
-            for j in 0..halfsize {
-                let z = r[j] * root[j];
-                r[j] = l[j] - z;
-                l[j] += z;
-            }
-        });
+            let size = halfsize * 2;
 
-        halfsize *= 2;
-    }
+            a.chunks_exact_mut(size).for_each(|chunk| {
+                let (l, r) = chunk.split_at_mut(halfsize);
+
+                for j in 0..halfsize {
+                    let z = r[j] * root[j];
+                    r[j] = l[j] - z;
+                    l[j] += z;
+                }
+            });
+
+            halfsize *= 2;
+
+        }
+    });
 }
 
 // Avoids having to evaluate a 2nd FFT.
