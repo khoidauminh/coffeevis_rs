@@ -11,12 +11,6 @@ This project also serves as my playground, so you'll see a lot of weird implemen
 
 ## What's new in v0.6.0
 
-#### YOU CAN NOW WRITE COFFEEVIS VISUALIZERS *OUTSIDE* OF COFFEEVIS
-
-See [README.md](src/data/README.md)
-
-### Other changes
-
 Terminal mode is back and enabled by default!
 
 Minifb support has been removed!
@@ -26,10 +20,6 @@ respectively disables terminal mode and winit mode if you don't want it.
 
 A little post-processing effect has been added to window mode which should
 make the animations a little more smooth looking.
-
-New visualizers: TODO!
-
-Configuration changes: TODO!
 
 ## Examples:
 
@@ -92,13 +82,6 @@ Coffeevis supports temporary options at launch
 | --resizable | | allows resizing in window mode |
 | --max-con-size | 50x50 | sets maximum resolution in terminal mode |
 | --vis | spectrum | launches coffeevis with the specified visualizer |
-
-## Experimental
-
-| Option | Value (example) | Description |
-| ------ | ------ | ------ |
-| --foreign | | instructs coffeevis to send out audio and listens to input commands see [Foreign Communicator](src/data/README.md) |
-| --desktop-file | | (Specifically for GNOME) creates a desktop file so that it gets an icon |
 
 ## Notes
 
