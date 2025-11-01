@@ -1,5 +1,3 @@
-use std::sync::Mutex;
-
 use crate::{
     audio::AudioBuffer,
     data::{DEFAULT_SIZE_WIN, Program},

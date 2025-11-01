@@ -1,8 +1,3 @@
-use std::sync::{
-    Mutex,
-    atomic::AtomicUsize,
-};
-
 use arrayvec::ArrayVec;
 
 use crate::graphics::Pixel;
@@ -15,8 +10,6 @@ use crate::visualizers::classic::cross::draw_cross;
 
 use crate::math::Cplx;
 
-static LOCALI: AtomicUsize = AtomicUsize::new(0);
-static WAVE_SCALE_FACTOR: Mutex<f32> = Mutex::new(1.0);
 const SMOOTH_SIZE: usize = 7;
 const SMOOTH_BUFFER_SIZE: usize = 512;
 

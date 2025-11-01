@@ -1,5 +1,4 @@
-use core::f32;
-use std::sync::{LazyLock, Mutex};
+use std::cell::RefCell;
 
 use crate::{
     audio::AudioBuffer,
@@ -7,6 +6,7 @@ use crate::{
     graphics::{Argb, P2, Pixel, PixelBuffer},
     math::{
         Cplx,
+        interpolate::linearf,
         rng::{random_float, random_int},
     },
 };
@@ -138,16 +138,16 @@ const DEFAULT_BOUND: P2 = P2(DEFAULT_SIZE_WIN as i32, DEFAULT_SIZE_WIN as i32);
 // static mut drop: RainDrop = RainDrop::new(0xFF_FF_FF_FF, 8, 0.2, DEFAULT_SIZE_WIN as usize, DEFAULT_SIZE_WIN as usize);
 
 pub fn draw(prog: &mut Program, stream: &mut AudioBuffer) {
-    static LIST_OF_DROPS: Mutex<[RainDrop; NUM_OF_DROPS]> =
-        Mutex::new([RainDrop::new(0xFF_FF_FF_FF, 8, 0.2, DEFAULT_BOUND); NUM_OF_DROPS]);
+
+    thread_local! {
+        static LIST_OF_DROPS: RefCell<[RainDrop; NUM_OF_DROPS]> =
+        RefCell::new([RainDrop::new(0xFF_FF_FF_FF, 8, 0.2, DEFAULT_BOUND); NUM_OF_DROPS]);
+         
+        static OLD_VOLUME: RefCell<f32> = RefCell::new(0.0);
+    }
 
     //static THUNDER: LazyLock<Thunder> = LazyLock::new(|| Thunder::generate(0));
 
-    static OLD_VOLUME: Mutex<f32> = Mutex::new(0.0);
-
-    let Ok(mut list) = LIST_OF_DROPS.try_lock() else {
-        return;
-    };
 
     let mut new_volume: f32 = 0.0;
     {
@@ -158,10 +158,12 @@ pub fn draw(prog: &mut Program, stream: &mut AudioBuffer) {
         }
     }
 
-    let mut old = OLD_VOLUME.lock().unwrap();
-    *old = crate::math::interpolate::linearf(*old, new_volume, 0.2);
+    let old = OLD_VOLUME.with_borrow_mut(|old| {
+        *old = linearf(*old, new_volume, 0.2);
+        *old
+    }); 
 
-    let blue = 0.7 - *old * 0.005;
+    let blue = 0.7 - old * 0.005;
 
     prog.pix.color(u32::from_be_bytes([
         0xFF,
@@ -173,21 +175,23 @@ pub fn draw(prog: &mut Program, stream: &mut AudioBuffer) {
 
     let size = prog.pix.size();
 
-    for drop in list.iter_mut() {
-        let size = prog.pix.size();
+    LIST_OF_DROPS.with_borrow_mut(|list|
+        for drop in list.iter_mut() {
+            let size = prog.pix.size();
 
-        if !drop.is_bounds_match(size) {
-            drop.set_bound(size);
-            drop.randomize_start();
+            if !drop.is_bounds_match(size) {
+                drop.set_bound(size);
+                drop.randomize_start();
+            }
+
+            drop.draw(&mut prog.pix);
+
+            let p = drop.fall(old * 0.01);
+            if !p {
+                drop.randomize_start();
+            }
         }
-
-        drop.draw(&mut prog.pix);
-
-        let p = drop.fall(*old * 0.01);
-        if !p {
-            drop.randomize_start();
-        }
-    }
+    );  
 
     Thunder::generate(crate::math::rng::random_int(1000), size.0).draw(&mut prog.pix, 255);
 

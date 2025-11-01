@@ -1,8 +1,8 @@
-use std::sync::Mutex;
+use std::cell::RefCell;
 
 use crate::data::FFT_SIZE;
 use crate::graphics::{P2, Pixel};
-use crate::math::{self, Cplx};
+use crate::math::{self, Cplx, interpolate::linearf};
 
 const COLOR: [u32; 3] = [0x66ff66, 0xaaffff, 0xaaaaff];
 
@@ -19,10 +19,12 @@ struct DataMax {
     pub max: f32,
 }
 
-static DATA_MAX: Mutex<DataMax> = Mutex::new(DataMax {
-    data: [0.0f32; MAX_BARS1],
-    max: 0.0f32,
-});
+thread_local! {
+    static DATA_MAX: RefCell<DataMax> = RefCell::new(DataMax {
+        data: [0.0f32; MAX_BARS1],
+        max: 0.0f32,
+    });
+}
 
 fn dynamic_smooth(t: f32, a: f32) -> f32 {
     ((t - a) / a).powi(2)
@@ -42,8 +44,6 @@ fn prepare(
 
     let bnf = bar_num as f32;
     let _l = stream.len();
-
-    let mut local = DATA_MAX.try_lock().unwrap();
 
     let mut data_c = [Cplx::zero(); FFT_SIZE];
     for n in 0..FFT_SIZE {
@@ -73,7 +73,8 @@ fn prepare(
 
     let bnf = 1.0 / bnf;
 
-    local
+    DATA_MAX.with_borrow_mut(|local|
+        local
         .data
         .iter_mut()
         .zip(data_f.iter())
@@ -83,7 +84,8 @@ fn prepare(
             let i_ = (i + 1) as f32 * bnf;
             let accel = (0.99 - 0.015 * i_) * prog_smoothing;
             *w = math::interpolate::decay(*w, *r, accel);
-        });
+        })
+    );
 
     stream.autoslide();
 }
@@ -97,8 +99,6 @@ pub fn draw_bars(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
     let _l = stream.len();
 
     prepare(stream, bar_num, prog.vol_scl, 0.95);
-
-    let local = DATA_MAX.lock().unwrap();
 
     prog.pix.clear();
     let size = prog.pix.sizeu();
@@ -121,11 +121,15 @@ pub fn draw_bars(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
 
         let t = idxf.fract();
 
-        smoothed_smp = smoothed_smp.max(cubed_sqrt(smooth_step(
-            local.data[idx],
-            local.data[(idx + 1).min(bar_num)],
-            t,
-        )));
+        smoothed_smp = 
+        
+        DATA_MAX.with_borrow(|local|
+            smoothed_smp.max(cubed_sqrt(smooth_step(
+                local.data[idx],
+                local.data[(idx + 1).min(bar_num)],
+                t,
+            )))
+        );
 
         if prev_index == idx {
             continue;
@@ -175,8 +179,6 @@ pub fn draw_bars_circle(prog: &mut crate::Program, stream: &mut crate::AudioBuff
 
     prepare(stream, bar_num, prog.vol_scl, prog.smoothing);
 
-    let local = DATA_MAX.lock().unwrap();
-
     prog.pix.clear();
 
     //let base_angle = math::cos_sin(1.0 / bnf);
@@ -195,7 +197,7 @@ pub fn draw_bars_circle(prog: &mut crate::Program, stream: &mut crate::AudioBuff
 
         // let scalef = math::fft_scale_up(i, bar_num);
 
-        let bar = math::interpolate::linearf(local.data[i], local.data[i_next], t) * sizef;
+        let bar = DATA_MAX.with_borrow(|local| linearf(local.data[i], local.data[i_next], t) * sizef);
         let bar = bar * 0.7;
 
         let p1 = P2(

@@ -1,9 +1,11 @@
 use crate::graphics::{P2, Pixel};
 use crate::math::{Cplx, cos_sin, interpolate::linearf};
 use std::f32::consts::{PI, TAU};
-use std::sync::Mutex;
+use std::cell::RefCell;
 
-static ANGLE_AMP: Mutex<(f32, f32)> = Mutex::new((0.0f32, 0.0f32));
+thread_local! {
+    static ANGLE_AMP: RefCell<(f32, f32)> = RefCell::new((0.0f32, 0.0f32));
+}
 
 fn blend(c1: u32, c2: u32) -> u32 {
     c1.add(c2).wrapping_shl(4)
@@ -45,9 +47,7 @@ pub fn draw_slice(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
         ((bin.l1_norm() / sizef * 2.).min(TAU), high.l1_norm())
     };
 
-    let Ok(mut mt) = ANGLE_AMP.try_lock() else {
-        return;
-    };
+    let mut mt = ANGLE_AMP.with_borrow_mut(|f| *f);
 
     let amp = 2.5 * (sweep - mt.1).max(0.0) + sweep * 0.3 + high * 0.00005;
     mt.1 = sweep;
@@ -81,4 +81,6 @@ pub fn draw_slice(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
         .circle(center, small_radius, true);
 
     stream.autoslide();
+
+    ANGLE_AMP.with_borrow_mut(|m| *m = mt);
 }

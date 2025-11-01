@@ -1,6 +1,6 @@
 use std::f32::consts::LN_2;
 
-use std::sync::Mutex;
+use std::cell::RefCell;
 
 use crate::graphics::P2;
 use crate::math::{self, Cplx, interpolate::*};
@@ -48,13 +48,13 @@ fn prepare(stream: &mut crate::AudioBuffer, local: &mut LocalType) {
 }
 
 pub fn draw_spectrum(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
-    static DATA: Mutex<LocalType> = Mutex::new([Cplx::zero(); RANGE + 1]);
+    thread_local! {
+        static DATA: RefCell<LocalType> = RefCell::new([Cplx::zero(); RANGE + 1]);
+    }
 
-    let Ok(mut local) = DATA.try_lock() else {
-        return;
-    };
-
-    prepare(stream, &mut local);
+    DATA.with_borrow_mut(|l| {
+        prepare(stream, l);
+    });
 
     let _l = stream.len();
     let P2(w, h) = prog.pix.size();
@@ -76,8 +76,7 @@ pub fn draw_spectrum(prog: &mut crate::Program, stream: &mut crate::AudioBuffer)
         let iceil = ifloat.ceil() as usize;
         let ti = ifloat.fract(); 
         
-        let sfloor = local[ifloor];
-        let sceil = local[iceil];
+        let (sfloor, sceil) = DATA.with_borrow(|v| (v[ifloor], v[iceil]));
 
         let sl = smooth_step(sfloor.0, sceil.0, ti);
         let sr = smooth_step(sfloor.1, sceil.1, ti);
