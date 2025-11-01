@@ -8,6 +8,5 @@ pub mod slice;
 pub mod spectrum;
 pub mod vol_sweeper;
 pub mod wave;
-pub mod wavelet;
 
 mod cross;

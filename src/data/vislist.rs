@@ -190,7 +190,6 @@ pub const VIS_CLASSIC: &[Visualizer] = &[
     define_visualizer_struct!(spectrum::draw_spectrum, "Spectrum", true),
     define_visualizer_struct!(bars::draw_bars, "Bars", true),
     define_visualizer_struct!(bars::draw_bars_circle, "Bars (Circle)", true),
-    define_visualizer_struct!(wavelet::draw_wavelet, "Wavelet", true),
     define_visualizer_struct!(shaky::draw_shaky, "Shaky", false),
     define_visualizer_struct!(lazer::draw_lazer, "Lazer", true),
     define_visualizer_struct!(wave::draw_wave, "Wave", true),
