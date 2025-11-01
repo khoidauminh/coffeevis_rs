@@ -211,6 +211,8 @@ impl PixelBuffer {
             return;
         }
 
+        self.mixerm();
+
         let dst_width = width.unwrap_or(self.width * scale);
 
         if effect == RenderEffect::None {
