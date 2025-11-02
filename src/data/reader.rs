@@ -14,7 +14,6 @@ impl Program {
         while let Some(arg) = args.next() {
             let arg = arg.as_str();
             match arg {
-                #[cfg(all(not(feature = "console_only"), target_os = "linux"))]
                 "--desktop-file" => {
                     alert!("Attempting to create a desktop file!! This is experimental!!");
                     create_tmp_desktop_file();
@@ -22,17 +21,14 @@ impl Program {
 
                 "--quiet" => self.quiet = true,
 
-                #[cfg(all(not(feature = "window_only"), target_os = "linux"))]
                 "--braille" => {
                     (self.mode, self.console_props.flusher) = (ConBrail, Program::print_brail)
                 }
 
-                #[cfg(all(not(feature = "window_only"), target_os = "linux"))]
                 "--ascii" => {
                     (self.mode, self.console_props.flusher) = (ConAscii, Program::print_ascii)
                 }
 
-                #[cfg(all(not(feature = "window_only"), target_os = "linux"))]
                 "--block" => {
                     (self.mode, self.console_props.flusher) = (ConBlock, Program::print_block)
                 }
@@ -84,7 +80,6 @@ impl Program {
                     self.resize = true;
                 }
 
-                #[cfg(all(not(feature = "window_only"), target_os = "linux"))]
                 "--max-con-size" => {
                     let s = args
                         .next()
@@ -151,35 +146,7 @@ impl Program {
                     self.display = false;
                 }
 
-                &_ => match arg {
-                    #[cfg(feature = "window_only")]
-                    "--braille" | "--block" | "--ascii" => {
-                        panic!(
-                            "\x1B[31;1m\
-                                Feature terminal is turned off in \
-                                this build of coffeevis.\n\
-                                Did you happen to commpile coffeevis \
-                                with features \"window_only\"?\
-                            \x1B[0m"
-                        )
-                    }
-
-                    #[cfg(feature = "console_only")]
-                    "--win" => {
-                        panic!(
-                            "\x1B[31;1m\
-                                Feature winit is turned off in \
-                                this build of coffeevis.\n\
-                                Did you happen to commpile coffeevis \
-                                with feature \"console_only\"?\
-                            \x1B[0m"
-                        )
-                    }
-
-                    &_ => {
-                        error!("Argument error: Unknown option {}", arg);
-                    }
-                },
+                &_ => error!("Argument error: Unknown option {}", arg),
             }
         }
 
@@ -230,7 +197,6 @@ impl Program {
             );
         }
 
-        #[cfg(not(feature = "console_only"))]
         {
             let w = self.window_props.width as u32 * self.scale as u32;
             let h = self.window_props.height as u32 * self.scale as u32;

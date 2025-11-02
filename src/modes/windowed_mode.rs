@@ -10,7 +10,7 @@ use winit::{
     event::{self, ElementState, WindowEvent},
     event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
     keyboard::{Key, NamedKey},
-    window::{Icon, Window, WindowId, WindowLevel},
+    window::{Icon, Window, WindowButtons, WindowId, WindowLevel},
 };
 
 #[cfg(target_os = "linux")]
@@ -108,6 +108,7 @@ impl ApplicationHandler for WindowState {
             .with_transparent(self.prog.is_transparent())
             .with_resizable(self.prog.is_resizable())
             .with_visible(false)
+            .with_enabled_buttons(WindowButtons::from(WindowButtons::CLOSE))
             .with_window_icon(icon);
 
         #[cfg(target_os = "linux")]

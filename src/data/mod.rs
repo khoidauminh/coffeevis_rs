@@ -76,7 +76,6 @@ pub(crate) struct Program {
 
     hidden: bool,
 
-    #[cfg(not(feature = "console_only"))]
     win_render_effect: crate::graphics::RenderEffect,
 
     pub pix: crate::graphics::PixelBuffer,
@@ -93,10 +92,8 @@ pub(crate) struct Program {
     pub vol_scl: f32,
     pub smoothing: f32,
 
-    #[cfg(not(feature = "console_only"))]
     pub window_props: modes::windowed_mode::WindowProps,
 
-    #[cfg(all(not(feature = "window_only"), target_os = "linux"))]
     pub console_props: modes::console_mode::ConsoleProps,
 
     vis_navigator: vislist::VisNavigator,
@@ -115,7 +112,7 @@ impl Program {
 
         let rate = Duration::from_nanos(1_000_000_000 / DEFAULT_HZ);
 
-        let default_mode = Mode::default();
+        let default_mode = Mode::Win;
 
         Self {
             quiet: false,
@@ -149,13 +146,11 @@ impl Program {
             vol_scl: DEFAULT_VOL_SCL,
             smoothing: DEFAULT_SMOOTHING,
 
-            #[cfg(not(feature = "console_only"))]
             window_props: modes::windowed_mode::WindowProps {
                 width: DEFAULT_SIZE_WIN,
                 height: DEFAULT_SIZE_WIN,
             },
 
-            #[cfg(all(not(feature = "window_only"), target_os = "linux"))]
             console_props: modes::console_mode::ConsoleProps {
                 width: 50,
                 height: 25,
@@ -175,12 +170,10 @@ impl Program {
         self.refresh_rate_intervals
     }
 
-    #[cfg(not(feature = "console_only"))]
     pub fn get_win_render_effect(&self) -> RenderEffect {
         self.win_render_effect
     }
 
-    #[cfg(not(feature = "console_only"))]
     pub fn set_win_render_effect(&mut self, e: RenderEffect) {
         self.win_render_effect = e;
     }
@@ -301,17 +294,8 @@ impl Program {
     #[allow(unused_mut)]
     pub fn update_size(&mut self, mut s: (u16, u16)) {
         match &self.mode {
-            #[cfg(not(feature = "console_only"))]
-            Mode::Win => {
-                self.window_props.set_size(s);
-            }
-
-            _ => {
-                #[cfg(all(not(feature = "window_only"), target_os = "linux"))]
-                {
-                    s = self.console_props.set_size(s, self.mode());
-                }
-            }
+            Mode::Win => self.window_props.set_size(s),
+            _ => s = self.console_props.set_size(s, self.mode()),
         }
 
         self.pix.resize(s.0 as usize, s.1 as usize);
@@ -319,13 +303,11 @@ impl Program {
 
     pub fn refresh(&mut self) {
         match &self.mode {
-            #[cfg(not(feature = "console_only"))]
             Mode::Win => self.pix.resize(
                 self.window_props.width as usize,
                 self.window_props.height as usize,
             ),
             _ => {
-                #[cfg(all(not(feature = "window_only"), target_os = "linux"))]
                 self.pix.resize(
                     self.console_props.width as usize,
                     self.console_props.height as usize,
@@ -388,7 +370,6 @@ impl Program {
         self.smoothing = DEFAULT_SMOOTHING;
         self.wav_win = DEFAULT_WAV_WIN;
 
-        #[cfg(all(not(feature = "window_only"), target_os = "linux"))]
         self.change_con_max(50, true);
 
         if self.refresh_rate_mode != RefreshRateMode::Specified {

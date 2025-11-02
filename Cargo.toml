@@ -21,11 +21,6 @@ xdg = "3"
 arrayvec = "0.7.6"
 qoi = "0.4.1"
 
-[features]
-window_only = []
-console_only = []
-fast_color = []
-
 [profile.dev]
 overflow-checks = false
 
