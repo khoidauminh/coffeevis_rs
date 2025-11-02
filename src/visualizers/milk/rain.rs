@@ -25,6 +25,7 @@ const MAX_THUNDER_SEGMENTS: usize = 48;
 
 struct Thunder {
     segments: [P2; MAX_THUNDER_SEGMENTS],
+    fade: u8,
 }
 
 impl Thunder {
@@ -40,7 +41,7 @@ impl Thunder {
         let mut segs = [P2(0, 0); MAX_THUNDER_SEGMENTS];
         let mut rng = FastU32::new(seed);
 
-        let mut location = P2(40, 0);
+        let mut location = P2(random_int(canvas_width as u32) as i32, 0);
 
         segs[0] = location;
 
@@ -57,18 +58,22 @@ impl Thunder {
             segs[i] = location;
         }
 
-        Self { segments: segs }
+        Self { segments: segs, fade: 255 }
     }
 
-    pub fn draw(&self, canvas: &mut PixelBuffer, fade: u8) {
+    pub fn draw(&self, canvas: &mut PixelBuffer) {
         self.segments.windows(2).for_each(|pair| {
             let p1 = pair[0];
             let p2 = pair[1];
 
-            canvas.color(0xFF_FF_FF_FF);
+            canvas.color(0xFF_FF_FF_FF.fade(self.fade));
             canvas.mixer(u32::add);
             canvas.line(p1, p2);
         });
+    }
+
+    pub fn fade(&mut self) {
+        self.fade = self.fade.saturating_sub(10);
     }
 }
 
@@ -139,7 +144,7 @@ pub fn draw(prog: &mut Program, stream: &mut AudioBuffer) {
     thread_local! {
         static LIST_OF_DROPS: RefCell<[RainDrop; NUM_OF_DROPS]> =
         RefCell::new([RainDrop::new(0xFF_FF_FF_FF, 8, 0.2, DEFAULT_BOUND); NUM_OF_DROPS]);
-
+        static THUNDER: RefCell<Thunder> = RefCell::new(Thunder::generate(0, 1));
         static OLD_VOLUME: RefCell<f32> = RefCell::new(0.0);
     }
 
@@ -152,12 +157,17 @@ pub fn draw(prog: &mut Program, stream: &mut AudioBuffer) {
         }
     }
 
-    let old = OLD_VOLUME.with_borrow_mut(|old| {
+    let (vol1, vol2) = OLD_VOLUME.with_borrow_mut(|old| {
+        let vol1 = *old;
         *old = linearf(*old, new_volume, 0.2);
-        *old
+        (vol1, *old)
     });
 
-    let blue = 0.7 - old * 0.005;
+    let voldiff = vol2 - vol1;
+
+    dbg!(voldiff>= 5.0);
+
+    let blue = 0.7 - vol2 * 0.005;
 
     prog.pix.color(u32::from_be_bytes([
         0xFF,
@@ -180,14 +190,21 @@ pub fn draw(prog: &mut Program, stream: &mut AudioBuffer) {
 
             drop.draw(&mut prog.pix);
 
-            let p = drop.fall(old * 0.01);
+            let p = drop.fall(vol2 * 0.01);
             if !p {
                 drop.randomize_start();
             }
         }
     });
 
-    Thunder::generate(crate::math::rng::random_int(1000), size.0).draw(&mut prog.pix, 255);
+    THUNDER.with_borrow_mut(|t| {
+        if voldiff>= 6.7 {
+            *t = Thunder::generate(random_int(1000), prog.pix.width() as i32)
+        }
+
+        t.draw(&mut prog.pix);
+        t.fade();
+    });
 
     stream.autoslide();
 }
