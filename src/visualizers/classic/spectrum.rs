@@ -10,7 +10,7 @@ const RANGE: usize = 64;
 const RANGEF: f32 = RANGE as f32;
 const FFT_SIZEF: f32 = FFT_SIZE as f32;
 const FFT_SIZEF_RECIP: f32 = 1.0 / FFT_SIZEF;
-const SMOOTHING: f32 = 0.91;
+const SMOOTHING: f32 = 0.90;
 
 type LocalType = [Cplx; RANGE + 1];
 
