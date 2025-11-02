@@ -14,6 +14,7 @@ impl Program {
         while let Some(arg) = args.next() {
             let arg = arg.as_str();
             match arg {
+                #[cfg(not(target_os = "windows"))]
                 "--desktop-file" => {
                     alert!("Attempting to create a desktop file!! This is experimental!!");
                     create_tmp_desktop_file();
