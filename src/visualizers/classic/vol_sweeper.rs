@@ -18,7 +18,6 @@ thread_local! {
     });
 }
 
-
 pub fn draw_vol_sweeper(para: &mut crate::Program, stream: &mut crate::AudioBuffer) {
     para.pix.fade(3);
 
@@ -30,12 +29,12 @@ pub fn draw_vol_sweeper(para: &mut crate::Program, stream: &mut crate::AudioBuff
         (sum / (SAMPLE_SIZE / 3) as f32 * para.vol_scl * para.pix.width() as f32) as usize
     };
 
-    let color_ = (w * 255 / para.pix.width()).min(255) as u8;
+    let color = (w * 255 / para.pix.width()).min(255) as u8;
     let color = u32::from_be_bytes([
         255,
         255,
-        (sin_norm(color_ as f32 / 512.0) * 255.0) as u8,
-        color_,
+        (sin_norm(color as f32 / 512.0) * 255.0) as u8,
+        color,
     ]);
 
     let width = para.pix.width();

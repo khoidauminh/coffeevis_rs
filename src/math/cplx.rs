@@ -5,8 +5,8 @@ use crate::graphics::P2;
 
 impl std::default::Default for Cplx {
     fn default() -> Self {
-        return Self(0.0, 0.0)
-    }   
+        return Self(0.0, 0.0);
+    }
 }
 
 impl Neg for Cplx {

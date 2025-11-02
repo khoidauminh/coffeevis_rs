@@ -8,7 +8,7 @@ const AMP_TRIGGER_THRESHOLD: f32 = 0.85;
 const SILENCE_CHECK_SIZE: u8 = 24;
 
 const BUFFER_CAPACITY: usize = 1 << 20;
-const BUFFER_MASK: usize = BUFFER_CAPACITY -1;
+const BUFFER_MASK: usize = BUFFER_CAPACITY - 1;
 const REACT_SPEED: f32 = 0.025;
 
 pub struct AudioBuffer {
@@ -32,7 +32,7 @@ impl AudioBuffer {
     pub const fn new() -> Self {
         Self {
             data: [Cplx::zero(); _],
-            
+
             writeend: 0,
             oldwriteend: 0,
             readend: 0,
@@ -57,7 +57,7 @@ impl AudioBuffer {
 
         self.oldwriteend = self.writeend;
         let mut writeend = self.writeend;
-        
+
         in_buffer.chunks_exact(2).for_each(|chunk| {
             self.data[writeend] = Cplx::new(chunk[0].to_float_sample(), chunk[1].to_float_sample());
             writeend = (writeend + 1) & BUFFER_MASK;
@@ -66,7 +66,7 @@ impl AudioBuffer {
         self.writeend = writeend;
         self.readend = writeend.wrapping_sub(inputsize) & BUFFER_MASK;
 
-        self.autorotatesize = inputsize / (self.rotatessincewrite.next_power_of_two()*3/2);
+        self.autorotatesize = inputsize / (self.rotatessincewrite.next_power_of_two() * 3 / 2);
         self.rotatessincewrite = 0;
 
         self.lastinputsize = inputsize;
@@ -85,11 +85,11 @@ impl AudioBuffer {
 
         if self.max < 0.0001 {
             self.silent = self.silent.saturating_add(1);
-            return
+            return;
         }
 
         self.silent = 0;
-        
+
         let scale: f32 = 1.0 / self.max.max(0.001);
 
         for n in 0..self.lastinputsize {
@@ -128,4 +128,3 @@ impl AudioBuffer {
         self.data[(self.readend - i) & BUFFER_MASK]
     }
 }
-

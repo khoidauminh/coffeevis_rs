@@ -29,7 +29,7 @@ fn index_scale_derivative(x: f32) -> f32 {
 fn prepare(stream: &mut crate::AudioBuffer, local: &mut LocalType) {
     let mut fft = [Cplx::zero(); FFT_SIZE];
 
-    stream.read(&mut fft[..FFT_SIZE/2]);
+    stream.read(&mut fft[..FFT_SIZE / 2]);
     math::fft_stereo(&mut fft, RANGE, math::Normalize::No);
 
     fft.iter_mut().take(RANGE).enumerate().for_each(|(i, smp)| {
@@ -56,7 +56,6 @@ pub fn draw_spectrum(prog: &mut crate::Program, stream: &mut crate::AudioBuffer)
         prepare(stream, l);
     });
 
-    let _l = stream.len();
     let P2(w, h) = prog.pix.size();
     let winwh = w >> 1;
 
@@ -74,28 +73,23 @@ pub fn draw_spectrum(prog: &mut crate::Program, stream: &mut crate::AudioBuffer)
         let ifloat = ifrac * RANGEF;
         let ifloor = ifloat as usize;
         let iceil = ifloat.ceil() as usize;
-        let ti = ifloat.fract(); 
-        
+        let ti = ifloat.fract();
+
         let (sfloor, sceil) = DATA.with_borrow(|v| (v[ifloor], v[iceil]));
 
         let sl = smooth_step(sfloor.0, sceil.0, ti);
         let sr = smooth_step(sfloor.1, sceil.1, ti);
-    
+
         let sl = sl.powf(1.3) * whf;
         let sr = sr.powf(1.3) * whf;
 
-        let channel = (y  * 255 / h) as u8;
+        let channel = (y * 255 / h) as u8;
         let green = 255.min(16 + (3.0f32 * (sl + sr)) as u32) as u8;
 
-        let color = u32::from_be_bytes([
-            0xFF,
-            255 - channel,
-            green,
-            128 + channel / 2,
-        ]);
+        let color = u32::from_be_bytes([0xFF, 255 - channel, green, 128 + channel / 2]);
 
         let ry = h - y;
-      
+
         let rect_l = P2((whf - sl) as i32, ry);
         let rect_r = P2((whf + sr) as i32, ry);
         let middle = P2(winwh + 1, h - y);

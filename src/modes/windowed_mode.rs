@@ -24,10 +24,10 @@ use winit::platform::{
 };
 
 use std::{
+    cell::LazyCell,
     num::NonZeroU32,
     sync::mpsc::{self, SyncSender},
     thread::{self, JoinHandle},
-    cell::LazyCell,
     time::Duration,
 };
 
@@ -95,14 +95,11 @@ impl ApplicationHandler for WindowState {
 
         let de = std::env::var("XDG_CURRENT_DESKTOP").unwrap_or_default();
 
-        let icon = 
-        
-        ICON.with(|icon|
+        let icon = ICON.with(|icon| {
             Icon::from_rgba(icon.2.to_vec(), icon.0, icon.1)
                 .inspect_err(|_| error!("Failed to create window icon."))
                 .ok()
-        );
-
+        });
 
         let window_attributes = Window::default_attributes()
             .with_title("cvis")

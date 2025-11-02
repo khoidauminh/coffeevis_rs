@@ -15,14 +15,14 @@ pub fn butterfly<T>(a: &mut [T], power: u32) {
 }
 
 thread_local! {
-    static TWIDDLE_MAP: LazyCell<[Cplx; 1 << 13]> = LazyCell::new(||{ 
+    static TWIDDLE_MAP: LazyCell<[Cplx; 1 << 13]> = LazyCell::new(||{
         let mut out = [Cplx::default(); 1 << 13];
 
         let mut k = 1;
         let mut i = 1;
         while k < out.len() {
             let angle = -std::f32::consts::PI / k as f32;
- 
+
             for j in 0..k {
                 let (y, x) = (j as f32 * angle).sin_cos();
                 out[i] = Cplx(x, y);
@@ -59,7 +59,6 @@ pub fn compute_fft_iterative(a: &mut [Cplx]) {
 
     TWIDDLE_MAP.with(|twiddlemap| {
         while halfsize < length {
-
             let root = &twiddlemap[halfsize..];
 
             let size = halfsize * 2;
@@ -75,7 +74,6 @@ pub fn compute_fft_iterative(a: &mut [Cplx]) {
             });
 
             halfsize *= 2;
-
         }
     });
 }

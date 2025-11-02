@@ -22,12 +22,9 @@ pub fn draw_dash_line(
 
         for i in 0..para.pix.width() {
             let index = (i / 10 + i) % stream.len();
-            para.pix.color(C | (((stream.get(index).1 * 32784.0 % 256.0) as u32) << 24));
-            para.pix.rect(
-                P2(i as i32, o as i32),
-                2,
-                2,
-            );
+            para.pix
+                .color(C | (((stream.get(index).1 * 32784.0 % 256.0) as u32) << 24));
+            para.pix.rect(P2(i as i32, o as i32), 2, 2);
         }
     } else {
         let o = if flip_side {
@@ -38,12 +35,9 @@ pub fn draw_dash_line(
 
         for i in 0..para.pix.height() {
             let index = (i / 10 + i) % stream.len();
-            para.pix.color(C | (((stream.get(index).1 * 32784.0 % 256.0) as u32) << 24));
-            para.pix.rect(
-                P2(o as i32, i as i32),
-                2,
-                2,
-            );
+            para.pix
+                .color(C | (((stream.get(index).1 * 32784.0 % 256.0) as u32) << 24));
+            para.pix.rect(P2(o as i32, i as i32), 2, 2);
         }
     }
 }

@@ -80,7 +80,7 @@ where
 
     pub fn update(&mut self, val: T) -> T {
         self.sum = self.sum - self.data[self.index] + val;
-        
+
         self.data[self.index] = val;
 
         self.index += 1;
@@ -111,9 +111,9 @@ struct MovingMaximum<T, const N: usize> {
 impl<T: Default + Copy + PartialOrd, const N: usize> MovingMaximum<T, N> {
     pub fn init() -> Self {
         Self {
-            data: [NumPair::default() ; N],
+            data: [NumPair::default(); N],
             head: 0,
-            tail: N-1,
+            tail: N - 1,
             len: 0,
             index: 0,
         }
@@ -127,14 +127,17 @@ impl<T: Default + Copy + PartialOrd, const N: usize> MovingMaximum<T, N> {
             self.tail = 0;
         }
 
-        self.data[self.tail] = NumPair { index: self.index, value };
+        self.data[self.tail] = NumPair {
+            index: self.index,
+            value,
+        };
 
         self.index += 1;
     }
 
     fn dequeue_head(&mut self) {
         self.len -= 1;
-        
+
         self.head += 1;
         if self.head == N {
             self.head = 0;
@@ -143,11 +146,11 @@ impl<T: Default + Copy + PartialOrd, const N: usize> MovingMaximum<T, N> {
 
     fn dequeue_tail(&mut self) {
         self.len -= 1;
-        
+
         if self.tail == 0 {
             self.tail = N;
         }
-    
+
         self.tail -= 1;
     }
 
@@ -163,15 +166,11 @@ impl<T: Default + Copy + PartialOrd, const N: usize> MovingMaximum<T, N> {
         self.enqueue_tail(new);
 
         return self.data[self.head].value;
-    } 
+    }
 }
 
-pub fn limiter<T>(
-    a: &mut [T],
-    lo: f32,
-    hi: f32,
-    flattener: fn(T) -> f32,
-) where
+pub fn limiter<T>(a: &mut [T], lo: f32, hi: f32, flattener: fn(T) -> f32)
+where
     T: Into<f32> + Mul<f32, Output = T> + Copy,
 {
     const SMOOTHING: usize = 10;

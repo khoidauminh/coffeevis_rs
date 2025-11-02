@@ -5,9 +5,7 @@ struct Rng {
     d: f32,
 }
 
-use std::{
-    time::{Duration, SystemTime, UNIX_EPOCH},
-};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 pub struct FastU32 {
     state: u32,

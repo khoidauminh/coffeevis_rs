@@ -135,19 +135,13 @@ const NUM_OF_DROPS: usize = 64;
 
 const DEFAULT_BOUND: P2 = P2(DEFAULT_SIZE_WIN as i32, DEFAULT_SIZE_WIN as i32);
 
-// static mut drop: RainDrop = RainDrop::new(0xFF_FF_FF_FF, 8, 0.2, DEFAULT_SIZE_WIN as usize, DEFAULT_SIZE_WIN as usize);
-
 pub fn draw(prog: &mut Program, stream: &mut AudioBuffer) {
-
     thread_local! {
         static LIST_OF_DROPS: RefCell<[RainDrop; NUM_OF_DROPS]> =
         RefCell::new([RainDrop::new(0xFF_FF_FF_FF, 8, 0.2, DEFAULT_BOUND); NUM_OF_DROPS]);
-         
+
         static OLD_VOLUME: RefCell<f32> = RefCell::new(0.0);
     }
-
-    //static THUNDER: LazyLock<Thunder> = LazyLock::new(|| Thunder::generate(0));
-
 
     let mut new_volume: f32 = 0.0;
     {
@@ -161,7 +155,7 @@ pub fn draw(prog: &mut Program, stream: &mut AudioBuffer) {
     let old = OLD_VOLUME.with_borrow_mut(|old| {
         *old = linearf(*old, new_volume, 0.2);
         *old
-    }); 
+    });
 
     let blue = 0.7 - old * 0.005;
 
@@ -175,7 +169,7 @@ pub fn draw(prog: &mut Program, stream: &mut AudioBuffer) {
 
     let size = prog.pix.size();
 
-    LIST_OF_DROPS.with_borrow_mut(|list|
+    LIST_OF_DROPS.with_borrow_mut(|list| {
         for drop in list.iter_mut() {
             let size = prog.pix.size();
 
@@ -191,7 +185,7 @@ pub fn draw(prog: &mut Program, stream: &mut AudioBuffer) {
                 drop.randomize_start();
             }
         }
-    );  
+    });
 
     Thunder::generate(crate::math::rng::random_int(1000), size.0).draw(&mut prog.pix, 255);
 

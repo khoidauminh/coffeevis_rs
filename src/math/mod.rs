@@ -1,7 +1,7 @@
+mod cplx;
 pub mod fast;
 mod fft;
 pub mod rng;
-mod cplx;
 
 use std::ops;
 

@@ -1,7 +1,7 @@
 use crate::graphics::{P2, Pixel};
 use crate::math::{Cplx, cos_sin, interpolate::linearf};
-use std::f32::consts::{PI, TAU};
 use std::cell::RefCell;
+use std::f32::consts::{PI, TAU};
 
 thread_local! {
     static ANGLE_AMP: RefCell<(f32, f32)> = RefCell::new((0.0f32, 0.0f32));
@@ -77,8 +77,7 @@ pub fn draw_slice(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
 
     prog.pix.color(0xFF_FF_FF_FF);
     prog.pix.mixerd();
-    prog.pix
-        .circle(center, small_radius, true);
+    prog.pix.circle(center, small_radius, true);
 
     stream.autoslide();
 

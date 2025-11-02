@@ -7,7 +7,6 @@ struct LocalData {
     p1: Cplx,
 }
 
-
 thread_local! {
     static DATA: std::cell::RefCell<LocalData> = std::cell::RefCell::new(LocalData {
         p0: Cplx(1.0, 1.0),
@@ -42,7 +41,7 @@ pub fn draw_lazer(para: &mut crate::Program, stream: &mut crate::AudioBuffer) {
         Cplx(sum.0 * para.vol_scl * 0.0035, sum.1 * para.vol_scl * 0.0035)
     };
 
-    let LocalData {mut p0, mut p1} = DATA.with_borrow(|d| *d);
+    let LocalData { mut p0, mut p1 } = DATA.with_borrow(|d| *d);
 
     a *= p0;
 
@@ -59,13 +58,12 @@ pub fn draw_lazer(para: &mut crate::Program, stream: &mut crate::AudioBuffer) {
     para.pix.fade(3);
     para.pix.color(color);
     para.pix.mixerd();
-    para.pix
-        .line(p1.to_p2(), p0.to_p2());
+    para.pix.line(p1.to_p2(), p0.to_p2());
 
     p1 = p0;
 
     DATA.with_borrow_mut(|d| {
-        d.p0 = p0; 
+        d.p0 = p0;
         d.p1 = p1;
     });
 }

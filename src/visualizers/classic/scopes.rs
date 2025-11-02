@@ -51,7 +51,8 @@ pub fn draw_vectorscope(prog: &mut crate::Program, stream: &mut crate::AudioBuff
         let y = (sample.1 * scale) as i32;
         let amp = (x.abs() + y.abs()) * 3 / 2;
 
-        prog.pix.color(u32::from_be_bytes([255, to_color(amp, sizei), 255, 64]));
+        prog.pix
+            .color(u32::from_be_bytes([255, to_color(amp, sizei), 255, 64]));
         prog.pix.mixerd();
         prog.pix.plot(P2(x + width_top_h, y + height_top_h));
 
@@ -189,7 +190,6 @@ pub fn draw_vectorscope(prog: &mut crate::Program, stream: &mut crate::AudioBuff
 //     stream.autoslide();
 // }
 
-
 const BUFFER_SIZE: usize = 1024;
 const PADDING: usize = BUFFER_SIZE;
 const START: usize = BUFFER_SIZE / 2;
@@ -199,7 +199,7 @@ const SHIFTBACK: usize = 50;
 const STORESIZE: usize = 6;
 
 pub fn draw_oscilloscope(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
-    let mut buffer= [Cplx::zero(); BUFFER_SIZE + PADDING];
+    let mut buffer = [Cplx::zero(); BUFFER_SIZE + PADDING];
     stream.read(&mut buffer);
 
     let mut indices = ArrayVec::<usize, STORESIZE>::new();
@@ -207,7 +207,7 @@ pub fn draw_oscilloscope(prog: &mut crate::Program, stream: &mut crate::AudioBuf
     let mut smp2 = Cplx::zero();
     let mut smp3 = Cplx::zero();
 
-    for i in START-PRESMOOTH..START {
+    for i in START - PRESMOOTH..START {
         smp3 = linearfc(smp3, buffer[i], LOWPASS_FACTOR);
         smp1 = smp2;
         smp2 = smp3;
@@ -219,13 +219,17 @@ pub fn draw_oscilloscope(prog: &mut crate::Program, stream: &mut crate::AudioBuf
             indices.push(i);
         }
 
-        if indices.is_full() { break }
+        if indices.is_full() {
+            break;
+        }
 
         if smp1.0 >= 0.0 && smp3.0 < 0.0 {
             indices.push(i);
         }
 
-        if indices.is_full() { break }
+        if indices.is_full() {
+            break;
+        }
 
         smp3 = linearfc(smp3, buffer[i], LOWPASS_FACTOR);
         smp1 = smp2;
@@ -277,9 +281,11 @@ pub fn draw_oscilloscope(prog: &mut crate::Program, stream: &mut crate::AudioBuf
         rmax = rmax * scale + center;
 
         prog.pix.mixer(|a, b| a | b);
-        prog.pix.color(u32::compose([255, 0,  55, 255]));
-        prog.pix.rect(P2(x as i32, lmin as i32), 1, (lmax - lmin) as usize);
+        prog.pix.color(u32::compose([255, 0, 55, 255]));
+        prog.pix
+            .rect(P2(x as i32, lmin as i32), 1, (lmax - lmin) as usize);
         prog.pix.color(u32::compose([255, 0, 255, 55]));
-        prog.pix.rect(P2(x as i32, rmin as i32), 1, (rmax - rmin) as usize);
+        prog.pix
+            .rect(P2(x as i32, rmin as i32), 1, (rmax - rmin) as usize);
     }
 }

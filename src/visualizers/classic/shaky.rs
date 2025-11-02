@@ -1,4 +1,4 @@
-use std::{f32::consts::FRAC_PI_2, cell::RefCell};
+use std::{cell::RefCell, f32::consts::FRAC_PI_2};
 
 use crate::graphics::Pixel;
 use crate::math::{self, Cplx, fast};

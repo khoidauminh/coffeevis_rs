@@ -43,11 +43,10 @@ fn prepare(
     let bar_num = bar_num + 1;
 
     let bnf = bar_num as f32;
-    let _l = stream.len();
 
     let mut data_c = [Cplx::zero(); FFT_SIZE];
     for n in 0..FFT_SIZE {
-        data_c[n] = stream.get((FFT_SIZE - n)*3);
+        data_c[n] = stream.get((FFT_SIZE - n) * 3);
     }
 
     let bound = data_c.len().min(math::ideal_fft_bound(BARS));
@@ -73,19 +72,19 @@ fn prepare(
 
     let bnf = 1.0 / bnf;
 
-    DATA_MAX.with_borrow_mut(|local|
+    DATA_MAX.with_borrow_mut(|local| {
         local
-        .data
-        .iter_mut()
-        .zip(data_f.iter())
-        .take(bar_num)
-        .enumerate()
-        .for_each(|(i, (w, r))| {
-            let i_ = (i + 1) as f32 * bnf;
-            let accel = (0.99 + 0.005 * i_) * prog_smoothing;
-            *w = math::interpolate::decay(*w, *r, accel);
-        })
-    );
+            .data
+            .iter_mut()
+            .zip(data_f.iter())
+            .take(bar_num)
+            .enumerate()
+            .for_each(|(i, (w, r))| {
+                let i_ = (i + 1) as f32 * bnf;
+                let accel = (0.99 + 0.005 * i_) * prog_smoothing;
+                *w = math::interpolate::decay(*w, *r, accel);
+            })
+    });
 
     stream.autoslide();
 }
@@ -121,15 +120,13 @@ pub fn draw_bars(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
 
         let t = idxf.fract();
 
-        smoothed_smp = 
-        
-        DATA_MAX.with_borrow(|local|
+        smoothed_smp = DATA_MAX.with_borrow(|local| {
             smoothed_smp.max(cubed_sqrt(smooth_step(
                 local.data[idx],
                 local.data[(idx + 1).min(bar_num)],
                 t,
             )))
-        );
+        });
 
         if prev_index == idx {
             continue;
@@ -147,7 +144,8 @@ pub fn draw_bars(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
         let peak = (bar * 255 / prog.pix.height()) as u8;
         let _red = (fade.wrapping_mul(2) / 3).saturating_add(128).max(peak);
 
-        prog.pix.color(u32::from_be_bytes([0xFF, 0xFF, (fade).max(peak), 0]));
+        prog.pix
+            .color(u32::from_be_bytes([0xFF, 0xFF, (fade).max(peak), 0]));
         prog.pix.rect(
             P2(
                 (size.0 * idx / bar_num) as i32,
@@ -172,7 +170,6 @@ pub fn draw_bars_circle(prog: &mut crate::Program, stream: &mut crate::AudioBuff
     let bar_num = prog.pix.sizel().isqrt().min(MAX_BARS);
     let bnf = bar_num as f32;
     let bnf_recip = 1.0 / bnf;
-    let _l = stream.len();
 
     let wh = prog.pix.width() as i32 / 2;
     let hh = prog.pix.height() as i32 / 2;
@@ -180,8 +177,6 @@ pub fn draw_bars_circle(prog: &mut crate::Program, stream: &mut crate::AudioBuff
     prepare(stream, bar_num, prog.vol_scl, prog.smoothing);
 
     prog.pix.clear();
-
-    //let base_angle = math::cos_sin(1.0 / bnf);
 
     const FFT_WINDOW: f32 = (FFT_SIZE >> 6) as f32 * 1.5;
 
@@ -197,7 +192,8 @@ pub fn draw_bars_circle(prog: &mut crate::Program, stream: &mut crate::AudioBuff
 
         // let scalef = math::fft_scale_up(i, bar_num);
 
-        let bar = DATA_MAX.with_borrow(|local| linearf(local.data[i], local.data[i_next], t) * sizef);
+        let bar =
+            DATA_MAX.with_borrow(|local| linearf(local.data[i], local.data[i_next], t) * sizef);
         let bar = bar * 0.7;
 
         let p1 = P2(

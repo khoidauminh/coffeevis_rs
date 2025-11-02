@@ -18,11 +18,7 @@ pub fn draw_wave(para: &mut crate::Program, stream: &mut crate::AudioBuffer) {
 
         para.pix.color(u32::from_be_bytes([b, r, g, b]));
         para.pix.mixerm();
-        para.pix.rect(
-            P2(x as i32, 0),
-            1,
-            height,
-        );
+        para.pix.rect(P2(x as i32, 0), 1, height);
     }
 
     stream.autoslide();
