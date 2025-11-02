@@ -25,11 +25,6 @@ pub fn unit_exp2_0(x: f32) -> f32 {
     x * (0.3431 * x + 0.6568)
 }
 
-// Used in rage 0..=1
-pub fn unit_exp2(x: f32) -> f32 {
-    unit_exp2_0(x) + 1.0
-}
-
 pub const fn ilog2(x: usize) -> u32 {
     usize::BITS.wrapping_sub(x.wrapping_shr(1).leading_zeros())
 }

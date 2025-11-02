@@ -14,10 +14,6 @@ pub enum Normalize {
 #[derive(Copy, Clone, Debug)]
 pub struct Cplx(pub f32, pub f32);
 
-pub trait ToUsize<T> {
-    fn new(value: T) -> Self;
-}
-
 pub const fn ideal_fft_bound(up_to: usize) -> usize {
     (up_to * 3 / 2).next_power_of_two() * 2
 }
@@ -53,10 +49,6 @@ where
         return limit - 1.into();
     }
     a - 1.into()
-}
-
-pub fn squish(x: f32, scale: f32, limit: f32) -> f32 {
-    (-scale * (x.abs() + scale).recip() + 1.0) * limit * x.signum()
 }
 
 pub fn integrate_inplace(a: &mut [Cplx], factor: usize, norm: Normalize) {
@@ -138,20 +130,18 @@ pub mod interpolate {
         a + (b - a) * t
     }
 
-    pub fn cosf(a: f32, b: f32, t: f32) -> f32 {
-        a + (b - a) * (0.5 - 0.5 * super::fast::cos_norm(t * 0.5))
-    }
-
     pub fn smooth_step(a: f32, b: f32, t: f32) -> f32 {
         let t = t - 0.5;
         let t = t * (2.0 - 2.0 * t.abs()) + 0.5;
         a + (b - a) * t
     }
 
+    #[allow(dead_code)]
     pub fn nearest<T>(a: T, b: T, t: f32) -> T {
         if t < 0.5 { a } else { b }
     }
 
+    #[allow(dead_code)]
     pub fn linear_decay(prev: f32, now: f32, amount: f32) -> f32 {
         now.max(prev - amount)
     }
@@ -160,6 +150,7 @@ pub mod interpolate {
         now.max(prev * factor)
     }
 
+    #[allow(dead_code)]
     pub fn step(mut a: f32, b: f32, ladder_step: f32) -> f32 {
         if a < b {
             a += ladder_step;

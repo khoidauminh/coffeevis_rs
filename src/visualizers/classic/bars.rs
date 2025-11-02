@@ -51,7 +51,7 @@ fn prepare(
 
     math::fft(&mut data_c[0..bound]);
 
-    let norm: f32 = 1.0 / bound as f32;
+    let norm: f32 = 1.0 / FFT_SIZE as f32;
 
     let mut data_f = [0f32; MAX_BARS1];
     data_f
@@ -60,7 +60,7 @@ fn prepare(
         .zip(data_c.iter())
         .enumerate()
         .for_each(|(i, (smp, cplx))| {
-            let scl = ((i + 1) as f32).log2().powi(2);
+            let scl = 3.0 * ((i + 2) as f32).log2().powi(2);
             let smp_f32: f32 = cplx.mag();
 
             *smp = smp_f32 * scl * norm;
@@ -93,15 +93,12 @@ pub fn draw_bars(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
     let bar_num = (prog.pix.width() / 2).min(MAX_BARS);
     let bnf = bar_num as f32;
     let bnf_recip = 1.0 / bnf;
-    let _l = stream.len();
-
+    
     prepare(stream, bar_num);
 
     prog.pix.clear();
     let size = prog.pix.sizeu();
     let sizef = Cplx(prog.pix.width() as f32, prog.pix.height() as f32);
-
-    let _bnfh = bnf * 0.5;
 
     let mut iter: f32 = 0.4;
 
@@ -187,8 +184,6 @@ pub fn draw_bars_circle(prog: &mut crate::Program, stream: &mut crate::AudioBuff
         let i_next = i + 1;
 
         let angle = math::cos_sin(i_);
-
-        // let scalef = math::fft_scale_up(i, bar_num);
 
         let bar =
             DATA_MAX.with_borrow(|local| linearf(local.data[i], local.data[i_next], t) * sizef);

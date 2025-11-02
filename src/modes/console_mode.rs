@@ -23,7 +23,7 @@ use crate::{
 pub type Flusher = fn(&Program, &mut Stdout);
 
 const ERROR: u8 = 6;
-const MAX_SEGMENTS: usize = 48;
+
 const CHARSET_OPAC_EXP: &[u8] = b" `.-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ\
     5Yxjya]2ESwqkP6h9d4VpOGbUAKXHm8RD#$Bg0MNWQ%&@";
 
@@ -45,10 +45,6 @@ impl ConsoleProps {
     pub fn set_max(&mut self, s: (u16, u16)) {
         self.max_width = s.0;
         self.max_height = s.1;
-    }
-
-    pub fn get(&self) -> (u16, u16) {
-        (self.width, self.height)
     }
 
     pub fn rescale(&self, mut s: (u16, u16), m: Mode) -> (u16, u16) {

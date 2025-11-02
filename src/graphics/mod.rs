@@ -2,7 +2,6 @@ pub mod blend;
 //pub mod draw;
 pub mod draw;
 
-use crate::data::MAX_WIDTH;
 use blend::Mixer;
 
 const FIELD_START: usize = 64;
@@ -34,25 +33,11 @@ pub(crate) trait Pixel:
     fn black() -> Self;
     fn white() -> Self;
     fn trans() -> Self;
-    fn from(x: u32) -> Self;
-
+ 
     fn over(self, other: Self) -> Self;
     fn mix(self, other: Self) -> Self;
     fn add(self, other: Self) -> Self;
-    fn sub(self, other: Self) -> Self;
-
-    fn grayb(self) -> u8;
-
-    fn premultiply(self) -> Self;
-
-    fn copy_alpha(self, other: Self) -> Self;
-
-    fn mul_alpha(self, a: u8) -> Self;
-
-    fn blend(self, other: Self) -> Self;
-
-    fn sub_by_alpha(self, other: u8) -> Self;
-
+  
     fn set_alpha(self, alpha: u8) -> Self;
 
     fn alpha(self) -> u8;
@@ -74,7 +59,6 @@ pub struct PixelBuffer {
 
     field: usize,
     background: Argb,
-    is_running_foreign: bool,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -99,7 +83,6 @@ impl PixelBuffer {
 
             field: FIELD_START,
             background: 0xFF_24_24_24,
-            is_running_foreign: false,
         }
     }
 
@@ -117,14 +100,6 @@ impl PixelBuffer {
 
     pub fn mixerm(&mut self) {
         self.mixer = u32::mix;
-    }
-
-    pub fn as_slice(&self) -> &[Argb] {
-        self.buffer.as_slice()
-    }
-
-    pub fn as_mut_slide(&mut self) -> &mut [Argb] {
-        self.buffer.as_mut_slice()
     }
 
     pub fn set_background(&mut self, bg: Argb) {
@@ -164,33 +139,8 @@ impl PixelBuffer {
         self.height = h;
     }
 
-    pub fn update(&mut self) {
-        self.resize(self.width, self.height);
-    }
-
-    pub fn is_in_bound(&self, p: P2) -> bool {
-        (p.0 as usize) < self.width && (p.1 as usize) < self.height
-    }
-
-    pub fn get_idx_fast(&self, p: P2) -> usize {
-        let x = p.0 as Argb;
-        let y = p.1 as Argb;
-
-        y.wrapping_mul(self.width as Argb).wrapping_add(x) as usize
-    }
-
     pub fn pixel(&self, i: usize) -> Argb {
         self.buffer[i]
-    }
-
-    pub fn to_rgba(i: &[Argb], o: &mut [u8]) {
-        for (pin, pout) in i.iter().zip(o.chunks_exact_mut(4)) {
-            let mut a = pin.decompose();
-
-            a.rotate_left(1);
-
-            pout.copy_from_slice(&a);
-        }
     }
 
     pub fn clear_out_buffer(&mut self) {

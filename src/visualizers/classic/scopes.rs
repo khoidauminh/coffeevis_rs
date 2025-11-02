@@ -19,7 +19,6 @@ fn to_color(s: i32, size: i32) -> u8 {
 
 pub fn draw_vectorscope(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
     let range = crate::data::DEFAULT_WAV_WIN;
-    let _l = stream.len();
 
     let size = prog.pix.height().min(prog.pix.width()) as i32;
     let sizei = size;
@@ -63,132 +62,6 @@ pub fn draw_vectorscope(prog: &mut crate::Program, stream: &mut crate::AudioBuff
 
     stream.autoslide();
 }
-
-// pub fn draw_oscilloscope(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
-//     let Ok(mut wave_scale_factor) = WAVE_SCALE_FACTOR.try_lock() else {
-//         return;
-//     };
-
-//     let l = stream.input_size() * 2 / 3;
-//     let (width, height) = prog.pix.size().as_tuple();
-//     let width_top_h = width / 2;
-//     let height_top_h = height / 2;
-
-//     let scale = prog.pix.height() as f32 * prog.vol_scl * 0.45;
-
-//     let mut bass_sum = 0.0;
-
-//     let mut i = (-20_isize) as usize;
-
-//     let mut ssmp = stream.get(i);
-//     let mut old = ssmp;
-//     let mut old2 = old;
-
-//     while i != 0 {
-//         ssmp = linearfc(ssmp, stream.get(i), 0.01);
-//         old2 = old;
-//         old = ssmp;
-//         i = i.wrapping_add(1);
-//     }
-
-//     let zeroi = {
-//         let mut zeros = ArrayVec::<usize, 6>::new();
-//         zeros.push(0);
-
-//         for i in 0..l {
-//             let t = stream.get(i);
-//             ssmp = linearfc(ssmp, t, 0.01);
-
-//             if zeros.len() < 5 {
-//                 if old2.0 > 0.0 && ssmp.0 < 0.0 {
-//                     zeros.push(i);
-//                 }
-//                 if old2.1 > 0.0 && ssmp.1 < 0.0 {
-//                     zeros.push(i);
-//                 }
-//             }
-
-//             old2 = old;
-//             old = ssmp;
-
-//             bass_sum += ssmp.0.powi(2) + ssmp.1.powi(2);
-//         }
-
-//         zeros[zeros.len() - 1] - 50
-//     };
-
-//     let bass = (bass_sum / l as f32).sqrt();
-
-//     let wsf = bass * 20.0 + 2.0;
-
-//     *wave_scale_factor = math::interpolate::linear_decay(*wave_scale_factor, wsf, 0.5).max(2.0);
-
-//     prog.pix.clear();
-
-//     let wave_scale_factor = *wave_scale_factor as isize;
-
-//     for x in 0..prog.pix.width() as i32 {
-//         let di = (x - width_top_h) as isize * wave_scale_factor + zeroi as isize;
-
-//         let mut smp_max = Cplx::new(-1000.0, -1000.0);
-//         let mut smp_min = Cplx::new(1000.0, 1000.0);
-
-//         for i in di..di + wave_scale_factor {
-//             let smp = stream.get(i as usize);
-
-//             smp_max.0 = smp_max.0.max(smp.0);
-//             smp_min.0 = smp_min.0.min(smp.0);
-
-//             smp_max.1 = smp_max.1.max(smp.1);
-//             smp_min.1 = smp_min.1.min(smp.1);
-//         }
-
-//         let y1_max = height_top_h + (smp_max.0 * scale) as i32;
-//         let y1_min = height_top_h + (smp_min.0 * scale) as i32;
-
-//         let y2_max = height_top_h + (smp_max.1 * scale) as i32;
-//         let y2_min = height_top_h + (smp_min.1 * scale) as i32;
-
-//         let p1_max = P2::new(x, y1_max);
-//         let p1_min = P2::new(x, y1_min);
-
-//         let p2_max = P2::new(x, y2_max);
-//         let p2_min = P2::new(x, y2_min);
-
-//         prog.pix.line(p1_max, p1_min, 0xFF_55_FF_55, |a, b| a | b);
-//         prog.pix.line(p2_max, p2_min, 0xFF_55_55_FF, |a, b| a | b);
-//     }
-
-//     let mut li = LOCALI.load(Relaxed);
-//     let random = math::rng::random_int(3) as usize;
-
-//     li = (li + random + 3) % prog.pix.width();
-
-//     let rx = width - li as i32 - 1;
-
-//     let width = width as usize;
-//     let height = height as usize;
-
-//     prog.pix.rect_wh(
-//         P2::new(rx, height / 10),
-//         1,
-//         width - height / 4,
-//         CROSS_COL,
-//         Pixel::over,
-//     );
-
-//     prog.pix.rect_wh(
-//         P2::new(rx, height / 2),
-//         width >> 3,
-//         1,
-//         CROSS_COL,
-//         Pixel::over,
-//     );
-
-//     LOCALI.store(li, Relaxed);
-
-//     stream.autoslide();
-// }
 
 const BUFFER_SIZE: usize = 1024;
 const PADDING: usize = BUFFER_SIZE;
@@ -280,7 +153,7 @@ pub fn draw_oscilloscope(prog: &mut crate::Program, stream: &mut crate::AudioBuf
         rmin = rmin * scale + center;
         rmax = rmax * scale + center;
 
-        prog.pix.mixer(|a, b| a | b);
+        prog.pix.mixer(u32::or);
         prog.pix.color(u32::compose([255, 0, 55, 255]));
         prog.pix
             .rect(P2(x as i32, lmin as i32), 1, (lmax - lmin) as usize);

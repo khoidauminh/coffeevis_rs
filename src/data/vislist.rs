@@ -116,23 +116,6 @@ impl VisNavigator {
         self.load_index();
     }
 
-    pub fn prev_list(&mut self) {
-        let size = self.num_of_lists();
-        self.save_index();
-        self.index_list = increment(self.index_list, size);
-        self.load_index();
-    }
-
-    pub fn switch_by_index(&mut self, index: usize) -> Visualizer {
-        let current_list = self.structure[self.index_list].list;
-
-        if let Some(_vis) = current_list.get(index) {
-            self.index_vis = index;
-        }
-
-        Self::return_apply(self.current_vis())
-    }
-
     pub fn switch_by_name(&mut self, name: &str) -> Visualizer {
         let name = name.to_lowercase();
         let mut found = false;

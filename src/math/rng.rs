@@ -1,10 +1,3 @@
-struct Rng {
-    a: f32,
-    b: f32,
-    c: f32,
-    d: f32,
-}
-
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 pub struct FastU32 {

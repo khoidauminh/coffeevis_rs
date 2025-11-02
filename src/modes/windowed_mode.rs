@@ -62,10 +62,6 @@ impl WindowProps {
         self.width = s.0.try_into().ok().unwrap();
         self.height = s.1.try_into().ok().unwrap();
     }
-
-    pub fn getu(&self) -> (usize, usize) {
-        (self.width as usize, self.height as usize)
-    }
 }
 
 struct WindowState {
@@ -204,10 +200,6 @@ impl ApplicationHandler for WindowState {
                 if let Some(w) = self.window.as_ref() {
                     w.request_redraw()
                 }
-            }
-
-            WindowEvent::Occluded(b) => {
-                self.prog.set_hidden(b);
             }
 
             WindowEvent::Resized(PhysicalSize { width, height }) => {

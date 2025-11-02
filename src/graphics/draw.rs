@@ -2,8 +2,6 @@ use crate::graphics::PixelBuffer;
 
 use super::{P2, Pixel};
 
-const COMMAND_BUFFER_INIT_CAPACITY: usize = super::MAX_WIDTH as usize;
-
 pub fn get_idx_fast(cwidth: usize, p: P2) -> usize {
     let x = p.0.cast_unsigned();
     let y = p.1.cast_unsigned();
@@ -148,6 +146,7 @@ impl PixelBuffer {
         }
     }
 
+    #[allow(dead_code)]
     pub fn paste(&mut self, pix_pos: P2, pix_width: usize, pix_vec: &Vec<u32>) {
         let canvas_iter = self
             .buffer

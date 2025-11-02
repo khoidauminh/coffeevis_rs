@@ -26,13 +26,10 @@ pub const INCREMENT: usize = 2;
 pub const CAP_MILLI_HZ: u32 = 192 * 1000;
 pub const DEFAULT_MILLI_HZ: u32 = 60 * 1000;
 pub const DEFAULT_HZ: u64 = DEFAULT_MILLI_HZ as u64 / 1000;
-pub const IDLE_INTERVAL: Duration = Duration::from_millis(1000 / 5);
 
 pub const DEFAULT_WAV_WIN: usize = 64 * INCREMENT;
 pub const DEFAULT_ROTATE_SIZE: usize = 289; // 3539;
 pub const PHASE_OFFSET: usize = SAMPLE_RATE / 50 / 4;
-pub const DEFAULT_VOL_SCL: f32 = 0.86;
-pub const DEFAULT_SMOOTHING: f32 = 0.65;
 
 /// Stop rendering when get_no_sample() exceeds this value;
 pub const STOP_RENDERING: u8 = 192;
@@ -46,13 +43,8 @@ pub const MAX_WIDTH: u16 = 480;
 pub const MAX_HEIGHT: u16 = 360;
 
 pub const MAX_CON_WIDTH: u16 = 128;
-pub const MAX_CON_HEIGHT: u16 = 96;
 
 pub const MAX_SCALE_FACTOR: u8 = 8;
-pub const CRT_EFFECT: bool = false;
-
-type Real = f64;
-type Int = i32;
 
 #[derive(PartialEq, Clone, Copy)]
 pub enum RefreshRateMode {
@@ -71,8 +63,6 @@ pub(crate) struct Program {
 
     /// Allow for resizing. Windowed mode only.
     resize: bool,
-
-    hidden: bool,
 
     win_render_effect: crate::graphics::RenderEffect,
 
@@ -114,7 +104,6 @@ impl Program {
             scale: DEFAULT_WIN_SCALE,
             resize: false,
 
-            hidden: false,
             win_render_effect: RenderEffect::Interlaced,
 
             mode: default_mode,
@@ -174,14 +163,6 @@ impl Program {
 
     pub fn is_display_enabled(&self) -> bool {
         self.display
-    }
-
-    pub fn set_hidden(&mut self, b: bool) {
-        self.hidden = b;
-    }
-
-    pub fn is_hidden(&self) -> bool {
-        self.hidden
     }
 
     pub fn is_transparent(&self) -> bool {
@@ -289,21 +270,6 @@ impl Program {
         }
 
         self.pix.resize(s.0 as usize, s.1 as usize);
-    }
-
-    pub fn refresh(&mut self) {
-        match &self.mode {
-            Mode::Win => self.pix.resize(
-                self.window_props.width as usize,
-                self.window_props.height as usize,
-            ),
-            _ => {
-                self.pix.resize(
-                    self.console_props.width as usize,
-                    self.console_props.height as usize,
-                );
-            }
-        }
     }
 
     pub fn render(&mut self) {

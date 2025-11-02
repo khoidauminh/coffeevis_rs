@@ -2,14 +2,12 @@ use crate::data::DEFAULT_ROTATE_SIZE;
 use crate::math::Cplx;
 use crate::math::interpolate::decay;
 
-const SILENCE_LIMIT: f32 = 0.001;
-const AMP_PERSIST_LIMIT: f32 = 0.05;
-const AMP_TRIGGER_THRESHOLD: f32 = 0.85;
-const SILENCE_CHECK_SIZE: u8 = 24;
+const SILENCE_LIMIT: f32 = 0.0001;
+const AMP_PERSIST_LIMIT: f32 = 0.001;
 
-const BUFFER_CAPACITY: usize = 1 << 20;
+const BUFFER_CAPACITY: usize = 1 << 16;
 const BUFFER_MASK: usize = BUFFER_CAPACITY - 1;
-const REACT_SPEED: f32 = 0.025;
+const REACT_SPEED: f32 = 0.99;
 
 pub struct AudioBuffer {
     data: [Cplx; BUFFER_CAPACITY],
@@ -81,16 +79,16 @@ impl AudioBuffer {
             max = max.max(self.data[i].max());
         }
 
-        self.max = decay(self.max, max, 0.99);
+        self.max = decay(self.max, max, REACT_SPEED);
 
-        if self.max < 0.0001 {
+        if self.max < SILENCE_LIMIT {
             self.silent = self.silent.saturating_add(1);
             return;
         }
 
         self.silent = 0;
 
-        let scale: f32 = 1.0 / self.max.max(0.001);
+        let scale: f32 = 1.0 / self.max.max(AMP_PERSIST_LIMIT);
 
         for n in 0..self.lastinputsize {
             let i = (n + self.oldwriteend) & BUFFER_MASK;
