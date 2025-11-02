@@ -33,7 +33,7 @@ fn prepare(stream: &mut crate::AudioBuffer, local: &mut LocalType) {
     math::fft_stereo(&mut fft, RANGE, math::Normalize::No);
 
     fft.iter_mut().take(RANGE).enumerate().for_each(|(i, smp)| {
-        let scalef = 3.0 / FFT_SIZE as f32 * math::fast::ilog2(i + 1) as f32;
+        let scalef = 2.5 / FFT_SIZE as f32 * math::fast::ilog2(i + 1) as f32;
         *smp *= scalef;
     });
 
