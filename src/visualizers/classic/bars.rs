@@ -37,8 +37,6 @@ fn dynamic_smooth2(t: f32, b: f32) -> f32 {
 fn prepare(
     stream: &mut crate::AudioBuffer,
     bar_num: usize,
-    volume_scale: f32,
-    prog_smoothing: f32,
 ) {
     let bar_num = bar_num + 1;
 
@@ -65,7 +63,7 @@ fn prepare(
             let scl = ((i + 1) as f32).log2().powi(2);
             let smp_f32: f32 = cplx.mag();
 
-            *smp = smp_f32 * volume_scale * scl * norm;
+            *smp = smp_f32 * scl * norm;
         });
 
     crate::audio::limiter(&mut data_f[..bar_num], 0.0, 0.95, |x| x);
@@ -81,7 +79,7 @@ fn prepare(
             .enumerate()
             .for_each(|(i, (w, r))| {
                 let i_ = (i + 1) as f32 * bnf;
-                let accel = (0.99 + 0.005 * i_) * prog_smoothing;
+                let accel = 0.95 + 0.025 * i_;
                 *w = math::interpolate::decay(*w, *r, accel);
             })
     });
@@ -97,7 +95,7 @@ pub fn draw_bars(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
     let bnf_recip = 1.0 / bnf;
     let _l = stream.len();
 
-    prepare(stream, bar_num, prog.vol_scl, 0.95);
+    prepare(stream, bar_num);
 
     prog.pix.clear();
     let size = prog.pix.sizeu();
@@ -174,7 +172,7 @@ pub fn draw_bars_circle(prog: &mut crate::Program, stream: &mut crate::AudioBuff
     let wh = prog.pix.width() as i32 / 2;
     let hh = prog.pix.height() as i32 / 2;
 
-    prepare(stream, bar_num, prog.vol_scl, prog.smoothing);
+    prepare(stream, bar_num);
 
     prog.pix.clear();
 

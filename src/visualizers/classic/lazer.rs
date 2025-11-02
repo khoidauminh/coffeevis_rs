@@ -38,7 +38,7 @@ pub fn draw_lazer(para: &mut crate::Program, stream: &mut crate::AudioBuffer) {
             sum.1 += smooth;
         }
 
-        Cplx(sum.0 * para.vol_scl * 0.0035, sum.1 * para.vol_scl * 0.0035)
+        Cplx(sum.0 * 0.0035, sum.1 * 0.0035)
     };
 
     let LocalData { mut p0, mut p1 } = DATA.with_borrow(|d| *d);

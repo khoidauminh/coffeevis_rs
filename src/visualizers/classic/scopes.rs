@@ -18,12 +18,12 @@ fn to_color(s: i32, size: i32) -> u8 {
 }
 
 pub fn draw_vectorscope(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
-    let range = prog.wav_win;
+    let range = crate::data::DEFAULT_WAV_WIN;
     let _l = stream.len();
 
     let size = prog.pix.height().min(prog.pix.width()) as i32;
     let sizei = size;
-    let scale = size as f32 * prog.vol_scl * 0.5;
+    let scale = size as f32 * 0.5;
 
     let P2(width, height) = prog.pix.size();
 

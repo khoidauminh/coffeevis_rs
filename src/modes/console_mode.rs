@@ -323,8 +323,8 @@ pub fn control_key_events_con(prog: &mut Program, exit: &mut bool) -> Result<(),
         match read()? {
             Event::Key(event) => match event.code {
                 KeyCode::Char('b') => prog.change_visualizer(false),
-
-                KeyCode::Char(' ') => prog.change_visualizer(true),
+                KeyCode::Char('n') => prog.change_visualizer(true),
+                KeyCode::Char('m') => prog.change_vislist(),
 
                 KeyCode::Char('q') => *exit = true,
 
@@ -348,20 +348,9 @@ pub fn control_key_events_con(prog: &mut Program, exit: &mut bool) -> Result<(),
                     prog.update_size(prog.console_size())
                 }
 
-                KeyCode::Char('-') => prog.decrease_vol_scl(),
-                KeyCode::Char('=') => prog.increase_vol_scl(),
-
-                KeyCode::Char('[') => prog.decrease_smoothing(),
-                KeyCode::Char(']') => prog.increase_smoothing(),
-
-                KeyCode::Char(';') => prog.decrease_wav_win(),
-                KeyCode::Char('\'') => prog.increase_wav_win(),
-
                 KeyCode::Char('\\') => prog.toggle_auto_switch(),
 
                 KeyCode::Char('.') => prog.switch_con_mode(),
-
-                KeyCode::Char('n') => prog.change_vislist(),
 
                 KeyCode::Char('/') => prog.reset_parameters(),
 

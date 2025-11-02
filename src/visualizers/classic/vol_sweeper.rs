@@ -26,7 +26,7 @@ pub fn draw_vol_sweeper(para: &mut crate::Program, stream: &mut crate::AudioBuff
         for i in 0..SAMPLE_SIZE / 4 {
             sum += stream.get(i).l1_norm();
         }
-        (sum / (SAMPLE_SIZE / 3) as f32 * para.vol_scl * para.pix.width() as f32) as usize
+        (sum / (SAMPLE_SIZE / 3) as f32 * para.pix.width() as f32) as usize
     };
 
     let color = (w * 255 / para.pix.width()).min(255) as u8;

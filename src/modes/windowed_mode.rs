@@ -9,7 +9,7 @@ use winit::{
     dpi::PhysicalSize,
     event::{self, ElementState, WindowEvent},
     event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
-    keyboard::{Key, NamedKey},
+    keyboard::Key,
     window::{Icon, Window, WindowButtons, WindowId, WindowLevel},
 };
 
@@ -242,24 +242,10 @@ impl ApplicationHandler for WindowState {
             {
                 match event.key_without_modifiers().as_ref() {
                     Key::Character("q") => self.call_exit(event_loop),
-
-                    Key::Named(NamedKey::Space) => self.prog.change_visualizer(true),
-
+                    Key::Character("n") => self.prog.change_visualizer(true),
                     Key::Character("b") => self.prog.change_visualizer(false),
-
-                    Key::Character("n") => self.prog.change_vislist(),
-
-                    Key::Character("-") => self.prog.decrease_vol_scl(),
-                    Key::Character("=") => self.prog.increase_vol_scl(),
-
-                    Key::Character("[") => self.prog.decrease_smoothing(),
-                    Key::Character("]") => self.prog.increase_smoothing(),
-
-                    Key::Character(";") => self.prog.decrease_wav_win(),
-                    Key::Character("\'") => self.prog.increase_wav_win(),
-
+                    Key::Character("m") => self.prog.change_vislist(),
                     Key::Character("\\") => self.prog.toggle_auto_switch(),
-
                     Key::Character("/") => self.prog.reset_parameters(),
 
                     _ => {}

@@ -86,10 +86,6 @@ pub(crate) struct Program {
     refresh_rate_mode: RefreshRateMode,
     refresh_rate_intervals: [Duration; 2],
 
-    pub wav_win: usize,
-    pub vol_scl: f32,
-    pub smoothing: f32,
-
     pub window_props: modes::windowed_mode::WindowProps,
 
     pub console_props: modes::console_mode::ConsoleProps,
@@ -139,10 +135,6 @@ impl Program {
             switch: Instant::now() + Duration::from_secs(8),
             auto_switch: true,
             auto_switch_interval: Duration::from_secs(8),
-
-            wav_win: DEFAULT_WAV_WIN,
-            vol_scl: DEFAULT_VOL_SCL,
-            smoothing: DEFAULT_SMOOTHING,
 
             window_props: modes::windowed_mode::WindowProps {
                 width: DEFAULT_SIZE_WIN,
@@ -318,30 +310,6 @@ impl Program {
         (self.visualizer)(self, &mut crate::audio::get_buf());
     }
 
-    pub fn increase_vol_scl(&mut self) {
-        self.vol_scl = (self.vol_scl * 1.2).clamp(0.0, 10.0);
-    }
-
-    pub fn decrease_vol_scl(&mut self) {
-        self.vol_scl = (self.vol_scl / 1.2).clamp(0.0, 10.0);
-    }
-
-    pub fn increase_smoothing(&mut self) {
-        self.smoothing = (self.smoothing + 0.05).clamp(0.0, 0.95);
-    }
-
-    pub fn decrease_smoothing(&mut self) {
-        self.smoothing = (self.smoothing - 0.05).clamp(0.0, 0.95);
-    }
-
-    pub fn increase_wav_win(&mut self) {
-        self.wav_win = (self.wav_win * 5 / 4).clamp(3, 500)
-    }
-
-    pub fn decrease_wav_win(&mut self) {
-        self.wav_win = (self.wav_win * 4 / 5).clamp(3, 500)
-    }
-
     pub fn toggle_auto_switch(&mut self) {
         self.auto_switch ^= true;
 
@@ -364,10 +332,6 @@ impl Program {
     }
 
     pub fn reset_parameters(&mut self) {
-        self.vol_scl = DEFAULT_VOL_SCL;
-        self.smoothing = DEFAULT_SMOOTHING;
-        self.wav_win = DEFAULT_WAV_WIN;
-
         self.change_con_max(50, true);
 
         if self.refresh_rate_mode != RefreshRateMode::Specified {
