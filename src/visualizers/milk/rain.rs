@@ -58,7 +58,10 @@ impl Thunder {
             segs[i] = location;
         }
 
-        Self { segments: segs, fade: 255 }
+        Self {
+            segments: segs,
+            fade: 255,
+        }
     }
 
     pub fn draw(&self, canvas: &mut PixelBuffer) {
@@ -165,7 +168,7 @@ pub fn draw(prog: &mut Program, stream: &mut AudioBuffer) {
 
     let voldiff = vol2 - vol1;
 
-    dbg!(voldiff>= 5.0);
+    dbg!(voldiff >= 5.0);
 
     let blue = 0.7 - vol2 * 0.005;
 
@@ -198,7 +201,7 @@ pub fn draw(prog: &mut Program, stream: &mut AudioBuffer) {
     });
 
     THUNDER.with_borrow_mut(|t| {
-        if voldiff>= 6.7 {
+        if voldiff >= 6.7 {
             *t = Thunder::generate(random_int(1000), prog.pix.width() as i32)
         }
 

@@ -33,11 +33,11 @@ pub(crate) trait Pixel:
     fn black() -> Self;
     fn white() -> Self;
     fn trans() -> Self;
- 
+
     fn over(self, other: Self) -> Self;
     fn mix(self, other: Self) -> Self;
     fn add(self, other: Self) -> Self;
-  
+
     fn set_alpha(self, alpha: u8) -> Self;
 
     fn alpha(self) -> u8;

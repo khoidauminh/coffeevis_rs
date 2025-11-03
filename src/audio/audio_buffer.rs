@@ -54,15 +54,19 @@ impl AudioBuffer {
         let inputsize = in_buffer.len() / 2;
 
         self.oldwriteend = self.writeend;
-        let mut writeend = self.writeend;
+        self.readend = self.writeend;
 
-        in_buffer.chunks_exact(2).for_each(|chunk| {
-            self.data[writeend] = Cplx::new(chunk[0].to_float_sample(), chunk[1].to_float_sample());
-            writeend = (writeend + 1) & BUFFER_MASK;
-        });
+        let (sleft, sright) = self.data.split_at_mut(self.writeend);
 
-        self.writeend = writeend;
-        self.readend = writeend.wrapping_sub(inputsize) & BUFFER_MASK;
+        sright
+            .iter_mut()
+            .chain(sleft.iter_mut())
+            .zip(in_buffer.chunks_exact(2))
+            .for_each(|(i, chunk)| {
+                *i = Cplx::new(chunk[0].to_float_sample(), chunk[1].to_float_sample());
+            });
+
+        self.writeend = (self.writeend + inputsize) & BUFFER_MASK;
 
         self.autorotatesize = inputsize / (self.rotatessincewrite.next_power_of_two() * 3 / 2);
         self.rotatessincewrite = 0;
@@ -98,15 +102,13 @@ impl AudioBuffer {
 
     pub fn read(&self, out: &mut [Cplx]) {
         let len = out.len().min(BUFFER_CAPACITY);
+        let start = self.readend.wrapping_sub(len) & BUFFER_MASK;
 
-        let mut start = self.readend.wrapping_sub(len) & BUFFER_MASK;
+        let (sleft, sright) = self.data.split_at(start);
 
-        out.iter_mut().for_each(|smp| {
-            *smp = self.data[start];
-
-            start += 1;
-            start &= BUFFER_MASK;
-        });
+        out.iter_mut()
+            .zip(sright.iter().chain(sleft.iter()))
+            .for_each(|(d, s)| *d = *s);
     }
 
     pub fn input_size(&self) -> usize {

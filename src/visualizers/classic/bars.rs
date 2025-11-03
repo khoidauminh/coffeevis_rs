@@ -34,10 +34,7 @@ fn dynamic_smooth2(t: f32, b: f32) -> f32 {
     (b * t + 1.3).recip()
 }
 
-fn prepare(
-    stream: &mut crate::AudioBuffer,
-    bar_num: usize,
-) {
+fn prepare(stream: &mut crate::AudioBuffer, bar_num: usize) {
     let bar_num = bar_num + 1;
 
     let bnf = bar_num as f32;
@@ -93,7 +90,7 @@ pub fn draw_bars(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
     let bar_num = (prog.pix.width() / 2).min(MAX_BARS);
     let bnf = bar_num as f32;
     let bnf_recip = 1.0 / bnf;
-    
+
     prepare(stream, bar_num);
 
     prog.pix.clear();
