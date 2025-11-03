@@ -166,21 +166,15 @@ impl PixelBuffer {
         let dst_width = width.unwrap_or(self.width * scale);
 
         if effect == RenderEffect::None {
-            if self.out_buffer.len() < dest.len() {
-                self.out_buffer.resize(dest.len(), self.background);
-            }
-
             self.buffer
                 .chunks_exact(self.width) // source lines
-                .zip(self.out_buffer.chunks_exact_mut(dst_width * scale)) // with destination lines
+                .zip(dest.chunks_exact_mut(dst_width * scale)) // with destination lines
                 .flat_map(|(src_row, dst_row)| {
                     src_row.iter().cycle().zip(dst_row.chunks_exact_mut(scale))
                 })
                 .for_each(|(src_pixel, dst_chunk)| {
                     dst_chunk.fill((self.mixer)(self.background, *src_pixel))
                 });
-
-            dest.copy_from_slice(&self.out_buffer);
 
             return;
         }

@@ -136,6 +136,7 @@ impl Program {
                     match val.as_str() {
                         "crt" => self.set_win_render_effect(RenderEffect::Crt),
                         "interlaced" => self.set_win_render_effect(RenderEffect::Interlaced),
+                        "none" => self.set_win_render_effect(RenderEffect::None),
                         _ => panic!("Invalid value for effect."),
                     }
                 }
