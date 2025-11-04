@@ -4,13 +4,12 @@ const PERBYTE: usize = 16; // like percent but ranges from 0..256
 
 pub fn draw_wave(para: &mut crate::Program, stream: &mut crate::AudioBuffer) {
     let l = (stream.len() * PERBYTE) >> 8;
-    let _random = 0usize;
 
     let (width, height) = para.pix.sizeu();
 
     for x in 0..width {
         let i = l * x / width;
-        let smp = stream.get(i);
+        let smp = stream.get(l - i);
 
         let r: u8 = (smp.0 * 144.0 + 128.0) as u8;
         let b: u8 = (smp.1 * 144.0 + 128.0) as u8;
