@@ -66,7 +66,7 @@ impl AudioBuffer {
                 *i = Cplx::new(chunk[0].to_float_sample(), chunk[1].to_float_sample());
             });
 
-        self.writeend = (self.writeend + inputsize) & BUFFER_MASK;
+        self.writeend = self.writeend.wrapping_add(inputsize) & BUFFER_MASK;
 
         self.autorotatesize = inputsize / (self.rotatessincewrite.next_power_of_two() * 3 / 2);
         self.rotatessincewrite = 0;
@@ -79,7 +79,7 @@ impl AudioBuffer {
     fn normalize(&mut self) {
         let mut max = 0.0f32;
         for n in 0..self.lastinputsize {
-            let i = (n + self.oldwriteend) & BUFFER_MASK;
+            let i = n.wrapping_add(self.oldwriteend) & BUFFER_MASK;
             max = max.max(self.data[i].max());
         }
 
@@ -95,7 +95,7 @@ impl AudioBuffer {
         let scale: f32 = 1.0 / self.max.max(AMP_PERSIST_LIMIT);
 
         for n in 0..self.lastinputsize {
-            let i = (n + self.oldwriteend) & BUFFER_MASK;
+            let i = n.wrapping_add(self.oldwriteend) & BUFFER_MASK;
             self.data[i] *= scale;
         }
     }
@@ -120,11 +120,11 @@ impl AudioBuffer {
     }
 
     pub fn autoslide(&mut self) {
-        self.readend = (self.readend + self.autorotatesize) & BUFFER_MASK;
+        self.readend = self.readend.wrapping_add(self.autorotatesize) & BUFFER_MASK;
         self.rotatessincewrite += 1;
     }
 
     pub fn get(&self, i: usize) -> Cplx {
-        self.data[(self.readend - i) & BUFFER_MASK]
+        self.data[self.readend.wrapping_sub(i) & BUFFER_MASK]
     }
 }
