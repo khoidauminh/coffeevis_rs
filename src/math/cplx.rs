@@ -165,6 +165,10 @@ impl Cplx {
         Cplx(x, y)
     }
 
+    pub fn from_slice(x: &[f32]) -> Cplx {
+        Cplx(x[0], x[1])
+    }
+
     pub fn as_slice(&self) -> [f32; 2] {
         [self.0, self.1]
     }

@@ -7,10 +7,11 @@ const AMP_PERSIST_LIMIT: f32 = 0.001;
 
 const BUFFER_CAPACITY: usize = 1 << 16;
 const BUFFER_MASK: usize = BUFFER_CAPACITY - 1;
+const BUFFER_EVEN: usize = BUFFER_MASK - 1; // because all indices must be even.
 const REACT_SPEED: f32 = 0.99;
 
 pub struct AudioBuffer {
-    data: [Cplx; BUFFER_CAPACITY],
+    data: [f32; BUFFER_CAPACITY],
 
     writeend: usize,
     oldwriteend: usize,
@@ -29,7 +30,7 @@ pub struct AudioBuffer {
 impl AudioBuffer {
     pub const fn new() -> Self {
         Self {
-            data: [Cplx::zero(); _],
+            data: [0.0; _],
 
             writeend: 0,
             oldwriteend: 0,
@@ -50,28 +51,27 @@ impl AudioBuffer {
         self.silent
     }
 
-    pub fn read_from_input<T: cpal::Sample<Float = f32>>(&mut self, in_buffer: &[T]) {
-        let inputsize = in_buffer.len() / 2;
-
+    pub fn read_from_input(&mut self, in_buffer: &[f32]) {
+        let copysize = in_buffer.len();
+        
         self.oldwriteend = self.writeend;
         self.readend = self.writeend;
 
         let (sleft, sright) = self.data.split_at_mut(self.writeend);
 
-        sright
-            .iter_mut()
-            .chain(sleft.iter_mut())
-            .zip(in_buffer.chunks_exact(2))
-            .for_each(|(i, chunk)| {
-                *i = Cplx::new(chunk[0].to_float_sample(), chunk[1].to_float_sample());
-            });
+        let in_buffer_split = copysize.min(sright.len());
+        sright[..in_buffer_split].copy_from_slice(&in_buffer[..in_buffer_split]);
 
-        self.writeend = self.writeend.wrapping_add(inputsize) & BUFFER_MASK;
+        let in_buffer_left = copysize - in_buffer_split;
+        sleft[..in_buffer_left].copy_from_slice(&in_buffer[in_buffer_split..]);
 
-        self.autorotatesize = inputsize / (self.rotatessincewrite.next_power_of_two() * 3 / 2);
+        self.writeend = self.writeend.wrapping_add(copysize) & BUFFER_EVEN;
+
+        self.autorotatesize = copysize / (self.rotatessincewrite.next_power_of_two() * 2);
+        
         self.rotatessincewrite = 0;
 
-        self.lastinputsize = inputsize;
+        self.lastinputsize = copysize;
 
         self.normalize();
     }
@@ -80,7 +80,7 @@ impl AudioBuffer {
         let mut max = 0.0f32;
         for n in 0..self.lastinputsize {
             let i = n.wrapping_add(self.oldwriteend) & BUFFER_MASK;
-            max = max.max(self.data[i].max());
+            max = max.max(self.data[i]);
         }
 
         self.max = decay(self.max, max, REACT_SPEED);
@@ -102,13 +102,12 @@ impl AudioBuffer {
 
     pub fn read(&self, out: &mut [Cplx]) {
         let len = out.len().min(BUFFER_CAPACITY);
-        let start = self.readend.wrapping_sub(len) & BUFFER_MASK;
+        let start = self.readend.wrapping_sub(len * 2) & BUFFER_EVEN;
 
-        let (sleft, sright) = self.data.split_at(start);
-
-        out.iter_mut()
-            .zip(sright.iter().chain(sleft.iter()))
-            .for_each(|(d, s)| *d = *s);
+        for i in 0..len {
+            let si = (start + i * 2) & BUFFER_EVEN;
+            out[i] = Cplx::from_slice(&self.data[si..si+2]);
+        }
     }
 
     pub fn input_size(&self) -> usize {
@@ -120,11 +119,12 @@ impl AudioBuffer {
     }
 
     pub fn autoslide(&mut self) {
-        self.readend = self.readend.wrapping_add(self.autorotatesize) & BUFFER_MASK;
+        self.readend = self.readend.wrapping_add(self.autorotatesize) & BUFFER_EVEN;
         self.rotatessincewrite += 1;
     }
 
     pub fn get(&self, i: usize) -> Cplx {
-        self.data[self.readend.wrapping_sub(i) & BUFFER_MASK]
+        let i = self.readend.wrapping_sub(i*2) & BUFFER_EVEN;
+        Cplx::from_slice(&self.data[i..i+2])
     }
 }
