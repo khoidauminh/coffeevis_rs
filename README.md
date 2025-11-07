@@ -15,9 +15,6 @@ Terminal mode is back and enabled by default!
 
 Minifb support has been removed!
 
-Two new features have been added: 'window_only' and 'console_only` that
-respectively disables terminal mode and winit mode if you don't want it.
-
 A little post-processing effect has been added to window mode which should
 make the animations a little more smooth looking.
 
@@ -72,16 +69,18 @@ WAYLAND_DISPLAY= coffeevis
 ## Flags
 Coffeevis supports temporary options at launch
 
-| Option | Value (example) | Description |
+| Option | Value(s) | Description |
 | ------ | ------ | ------ |
-| --ascii<br />--block<br />--braille | | runs in the terminal |
-| --no-auto-switch | | disables automatic visualizer switching |
-| --size | 80x80 | sets resolution in window mode |
-| --scale | 2 | upscales in window mode |
-| --fps | 60 | sets refresh rate (by default coffeevis will try to query your monitor's refresh rate) |
-| --resizable | | allows resizing in window mode |
-| --max-con-size | 50x50 | sets maximum resolution in terminal mode |
-| --vis | spectrum | launches coffeevis with the specified visualizer |
+| --ascii<br />--block<br />--braille | | run in the terminal |
+| --no-auto-switch | | disable automatic visualizer switching |
+| --size | 80x80 | set resolution in window mode |
+| --scale | 2 | upscale in window mode |
+| --fps | 60 | set refresh rate (by default coffeevis will try to query your monitor's refresh rate) |
+| --resizable | | allow resizing in window mode |
+| --max-con-size | 50x50 | set maximum resolution in terminal mode |
+| --vis | spectrum | launche coffeevis with the specified visualizer |
+| --effect | crt | blank out every other horizontal line to simulate CRT effect |
+| --effect | interlaced | interlace fields together to make the visualizer appear smoother (the number of fields is the scale value) |
 
 ## Notes
 
@@ -105,18 +104,18 @@ It looks the smoothest when you're in a dark room with low monitor brightness. B
 ### Global
 |  Key | Description |
 | ------ | ------ |
-| <kbd>n</kbd> | iterates forward through visualizers (wraps around) |
-| <kbd>b</kbd> | iterates backward (wraps around) |
-| <kbd>m</kbd> | switches through sets of visualizers (wraps around) |
-| <kbd>q</kbd> | exits |
-| <kbd>\\</bkd> | toggles auto switching (default: ON, 8 seconds) |
+| <kbd>n</kbd> | iterate forward through visualizers (wraps around) |
+| <kbd>b</kbd> | iterate backward (wraps around) |
+| <kbd>m</kbd> | switche through sets of visualizers (wraps around) |
+| <kbd>q</kbd> | exit |
+| <kbd>\\</bkd> | toggle auto switching (default: ON, 8 seconds) |
 
 ### Terminal
 |  Key | Description |
 | ------ | ------ |
-| <kbd>.</kbd> | toggles between ascii rendering, block rendering and braille rendering |
-| <kbd>9</kbd> / <kbd>0</kbd> | decreases/increases maximum resolution |
-| <kbd>7</kbd> / <kbd>8</kbd> | decreases/increases fps by 5 (default: 60) |
-| <kbd>1</kbd> .. <kbd>6</kbd> | changes fps to 10 ... 60 respectively |
+| <kbd>.</kbd> | toggle between ascii rendering, block rendering and braille rendering |
+| <kbd>9</kbd> / <kbd>0</kbd> | decrease/increase maximum resolution |
+| <kbd>7</kbd> / <kbd>8</kbd> | decrease/increase fps by 5 (default: 60) |
+| <kbd>1</kbd> .. <kbd>6</kbd> | change fps to 10 ... 60 respectively |
 
 <sup><sub>Please don't look at my code. No I'm not hiding anything in there it's all garbage code idk how to do gpu programming so it's all cpu code uh uhhh</sub></sup>
