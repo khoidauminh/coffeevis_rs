@@ -183,7 +183,7 @@ impl Program {
         if self.mode.is_con() {
             string_out += &format!("Running in terminal, renderer: {}\n", self.mode.get_name());
         } else {
-            string_out += "Running graphically\n";                                                                                                                                                  
+            string_out += "Running graphically\n";
         }
 
         if self.is_transparent() {
@@ -197,7 +197,7 @@ impl Program {
                 "Note: resizing is not thoroughly tested and \
                 can crash the program or result in artifacts."
             );
-        }                                                                                                                                                                                                                                           
+        }
 
         {
             let w = self.window_props.width as u32 * self.scale as u32;

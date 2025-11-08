@@ -53,7 +53,7 @@ impl AudioBuffer {
 
     pub fn read_from_input(&mut self, in_buffer: &[f32]) {
         let copysize = in_buffer.len();
-        
+
         self.oldwriteend = self.writeend;
         self.readend = self.writeend;
 
@@ -68,7 +68,7 @@ impl AudioBuffer {
         self.writeend = self.writeend.wrapping_add(copysize) & BUFFER_EVEN;
 
         self.autorotatesize = copysize / (self.rotatessincewrite.next_power_of_two() * 2);
-        
+
         self.rotatessincewrite = 0;
 
         self.lastinputsize = copysize;
@@ -106,7 +106,7 @@ impl AudioBuffer {
 
         for i in 0..len {
             let si = (start + i * 2) & BUFFER_EVEN;
-            out[i] = Cplx::from_slice(&self.data[si..si+2]);
+            out[i] = Cplx::from_slice(&self.data[si..si + 2]);
         }
     }
 
@@ -124,7 +124,7 @@ impl AudioBuffer {
     }
 
     pub fn get(&self, i: usize) -> Cplx {
-        let i = self.readend.wrapping_sub(i*2) & BUFFER_EVEN;
-        Cplx::from_slice(&self.data[i..i+2])
+        let i = self.readend.wrapping_sub(i * 2) & BUFFER_EVEN;
+        Cplx::from_slice(&self.data[i..i + 2])
     }
 }
