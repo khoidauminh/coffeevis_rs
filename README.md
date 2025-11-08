@@ -3,20 +3,19 @@
 # Coffee Music Visualizer
 A personal GUI + TUI music visualizer written in Rust.
 
-## About this project
-I decided to write the visualizer because existing projects didn't suit me.
-Some too slow, some didn't have the visualizer I like, some take up too much cpu usage, etc.
-
-This project also serves as my playground, so you'll see a lot of weird implementations in the source files.
-
 ## What's new in v0.6.0
 
 Terminal mode is back and enabled by default!
 
 Minifb support has been removed!
 
-A little post-processing effect has been added to window mode which should
-make the animations a little more smooth looking.
+Controls have been remapped. 
+I'm currently preparing to introduce 
+more complex visualizers that allow inputs.
+
+A little post-processing effect has been added 
+to window mode which should make the animations 
+a little more smooth looking.
 
 ## Examples:
 
@@ -24,25 +23,14 @@ make the animations a little more smooth looking.
 ![Terminal](https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExeThkNGxieWVxcGhhM3RibXZ5aGNzczN1YzF5aGRuNmVyYzBlYjc4NiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/5FZtC9GbiOrXrhnMON/giphy.gif)
 
 ## Platform support
-Coffeevis so far only runs on Linux.
-Windows, MacOS and BSD support is not available.
+
+Coffeevis works on Linux.
+Windows support is being planned.
 
 ## Installation
 
 ```
 cargo install coffeevis
-```
-
-To disable winit, use:
-
-```
-cargo install coffeevis --features console_only
-```
-
-To disable console mode, use:
-
-```
-cargo install coffeevis --features window_only
 ```
 
 ## Configuration
@@ -80,7 +68,8 @@ Coffeevis supports temporary options at launch
 | --max-con-size | 50x50 | set maximum resolution in terminal mode |
 | --vis | spectrum | launche coffeevis with the specified visualizer |
 | --effect | crt | blank out every other horizontal line to simulate CRT effect |
-| --effect | interlaced | interlace fields together to make the visualizer appear smoother (the number of fields is the scale value) |
+| --effect | interlaced | (default) interlace fields together to make the visualizer appear smoother (the number of fields is the scale value) |
+| --effect | none | rendering is scaled and presented as is |
 
 ## Notes
 
