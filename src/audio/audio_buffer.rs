@@ -51,7 +51,7 @@ impl AudioBuffer {
     }
 
     pub fn read_from_input(&mut self, in_buffer: &[f32]) {
-        let copysize = in_buffer.len()/2;
+        let copysize = in_buffer.len() / 2;
 
         self.oldwriteend = self.writeend;
         self.readend = self.writeend;
