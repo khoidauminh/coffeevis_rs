@@ -1,6 +1,6 @@
 [package]
 name = "coffeevis"
-version = "0.6.0"
+version = "0.6.1"
 rust-version = "1.85"
 edition = "2024"
 authors = ["Cas Pascal <casboi86@gmail.com>"]
