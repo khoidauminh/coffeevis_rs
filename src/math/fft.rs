@@ -37,20 +37,25 @@ thread_local! {
 }
 
 pub fn compute_fft_iterative(a: &mut [Cplx]) {
-    for pair in a.chunks_exact_mut(2) {
-        let q = pair[1];
-        pair[1] = pair[0] - q;
-        pair[0] += q;
-    }
-
     for four in a.chunks_exact_mut(4) {
-        let mut q = four[2];
-        four[2] = four[0] - q;
-        four[0] += q;
+        let [a0, a1, a2, a3] = *four else {
+            return;
+        };
 
-        q = four[3].times_minus_i();
-        four[3] = four[1] - q;
-        four[1] += q;
+        let a0pa1 = a0 + a1;
+        let a0ma1 = a0 - a1;
+
+        let a2pa3 = a2 + a3;
+        let a2ma3 = a2 - a3;
+        let a2ma3j = a2ma3.times_minus_i();
+
+        let c2 = a0pa1 - a2pa3;
+        let c0 = a0pa1 + a2pa3;
+
+        let c3 = a0ma1 - a2ma3j;
+        let c1 = a0ma1 + a2ma3j;
+
+        four.copy_from_slice(&[c0, c1, c2, c3]);
     }
 
     let length = a.len();
