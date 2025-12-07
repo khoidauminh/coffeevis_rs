@@ -1,4 +1,3 @@
-use cpal::SampleRate;
 use cpal::traits::{DeviceTrait, HostTrait};
 
 pub mod audio_buffer;
@@ -36,12 +35,10 @@ pub fn get_source() -> cpal::Stream {
         .default_input_device()
         .expect("no input device available");
 
-    let mut config: cpal::StreamConfig = device
+    let config: cpal::StreamConfig = device
         .default_input_config()
         .expect("error while querying configs")
         .config();
-
-    config.sample_rate = SampleRate(crate::data::SAMPLE_RATE as u32);
 
     device
         .build_input_stream(
@@ -155,11 +152,11 @@ impl<T: Default + Copy + PartialOrd, const N: usize> MovingMaximum<T, N> {
     }
 
     pub fn update(&mut self, new: T) -> T {
-        if self.len > 0 && self.data[self.head].index + N <= self.index {
+        if self.data[self.head].index + N <= self.index && self.len > 0 {
             self.dequeue_head();
         }
 
-        while self.len > 0 && self.data[self.tail].value < new {
+        while self.data[self.tail].value < new && self.len > 0 {
             self.dequeue_tail();
         }
 
