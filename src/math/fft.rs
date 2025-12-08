@@ -1,8 +1,5 @@
-// use crate::data::gen_const::TWIDDLE_MAP;
-
-use std::cell::LazyCell;
-
 use super::Cplx;
+use std::cell::LazyCell;
 
 pub fn butterfly<T>(a: &mut [T], power: u32) {
     // first and last element stays in place
@@ -14,9 +11,11 @@ pub fn butterfly<T>(a: &mut [T], power: u32) {
     }
 }
 
+const MAX_POWER: usize = 13;
+
 thread_local! {
-    static TWIDDLE_MAP: LazyCell<[Cplx; 1 << 13]> = LazyCell::new(||{
-        let mut out = [Cplx::default(); 1 << 13];
+    static TWIDDLE_MAP: LazyCell<[Cplx; 1 << MAX_POWER]> = LazyCell::new(||{
+        let mut out = [Cplx::default(); 1 << MAX_POWER];
 
         let mut k = 1;
 
