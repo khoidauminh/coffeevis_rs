@@ -1,20 +1,31 @@
 // use crate::data::gen_const::TWIDDLE_MAP;
 
-use std::cell::LazyCell;
+use std::{cell::LazyCell, f32::consts::TAU};
 
 use super::Cplx;
 
 pub fn butterfly<T>(a: &mut [T], power: u32) {
     // first and last element stays in place
     for i in 1..a.len() - 1 {
-        let ni = super::fast::bit_reverse(i, power);
+        let ni = {
+            let mut o = 0;
+            let mut x = i;
+            for _ in 0..power {
+                o *= 4;
+                o += x % 4;
+                x /= 4;
+            }
+
+            o
+        };
+
         if i < ni {
             a.swap(ni, i)
         }
     }
 }
 
-pub fn strict_log4(mut x: usize) -> usize {
+pub fn strict_log4(mut x: usize) -> u32 {
     let mut o = 1;
     while x > 4 {
         o += 1;
@@ -26,26 +37,6 @@ pub fn strict_log4(mut x: usize) -> usize {
     }
 
     o
-}
-
-pub fn butterfly_radix4<T>(a: &mut [T], power: u32) {
-    for i in 1..a.len() - 1 {
-        let ni = {
-            let mut o = 0;
-            let mut x = i;
-            for _ in 1..power {
-                o *= 4;
-                o += x & 0b11;
-                x /= 4;
-            }
-
-            o
-        };
-
-        if i < ni {
-            a.swap(ni, i)
-        }
-    }
 }
 
 thread_local! {
@@ -72,71 +63,61 @@ thread_local! {
 pub fn compute_fft_iterative(a: &mut [Cplx]) {
     let mut chunk4s = a.chunks_exact_mut(4);
     while let Some([a0, a1, a2, a3]) = chunk4s.next() {
-        let a0pa1 = *a0 + *a1;
-        let a0ma1 = *a0 - *a1;
+        let a1j = a1.times_i();
+        let a3j = a3.times_i();
 
-        let a2pa3 = *a2 + *a3;
-        let a2ma3 = *a2 - *a3;
-        let a2ma3j = a2ma3.times_minus_i();
-
-        *a0 = a0pa1 + a2pa3;
-        *a1 = a0ma1 + a2ma3j;
-        *a2 = a0pa1 - a2pa3;
-        *a3 = a0ma1 - a2ma3j;
+        *a0 = *a0 + *a1 + *a2 + *a3;
+        *a1 = *a0 - a1j - *a2 + a3j;
+        *a2 = *a0 - *a1 + *a2 - *a3;
+        *a3 = *a0 + a1j - *a2 - a3j;
     }
 
     let length = a.len();
 
     let mut size = 16usize;
 
-    TWIDDLE_MAP.with(|twiddle_map| {
-        while size <= length {
-            let quarter = size / 4;
+    while size <= length {
+        let quarter = size / 4;
 
-            a.chunks_exact_mut(size).for_each(|chunk| {
-                let (x0, x1, x2, x3) = {
-                    let (h0, h1) = chunk.split_at_mut(size / 2);
-                    let (x0, x1) = h0.split_at_mut(quarter);
-                    let (x2, x3) = h1.split_at_mut(quarter);
+        a.chunks_exact_mut(size).for_each(|chunk| {
+            let (x0, x1, x2, x3) = {
+                let (h0, h1) = chunk.split_at_mut(size / 2);
+                let (x0, x1) = h0.split_at_mut(quarter);
+                let (x2, x3) = h1.split_at_mut(quarter);
 
-                    (x0, x1, x2, x3)
-                };
+                (x0, x1, x2, x3)
+            };
 
-                let roots1 = &twiddle_map[size / 4..];
-                let roots2 = &twiddle_map[size / 2..];
+            let wfactor = Cplx::euler(-TAU / quarter as f32);
+            let mut w = Cplx::one();
 
-                let iter = x0
-                    .iter_mut()
-                    .zip(x1.iter_mut())
-                    .zip(x2.iter_mut())
-                    .zip(x3.iter_mut())
-                    .enumerate();
+            let iter = x0
+                .iter_mut()
+                .zip(x1.iter_mut())
+                .zip(x2.iter_mut())
+                .zip(x3.iter_mut())
+                .enumerate();
 
-                for (i, (((x0, x1), x2), x3)) in iter {
-                    let a0 = *x0;
-                    let a1 = *x1;
-                    let a2 = *x2;
-                    let a3 = *x3;
+            for (i, (((x0, x1), x2), x3)) in iter {
+                let a0 = *x0;
+                let a1 = *x1;
+                let a2 = *x2;
+                let a3 = *x3;
 
-                    let a1w1 = a1 * roots1[i];
-                    let a3w1 = a3 * roots1[i];
+                let a1j = a1.times_i();
+                let a3j = a3.times_i();
 
-                    let a0p1w1 = a0 + a1w1;
-                    let a2p3w1w2 = (a2 + a3w1) * roots2[i];
+                *x0 = (a0 + a1 + a2 + a3);
+                *x1 = (a0 - a1j - a2 + a3j).times_minus_i();
+                *x2 = -(a0 - a1 + a2 - a3);
+                *x3 = (a0 + a1j - a2 - a3j).times_i();
 
-                    let a0ma1w1 = a0 - a1w1;
-                    let a2ma3w1jw2 = (a2 - a3w1).times_minus_i() * roots2[i];
+                w *= wfactor;
+            }
+        });
 
-                    *x0 = a0p1w1 + a2p3w1w2;
-                    *x2 = a0p1w1 - a2p3w1w2;
-                    *x1 = a0ma1w1 + a2ma3w1jw2;
-                    *x3 = a0ma1w1 - a2ma3w1jw2;
-                }
-            });
-
-            size *= 4;
-        }
-    });
+        size *= 4;
+    }
 }
 
 // Avoids having to evaluate a 2nd FFT.

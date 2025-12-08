@@ -5,6 +5,8 @@ pub mod rng;
 
 use std::ops;
 
+use crate::math::fft::strict_log4;
+
 #[derive(PartialEq)]
 pub enum Normalize {
     Yes,
@@ -24,7 +26,7 @@ pub fn fft_stereo(a: &mut [Cplx], up_to: usize, norm: Normalize) {
 
 pub fn fft(a: &mut [Cplx]) {
     let l = a.len();
-    let power = fast::ilog2(l);
+    let power = fft::strict_log4(l);
 
     fft::butterfly(a, power);
     fft::compute_fft(a);
