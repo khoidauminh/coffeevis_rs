@@ -62,13 +62,15 @@ pub fn compute_fft_iterative(a: &mut [Cplx]) {
             a.chunks_exact_mut(size).for_each(|chunk| {
                 let (l, r) = chunk.split_at_mut(halfsize);
 
-                r.iter_mut().zip(root).for_each(|(x, &w)| *x *= w);
+                for i in 0..halfsize {
+                    r[i] *= root[i];
+                }
 
-                l.iter_mut().zip(r.iter_mut()).for_each(|(l, r)| {
-                    let z = *r;
-                    *r = *l - z;
-                    *l += z;
-                });
+                for i in 0..halfsize {
+                    let z = r[i];
+                    r[i] = l[i] - z;
+                    l[i] += z;
+                }
             });
 
             halfsize *= 2;
