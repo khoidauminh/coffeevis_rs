@@ -19,14 +19,12 @@ thread_local! {
         let mut out = [Cplx::default(); 1 << 13];
 
         let mut k = 1;
-        let mut i = 1;
+
         while k < out.len() {
             let angle = -std::f32::consts::PI / k as f32;
 
-            for j in 0..k {
-                let (y, x) = (j as f32 * angle).sin_cos();
-                out[i] = Cplx(x, y);
-                i += 1;
+            for (j, ele) in out[k..].iter_mut().enumerate() {
+                *ele = Cplx::euler(j as f32 * angle);
             }
 
             k *= 2;
