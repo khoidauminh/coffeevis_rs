@@ -14,6 +14,40 @@ pub fn butterfly<T>(a: &mut [T], power: u32) {
     }
 }
 
+pub fn strict_log4(mut x: usize) -> usize {
+    let mut o = 1;
+    while x > 4 {
+        o += 1;
+        x /= 4;
+    }
+
+    if x != 4 {
+        panic!("Not a power of 4");
+    }
+
+    o
+}
+
+pub fn butterfly_radix4<T>(a: &mut [T], power: u32) {
+    for i in 1..a.len() - 1 {
+        let ni = {
+            let mut o = 0;
+            let mut x = i;
+            for _ in 1..power {
+                o *= 4;
+                o += x & 0b11;
+                x /= 4;
+            }
+
+            o
+        };
+
+        if i < ni {
+            a.swap(ni, i)
+        }
+    }
+}
+
 thread_local! {
     static TWIDDLE_MAP: LazyCell<[Cplx; 1 << 13]> = LazyCell::new(||{
         let mut out = [Cplx::default(); 1 << 13];
@@ -24,8 +58,7 @@ thread_local! {
             let angle = -std::f32::consts::PI / k as f32;
 
             for j in 0..k {
-                let (y, x) = (j as f32 * angle).sin_cos();
-                out[i] = Cplx(x, y);
+                out[i] = Cplx::euler(j as f32 * angle);
                 i += 1;
             }
 
@@ -54,25 +87,54 @@ pub fn compute_fft_iterative(a: &mut [Cplx]) {
 
     let length = a.len();
 
-    let mut halfsize = 4usize;
+    let mut size = 16usize;
 
-    TWIDDLE_MAP.with(|twiddlemap| {
-        while halfsize < length {
-            let root = &twiddlemap[halfsize..];
-
-            let size = halfsize * 2;
+    TWIDDLE_MAP.with(|twiddle_map| {
+        while size <= length {
+            let quarter = size / 4;
 
             a.chunks_exact_mut(size).for_each(|chunk| {
-                let (l, r) = chunk.split_at_mut(halfsize);
+                let (x0, x1, x2, x3) = {
+                    let (h0, h1) = chunk.split_at_mut(size / 2);
+                    let (x0, x1) = h0.split_at_mut(quarter);
+                    let (x2, x3) = h1.split_at_mut(quarter);
 
-                for j in 0..halfsize {
-                    let z = r[j] * root[j];
-                    r[j] = l[j] - z;
-                    l[j] += z;
+                    (x0, x1, x2, x3)
+                };
+
+                let roots1 = &twiddle_map[size / 4..];
+                let roots2 = &twiddle_map[size / 2..];
+
+                let iter = x0
+                    .iter_mut()
+                    .zip(x1.iter_mut())
+                    .zip(x2.iter_mut())
+                    .zip(x3.iter_mut())
+                    .enumerate();
+
+                for (i, (((x0, x1), x2), x3)) in iter {
+                    let a0 = *x0;
+                    let a1 = *x1;
+                    let a2 = *x2;
+                    let a3 = *x3;
+
+                    let a1w1 = a1 * roots1[i];
+                    let a3w1 = a3 * roots1[i];
+
+                    let a0p1w1 = a0 + a1w1;
+                    let a2p3w1w2 = (a2 + a3w1) * roots2[i];
+
+                    let a0ma1w1 = a0 - a1w1;
+                    let a2ma3w1jw2 = (a2 - a3w1).times_minus_i() * roots2[i];
+
+                    *x0 = a0p1w1 + a2p3w1w2;
+                    *x2 = a0p1w1 - a2p3w1w2;
+                    *x1 = a0ma1w1 + a2ma3w1jw2;
+                    *x3 = a0ma1w1 - a2ma3w1jw2;
                 }
             });
 
-            halfsize *= 2;
+            size *= 4;
         }
     });
 }
