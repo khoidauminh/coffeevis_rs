@@ -126,6 +126,7 @@ impl RainDrop {
         if self.position.0 as usize >= _w {
             return;
         }
+
         let mut p = self.position.to_p2();
 
         while current_length > 0 && p.1 >= 0 {

@@ -103,8 +103,9 @@ impl AudioBuffer {
         let (sleft, sright) = self.data.split_at(start);
 
         let outsplit = len.min(sright.len());
-        out[..outsplit].copy_from_slice(&sright[..outsplit]);
         let outremaining = len - outsplit;
+
+        out[..outsplit].copy_from_slice(&sright[..outsplit]);
         out[outsplit..].copy_from_slice(&sleft[..outremaining]);
     }
 
