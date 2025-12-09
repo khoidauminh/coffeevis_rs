@@ -36,7 +36,7 @@ impl Program {
 
                 "--no-auto-switch" => {
                     if let Some(v) = self.vislist.as_mut() {
-                        v.set_autoswitch(false)
+                        v.auto_switch = false;
                     }
                 }
 

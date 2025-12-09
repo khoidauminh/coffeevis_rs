@@ -237,7 +237,12 @@ impl Program {
     }
 
     pub fn toggle_auto_switch(&mut self) {
-        self.auto_switch ^= true;
+        let v = self
+            .vislist
+            .as_mut()
+            .expect("Missing visualizer handler!!!");
+
+        v.auto_switch ^= true;
 
         info!(
             "Auto switch is now {}",

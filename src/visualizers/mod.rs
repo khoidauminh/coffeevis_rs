@@ -44,7 +44,7 @@ pub struct VisList {
     list: Vec<Box<dyn Visualizer>>,
     index: usize,
     last_updated: Instant,
-    auto_switch: bool,
+    pub auto_switch: bool,
 }
 
 impl VisList {
@@ -67,10 +67,6 @@ impl VisList {
             last_updated: Instant::now(),
             auto_switch: true,
         }
-    }
-
-    pub fn set_autoswitch(&mut self, b: bool) {
-        self.auto_switch = b;
     }
 
     pub fn next(&mut self) {

@@ -95,7 +95,6 @@ It looks the smoothest when you're in a dark room with low monitor brightness. B
 | ------ | ------ |
 | <kbd>n</kbd> | iterate forward through visualizers (wraps around) |
 | <kbd>b</kbd> | iterate backward (wraps around) |
-| <kbd>m</kbd> | switche through sets of visualizers (wraps around) |
 | <kbd>q</kbd> | exit |
 | <kbd>\\</bkd> | toggle auto switching (default: ON, 8 seconds) |
 
