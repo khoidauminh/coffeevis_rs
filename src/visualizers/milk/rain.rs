@@ -9,6 +9,7 @@ use crate::{
         interpolate::linearf,
         rng::{random_float, random_int},
     },
+    visualizers::Visualizer,
 };
 
 #[derive(Copy, Clone)]
@@ -143,47 +144,58 @@ const NUM_OF_DROPS: usize = 64;
 
 const DEFAULT_BOUND: P2 = P2(DEFAULT_SIZE_WIN as i32, DEFAULT_SIZE_WIN as i32);
 
-pub fn draw(prog: &mut Program, stream: &mut AudioBuffer) {
-    thread_local! {
-        static LIST_OF_DROPS: RefCell<[RainDrop; NUM_OF_DROPS]> =
-        RefCell::new([RainDrop::new(0xFF_FF_FF_FF, 8, 0.2, DEFAULT_BOUND); NUM_OF_DROPS]);
-        static THUNDER: RefCell<Thunder> = RefCell::new(Thunder::generate(0, 1));
-        static OLD_VOLUME: RefCell<f32> = RefCell::new(0.0);
-    }
+pub struct Rain {
+    listdrops: [RainDrop; NUM_OF_DROPS],
+    thunder: Thunder,
+    oldvolume: f32,
+}
 
-    let mut new_volume: f32 = 0.0;
-    {
-        let mut y: f32 = stream.get(0).into();
-        for i in 1..200 {
-            y = y + 0.25 * (stream.get(i).max() - y);
-            new_volume += y;
+impl Default for Rain {
+    fn default() -> Self {
+        Self {
+            listdrops: [RainDrop::new(0xFF_FF_FF_FF, 8, 0.2, DEFAULT_BOUND); NUM_OF_DROPS],
+            thunder: Thunder::generate(0, 1),
+            oldvolume: 0.0,
         }
     }
+}
 
-    let (vol1, vol2) = OLD_VOLUME.with_borrow_mut(|old| {
-        let vol1 = *old;
-        *old = linearf(*old, new_volume, 0.2);
-        (vol1, *old)
-    });
+impl Visualizer for Rain {
+    fn name(&self) -> &'static str {
+        "Rain"
+    }
 
-    let voldiff = vol2 - vol1;
+    fn perform(&mut self, prog: &mut crate::data::Program, stream: &mut crate::audio::AudioBuffer) {
+        let mut new_volume: f32 = 0.0;
+        {
+            let mut y: f32 = stream.get(0).into();
+            for i in 1..200 {
+                y = y + 0.25 * (stream.get(i).max() - y);
+                new_volume += y;
+            }
+        }
 
-    dbg!(voldiff >= 5.0);
+        let (vol1, vol2) = {
+            let vol1 = self.oldvolume;
+            self.oldvolume = linearf(self.oldvolume, new_volume, 0.2);
+            (vol1, self.oldvolume)
+        };
 
-    let blue = 0.7 - vol2 * 0.005;
+        let voldiff = vol2 - vol1;
 
-    prog.pix.color(u32::from_be_bytes([
-        0xFF,
-        0,
-        (119.0 * blue) as u8,
-        (255.0 * blue) as u8,
-    ]));
-    prog.pix.fill();
+        let blue = 0.7 - vol2 * 0.005;
 
-    let size = prog.pix.size();
+        prog.pix.color(u32::from_be_bytes([
+            0xFF,
+            0,
+            (119.0 * blue) as u8,
+            (255.0 * blue) as u8,
+        ]));
+        prog.pix.fill();
 
-    LIST_OF_DROPS.with_borrow_mut(|list| {
-        for drop in list.iter_mut() {
+        let size = prog.pix.size();
+
+        for drop in self.listdrops.iter_mut() {
             let size = prog.pix.size();
 
             if !drop.is_bounds_match(size) {
@@ -198,16 +210,14 @@ pub fn draw(prog: &mut Program, stream: &mut AudioBuffer) {
                 drop.randomize_start();
             }
         }
-    });
 
-    THUNDER.with_borrow_mut(|t| {
         if voldiff >= 6.7 {
-            *t = Thunder::generate(random_int(1000), prog.pix.width() as i32)
+            self.thunder = Thunder::generate(random_int(1000), prog.pix.width() as i32)
         }
 
-        t.draw(&mut prog.pix);
-        t.fade();
-    });
+        self.thunder.draw(&mut prog.pix);
+        self.thunder.fade();
 
-    stream.autoslide();
+        stream.autoslide();
+    }
 }

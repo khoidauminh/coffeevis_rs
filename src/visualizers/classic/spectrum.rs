@@ -1,9 +1,10 @@
 use std::f32::consts::LN_2;
 
-use std::cell::RefCell;
-
+use crate::audio::AudioBuffer;
+use crate::data::Program;
 use crate::graphics::P2;
 use crate::math::{self, Cplx, interpolate::*};
+use crate::visualizers::{Visualizer, VisualizerConfig};
 
 const FFT_SIZE: usize = 1 << 10;
 const RANGE: usize = 64;
@@ -47,62 +48,78 @@ fn prepare(stream: &mut crate::AudioBuffer, local: &mut LocalType) {
     stream.autoslide();
 }
 
-pub fn draw_spectrum(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
-    thread_local! {
-        static DATA: RefCell<LocalType> = RefCell::new([Cplx::zero(); RANGE + 1]);
+pub struct Spectrum {
+    buffer: [Cplx; RANGE + 1],
+}
+
+impl Default for Spectrum {
+    fn default() -> Self {
+        Self {
+            buffer: [Cplx::zero(); _],
+        }
+    }
+}
+
+impl Visualizer for Spectrum {
+    fn name(&self) -> &'static str {
+        "Spectrum"
     }
 
-    DATA.with_borrow_mut(|l| {
-        prepare(stream, l);
-    });
+    fn config(&self) -> crate::visualizers::VisualizerConfig {
+        return VisualizerConfig { normalize: true };
+    }
 
-    let P2(w, h) = prog.pix.size();
-    let winwh = w >> 1;
+    fn perform(&mut self, prog: &mut Program, stream: &mut AudioBuffer) {
+        prepare(stream, &mut self.buffer);
 
-    let wf = w as f32;
-    let hf = h as f32;
+        let P2(w, h) = prog.pix.size();
+        let winwh = w >> 1;
 
-    let whf = wf * 0.5;
+        let wf = w as f32;
+        let hf = h as f32;
 
-    prog.pix.clear();
-    prog.pix.mixerd();
+        let whf = wf * 0.5;
 
-    for y in 0..h {
-        //let i_rev = h - i;
-        let ifrac = (y as f32 / hf).exp2() - 1.0f32;
-        let ifloat = ifrac * RANGEF;
-        let ifloor = ifloat as usize;
-        let iceil = ifloat.ceil() as usize;
-        let ti = ifloat.fract();
+        prog.pix.clear();
+        prog.pix.mixerd();
 
-        let (sfloor, sceil) = DATA.with_borrow(|v| (v[ifloor], v[iceil]));
+        for y in 0..h {
+            let ifrac = (y as f32 / hf).exp2() - 1.0f32;
+            let ifloat = ifrac * RANGEF;
+            let ifloor = ifloat as usize;
+            let iceil = ifloat.ceil() as usize;
+            let ti = ifloat.fract();
 
-        let sl = smooth_step(sfloor.0, sceil.0, ti);
-        let sr = smooth_step(sfloor.1, sceil.1, ti);
+            let sfloor = self.buffer[ifloor];
+            let sceil = self.buffer[iceil];
 
-        let sl = sl.powf(1.3) * whf;
-        let sr = sr.powf(1.3) * whf;
+            let sl = smooth_step(sfloor.0, sceil.0, ti);
+            let sr = smooth_step(sfloor.1, sceil.1, ti);
 
-        let channel = (y * 255 / h) as u8;
-        let green = 255.min(16 + (3.0f32 * (sl + sr)) as u32) as u8;
+            let sl = sl.powf(1.3) * whf;
+            let sr = sr.powf(1.3) * whf;
 
-        let color = u32::from_be_bytes([0xFF, 255 - channel, green, 128 + channel / 2]);
+            let channel = (y * 255 / h) as u8;
+            let green = 255.min(16 + (3.0f32 * (sl + sr)) as u32) as u8;
 
-        let ry = h - y;
+            let color = u32::from_be_bytes([0xFF, 255 - channel, green, 128 + channel / 2]);
 
-        let rect_l = P2((whf - sl) as i32, ry);
-        let rect_r = P2((whf + sr) as i32, ry);
-        let middle = P2(winwh + 1, h - y);
+            let ry = h - y;
 
-        prog.pix.color(color);
-        prog.pix.rect_xy(rect_l, middle);
-        prog.pix.rect_xy(middle, rect_r);
+            let rect_l = P2((whf - sl) as i32, ry);
+            let rect_r = P2((whf + sr) as i32, ry);
+            let middle = P2(winwh + 1, h - y);
 
-        let s = stream.get((h - y) as usize);
-        let c1 = if s.0 > 0.0 { 255 } else { 0 };
-        let c2 = if s.1 > 0.0 { 255 } else { 0 };
+            prog.pix.color(color);
+            prog.pix.rect_xy(rect_l, middle);
+            prog.pix.rect_xy(middle, rect_r);
 
-        prog.pix.color(u32::from_be_bytes([255, c1, 0, c2]));
-        prog.pix.rect(P2(winwh - 1, ry), 2, 1);
+            let s = stream.get((h - y) as usize);
+            let c1 = if s.0 > 0.0 { 255 } else { 0 };
+            let c2 = if s.1 > 0.0 { 255 } else { 0 };
+
+            prog.pix.color(u32::from_be_bytes([255, c1, 0, c2]));
+            prog.pix.rect(P2(winwh - 1, ry), 2, 1);
+        }
     }
 }

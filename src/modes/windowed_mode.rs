@@ -236,7 +236,7 @@ impl ApplicationHandler for WindowState {
                     Key::Character("q") => self.call_exit(event_loop),
                     Key::Character("n") => self.prog.change_visualizer(true),
                     Key::Character("b") => self.prog.change_visualizer(false),
-                    Key::Character("m") => self.prog.change_vislist(),
+
                     Key::Character("\\") => self.prog.toggle_auto_switch(),
                     Key::Character("/") => self.prog.reset_parameters(),
 
@@ -249,7 +249,7 @@ impl ApplicationHandler for WindowState {
                     return;
                 };
 
-                self.prog.update_vis();
+                self.prog.autoupdate_visualizer();
                 self.prog.render();
 
                 if !self.prog.is_display_enabled() {

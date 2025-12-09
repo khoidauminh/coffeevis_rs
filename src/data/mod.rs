@@ -5,14 +5,14 @@ pub mod desktop;
 pub mod log;
 
 pub mod reader;
-pub mod vislist;
 
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use crate::graphics::RenderEffect;
+use crate::visualizers::VisList;
 use crate::{graphics::PixelBuffer, modes::Mode};
 
-use crate::{VisFunc, modes};
+use crate::modes;
 
 pub const SAMPLE_RATE: usize = 44100;
 
@@ -45,6 +45,8 @@ pub const MAX_HEIGHT: u16 = 360;
 pub const MAX_CON_WIDTH: u16 = 128;
 
 pub const MAX_SCALE_FACTOR: u8 = 8;
+
+pub const DEFAULT_VIS_SWITCH_DURATION: Duration = Duration::from_secs(8);
 
 #[derive(PartialEq, Clone, Copy)]
 pub enum RefreshRateMode {
@@ -80,20 +82,13 @@ pub(crate) struct Program {
 
     pub console_props: modes::console_mode::ConsoleProps,
 
-    vis_navigator: vislist::VisNavigator,
+    vislist: Option<crate::visualizers::VisList>,
 
-    visualizer: VisFunc,
-
-    switch: Instant,
     auto_switch: bool,
-    auto_switch_interval: Duration,
 }
 
 impl Program {
     pub fn new() -> Self {
-        let vislist_ = vislist::VisNavigator::new();
-        let vis = vislist_.current_vis();
-
         let rate = Duration::from_nanos(1_000_000_000 / DEFAULT_HZ);
 
         let default_mode = Mode::Win;
@@ -117,13 +112,9 @@ impl Program {
 
             refresh_rate_intervals: [rate, rate * 8],
 
-            vis_navigator: vislist_,
+            vislist: Some(VisList::new()),
 
-            visualizer: vis.func(),
-
-            switch: Instant::now() + Duration::from_secs(8),
             auto_switch: true,
-            auto_switch_interval: Duration::from_secs(8),
 
             window_props: modes::windowed_mode::WindowProps {
                 width: DEFAULT_SIZE_WIN,
@@ -169,30 +160,12 @@ impl Program {
         self.transparent
     }
 
-    pub fn reset_switch(&mut self) {
-        self.switch = Instant::now() + self.auto_switch_interval;
-    }
-
     pub fn get_milli_hz(&self) -> u32 {
         self.milli_hz
     }
 
     pub fn get_rr_mode(&self) -> RefreshRateMode {
         self.refresh_rate_mode
-    }
-
-    pub fn update_vis(&mut self) -> bool {
-        let elapsed = Instant::now();
-
-        if elapsed < self.switch || !self.auto_switch {
-            return false;
-        }
-
-        self.switch = elapsed + self.auto_switch_interval;
-
-        self.change_visualizer(true);
-
-        true
     }
 
     pub fn change_fps(&mut self, amount: i16, replace: bool) {
@@ -223,43 +196,27 @@ impl Program {
     }
 
     pub fn change_visualizer(&mut self, forward: bool) {
-        let new_visualizer = if forward {
-            self.vis_navigator.next_vis()
-        } else {
-            self.vis_navigator.prev_vis()
-        };
+        let vislist = self.vislist.as_mut().unwrap();
 
-        self.visualizer = new_visualizer.func();
+        if forward {
+            vislist.next();
+        } else {
+            vislist.prev();
+        }
 
         self.pix.clear();
 
-        self.reset_switch();
+        let conf = vislist.get().config();
 
-        crate::audio::set_normalizer(new_visualizer.request());
+        crate::audio::set_normalizer(conf.normalize);
 
-        let vis_name = self.vis_navigator.current_vis_name();
-        let vis_list = self.vis_navigator.current_list_name();
+        let vis_name = vislist.get().name();
 
-        info!("Switching to {} in list {}", vis_name, vis_list);
+        info!("Switching to {}", vis_name);
     }
 
-    pub fn change_vislist(&mut self) {
-        self.vis_navigator.next_list();
-
-        let new_visualizer = self.vis_navigator.current_vis();
-
-        self.visualizer = new_visualizer.func();
-
-        self.pix.clear();
-
-        self.reset_switch();
-
-        crate::audio::set_normalizer(new_visualizer.request());
-
-        let vis_name = self.vis_navigator.current_vis_name();
-        let vis_list = self.vis_navigator.current_list_name();
-
-        info!("Switching to {} in list {}\r\n", vis_name, vis_list);
+    pub fn autoupdate_visualizer(&mut self) {
+        self.vislist.as_mut().map(|v| v.update());
     }
 
     #[allow(unused_mut)]
@@ -273,7 +230,9 @@ impl Program {
     }
 
     pub fn render(&mut self) {
-        (self.visualizer)(self, &mut crate::audio::get_buf());
+        let mut vis = self.vislist.take().unwrap();
+        crate::visualizers::Visualizer::perform(vis.get(), self, &mut crate::audio::get_buf());
+        self.vislist = Some(vis)
     }
 
     pub fn toggle_auto_switch(&mut self) {

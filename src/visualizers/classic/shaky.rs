@@ -1,12 +1,14 @@
-use std::{cell::RefCell, f32::consts::FRAC_PI_2};
+use std::f32::consts::FRAC_PI_2;
 
 use crate::graphics::Pixel;
 use crate::math::{self, Cplx, fast};
+use crate::visualizers::Visualizer;
 
 // soft shaking
 const INCR: f32 = 0.0001;
 
-struct LocalData {
+#[derive(Default)]
+pub struct Shaky {
     i: f32,
     js: f32,
     jc: f32,
@@ -14,18 +16,6 @@ struct LocalData {
     yshake: f32,
     x: i32,
     y: i32,
-}
-
-thread_local! {
-    static DATA: RefCell<LocalData> = RefCell::new(LocalData {
-        i: 0.0,
-        js: 0.0,
-        jc: 0.0,
-        xshake: 0.0,
-        yshake: 0.0,
-        x: 0,
-        y: 0,
-    });
 }
 
 fn diamond_func(amp: f32, prd: f32, t: f32) -> (i32, i32) {
@@ -39,39 +29,43 @@ fn triangle_wav(amp: f32, prd: f32, t: f32) -> f32 {
     (4.0 * (t / prd - (t / prd + 0.5).trunc()).abs() - 1.0) * amp
 }
 
-pub fn draw_shaky(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
-    let mut data_f = [Cplx::zero(); 512];
-    stream.read(&mut data_f);
+impl Visualizer for Shaky {
+    fn name(&self) -> &'static str {
+        "Shaky"
+    }
 
-    let sizef = prog.pix.width().min(prog.pix.height()) as f32;
+    fn perform(&mut self, prog: &mut crate::data::Program, stream: &mut crate::audio::AudioBuffer) {
+        let mut data_f = [Cplx::zero(); 512];
+        stream.read(&mut data_f);
 
-    math::integrate_inplace(&mut data_f, 128, math::Normalize::No);
+        let sizef = prog.pix.width().min(prog.pix.height()) as f32;
 
-    let amplitude = data_f.iter().fold(0f32, |acc, x| acc + x.l1_norm()) * sizef;
+        math::integrate_inplace(&mut data_f, 128, math::Normalize::No);
 
-    let smooth_amplitude = amplitude * 0.00003;
-    let amplitude_scaled = amplitude * 0.00000002;
+        let amplitude = data_f.iter().fold(0f32, |acc, x| acc + x.l1_norm()) * sizef;
 
-    DATA.with_borrow_mut(|localdata| {
-        localdata.js = (localdata.js + amplitude_scaled) % 2.0;
-        localdata.jc = (localdata.jc + amplitude_scaled * FRAC_PI_2) % 2.0;
+        let smooth_amplitude = amplitude * 0.00003;
+        let amplitude_scaled = amplitude * 0.00000002;
 
-        localdata.xshake = (smooth_amplitude) * fast::cos_norm(fast::wrap(localdata.jc));
-        localdata.yshake = (smooth_amplitude) * fast::sin_norm(fast::wrap(localdata.js));
+        self.js = (self.js + amplitude_scaled) % 2.0;
+        self.jc = (self.jc + amplitude_scaled * FRAC_PI_2) % 2.0;
 
-        localdata.x = math::interpolate::linearf(localdata.x as f32, localdata.xshake, 0.1) as i32;
-        localdata.y = math::interpolate::linearf(localdata.y as f32, localdata.yshake, 0.1) as i32;
+        self.xshake = (smooth_amplitude) * fast::cos_norm(fast::wrap(self.jc));
+        self.yshake = (smooth_amplitude) * fast::sin_norm(fast::wrap(self.js));
 
-        localdata.js += 0.01;
-        localdata.jc += 0.01;
-        localdata.i = (localdata.i + INCR + amplitude_scaled) % 1.0;
+        self.x = math::interpolate::linearf(self.x as f32, self.xshake, 0.1) as i32;
+        self.y = math::interpolate::linearf(self.y as f32, self.yshake, 0.1) as i32;
+
+        self.js += 0.01;
+        self.jc += 0.01;
+        self.i = (self.i + INCR + amplitude_scaled) % 1.0;
 
         prog.pix.fade(4);
 
-        let (x_soft_shake, y_soft_shake) = diamond_func(8.0, 1.0, localdata.i);
+        let (x_soft_shake, y_soft_shake) = diamond_func(8.0, 1.0, self.i);
 
-        let final_x = x_soft_shake + localdata.x;
-        let final_y = y_soft_shake + localdata.y;
+        let final_x = x_soft_shake + self.x;
+        let final_y = y_soft_shake + self.y;
 
         let width = prog.pix.width() as i32;
         let height = prog.pix.height() as i32;
@@ -87,7 +81,7 @@ pub fn draw_shaky(prog: &mut crate::Program, stream: &mut crate::AudioBuffer) {
             3,
             3,
         );
-    });
+    }
 }
 
 const WRAPPER: f32 = 725.0;

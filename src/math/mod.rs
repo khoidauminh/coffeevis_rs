@@ -41,16 +41,6 @@ where
     b
 }
 
-pub fn decrement<T>(a: T, limit: T) -> T
-where
-    T: ops::Sub<Output = T> + std::cmp::PartialEq + From<u8>,
-{
-    if a == T::from(0) {
-        return limit - 1.into();
-    }
-    a - 1.into()
-}
-
 pub fn integrate_inplace(a: &mut [Cplx], factor: usize, norm: Normalize) {
     if factor < 2 {
         return;

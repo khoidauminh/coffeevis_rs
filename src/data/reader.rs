@@ -34,7 +34,9 @@ impl Program {
                     (self.mode, self.console_props.flusher) = (ConBlock, Program::print_block)
                 }
 
-                "--no-auto-switch" => self.auto_switch = false,
+                "--no-auto-switch" => {
+                    self.vislist.as_mut().map(|v| v.set_autoswitch(false));
+                }
 
                 "--size" => {
                     let s = args
@@ -105,7 +107,7 @@ impl Program {
                         .next()
                         .expect("Argument error: Expected name of visualizer");
 
-                    self.visualizer = self.vis_navigator.switch_by_name(vis_name).func();
+                    self.vislist.as_mut().map(|v| v.select_by_name(vis_name));
                 }
 
                 "--background" => {

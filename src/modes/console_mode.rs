@@ -311,7 +311,7 @@ fn to_ascii_art(table: &[u8], x: usize) -> char {
 }
 
 pub fn control_key_events_con(prog: &mut Program, exit: &mut bool) -> Result<(), Error> {
-    prog.update_vis();
+    prog.autoupdate_visualizer();
 
     let no_sample = crate::audio::get_no_sample();
 
@@ -320,7 +320,6 @@ pub fn control_key_events_con(prog: &mut Program, exit: &mut bool) -> Result<(),
             Event::Key(event) => match event.code {
                 KeyCode::Char('b') => prog.change_visualizer(false),
                 KeyCode::Char('n') => prog.change_visualizer(true),
-                KeyCode::Char('m') => prog.change_vislist(),
 
                 KeyCode::Char('q') => *exit = true,
 

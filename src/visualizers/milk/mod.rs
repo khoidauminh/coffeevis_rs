@@ -2,7 +2,6 @@
 use crate::{
     graphics,
     math::{self, Cplx},
-    visualizers::VisFunc,
 };
 
 pub mod rain;
