@@ -216,10 +216,11 @@ impl Program {
     }
 
     pub fn autoupdate_visualizer(&mut self) {
-        self.vislist.as_mut().map(|v| v.update());
+        if let Some(v) = self.vislist.as_mut() {
+            v.update()
+        }
     }
 
-    #[allow(unused_mut)]
     pub fn update_size(&mut self, mut s: (u16, u16)) {
         match &self.mode {
             Mode::Win => self.window_props.set_size(s),

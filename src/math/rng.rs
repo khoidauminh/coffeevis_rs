@@ -29,7 +29,7 @@ pub fn random_int(bound: u32) -> u32 {
 
 pub fn random_float(bound: f32) -> f32 {
     thread_local! {
-        static VAR: std::cell::RefCell<f32> = std::cell::RefCell::new(0.2132454);
+        static VAR: std::cell::RefCell<f32> = const { std::cell::RefCell::new(0.2132454) };
     }
 
     // return random_int(bound as u32) as f32;

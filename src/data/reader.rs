@@ -35,7 +35,9 @@ impl Program {
                 }
 
                 "--no-auto-switch" => {
-                    self.vislist.as_mut().map(|v| v.set_autoswitch(false));
+                    if let Some(v) = self.vislist.as_mut() {
+                        v.set_autoswitch(false)
+                    }
                 }
 
                 "--size" => {
@@ -107,7 +109,9 @@ impl Program {
                         .next()
                         .expect("Argument error: Expected name of visualizer");
 
-                    self.vislist.as_mut().map(|v| v.select_by_name(vis_name));
+                    if let Some(v) = self.vislist.as_mut() {
+                        v.select_by_name(vis_name)
+                    }
                 }
 
                 "--background" => {

@@ -162,7 +162,7 @@ impl<T: Default + Copy + PartialOrd, const N: usize> MovingMaximum<T, N> {
 
         self.enqueue_tail(new);
 
-        return self.data[self.head].value;
+        self.data[self.head].value
     }
 }
 

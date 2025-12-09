@@ -4,7 +4,7 @@ use crate::audio::AudioBuffer;
 use crate::data::Program;
 use crate::graphics::P2;
 use crate::math::{self, Cplx, interpolate::*};
-use crate::visualizers::{Visualizer, VisualizerConfig};
+use crate::visualizers::Visualizer;
 
 const FFT_SIZE: usize = 1 << 10;
 const RANGE: usize = 64;
@@ -63,10 +63,6 @@ impl Default for Spectrum {
 impl Visualizer for Spectrum {
     fn name(&self) -> &'static str {
         "Spectrum"
-    }
-
-    fn config(&self) -> crate::visualizers::VisualizerConfig {
-        return VisualizerConfig { normalize: true };
     }
 
     fn perform(&mut self, prog: &mut Program, stream: &mut AudioBuffer) {

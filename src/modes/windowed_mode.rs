@@ -35,7 +35,7 @@ use crate::{audio::get_no_sample, data::*};
 
 type WindowSurface = Surface<&'static Window, &'static Window>;
 
-const ICON_FILE: &'static [u8] = include_bytes!("../../assets/coffeevis_icon_128x128.qoi");
+const ICON_FILE: &[u8] = include_bytes!("../../assets/coffeevis_icon_128x128.qoi");
 
 thread_local! {
     static ICON: LazyCell<(u32, u32, Vec<u8>)> = LazyCell::new(|| {
@@ -104,7 +104,7 @@ impl ApplicationHandler for WindowState {
             .with_transparent(self.prog.is_transparent())
             .with_resizable(self.prog.is_resizable())
             .with_visible(false)
-            .with_enabled_buttons(WindowButtons::from(WindowButtons::CLOSE))
+            .with_enabled_buttons(WindowButtons::CLOSE)
             .with_window_icon(icon);
 
         #[cfg(target_os = "linux")]
@@ -284,9 +284,9 @@ impl ApplicationHandler for WindowState {
 impl WindowState {
     fn call_exit(&mut self, event_loop: &ActiveEventLoop) {
         self.exit_sender.as_ref().map(|x| x.send(()));
-        self.thread_control_draw_id
-            .take()
-            .map(|t| t.join().unwrap());
+        if let Some(t) = self.thread_control_draw_id.take() {
+            t.join().unwrap()
+        }
         event_loop.exit();
     }
 

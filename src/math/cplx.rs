@@ -5,7 +5,7 @@ use crate::graphics::P2;
 
 impl std::default::Default for Cplx {
     fn default() -> Self {
-        return Self(0.0, 0.0);
+        Self(0.0, 0.0)
     }
 }
 
@@ -173,7 +173,7 @@ impl Cplx {
         [self.0, self.1]
     }
 
-    pub fn to_p2(&self) -> P2 {
+    pub fn to_p2(self) -> P2 {
         P2(self.0 as i32, self.1 as i32)
     }
 }

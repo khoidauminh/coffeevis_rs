@@ -38,7 +38,6 @@ pub fn composite_u32(c1: Argb, c2: Argb) -> Argb {
         let c1 = c1 as u16;
         let c2 = c2 as u16;
         let a2 = a2 as u16;
-        let a = a as u16;
 
         ((c2 * a2 + c1 * a3) / a) as u8
     };

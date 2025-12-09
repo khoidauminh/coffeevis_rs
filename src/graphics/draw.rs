@@ -147,7 +147,7 @@ impl PixelBuffer {
     }
 
     #[allow(dead_code)]
-    pub fn paste(&mut self, pix_pos: P2, pix_width: usize, pix_vec: &Vec<u32>) {
+    pub fn paste(&mut self, pix_pos: P2, pix_width: usize, pix_vec: &[u32]) {
         let canvas_iter = self
             .buffer
             .chunks_exact_mut(self.width)

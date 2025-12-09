@@ -119,7 +119,7 @@ impl PixelBuffer {
     }
 
     pub fn sizeu(&self) -> (usize, usize) {
-        (self.width as usize, self.height as usize)
+        (self.width, self.height)
     }
 
     pub fn sizel(&self) -> usize {

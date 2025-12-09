@@ -96,14 +96,14 @@ impl Visualizer for Oscilloscope {
         let mut smp2 = Cplx::zero();
         let mut smp3 = Cplx::zero();
 
-        for i in START - PRESMOOTH..START {
-            smp3 = linearfc(smp3, buffer[i], LOWPASS_FACTOR);
+        for &smp in buffer.iter().take(START).skip(START - PRESMOOTH) {
+            smp3 = linearfc(smp3, smp, LOWPASS_FACTOR);
             smp1 = smp2;
             smp2 = smp3;
         }
 
         indices.push(START);
-        for i in START..PADDING + START {
+        for (i, &smp) in buffer.iter().enumerate().skip(START).take(PADDING) {
             if smp1.0 >= 0.0 && smp3.0 < 0.0 {
                 indices.push(i);
             }
@@ -120,7 +120,7 @@ impl Visualizer for Oscilloscope {
                 break;
             }
 
-            smp3 = linearfc(smp3, buffer[i], LOWPASS_FACTOR);
+            smp3 = linearfc(smp3, smp, LOWPASS_FACTOR);
             smp1 = smp2;
             smp2 = smp3;
         }
@@ -152,9 +152,9 @@ impl Visualizer for Oscilloscope {
             let mut rmin = 100.0f32;
             let mut rmax = -100.0f32;
 
-            for i in istart..iend {
-                let l = buffer[i].0;
-                let r = buffer[i].1;
+            for smp in buffer.iter().take(iend).skip(istart) {
+                let l = smp.0;
+                let r = smp.1;
 
                 lmin = lmin.min(l);
                 lmax = lmax.max(l);

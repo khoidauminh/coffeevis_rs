@@ -29,8 +29,8 @@ fn prepare(stream: &mut crate::AudioBuffer, bar_num: usize, data: &mut [f32]) {
     let bnf = bar_num as f32;
 
     let mut data_c = [Cplx::zero(); FFT_SIZE];
-    for n in 0..FFT_SIZE {
-        data_c[n] = stream.get((FFT_SIZE - n) * 3);
+    for (n, d) in data_c.iter_mut().enumerate() {
+        *d = stream.get((FFT_SIZE - n) * 3);
     }
 
     let bound = data_c.len().min(math::ideal_fft_bound(BARS));
@@ -71,7 +71,7 @@ fn prepare(stream: &mut crate::AudioBuffer, bar_num: usize, data: &mut [f32]) {
 
 impl Visualizer for Bars {
     fn name(&self) -> &'static str {
-        return "Bars";
+        "Bars"
     }
 
     fn perform(&mut self, prog: &mut crate::data::Program, stream: &mut crate::audio::AudioBuffer) {

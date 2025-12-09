@@ -232,17 +232,13 @@ impl Program {
                     let idx = idx_base + i * self.pix.width(); // iterate horizontally, then jump to the nex row;
                     let [_, pr, pg, pb] = self.pix.pixel(idx).to_be_bytes();
 
-                    match grayb(pr, pg, pb) {
+                    if let 48.. = grayb(pr, pg, pb) {
                         // Values smaller than this becomes transparent.
-                        48.. => {
-                            r = r.max(pr);
-                            g = g.max(pg);
-                            b = b.max(pb);
+                        r = r.max(pr);
+                        g = g.max(pg);
+                        b = b.max(pb);
 
-                            return acc | (1 << (1 - i));
-                        }
-
-                        _ => {}
+                        return acc | (1 << (1 - i));
                     }
 
                     acc

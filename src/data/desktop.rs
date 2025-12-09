@@ -1,4 +1,4 @@
-const DESKTOP_FILE_ICON: &'static [u8] = include_bytes!("../../assets/coffeevis_icon.svg");
+const DESKTOP_FILE_ICON: &[u8] = include_bytes!("../../assets/coffeevis_icon.svg");
 
 use super::log::{error, info};
 use std::{
@@ -28,7 +28,7 @@ pub fn create_tmp_desktop_file() {
             return;
         };
 
-        exec.to_owned() + &args.iter().skip(1).fold(String::new(), |a, x| a + " " + &x)
+        exec.to_owned() + &args.iter().skip(1).fold(String::new(), |a, x| a + " " + x)
     };
 
     let Some(share_path) = xdg_dirs.get_data_home() else {
@@ -98,7 +98,7 @@ pub fn __create_tmp_desktop_file() {
             return;
         };
 
-        exec.to_owned() + &args.iter().skip(1).fold(String::new(), |a, x| a + " " + &x)
+        exec.to_owned() + &args.iter().skip(1).fold(String::new(), |a, x| a + " " + x)
     };
 
     if std::fs::create_dir(base_path).is_err() {
