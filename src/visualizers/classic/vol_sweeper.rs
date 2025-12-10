@@ -16,18 +16,22 @@ impl Visualizer for VolSweeper {
         "Volum sweeper"
     }
 
-    fn perform(&mut self, prog: &mut crate::data::Program, stream: &mut crate::audio::AudioBuffer) {
-        prog.pix.fade(3);
+    fn perform(
+        &mut self,
+        pix: &mut crate::graphics::PixelBuffer,
+        stream: &mut crate::audio::AudioBuffer,
+    ) {
+        pix.fade(3);
 
         let w = {
             let mut sum = 0.0;
             for i in 0..SAMPLE_SIZE / 4 {
                 sum += stream.get(i).l1_norm();
             }
-            (sum / (SAMPLE_SIZE / 3) as f32 * prog.pix.width() as f32) as usize
+            (sum / (SAMPLE_SIZE / 3) as f32 * pix.width() as f32) as usize
         };
 
-        let color = (w * 255 / prog.pix.width()).min(255) as u8;
+        let color = (w * 255 / pix.width()).min(255) as u8;
         let color = u32::from_be_bytes([
             255,
             255,
@@ -35,15 +39,15 @@ impl Visualizer for VolSweeper {
             color,
         ]);
 
-        let width = prog.pix.width();
+        let width = pix.width();
 
-        prog.pix.color(0);
-        prog.pix.mixerm();
-        prog.pix.rect(P2(0, self.sweepi as i32), width, 1);
-        prog.pix.color(color);
-        prog.pix.rect(P2(0, self.sweepi as i32), w, 1);
+        pix.color(0);
+        pix.mixerm();
+        pix.rect(P2(0, self.sweepi as i32), width, 1);
+        pix.color(color);
+        pix.rect(P2(0, self.sweepi as i32), w, 1);
 
-        match (self.sweepi >= prog.pix.height(), self.pong) {
+        match (self.sweepi >= pix.height(), self.pong) {
             (false, true) => self.sweepi = self.sweepi.wrapping_add(1),
             (false, false) => self.sweepi = self.sweepi.wrapping_sub(1),
 

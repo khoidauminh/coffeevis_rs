@@ -9,10 +9,14 @@ impl Visualizer for Wave {
         "Wave"
     }
 
-    fn perform(&mut self, prog: &mut crate::data::Program, stream: &mut crate::audio::AudioBuffer) {
+    fn perform(
+        &mut self,
+        pix: &mut crate::graphics::PixelBuffer,
+        stream: &mut crate::audio::AudioBuffer,
+    ) {
         let l = (stream.len() * PERBYTE) >> 8;
 
-        let (width, height) = prog.pix.sizeu();
+        let (width, height) = pix.sizeu();
 
         for x in 0..width {
             let i = l * x / width;
@@ -22,9 +26,9 @@ impl Visualizer for Wave {
             let b: u8 = (smp.1 * 144.0 + 128.0) as u8;
             let g: u8 = ((r as u16 + b as u16) / 2) as u8;
 
-            prog.pix.color(u32::from_be_bytes([b, r, g, b]));
-            prog.pix.mixerm();
-            prog.pix.rect(P2(x as i32, 0), 1, height);
+            pix.color(u32::from_be_bytes([b, r, g, b]));
+            pix.mixerm();
+            pix.rect(P2(x as i32, 0), 1, height);
         }
 
         stream.autoslide();

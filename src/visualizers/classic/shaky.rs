@@ -34,11 +34,15 @@ impl Visualizer for Shaky {
         "Shaky"
     }
 
-    fn perform(&mut self, prog: &mut crate::data::Program, stream: &mut crate::audio::AudioBuffer) {
+    fn perform(
+        &mut self,
+        pix: &mut crate::graphics::PixelBuffer,
+        stream: &mut crate::audio::AudioBuffer,
+    ) {
         let mut data_f = [Cplx::zero(); 512];
         stream.read(&mut data_f);
 
-        let sizef = prog.pix.width().min(prog.pix.height()) as f32;
+        let sizef = pix.width().min(pix.height()) as f32;
 
         math::integrate_inplace(&mut data_f, 128, math::Normalize::No);
 
@@ -60,23 +64,23 @@ impl Visualizer for Shaky {
         self.jc += 0.01;
         self.i = (self.i + INCR + amplitude_scaled) % 1.0;
 
-        prog.pix.fade(4);
+        pix.fade(4);
 
         let (x_soft_shake, y_soft_shake) = diamond_func(8.0, 1.0, self.i);
 
         let final_x = x_soft_shake + self.x;
         let final_y = y_soft_shake + self.y;
 
-        let width = prog.pix.width() as i32;
-        let height = prog.pix.height() as i32;
+        let width = pix.width() as i32;
+        let height = pix.height() as i32;
 
         let red = 255i32.saturating_sub(final_x.abs() * 5) as u8;
         let blue = 255i32.saturating_sub(final_y.abs() * 5) as u8;
         let green = (amplitude * 0.0001) as u8;
 
-        prog.pix.color(u32::compose([0xFF, red, green, blue]));
-        prog.pix.mixerm();
-        prog.pix.rect(
+        pix.color(u32::compose([0xFF, red, green, blue]));
+        pix.mixerm();
+        pix.rect(
             crate::graphics::P2(final_x + width / 2 - 1, final_y + height / 2 - 1),
             3,
             3,

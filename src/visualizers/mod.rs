@@ -34,7 +34,11 @@ pub trait Visualizer {
 
     fn focus(&mut self) {}
     fn defocus(&mut self) {}
-    fn perform(&mut self, prog: &mut crate::data::Program, stream: &mut crate::audio::AudioBuffer);
+    fn perform(
+        &mut self,
+        pix: &mut crate::graphics::PixelBuffer,
+        stream: &mut crate::audio::AudioBuffer,
+    );
 }
 
 pub mod classic;

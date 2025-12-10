@@ -1,8 +1,8 @@
 use std::f32::consts::LN_2;
 
 use crate::audio::AudioBuffer;
-use crate::data::Program;
 use crate::graphics::P2;
+use crate::graphics::PixelBuffer;
 use crate::math::{self, Cplx, interpolate::*};
 use crate::visualizers::Visualizer;
 
@@ -65,10 +65,10 @@ impl Visualizer for Spectrum {
         "Spectrum"
     }
 
-    fn perform(&mut self, prog: &mut Program, stream: &mut AudioBuffer) {
+    fn perform(&mut self, pix: &mut PixelBuffer, stream: &mut AudioBuffer) {
         prepare(stream, &mut self.buffer);
 
-        let P2(w, h) = prog.pix.size();
+        let P2(w, h) = pix.size();
         let winwh = w >> 1;
 
         let wf = w as f32;
@@ -76,8 +76,8 @@ impl Visualizer for Spectrum {
 
         let whf = wf * 0.5;
 
-        prog.pix.clear();
-        prog.pix.mixerd();
+        pix.clear();
+        pix.mixerd();
 
         for y in 0..h {
             let ifrac = (y as f32 / hf).exp2() - 1.0f32;
@@ -106,16 +106,16 @@ impl Visualizer for Spectrum {
             let rect_r = P2((whf + sr) as i32, ry);
             let middle = P2(winwh + 1, h - y);
 
-            prog.pix.color(color);
-            prog.pix.rect_xy(rect_l, middle);
-            prog.pix.rect_xy(middle, rect_r);
+            pix.color(color);
+            pix.rect_xy(rect_l, middle);
+            pix.rect_xy(middle, rect_r);
 
             let s = stream.get((h - y) as usize);
             let c1 = if s.0 > 0.0 { 255 } else { 0 };
             let c2 = if s.1 > 0.0 { 255 } else { 0 };
 
-            prog.pix.color(u32::from_be_bytes([255, c1, 0, c2]));
-            prog.pix.rect(P2(winwh - 1, ry), 2, 1);
+            pix.color(u32::from_be_bytes([255, c1, 0, c2]));
+            pix.rect(P2(winwh - 1, ry), 2, 1);
         }
     }
 }

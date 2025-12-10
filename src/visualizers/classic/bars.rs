@@ -74,18 +74,22 @@ impl Visualizer for Bars {
         "Bars"
     }
 
-    fn perform(&mut self, prog: &mut crate::data::Program, stream: &mut crate::audio::AudioBuffer) {
+    fn perform(
+        &mut self,
+        pix: &mut crate::graphics::PixelBuffer,
+        stream: &mut crate::audio::AudioBuffer,
+    ) {
         use crate::math::{fast::cubed_sqrt, interpolate::smooth_step};
 
-        let bar_num = (prog.pix.width() / 2).min(MAX_BARS);
+        let bar_num = (pix.width() / 2).min(MAX_BARS);
         let bnf = bar_num as f32;
         let bnf_recip = 1.0 / bnf;
 
         prepare(stream, bar_num, &mut self.data);
 
-        prog.pix.clear();
-        let size = prog.pix.sizeu();
-        let sizef = Cplx(prog.pix.width() as f32, prog.pix.height() as f32);
+        pix.clear();
+        let size = pix.sizeu();
+        let sizef = Cplx(pix.width() as f32, pix.height() as f32);
 
         let mut iter: f32 = 0.4;
 
@@ -118,15 +122,14 @@ impl Visualizer for Bars {
 
             let bar = smoothed_smp * sizef.1;
 
-            let bar = (bar as usize).clamp(1, prog.pix.height());
+            let bar = (bar as usize).clamp(1, pix.height());
 
             let fade = (128.0 + stream.get(idx * 3 / 2).0 * 256.0) as u8;
-            let peak = (bar * 255 / prog.pix.height()) as u8;
+            let peak = (bar * 255 / pix.height()) as u8;
             let _red = (fade.wrapping_mul(2) / 3).saturating_add(128).max(peak);
 
-            prog.pix
-                .color(u32::from_be_bytes([0xFF, 0xFF, (fade).max(peak), 0]));
-            prog.pix.rect(
+            pix.color(u32::from_be_bytes([0xFF, 0xFF, (fade).max(peak), 0]));
+            pix.rect(
                 P2(
                     (size.0 * idx / bar_num) as i32,
                     (size.1 - bar.min(size.1 - 1)) as i32,
@@ -167,20 +170,24 @@ impl Visualizer for BarsCircle {
         "Bars Cicle"
     }
 
-    fn perform(&mut self, prog: &mut crate::data::Program, stream: &mut crate::audio::AudioBuffer) {
-        let size = prog.pix.height().min(prog.pix.width()) as i32;
+    fn perform(
+        &mut self,
+        pix: &mut crate::graphics::PixelBuffer,
+        stream: &mut crate::audio::AudioBuffer,
+    ) {
+        let size = pix.height().min(pix.width()) as i32;
         let sizef = size as f32;
 
-        let bar_num = prog.pix.sizel().isqrt().min(MAX_BARS);
+        let bar_num = pix.sizel().isqrt().min(MAX_BARS);
         let bnf = bar_num as f32;
         let bnf_recip = 1.0 / bnf;
 
-        let wh = prog.pix.width() as i32 / 2;
-        let hh = prog.pix.height() as i32 / 2;
+        let wh = pix.width() as i32 / 2;
+        let hh = pix.height() as i32 / 2;
 
         prepare(stream, bar_num, &mut self.data);
 
-        prog.pix.clear();
+        pix.clear();
 
         const FFT_WINDOW: f32 = (FFT_SIZE >> 6) as f32 * 1.5;
 
@@ -213,8 +220,8 @@ impl Visualizer for BarsCircle {
             let b: u8 = 0xFF;
             let c = u32::compose([0xFF, r, g, b]);
 
-            prog.pix.color(c);
-            prog.pix.line(p1, p2);
+            pix.color(c);
+            pix.line(p1, p2);
         }
     }
 }

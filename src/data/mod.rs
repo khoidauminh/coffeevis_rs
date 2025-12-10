@@ -21,15 +21,9 @@ pub const FFT_POWER: usize = 9;
 pub const SAMPLE_SIZE: usize = 1 << POWER;
 pub const FFT_SIZE: usize = 1 << FFT_POWER;
 
-pub const INCREMENT: usize = 2;
-
 pub const CAP_MILLI_HZ: u32 = 192 * 1000;
 pub const DEFAULT_MILLI_HZ: u32 = 60 * 1000;
 pub const DEFAULT_HZ: u64 = DEFAULT_MILLI_HZ as u64 / 1000;
-
-pub const DEFAULT_WAV_WIN: usize = 64 * INCREMENT;
-pub const DEFAULT_ROTATE_SIZE: usize = 289; // 3539;
-pub const PHASE_OFFSET: usize = SAMPLE_RATE / 50 / 4;
 
 /// Stop rendering when get_no_sample() exceeds this value;
 pub const STOP_RENDERING: u8 = 192;
@@ -39,7 +33,6 @@ pub const DEFAULT_SIZE_WIN: u16 = 84;
 pub const DEFAULT_WIN_SCALE: u8 = 2;
 
 pub const MAX_WIDTH: u16 = 480;
-
 pub const MAX_HEIGHT: u16 = 360;
 
 pub const MAX_CON_WIDTH: u16 = 128;
@@ -82,7 +75,7 @@ pub(crate) struct Program {
 
     pub console_props: modes::console_mode::ConsoleProps,
 
-    vislist: Option<crate::visualizers::VisList>,
+    vislist: crate::visualizers::VisList,
 
     auto_switch: bool,
 }
@@ -112,7 +105,7 @@ impl Program {
 
             refresh_rate_intervals: [rate, rate * 8],
 
-            vislist: Some(VisList::new()),
+            vislist: VisList::new(),
 
             auto_switch: true,
 
@@ -196,29 +189,25 @@ impl Program {
     }
 
     pub fn change_visualizer(&mut self, forward: bool) {
-        let vislist = self.vislist.as_mut().unwrap();
-
         if forward {
-            vislist.next();
+            self.vislist.next();
         } else {
-            vislist.prev();
+            self.vislist.prev();
         }
 
         self.pix.clear();
 
-        let conf = vislist.get().config();
+        let conf = self.vislist.get().config();
 
         crate::audio::set_normalizer(conf.normalize);
 
-        let vis_name = vislist.get().name();
+        let vis_name = self.vislist.get().name();
 
         info!("Switching to {}", vis_name);
     }
 
     pub fn autoupdate_visualizer(&mut self) {
-        if let Some(v) = self.vislist.as_mut() {
-            v.update()
-        }
+        self.vislist.update()
     }
 
     pub fn update_size(&mut self, mut s: (u16, u16)) {
@@ -231,18 +220,13 @@ impl Program {
     }
 
     pub fn render(&mut self) {
-        let mut vis = self.vislist.take().unwrap();
-        crate::visualizers::Visualizer::perform(vis.get(), self, &mut crate::audio::get_buf());
-        self.vislist = Some(vis)
+        self.vislist
+            .get()
+            .perform(&mut self.pix, &mut crate::audio::get_buf());
     }
 
     pub fn toggle_auto_switch(&mut self) {
-        let v = self
-            .vislist
-            .as_mut()
-            .expect("Missing visualizer handler!!!");
-
-        v.auto_switch ^= true;
+        self.vislist.auto_switch ^= true;
 
         info!(
             "Auto switch is now {}",

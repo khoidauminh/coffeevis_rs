@@ -1,4 +1,3 @@
-use crate::data::DEFAULT_ROTATE_SIZE;
 use crate::math::Cplx;
 use crate::math::interpolate::decay;
 
@@ -35,7 +34,7 @@ impl AudioBuffer {
             oldwriteend: 0,
             readend: 0,
 
-            autorotatesize: DEFAULT_ROTATE_SIZE,
+            autorotatesize: 0,
             rotatessincewrite: 0,
 
             lastinputsize: 0,

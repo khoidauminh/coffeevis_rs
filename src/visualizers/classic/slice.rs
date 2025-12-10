@@ -19,9 +19,13 @@ impl Visualizer for Slice {
         "Slice"
     }
 
-    fn perform(&mut self, prog: &mut crate::data::Program, stream: &mut crate::audio::AudioBuffer) {
-        let center = prog.pix.size().center();
-        let radius = prog.pix.width().min(prog.pix.height());
+    fn perform(
+        &mut self,
+        pix: &mut crate::graphics::PixelBuffer,
+        stream: &mut crate::audio::AudioBuffer,
+    ) {
+        let center = pix.size().center();
+        let radius = pix.width().min(pix.height());
         let small_radius = radius as i32 / 16;
         let big_radius = (radius as i32 / 2) * 9 / 10;
         let big_radius_f = big_radius as f32;
@@ -72,18 +76,18 @@ impl Visualizer for Slice {
 
             let p = P2(center.0 + x as i32, center.1 + y as i32);
 
-            prog.pix.color(color);
-            prog.pix.mixer(blend);
-            prog.pix.line(center, p);
+            pix.color(color);
+            pix.mixer(blend);
+            pix.line(center, p);
 
             o += d;
         }
 
         mt.0 = new_angle % TAU;
 
-        prog.pix.color(0xFF_FF_FF_FF);
-        prog.pix.mixerd();
-        prog.pix.circle(center, small_radius, true);
+        pix.color(0xFF_FF_FF_FF);
+        pix.mixerd();
+        pix.circle(center, small_radius, true);
 
         stream.autoslide();
 

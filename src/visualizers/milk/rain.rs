@@ -166,7 +166,7 @@ impl Visualizer for Rain {
         "Rain"
     }
 
-    fn perform(&mut self, prog: &mut crate::data::Program, stream: &mut crate::audio::AudioBuffer) {
+    fn perform(&mut self, pix: &mut PixelBuffer, stream: &mut crate::audio::AudioBuffer) {
         let mut new_volume: f32 = 0.0;
         {
             let mut y: f32 = stream.get(0).into();
@@ -186,25 +186,25 @@ impl Visualizer for Rain {
 
         let blue = 0.7 - vol2 * 0.005;
 
-        prog.pix.color(u32::from_be_bytes([
+        pix.color(u32::from_be_bytes([
             0xFF,
             0,
             (119.0 * blue) as u8,
             (255.0 * blue) as u8,
         ]));
-        prog.pix.fill();
+        pix.fill();
 
-        let size = prog.pix.size();
+        let size = pix.size();
 
         for drop in self.listdrops.iter_mut() {
-            let size = prog.pix.size();
+            let size = pix.size();
 
             if !drop.is_bounds_match(size) {
                 drop.set_bound(size);
                 drop.randomize_start();
             }
 
-            drop.draw(&mut prog.pix);
+            drop.draw(pix);
 
             let p = drop.fall(vol2 * 0.01);
             if !p {
@@ -213,10 +213,10 @@ impl Visualizer for Rain {
         }
 
         if voldiff >= 6.7 {
-            self.thunder = Thunder::generate(random_int(1000), prog.pix.width() as i32)
+            self.thunder = Thunder::generate(random_int(1000), pix.width() as i32)
         }
 
-        self.thunder.draw(&mut prog.pix);
+        self.thunder.draw(pix);
         self.thunder.fade();
 
         stream.autoslide();

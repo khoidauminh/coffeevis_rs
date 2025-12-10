@@ -21,9 +21,13 @@ impl Visualizer for Lazer {
         "Lazer"
     }
 
-    fn perform(&mut self, prog: &mut crate::data::Program, stream: &mut crate::audio::AudioBuffer) {
-        let w = prog.pix.width() as f32;
-        let h = prog.pix.height() as f32;
+    fn perform(
+        &mut self,
+        pix: &mut crate::graphics::PixelBuffer,
+        stream: &mut crate::audio::AudioBuffer,
+    ) {
+        let w = pix.width() as f32;
+        let h = pix.height() as f32;
 
         let mut a = {
             let mut sum = Cplx::zero();
@@ -63,10 +67,10 @@ impl Visualizer for Lazer {
             ((255.0 - a.0 * a.1 * 2.0).abs().min(255.0)) as u8,
         ]);
 
-        prog.pix.fade(3);
-        prog.pix.color(color);
-        prog.pix.mixerd();
-        prog.pix.line(p1.to_p2(), p0.to_p2());
+        pix.fade(3);
+        pix.color(color);
+        pix.mixerd();
+        pix.line(p1.to_p2(), p0.to_p2());
 
         p1 = p0;
 
