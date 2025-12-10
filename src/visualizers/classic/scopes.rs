@@ -7,7 +7,7 @@ use crate::audio::MovingAverage;
 use crate::graphics::P2;
 use crate::math::interpolate::linearfc;
 use crate::visualizers::Visualizer;
-use crate::visualizers::classic::cross::draw_cross;
+use crate::visualizers::helpers::draw_cross;
 
 use crate::math::Cplx;
 

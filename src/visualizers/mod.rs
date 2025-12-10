@@ -2,6 +2,8 @@
 
 use std::time::Instant;
 
+mod helpers;
+
 use crate::{
     data::{DEFAULT_VIS_SWITCH_DURATION, log},
     visualizers::{
