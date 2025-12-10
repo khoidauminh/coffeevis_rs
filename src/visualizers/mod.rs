@@ -3,7 +3,7 @@
 use std::time::Instant;
 
 use crate::{
-    data::log,
+    data::{DEFAULT_VIS_SWITCH_DURATION, log},
     visualizers::{
         classic::{
             bars::{Bars, BarsCircle},
@@ -47,7 +47,7 @@ pub mod milk;
 pub struct VisList {
     list: Vec<Box<dyn Visualizer>>,
     index: usize,
-    last_updated: Instant,
+    next_update: Instant,
     pub auto_switch: bool,
 }
 
@@ -68,9 +68,17 @@ impl VisList {
                 Box::new(Rain::default()),
             ],
             index: 0,
-            last_updated: Instant::now(),
+            next_update: Instant::now() + DEFAULT_VIS_SWITCH_DURATION,
             auto_switch: true,
         }
+    }
+
+    fn reset_timer(&mut self) {
+        self.next_update = Instant::now() + DEFAULT_VIS_SWITCH_DURATION;
+    }
+
+    fn log(&self) {
+        crate::data::log::info!("Switching to {}", self.list[self.index].name());
     }
 
     pub fn next(&mut self) {
@@ -82,28 +90,33 @@ impl VisList {
             self.index = 0;
         }
 
-        self.last_updated = Instant::now();
         self.list[self.index].focus();
+
+        self.reset_timer();
+        self.log();
     }
 
     pub fn prev(&mut self) {
         self.list[self.index].defocus();
+
         if self.index == 0 {
             self.index = self.list.len();
         }
 
         self.index -= 1;
 
-        self.last_updated = Instant::now();
         self.list[self.index].focus();
+
+        self.reset_timer();
+        self.log();
     }
 
     pub fn update(&mut self) {
         if self.auto_switch {
             let now = Instant::now();
-            if now - self.last_updated >= crate::data::DEFAULT_VIS_SWITCH_DURATION {
+            if now >= self.next_update {
                 self.next();
-                self.last_updated = now;
+                self.next_update = now + DEFAULT_VIS_SWITCH_DURATION;
             }
         }
     }

@@ -198,12 +198,7 @@ impl Program {
         self.pix.clear();
 
         let conf = self.vislist.get().config();
-
         crate::audio::set_normalizer(conf.normalize);
-
-        let vis_name = self.vislist.get().name();
-
-        info!("Switching to {}", vis_name);
     }
 
     pub fn autoupdate_visualizer(&mut self) {
