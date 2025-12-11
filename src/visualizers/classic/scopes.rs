@@ -56,7 +56,7 @@ impl Visualizer for Vectorscope {
         }
 
         while di < DEFAULT_WAV_WIN {
-            let sample = Cplx::new(stream.get(di).0, stream.get(di + PHASE_OFFSET).1) * 0.98;
+            let sample = Cplx::new(stream.get(di).0, stream.get(di + PHASE_OFFSET).1) * 0.85;
 
             let sample = smoothed_sample.update(sample);
 
