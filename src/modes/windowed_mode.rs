@@ -82,10 +82,7 @@ struct WindowState {
 
 impl ApplicationHandler for WindowState {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-        // Since we are leaking the window into a static
-        // reference, resumed() is not allowed to be
-        // called again as it would cause the build up
-        // of leaked windows and potentially flood RAM.
+        // Prevents re-initialization.
         assert!(self.renderer.is_none());
 
         let scale = self.prog.scale() as u32;
