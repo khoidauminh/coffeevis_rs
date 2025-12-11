@@ -128,14 +128,17 @@ impl VisList {
     }
 
     pub fn select_by_name(&mut self, name: &str) {
-        let name = name.trim().to_lowercase();
-        if let Some(i) = self.list.iter().position(|v| v.name() == name) {
+        if let Some(i) = self
+            .list
+            .iter()
+            .position(|v| v.name().eq_ignore_ascii_case(&name))
+        {
             self.index = i;
             self.list[self.index].focus();
             return;
         }
 
-        log::error!("Invalid name specified");
+        log::error!("Invalid name specified: \"{}\"", name);
         log::info!("Possible visualizer values include: ");
 
         for v in &self.list {
