@@ -24,20 +24,7 @@ fn main() {
 
     match prog.mode() {
         modes::Mode::Win => modes::windowed_mode::winit_main(prog),
-
-        _ => {
-            #[allow(unused_mut, unused_assignments)]
-            let mut terminal = false;
-
-            {
-                terminal = true;
-                modes::console_mode::con_main(prog).unwrap();
-            }
-
-            if !terminal {
-                crate::data::log::error!("Unable to determine display mode!");
-            }
-        }
+        _ => modes::console_mode::con_main(prog).unwrap(),
     }
 
     stream.pause().unwrap();
