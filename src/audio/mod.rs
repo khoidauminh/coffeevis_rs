@@ -16,7 +16,7 @@ pub(crate) fn get_buf<'a>() -> MutexGuard<'a, AudioBuffer> {
 pub fn get_device_linux() -> Device {
     cpal::default_host()
         .default_input_device()
-        .expect("No loopback device available")
+        .expect("No input device available")
 }
 
 #[cfg(target_os = "windows")]
