@@ -1,44 +1,70 @@
+use cpal::Device;
 use cpal::traits::{DeviceTrait, HostTrait};
 
 pub mod audio_buffer;
 pub(crate) use audio_buffer::AudioBuffer;
 
 use std::ops::*;
-use std::sync::{
-    Mutex, MutexGuard,
-    atomic::{AtomicBool, AtomicU8, Ordering::Relaxed},
-};
-
-static NO_SAMPLE: AtomicU8 = AtomicU8::new(0);
+use std::sync::{Mutex, MutexGuard};
 
 pub(crate) fn get_buf<'a>() -> MutexGuard<'a, AudioBuffer> {
     static BUFFER: Mutex<AudioBuffer> = Mutex::new(AudioBuffer::new());
     BUFFER.lock().unwrap()
 }
 
-pub(crate) fn get_no_sample() -> u8 {
-    NO_SAMPLE.load(Relaxed)
+#[cfg(target_os = "linux")]
+pub fn get_device_linux() -> Device {
+    cpal::default_host()
+        .default_input_device()
+        .expect("No loopback device available")
 }
 
-pub fn set_no_sample(ns: u8) {
-    NO_SAMPLE.store(ns, Relaxed);
-}
+#[cfg(target_os = "windows")]
+pub fn get_device_windows() -> Device {
+    let default_device = cpal::default_host().default_input_device();
 
-pub static NORMALIZE: AtomicBool = AtomicBool::new(true);
+    let input_devices = cpal::default_host()
+        .input_devices()
+        .expect("Failed to probe all input devices.")
+        .collect::<Vec<_>>();
 
-pub fn set_normalizer(b: bool) {
-    NORMALIZE.store(b, Relaxed);
+    for d in &input_devices {
+        println!("I see {}", d.name().unwrap_or("<unknown>".to_string()));
+    }
+
+    let query = input_devices.iter().find(|d| {
+        d.name()
+            .map(|name| name.contains("Stereo Mix"))
+            .unwrap_or(false)
+    });
+
+    if let Some(q) = query {
+        crate::data::log::info!("Found Stereo Mix.");
+        return q.clone();
+    }
+
+    let d = default_device.expect("Failed to get default device.");
+    crate::data::log::alert!(
+        "No Stereo Mix found. Going with default input device: {}",
+        d.name().unwrap_or("<Unknown>".to_string())
+    );
+
+    d
 }
 
 pub fn get_source() -> cpal::Stream {
-    let device = cpal::default_host()
-        .default_input_device()
-        .expect("no input device available");
+    #[cfg(target_os = "linux")]
+    let device = get_device_linux();
+
+    #[cfg(target_os = "windows")]
+    let device = get_device_windows();
 
     let config: cpal::StreamConfig = device
         .default_input_config()
         .expect("error while querying configs")
         .config();
+
+    crate::data::log::info!("Using {}", device.name().unwrap_or("<unkown>".to_owned()));
 
     device
         .build_input_stream(
@@ -46,7 +72,6 @@ pub fn get_source() -> cpal::Stream {
             |data: &[f32], _| {
                 let mut b = get_buf();
                 b.read_from_input(data);
-                set_no_sample(b.silent());
             },
             |err| eprintln!("an error occurred on the input audio stream: {}", err),
             None,

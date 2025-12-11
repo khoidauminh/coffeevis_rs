@@ -14,7 +14,6 @@ use arrayvec::ArrayString;
 use std::io::{Error, Stdout, Write, stdout};
 
 use crate::{
-    audio::get_no_sample,
     data::*,
     graphics::{Argb, Pixel, blend::grayb},
     modes::Mode,
@@ -306,10 +305,12 @@ fn to_ascii_art(table: &[u8], x: usize) -> char {
     table[(x * table.len()) >> 8] as char
 }
 
-pub fn control_key_events_con(prog: &mut Program, exit: &mut bool) -> Result<(), Error> {
+pub fn control_key_events_con(
+    prog: &mut Program,
+    exit: &mut bool,
+    no_sample: u8,
+) -> Result<(), Error> {
     prog.autoupdate_visualizer();
-
-    let no_sample = crate::audio::get_no_sample();
 
     if poll(prog.get_rr_interval(no_sample))? {
         match read()? {
@@ -374,8 +375,9 @@ pub fn con_main(mut prog: Program) -> std::io::Result<()> {
 
     if !prog.is_display_enabled() {
         while !exit {
-            control_key_events_con(&mut prog, &mut exit)?;
-            prog.render();
+            let mut buf = crate::audio::get_buf();
+            control_key_events_con(&mut prog, &mut exit, buf.silent())?;
+            prog.render(&mut buf);
         }
     } else {
         let _ = queue!(
@@ -385,13 +387,16 @@ pub fn con_main(mut prog: Program) -> std::io::Result<()> {
             SetAttribute(Attribute::Bold)
         );
         while !exit {
-            control_key_events_con(&mut prog, &mut exit)?;
+            let mut buf = crate::audio::get_buf();
+            let silent = buf.silent();
 
-            if get_no_sample() > STOP_RENDERING {
+            control_key_events_con(&mut prog, &mut exit, silent)?;
+
+            if silent > STOP_RENDERING {
                 continue;
             }
 
-            prog.render();
+            prog.render(&mut buf);
             prog.print_con();
 
             let _ = stdout.flush();

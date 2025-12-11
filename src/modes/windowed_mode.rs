@@ -26,14 +26,12 @@ use winit::platform::{
 use std::{
     cell::LazyCell,
     num::NonZeroU32,
-    sync::mpsc::{self, SyncSender},
+    sync::mpsc::{self, RecvTimeoutError, SyncSender},
     thread::{self, JoinHandle},
-    time::Duration,
+    time::{Duration, Instant},
 };
 
-use crate::{audio::get_no_sample, data::*};
-
-type WindowSurface = Surface<&'static Window, &'static Window>;
+use crate::data::*;
 
 const ICON_FILE: &[u8] = include_bytes!("../../assets/coffeevis_icon_128x128.qoi");
 
@@ -64,12 +62,21 @@ impl WindowProps {
     }
 }
 
+enum LoopCode {
+    Continue(u8),
+    Exit,
+}
+
+struct Renderer {
+    pub window: &'static Window,
+    pub surface: Surface<&'static Window, &'static Window>,
+    pub thread_control_draw_id: JoinHandle<()>,
+    pub loopcode_sender: SyncSender<LoopCode>,
+}
+
 struct WindowState {
     pub prog: Program,
-    pub window: Option<&'static Window>,
-    pub surface: Option<WindowSurface>,
-    pub exit_sender: Option<SyncSender<()>>,
-    pub thread_control_draw_id: Option<JoinHandle<()>>,
+    pub renderer: Option<Renderer>,
     pub final_buffer_size: PhysicalSize<u32>,
 }
 
@@ -79,9 +86,7 @@ impl ApplicationHandler for WindowState {
         // reference, resumed() is not allowed to be
         // called again as it would cause the build up
         // of leaked windows and potentially flood RAM.
-        assert!(self.window.is_none());
-
-        self.prog.print_startup_info();
+        assert!(self.renderer.is_none());
 
         let scale = self.prog.scale() as u32;
         let win_size = PhysicalSize::<u32>::new(
@@ -113,25 +118,14 @@ impl ApplicationHandler for WindowState {
         #[cfg(target_os = "windows")]
         let window_attributes = window_attributes.with_class_name("coffeevis");
 
-        self.window = Some(Box::leak(Box::new(
+        let window = &*Box::leak(Box::new(
             event_loop.create_window(window_attributes).unwrap(),
-        )));
-
-        let window = self
-            .window
-            .expect("Window unwraps to none. This error should never happen!");
+        ));
 
         let size = window.inner_size();
         self.final_buffer_size = size;
 
-        self.surface = {
-            let context = Context::new(window).unwrap();
-            let mut surface = Surface::new(&context, window).unwrap();
-
-            Self::resize_surface(&mut surface, size.width, size.height);
-
-            Some(surface)
-        };
+        let surface = Surface::new(&Context::new(window).unwrap(), window).unwrap();
 
         if !de.is_empty() {
             info!("Running in the {} desktop (XDG_CURRENT_DESKTOP).", de);
@@ -143,16 +137,18 @@ impl ApplicationHandler for WindowState {
             window.set_max_inner_size(Some(win_size));
         }
 
-        let (exit_send, exit_recv) = mpsc::sync_channel(1);
+        let (loopcode_sender, loopcode_receiver) = mpsc::sync_channel::<LoopCode>(1);
 
-        self.exit_sender = Some(exit_send);
-
-        let mut intervals = self.prog.get_rr_intervals();
         let mut milli_hz = self.prog.get_milli_hz();
         let rr_mode = self.prog.get_rr_mode();
 
+        let mut intervals = self.prog.get_rr_intervals().to_vec();
+
+        window.set_visible(true);
+        window.set_window_level(WindowLevel::AlwaysOnTop);
+
         // Thread to control requesting redraws.
-        self.thread_control_draw_id = thread::Builder::new()
+        let thread_control_draw_id = thread::Builder::new()
             .name("coffeevis draw control".into())
             .spawn(move || {
                 window.request_redraw();
@@ -161,49 +157,109 @@ impl ApplicationHandler for WindowState {
                     // Wait for a little before querying for monitor refresh rate.
                     thread::sleep(Duration::from_millis(100));
                     Self::check_refresh_rate(window, &mut milli_hz);
-                    intervals = Program::construct_intervals(milli_hz);
+                    intervals = Program::construct_intervals(milli_hz).to_vec();
                 }
 
+                let mut last = Instant::now();
+
                 loop {
-                    let s = get_no_sample();
+                    match loopcode_receiver.recv_timeout(Duration::from_millis(750)) {
+                        Ok(LoopCode::Continue(s)) => {
+                            if s < STOP_RENDERING {
+                                window.request_redraw();
+                            }
 
-                    let itvl = intervals[(s > SLOW_DOWN_THRESHOLD) as usize];
+                            let itvl = intervals[(s > SLOW_DOWN_THRESHOLD) as usize];
 
-                    if exit_recv.recv_timeout(itvl).is_ok() {
-                        break;
-                    }
+                            let now = Instant::now();
+                            let next = last + itvl;
+                            thread::sleep(next.duration_since(now));
+                            last = next;
+                        }
 
-                    if !window.is_minimized().unwrap_or(false) && s < STOP_RENDERING {
-                        window.request_redraw();
+                        Err(RecvTimeoutError::Timeout) => window.request_redraw(),
+                        _ => break,
                     }
                 }
             })
-            .ok();
+            .unwrap();
 
-        window.set_visible(true);
-        window.set_window_level(WindowLevel::AlwaysOnTop);
+        self.renderer = Some(Renderer {
+            window,
+            surface,
+            thread_control_draw_id,
+            loopcode_sender,
+        })
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _: WindowId, event: WindowEvent) {
         match event {
+            WindowEvent::RedrawRequested => {
+                let Some(Renderer {
+                    window,
+                    surface,
+                    loopcode_sender,
+                    ..
+                }) = self.renderer.as_mut()
+                else {
+                    return;
+                };
+
+                let Ok(mut buffer) = surface.buffer_mut() else {
+                    return;
+                };
+
+                let silent = {
+                    let mut buf = crate::audio::get_buf();
+                    self.prog.autoupdate_visualizer();
+                    self.prog.render(&mut buf);
+                    buf.silent()
+                };
+
+                if !self.prog.is_display_enabled() {
+                    return;
+                }
+
+                self.prog.pix.scale_to(
+                    self.prog.scale() as usize,
+                    &mut buffer,
+                    Some(self.final_buffer_size.width as usize),
+                    self.prog.get_win_render_effect(),
+                );
+
+                window.pre_present_notify();
+
+                if let Err(e) = buffer.present() {
+                    error!(
+                        "Coffeevis is failing to present buffers to the window: {}!",
+                        e
+                    );
+                }
+
+                let _ = loopcode_sender.send(LoopCode::Continue(silent));
+            }
+
             WindowEvent::CloseRequested => self.call_exit(event_loop),
 
             WindowEvent::MouseInput { button, .. } => {
                 if button == event::MouseButton::Left
-                    && let Some(err) = self.window.as_ref().and_then(|f| f.drag_window().err())
+                    && let Some(err) = self
+                        .renderer
+                        .as_ref()
+                        .and_then(|f| f.window.drag_window().err())
                 {
                     error!("Error dragging window: {}", err);
                 }
             }
 
             WindowEvent::Focused(_) => {
-                if let Some(w) = self.window.as_ref() {
-                    w.request_redraw()
+                if let Some(r) = self.renderer.as_ref() {
+                    r.window.request_redraw()
                 }
             }
 
             WindowEvent::Resized(PhysicalSize { width, height }) => {
-                let Some(surface) = self.surface.as_mut() else {
+                let Some(Renderer { surface, .. }) = self.renderer.as_mut() else {
                     error!("Coffeevis is unable to resize the buffer!");
                     return;
                 };
@@ -224,7 +280,12 @@ impl ApplicationHandler for WindowState {
                 self.final_buffer_size.width = w;
                 self.final_buffer_size.height = h;
 
-                Self::resize_surface(surface, w, h);
+                surface
+                    .resize(
+                        NonZeroU32::new(w).expect("Surface width is zero"),
+                        NonZeroU32::new(h).expect("Surface height is zero"),
+                    )
+                    .expect("Failed to resize surface buffer");
 
                 self.prog.pix.clear_out_buffer();
             }
@@ -244,38 +305,6 @@ impl ApplicationHandler for WindowState {
                 }
             }
 
-            WindowEvent::RedrawRequested => {
-                let Some(window) = self.window.as_ref() else {
-                    return;
-                };
-
-                self.prog.autoupdate_visualizer();
-                self.prog.render();
-
-                if !self.prog.is_display_enabled() {
-                    return;
-                }
-
-                let Some(Ok(mut buffer)) = self.surface.as_mut().map(|s| s.buffer_mut()) else {
-                    return;
-                };
-
-                self.prog.pix.scale_to(
-                    self.prog.scale() as usize,
-                    &mut buffer,
-                    Some(self.final_buffer_size.width as usize),
-                    self.prog.get_win_render_effect(),
-                );
-
-                window.pre_present_notify();
-                if let Err(e) = buffer.present() {
-                    error!(
-                        "Coffeevis is failing to present buffers to the window: {}!",
-                        e
-                    );
-                }
-            }
-
             _ => {}
         }
     }
@@ -283,20 +312,12 @@ impl ApplicationHandler for WindowState {
 
 impl WindowState {
     fn call_exit(&mut self, event_loop: &ActiveEventLoop) {
-        self.exit_sender.as_ref().map(|x| x.send(()));
-        if let Some(t) = self.thread_control_draw_id.take() {
-            t.join().unwrap()
+        if let Some(t) = self.renderer.take() {
+            t.loopcode_sender.send(LoopCode::Exit).unwrap();
+            t.thread_control_draw_id.join().unwrap()
         }
-        event_loop.exit();
-    }
 
-    fn resize_surface(surface: &mut WindowSurface, w: u32, h: u32) {
-        surface
-            .resize(
-                NonZeroU32::new(w).expect("Surface width is zero"),
-                NonZeroU32::new(h).expect("Surface height is zero"),
-            )
-            .expect("Failed to resize surface buffer");
+        event_loop.exit();
     }
 
     fn check_refresh_rate(window: &Window, milli_hz_out: &mut u32) -> bool {
@@ -340,10 +361,7 @@ pub fn winit_main(prog: Program) {
 
     let mut state = WindowState {
         prog,
-        window: None,
-        surface: None,
-        exit_sender: None,
-        thread_control_draw_id: None,
+        renderer: None,
         final_buffer_size: PhysicalSize::<u32>::new(0, 0),
     };
 

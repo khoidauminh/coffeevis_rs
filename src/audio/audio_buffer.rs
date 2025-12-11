@@ -80,7 +80,7 @@ impl AudioBuffer {
 
         self.max = decay(self.max, max, REACT_SPEED);
 
-        if self.max < SILENCE_LIMIT {
+        if max < SILENCE_LIMIT {
             self.silent = self.silent.saturating_add(1);
             return;
         }

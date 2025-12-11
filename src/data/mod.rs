@@ -8,6 +8,7 @@ pub mod reader;
 
 use std::time::Duration;
 
+use crate::audio::AudioBuffer;
 use crate::graphics::RenderEffect;
 use crate::visualizers::VisList;
 use crate::{graphics::PixelBuffer, modes::Mode};
@@ -196,9 +197,6 @@ impl Program {
         }
 
         self.pix.clear();
-
-        let conf = self.vislist.get().config();
-        crate::audio::set_normalizer(conf.normalize);
     }
 
     pub fn autoupdate_visualizer(&mut self) {
@@ -214,10 +212,8 @@ impl Program {
         self.pix.resize(s.0 as usize, s.1 as usize);
     }
 
-    pub fn render(&mut self) {
-        self.vislist
-            .get()
-            .perform(&mut self.pix, &mut crate::audio::get_buf());
+    pub fn render(&mut self, buf: &mut AudioBuffer) {
+        self.vislist.get().perform(&mut self.pix, buf);
     }
 
     pub fn toggle_auto_switch(&mut self) {
@@ -225,7 +221,11 @@ impl Program {
 
         info!(
             "Auto switch is now {}",
-            if self.auto_switch { "on" } else { "off" }
+            if self.vislist.auto_switch {
+                "on"
+            } else {
+                "off"
+            }
         );
     }
 
