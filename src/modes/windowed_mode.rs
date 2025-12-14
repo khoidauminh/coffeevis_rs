@@ -167,21 +167,18 @@ impl ApplicationHandler for WindowState {
                     intervals = Program::construct_intervals(milli_hz).to_vec();
                 }
 
-                let mut last = Instant::now();
+                let mut deadline = Instant::now();
 
                 loop {
-                    match loopcode_receiver.recv_timeout(Duration::from_millis(750)) {
+                    match loopcode_receiver.recv_timeout(Duration::from_millis(500)) {
                         Ok(LoopCode::Continue(s)) => {
                             if s < STOP_RENDERING {
                                 window.request_redraw();
                             }
-
-                            let itvl = intervals[(s > SLOW_DOWN_THRESHOLD) as usize];
-
-                            let now = Instant::now();
-                            let next = last + itvl;
-                            thread::sleep(next.duration_since(now));
-                            last = next;
+                            
+                            thread::sleep(deadline.duration_since(Instant::now()));
+                            
+                            deadline = deadline + intervals[(s > SLOW_DOWN_THRESHOLD) as usize];
                         }
 
                         Err(RecvTimeoutError::Timeout) => window.request_redraw(),
@@ -200,18 +197,18 @@ impl ApplicationHandler for WindowState {
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _: WindowId, event: WindowEvent) {
+        let Some(Renderer {
+            window,
+            surface,
+            loopcode_sender,
+            ..
+        }) = self.renderer.as_mut()
+        else {
+            return;
+        };
+
         match event {
             WindowEvent::RedrawRequested => {
-                let Some(Renderer {
-                    window,
-                    surface,
-                    loopcode_sender,
-                    ..
-                }) = self.renderer.as_mut()
-                else {
-                    return;
-                };
-
                 let Ok(mut buffer) = surface.buffer_mut() else {
                     return;
                 };
@@ -250,10 +247,7 @@ impl ApplicationHandler for WindowState {
 
             WindowEvent::MouseInput { button, .. } => {
                 if button == event::MouseButton::Left
-                    && let Some(err) = self
-                        .renderer
-                        .as_ref()
-                        .and_then(|f| f.window.drag_window().err())
+                    && let Some(err) = window.drag_window().err()
                 {
                     error!("Error dragging window: {}", err);
                 }
@@ -266,11 +260,6 @@ impl ApplicationHandler for WindowState {
             }
 
             WindowEvent::Resized(PhysicalSize { width, height }) => {
-                let Some(Renderer { surface, .. }) = self.renderer.as_mut() else {
-                    error!("Coffeevis is unable to resize the buffer!");
-                    return;
-                };
-
                 let scale = self.prog.scale() as u16;
 
                 let w = u16::min(MAX_WIDTH, width as u16);
