@@ -160,8 +160,8 @@ impl ApplicationHandler for WindowState {
             .spawn(move || {
                 window.request_redraw();
 
+                // Wait for a little before querying for monitor refresh rate.
                 if rr_mode == RefreshRateMode::Sync {
-                    // Wait for a little before querying for monitor refresh rate.
                     thread::sleep(Duration::from_millis(100));
                     Self::check_refresh_rate(window, &mut milli_hz);
                     intervals = Program::construct_intervals(milli_hz).to_vec();
