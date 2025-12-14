@@ -122,7 +122,17 @@ impl ApplicationHandler for WindowState {
         let size = window.inner_size();
         self.final_buffer_size = size;
 
-        let surface = Surface::new(&Context::new(window).unwrap(), window).unwrap();
+        let surface = {
+            let mut s = Surface::new(&Context::new(window).unwrap(), window).unwrap();
+
+            s.resize(
+                NonZeroU32::new(win_size.width).unwrap(),
+                NonZeroU32::new(win_size.height).unwrap(),
+            )
+            .unwrap();
+
+            s
+        };
 
         if !de.is_empty() {
             info!("Running in the {} desktop (XDG_CURRENT_DESKTOP).", de);
