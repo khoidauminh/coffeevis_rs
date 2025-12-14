@@ -178,7 +178,7 @@ impl ApplicationHandler for WindowState {
                             
                             thread::sleep(deadline.duration_since(Instant::now()));
                             
-                            deadline = deadline + intervals[(s > SLOW_DOWN_THRESHOLD) as usize];
+                            deadline += intervals[(s > SLOW_DOWN_THRESHOLD) as usize];
                         }
 
                         Err(RecvTimeoutError::Timeout) => window.request_redraw(),
