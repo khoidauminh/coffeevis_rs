@@ -175,9 +175,9 @@ impl ApplicationHandler for WindowState {
                             if s < STOP_RENDERING {
                                 window.request_redraw();
                             }
-                            
+
                             thread::sleep(deadline.duration_since(Instant::now()));
-                            
+
                             deadline += intervals[(s > SLOW_DOWN_THRESHOLD) as usize];
                         }
 

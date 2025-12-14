@@ -82,6 +82,21 @@ impl Mul<Cplx> for f32 {
     }
 }
 
+impl Div<f32> for Cplx {
+    type Output = Cplx;
+
+    fn div(self, other: f32) -> Cplx {
+        Cplx(self.0 / other, self.1 / other)
+    }
+}
+
+impl DivAssign<f32> for Cplx {
+    fn div_assign(&mut self, rhs: f32) {
+        self.0 /= rhs;
+        self.1 /= rhs;
+    }
+}
+
 impl From<Cplx> for f32 {
     fn from(val: Cplx) -> Self {
         val.max()

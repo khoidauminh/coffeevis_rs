@@ -68,6 +68,10 @@ impl P2 {
     pub fn center(self) -> P2 {
         P2(self.0 / 2, self.1 / 2)
     }
+
+    pub fn to_cplx(self) -> crate::math::Cplx {
+        crate::math::Cplx(self.0 as f32, self.1 as f32)
+    }
 }
 
 impl PixelBuffer {

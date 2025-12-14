@@ -20,9 +20,14 @@ impl PixelBuffer {
         self.plot_i(i);
     }
 
-    pub fn rect_xy(&mut self, ps: P2, pe: P2) {
-        let [xs, ys] = [ps.0 as usize, ps.1 as usize];
+    pub fn rect_xy(&mut self, mut ps: P2, mut pe: P2) {
+        ps.0 = ps.0.max(0);
+        ps.1 = ps.1.min(self.width as i32);
 
+        pe.0 = pe.0.max(0);
+        pe.1 = pe.1.min(self.height as i32);
+
+        let [xs, ys] = [ps.0 as usize, ps.1 as usize];
         let [xe, ye] = [pe.0 as usize, pe.1 as usize];
 
         let xe = xe.min(self.width);

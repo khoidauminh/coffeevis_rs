@@ -106,4 +106,8 @@ It looks the smoothest when you're in a dark room with low monitor brightness. B
 | <kbd>7</kbd> / <kbd>8</kbd> | decrease/increase fps by 5 (default: 60) |
 | <kbd>1</kbd> .. <kbd>6</kbd> | change fps to 10 ... 60 respectively |
 
+## Writing a visualizer (DRAFT)
+
+See visualizers/misc/example.rs for an example.
+
 <sup><sub>Please don't look at my code. No I'm not hiding anything in there it's all garbage code idk how to do gpu programming so it's all cpu code uh uhhh</sub></sup>

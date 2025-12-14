@@ -3,6 +3,7 @@
 use std::time::Instant;
 
 mod helpers;
+mod misc;
 
 use crate::{
     data::{DEFAULT_VIS_SWITCH_DURATION, log},
@@ -18,6 +19,7 @@ use crate::{
             wave::Wave,
         },
         milk::rain::Rain,
+        misc::example::Example,
     },
 };
 
@@ -56,6 +58,9 @@ pub struct VisList {
 impl VisList {
     pub fn new() -> Self {
         Self {
+            // In Rust, trait objects must be
+            // wrapped in `Box`es due to
+            // their unknown sizes.
             list: vec![
                 Box::new(Spectrum::default()),
                 Box::new(Oscilloscope {}),
@@ -68,6 +73,13 @@ impl VisList {
                 Box::new(VolSweeper::default()),
                 Box::new(Wave {}),
                 Box::new(Rain::default()),
+                // your visualizers goes here.
+                // they can be placed in any order.
+                // This one is the last.
+                //
+                // Hitting `b` in the visualizer window
+                // will take you to this one
+                Box::new(Example::default()),
             ],
             index: 0,
             next_update: Instant::now() + DEFAULT_VIS_SWITCH_DURATION,
