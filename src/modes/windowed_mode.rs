@@ -204,6 +204,7 @@ impl ApplicationHandler for WindowState {
             ..
         }) = self.renderer.as_mut()
         else {
+            crate::data::log::error!("Renderer unwraps to None! This should not happen");
             return;
         };
 
