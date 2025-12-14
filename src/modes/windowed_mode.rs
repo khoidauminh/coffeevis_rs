@@ -167,7 +167,7 @@ impl ApplicationHandler for WindowState {
                     intervals = Program::construct_intervals(milli_hz).to_vec();
                 }
 
-                let mut deadline = Instant::now();
+                let mut lastdraw = Instant::now();
 
                 loop {
                     match loopcode_receiver.recv_timeout(Duration::from_millis(500)) {
@@ -176,12 +176,18 @@ impl ApplicationHandler for WindowState {
                                 window.request_redraw();
                             }
 
-                            thread::sleep(deadline.duration_since(Instant::now()));
+                            let itvl = intervals[(s > SLOW_DOWN_THRESHOLD) as usize];
+                            let now = Instant::now();
+                            let elasped = now.duration_since(lastdraw);
+                            let waitfor = itvl.saturating_sub(elasped);
 
-                            deadline += intervals[(s > SLOW_DOWN_THRESHOLD) as usize];
+                            lastdraw = now + waitfor;
+
+                            thread::sleep(waitfor);
                         }
 
                         Err(RecvTimeoutError::Timeout) => window.request_redraw(),
+
                         _ => break,
                     }
                 }
@@ -204,7 +210,6 @@ impl ApplicationHandler for WindowState {
             ..
         }) = self.renderer.as_mut()
         else {
-            crate::data::log::error!("Renderer unwraps to None! This should not happen");
             return;
         };
 
