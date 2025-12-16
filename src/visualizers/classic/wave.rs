@@ -12,6 +12,7 @@ impl Visualizer for Wave {
     fn perform(
         &mut self,
         pix: &mut crate::graphics::PixelBuffer,
+        key: &crate::data::KeyInput,
         stream: &mut crate::audio::AudioBuffer,
     ) {
         let l = (stream.len() * PERBYTE) >> 8;

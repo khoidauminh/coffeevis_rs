@@ -12,6 +12,7 @@ impl Visualizer for Ring {
     fn perform(
         &mut self,
         pix: &mut crate::graphics::PixelBuffer,
+        key: &crate::data::KeyInput,
         stream: &mut crate::audio::AudioBuffer,
     ) {
         const RANGE: usize = 128;

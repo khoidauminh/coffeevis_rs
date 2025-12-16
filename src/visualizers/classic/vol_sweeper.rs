@@ -19,6 +19,7 @@ impl Visualizer for VolSweeper {
     fn perform(
         &mut self,
         pix: &mut crate::graphics::PixelBuffer,
+        key: &crate::data::KeyInput,
         stream: &mut crate::audio::AudioBuffer,
     ) {
         pix.fade(3);

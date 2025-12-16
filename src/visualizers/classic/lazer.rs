@@ -24,6 +24,7 @@ impl Visualizer for Lazer {
     fn perform(
         &mut self,
         pix: &mut crate::graphics::PixelBuffer,
+        key: &crate::data::KeyInput,
         stream: &mut crate::audio::AudioBuffer,
     ) {
         let w = pix.width() as f32;

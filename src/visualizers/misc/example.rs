@@ -47,6 +47,7 @@ impl Visualizer for Example {
     fn perform(
         &mut self,
         pix: &mut crate::graphics::PixelBuffer,
+        key: &crate::data::KeyInput,
         stream: &mut crate::audio::AudioBuffer,
     ) {
         let bound = pix.size().to_cplx();

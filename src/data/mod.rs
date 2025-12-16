@@ -48,6 +48,18 @@ pub enum RefreshRateMode {
     Specified,
 }
 
+#[derive(Default, Debug)]
+pub struct KeyInput {
+    pub z: bool,
+    pub x: bool,
+    pub c: bool,
+
+    pub left: bool,
+    pub up: bool,
+    pub right: bool,
+    pub down: bool
+}
+
 /// Main program struct
 pub(crate) struct Program {
     /// for experimental purposes. Console mode only.
@@ -63,6 +75,7 @@ pub(crate) struct Program {
     win_render_effect: crate::graphics::RenderEffect,
 
     pub pix: crate::graphics::PixelBuffer,
+    pub key: KeyInput,
 
     mode: Mode,
 
@@ -100,6 +113,7 @@ impl Program {
             transparent: false,
 
             pix: PixelBuffer::new(DEFAULT_SIZE_WIN as usize, DEFAULT_SIZE_WIN as usize),
+            key: KeyInput::default(),
 
             milli_hz: DEFAULT_MILLI_HZ,
             refresh_rate_mode: RefreshRateMode::Sync,
@@ -213,7 +227,7 @@ impl Program {
     }
 
     pub fn render(&mut self, buf: &mut AudioBuffer) {
-        self.vislist.get().perform(&mut self.pix, buf);
+        self.vislist.get().perform(&mut self.pix, &self.key, buf);
     }
 
     pub fn toggle_auto_switch(&mut self) {

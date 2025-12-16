@@ -65,7 +65,7 @@ impl Visualizer for Spectrum {
         "Spectrum"
     }
 
-    fn perform(&mut self, pix: &mut PixelBuffer, stream: &mut AudioBuffer) {
+    fn perform(&mut self, pix: &mut PixelBuffer, key: &crate::data::KeyInput, stream: &mut AudioBuffer) {
         prepare(stream, &mut self.buffer);
 
         let P2(w, h) = pix.size();

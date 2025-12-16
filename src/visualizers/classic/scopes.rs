@@ -32,6 +32,7 @@ impl Visualizer for Vectorscope {
     fn perform(
         &mut self,
         pix: &mut crate::graphics::PixelBuffer,
+        key: &crate::data::KeyInput,
         stream: &mut crate::audio::AudioBuffer,
     ) {
         let size = pix.height().min(pix.width()) as i32;
@@ -95,6 +96,7 @@ impl Visualizer for Oscilloscope {
     fn perform(
         &mut self,
         pix: &mut crate::graphics::PixelBuffer,
+        key: &crate::data::KeyInput,
         stream: &mut crate::audio::AudioBuffer,
     ) {
         let mut buffer = [Cplx::zero(); BUFFER_SIZE + PADDING];

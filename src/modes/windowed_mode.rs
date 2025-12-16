@@ -9,7 +9,7 @@ use winit::{
     dpi::PhysicalSize,
     event::{self, ElementState, WindowEvent},
     event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
-    keyboard::Key,
+    keyboard::{Key, NamedKey},
     window::{Icon, Window, WindowButtons, WindowId, WindowLevel},
 };
 
@@ -292,16 +292,33 @@ impl ApplicationHandler for WindowState {
                 self.prog.pix.clear_out_buffer();
             }
 
-            WindowEvent::KeyboardInput { event, .. }
-                if event.state == ElementState::Pressed && !event.repeat =>
-            {
-                match event.key_without_modifiers().as_ref() {
-                    Key::Character("q") => self.call_exit(event_loop),
-                    Key::Character("n") => self.prog.change_visualizer(true),
-                    Key::Character("b") => self.prog.change_visualizer(false),
+            WindowEvent::KeyboardInput { event, .. } if !event.repeat => {
+                let pressed = event.state.is_pressed();
+                let k = event.key_without_modifiers();
+                let k = k.as_ref();
 
-                    Key::Character("\\") => self.prog.toggle_auto_switch(),
-                    Key::Character("/") => self.prog.reset_parameters(),
+                if pressed {
+                    match k {
+                        Key::Character("q") => self.call_exit(event_loop),
+                        Key::Character("n") => self.prog.change_visualizer(true),
+                        Key::Character("b") => self.prog.change_visualizer(false),
+
+                        Key::Character("\\") => self.prog.toggle_auto_switch(),
+                        Key::Character("/") => self.prog.reset_parameters(),
+
+                        _ => {}
+                    }
+                }
+
+                match k {
+                    Key::Character("z") => self.prog.key.z = pressed,
+                    Key::Character("x") => self.prog.key.x = pressed,
+                    Key::Character("c") => self.prog.key.c = pressed,
+
+                    Key::Named(NamedKey::ArrowLeft) => self.prog.key.left = pressed,
+                    Key::Named(NamedKey::ArrowDown) => self.prog.key.down = pressed,
+                    Key::Named(NamedKey::ArrowUp) => self.prog.key.up = pressed,
+                    Key::Named(NamedKey::ArrowRight) => self.prog.key.right = pressed,
 
                     _ => {}
                 }

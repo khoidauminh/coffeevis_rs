@@ -77,6 +77,7 @@ impl Visualizer for Bars {
     fn perform(
         &mut self,
         pix: &mut crate::graphics::PixelBuffer,
+        key: &crate::data::KeyInput,
         stream: &mut crate::audio::AudioBuffer,
     ) {
         use crate::math::{fast::cubed_sqrt, interpolate::smooth_step};
@@ -173,6 +174,7 @@ impl Visualizer for BarsCircle {
     fn perform(
         &mut self,
         pix: &mut crate::graphics::PixelBuffer,
+        key: &crate::data::KeyInput,
         stream: &mut crate::audio::AudioBuffer,
     ) {
         let size = pix.height().min(pix.width()) as i32;
