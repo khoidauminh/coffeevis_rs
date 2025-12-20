@@ -7,7 +7,7 @@ use qoi;
 use winit::{
     application::ApplicationHandler,
     dpi::PhysicalSize,
-    event::{self, ElementState, WindowEvent},
+    event::{self, WindowEvent},
     event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
     keyboard::{Key, NamedKey},
     window::{Icon, Window, WindowButtons, WindowId, WindowLevel},
@@ -26,9 +26,9 @@ use winit::platform::{
 use std::{
     cell::LazyCell,
     num::NonZeroU32,
-    sync::mpsc::{self, RecvTimeoutError, SyncSender},
+    sync::mpsc::{self, SyncSender},
     thread::{self, JoinHandle},
-    time::{Duration, Instant},
+    time::Duration,
 };
 
 use crate::data::*;
@@ -62,16 +62,11 @@ impl WindowProps {
     }
 }
 
-enum LoopCode {
-    Continue(u8),
-    Exit,
-}
-
 struct Renderer {
     pub window: &'static Window,
     pub surface: Surface<&'static Window, &'static Window>,
     pub thread_control_draw_id: JoinHandle<()>,
-    pub loopcode_sender: SyncSender<LoopCode>,
+    pub exit: SyncSender<()>,
 }
 
 struct WindowState {
@@ -144,18 +139,17 @@ impl ApplicationHandler for WindowState {
             window.set_max_inner_size(Some(win_size));
         }
 
-        let (loopcode_sender, loopcode_receiver) = mpsc::sync_channel::<LoopCode>(1);
-
         let mut milli_hz = self.prog.get_milli_hz();
         let rr_mode = self.prog.get_rr_mode();
 
-        let mut intervals = self.prog.get_rr_intervals().to_vec();
+        let mut interval = self.prog.get_rr_interval();
 
         window.set_visible(true);
         window.set_window_level(WindowLevel::AlwaysOnTop);
 
-        let (audio_notifier_sender, audio_notifier_receiver) = mpsc::sync_channel(1);
-        crate::audio::get_buf().init_notifier(audio_notifier_sender);
+        let (exit_sender, exit_receiver) = mpsc::sync_channel(1);
+
+        let audio_notifier_receiver = crate::audio::get_buf().init_notifier();
 
         // Thread to control requesting redraws.
         let thread_control_draw_id = thread::Builder::new()
@@ -167,23 +161,22 @@ impl ApplicationHandler for WindowState {
                 if rr_mode == RefreshRateMode::Sync {
                     thread::sleep(Duration::from_millis(100));
                     Self::check_refresh_rate(window, &mut milli_hz);
-                    intervals = Program::construct_intervals(milli_hz).to_vec();
+                    interval = Program::construct_interval(milli_hz);
                 }
 
-                let mut slowdown = 0u16;
+                let loopcount = milli_hz / 1000;
 
                 loop {
-                    slowdown += 1;
+                    let _ = audio_notifier_receiver.recv();
 
-                    if audio_notifier_receiver.recv_timeout(intervals[0]).is_ok() {
-                        slowdown = 0;
+                    for _ in 0..loopcount {
+                        if exit_receiver.try_recv().is_ok() {
+                            return;
+                        }
+
+                        window.request_redraw();
+                        thread::sleep(interval);
                     }
-
-                    if slowdown >= 512 {
-                        continue;
-                    }
-
-                    window.request_redraw();
                 }
             })
             .unwrap();
@@ -192,16 +185,13 @@ impl ApplicationHandler for WindowState {
             window,
             surface,
             thread_control_draw_id,
-            loopcode_sender,
+            exit: exit_sender,
         })
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _: WindowId, event: WindowEvent) {
         let Some(Renderer {
-            window,
-            surface,
-            loopcode_sender,
-            ..
+            window, surface, ..
         }) = self.renderer.as_mut()
         else {
             return;
@@ -213,12 +203,8 @@ impl ApplicationHandler for WindowState {
                     return;
                 };
 
-                let silent = {
-                    let mut buf = crate::audio::get_buf();
-                    self.prog.autoupdate_visualizer();
-                    self.prog.render(&mut buf);
-                    buf.silent()
-                };
+                self.prog.autoupdate_visualizer();
+                self.prog.render(&mut crate::audio::get_buf());
 
                 if !self.prog.is_display_enabled() {
                     return;
@@ -239,8 +225,6 @@ impl ApplicationHandler for WindowState {
                         e
                     );
                 }
-
-                let _ = loopcode_sender.send(LoopCode::Continue(silent));
             }
 
             WindowEvent::CloseRequested => self.call_exit(event_loop),
@@ -326,7 +310,7 @@ impl ApplicationHandler for WindowState {
 impl WindowState {
     fn call_exit(&mut self, event_loop: &ActiveEventLoop) {
         if let Some(t) = self.renderer.take() {
-            t.loopcode_sender.send(LoopCode::Exit).unwrap();
+            t.exit.send(()).unwrap();
             t.thread_control_draw_id.join().unwrap()
         }
 

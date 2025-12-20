@@ -28,7 +28,6 @@ pub const DEFAULT_HZ: u64 = DEFAULT_MILLI_HZ as u64 / 1000;
 
 /// Stop rendering when get_no_sample() exceeds this value;
 pub const STOP_RENDERING: u8 = 192;
-pub const SLOW_DOWN_THRESHOLD: u8 = 86;
 
 pub const DEFAULT_SIZE_WIN: u16 = 84;
 pub const DEFAULT_WIN_SCALE: u8 = 2;
@@ -57,7 +56,7 @@ pub struct KeyInput {
     pub left: bool,
     pub up: bool,
     pub right: bool,
-    pub down: bool
+    pub down: bool,
 }
 
 /// Main program struct
@@ -83,7 +82,7 @@ pub(crate) struct Program {
 
     milli_hz: u32,
     refresh_rate_mode: RefreshRateMode,
-    refresh_rate_intervals: [Duration; 2],
+    refresh_rate_interval: Duration,
 
     pub window_props: modes::windowed_mode::WindowProps,
 
@@ -117,8 +116,7 @@ impl Program {
 
             milli_hz: DEFAULT_MILLI_HZ,
             refresh_rate_mode: RefreshRateMode::Sync,
-
-            refresh_rate_intervals: [rate, rate * 8],
+            refresh_rate_interval: rate,
 
             vislist: VisList::new(),
 
@@ -139,13 +137,8 @@ impl Program {
         }
     }
 
-    pub fn get_rr_interval(&self, no_sample: u8) -> Duration {
-        let rr_index = (no_sample > SLOW_DOWN_THRESHOLD) as usize;
-        self.refresh_rate_intervals[rr_index]
-    }
-
-    pub fn get_rr_intervals(&self) -> [Duration; 2] {
-        self.refresh_rate_intervals
+    pub fn get_rr_interval(&self) -> Duration {
+        self.refresh_rate_interval
     }
 
     pub fn get_win_render_effect(&self) -> RenderEffect {
@@ -189,18 +182,18 @@ impl Program {
         self.change_fps_frac(self.milli_hz);
     }
 
-    pub fn construct_intervals(fps: u32) -> [Duration; 2] {
+    pub fn construct_interval(fps: u32) -> Duration {
         let fps_f = fps as f32 / 1000.0;
         let rate = (1_000_000_000.0 / fps_f) as u64;
         // self.milli_hz = fps;
         let interval = Duration::from_nanos(rate);
 
-        [interval, interval * 8]
+        interval
     }
 
     pub fn change_fps_frac(&mut self, fps: u32) {
         self.milli_hz = fps;
-        self.refresh_rate_intervals = Self::construct_intervals(fps);
+        self.refresh_rate_interval = Self::construct_interval(fps);
     }
 
     pub fn change_visualizer(&mut self, forward: bool) {

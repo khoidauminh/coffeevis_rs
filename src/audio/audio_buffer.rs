@@ -1,4 +1,4 @@
-use std::sync::mpsc::SyncSender;
+use std::sync::mpsc::{self, Receiver, SyncSender};
 
 use crate::math::Cplx;
 use crate::math::interpolate::decay;
@@ -51,12 +51,16 @@ impl AudioBuffer {
         }
     }
 
-    pub fn init_notifier(&mut self, s: SyncSender<()>) {
+    pub fn init_notifier(&mut self) -> Receiver<()> {
         if self.notifier.is_some() {
             panic!("Only one pair of sender/receiver is allowed!");
         }
 
-        self.notifier = Some(s)
+        let (s, r) = mpsc::sync_channel(1);
+
+        self.notifier = Some(s);
+
+        r
     }
 
     pub fn silent(&self) -> u8 {

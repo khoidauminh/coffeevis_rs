@@ -305,14 +305,10 @@ fn to_ascii_art(table: &[u8], x: usize) -> char {
     table[(x * table.len()) >> 8] as char
 }
 
-pub fn control_key_events_con(
-    prog: &mut Program,
-    exit: &mut bool,
-    no_sample: u8,
-) -> Result<(), Error> {
+pub fn control_key_events_con(prog: &mut Program, exit: &mut bool) -> Result<(), Error> {
     prog.autoupdate_visualizer();
 
-    if poll(prog.get_rr_interval(no_sample))? {
+    if poll(prog.get_rr_interval())? {
         match read()? {
             Event::Key(event) => match event.code {
                 KeyCode::Char('b') => prog.change_visualizer(false),
@@ -376,7 +372,7 @@ pub fn con_main(mut prog: Program) -> std::io::Result<()> {
     if !prog.is_display_enabled() {
         while !exit {
             let mut buf = crate::audio::get_buf();
-            control_key_events_con(&mut prog, &mut exit, buf.silent())?;
+            control_key_events_con(&mut prog, &mut exit)?;
             prog.render(&mut buf);
         }
     } else {
@@ -390,7 +386,7 @@ pub fn con_main(mut prog: Program) -> std::io::Result<()> {
             let mut buf = crate::audio::get_buf();
             let silent = buf.silent();
 
-            control_key_events_con(&mut prog, &mut exit, silent)?;
+            control_key_events_con(&mut prog, &mut exit)?;
 
             if silent > STOP_RENDERING {
                 continue;
