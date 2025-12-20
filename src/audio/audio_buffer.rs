@@ -73,10 +73,23 @@ impl AudioBuffer {
         self.oldwriteend = self.writeend;
         self.readend = self.writeend;
 
-        in_buffer.chunks_exact(2).enumerate().for_each(|(i, c)| {
-            let si = (self.writeend + i) & BUFFER_MASK;
-            self.data[si] = Cplx::from_slice(c);
-        });
+        let (src_l, src_r) = in_buffer.split_at(
+            in_buffer
+                .len()
+                .min(2 * self.data.len().saturating_sub(self.writeend)),
+        );
+
+        let (dst_l, dst_r) = self.data.split_at_mut(self.writeend);
+
+        dst_r
+            .iter_mut()
+            .zip(src_l.chunks_exact(2))
+            .for_each(|(d, s)| *d = Cplx::from_slice(s));
+
+        dst_l
+            .iter_mut()
+            .zip(src_r.chunks_exact(2))
+            .for_each(|(d, s)| *d = Cplx::from_slice(s));
 
         self.writeend = self.writeend.wrapping_add(copysize) & BUFFER_MASK;
 
