@@ -206,16 +206,16 @@ impl ApplicationHandler for WindowState {
                 self.prog.autoupdate_visualizer();
                 self.prog.render(&mut crate::audio::get_buf());
 
-                if !self.prog.is_display_enabled() {
-                    return;
-                }
-
                 self.prog.pix.scale_to(
                     self.prog.scale() as usize,
                     &mut buffer,
                     Some(self.final_buffer_size.width as usize),
                     self.prog.get_win_render_effect(),
                 );
+
+                if !self.prog.is_display_enabled() {
+                    return;
+                }
 
                 window.pre_present_notify();
 
