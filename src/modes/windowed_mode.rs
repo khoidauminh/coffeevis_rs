@@ -154,6 +154,9 @@ impl ApplicationHandler for WindowState {
         window.set_visible(true);
         window.set_window_level(WindowLevel::AlwaysOnTop);
 
+        let (audio_notifier_sender, audio_notifier_receiver) = mpsc::sync_channel(1);
+        crate::audio::get_buf().init_notifier(audio_notifier_sender);
+
         // Thread to control requesting redraws.
         let thread_control_draw_id = thread::Builder::new()
             .name("coffeevis draw control".into())
@@ -167,29 +170,20 @@ impl ApplicationHandler for WindowState {
                     intervals = Program::construct_intervals(milli_hz).to_vec();
                 }
 
-                let mut lastdraw = Instant::now();
+                let mut slowdown = 0u16;
 
                 loop {
-                    match loopcode_receiver.recv_timeout(Duration::from_millis(500)) {
-                        Ok(LoopCode::Continue(s)) => {
-                            if s < STOP_RENDERING {
-                                window.request_redraw();
-                            }
+                    slowdown += 1;
 
-                            let itvl = intervals[(s > SLOW_DOWN_THRESHOLD) as usize];
-                            let now = Instant::now();
-                            let elasped = now.duration_since(lastdraw);
-                            let waitfor = itvl.saturating_sub(elasped);
-
-                            lastdraw = now + waitfor;
-
-                            thread::sleep(waitfor);
-                        }
-
-                        Err(RecvTimeoutError::Timeout) => window.request_redraw(),
-
-                        _ => break,
+                    if audio_notifier_receiver.recv_timeout(intervals[0]).is_ok() {
+                        slowdown = 0;
                     }
+
+                    if slowdown >= 512 {
+                        continue;
+                    }
+
+                    window.request_redraw();
                 }
             })
             .unwrap();

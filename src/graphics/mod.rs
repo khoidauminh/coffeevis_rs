@@ -74,6 +74,21 @@ impl P2 {
     }
 }
 
+impl std::ops::Rem for P2 {
+    type Output = P2;
+
+    fn rem(self, rhs: P2) -> Self {
+        Self(self.0.rem_euclid(rhs.0), self.1.rem_euclid(rhs.1))
+    }
+}
+
+impl std::ops::RemAssign for P2 {
+    fn rem_assign(&mut self, rhs: P2) {
+        self.0 = self.0.rem_euclid(rhs.0);
+        self.1 = self.1.rem_euclid(rhs.1);
+    }
+}
+
 impl PixelBuffer {
     pub fn new(w: usize, h: usize) -> Self {
         Self {

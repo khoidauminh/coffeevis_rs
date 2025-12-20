@@ -1,3 +1,5 @@
+use std::sync::mpsc::SyncSender;
+
 use crate::math::Cplx;
 use crate::math::interpolate::decay;
 
@@ -23,6 +25,8 @@ pub struct AudioBuffer {
     silent: u8,
 
     max: f32,
+
+    notifier: Option<SyncSender<()>>,
 }
 
 impl AudioBuffer {
@@ -42,7 +46,17 @@ impl AudioBuffer {
             silent: 0,
 
             max: 0.0,
+
+            notifier: None,
         }
+    }
+
+    pub fn init_notifier(&mut self, s: SyncSender<()>) {
+        if self.notifier.is_some() {
+            panic!("Only one pair of sender/receiver is allowed!");
+        }
+
+        self.notifier = Some(s)
     }
 
     pub fn silent(&self) -> u8 {
@@ -92,6 +106,10 @@ impl AudioBuffer {
         for n in 0..self.lastinputsize {
             let i = n.wrapping_add(self.oldwriteend) & BUFFER_MASK;
             self.data[i] *= scale;
+        }
+
+        if let Some(s) = self.notifier.as_ref() {
+            let _ = s.try_send(());
         }
     }
 
