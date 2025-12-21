@@ -29,12 +29,19 @@ pub fn get_device_windows() -> Device {
         .collect::<Vec<_>>();
 
     for d in &input_devices {
-        println!("I see {}", d.name().unwrap_or("<unknown>".to_string()));
+        println!(
+            "I see {}",
+            d.description()
+                .as_ref()
+                .map(|v| v.name())
+                .unwrap_or("<unknown>")
+        );
     }
 
     let query = input_devices.iter().find(|d| {
-        d.name()
-            .map(|name| name.contains("Stereo Mix"))
+        d.description()
+            .as_ref()
+            .map(|name| name.name().contains("Stereo Mix"))
             .unwrap_or(false)
     });
 
@@ -46,7 +53,10 @@ pub fn get_device_windows() -> Device {
     let d = default_device.expect("Failed to get default device.");
     crate::data::log::alert!(
         "No Stereo Mix found. Going with default input device: {}",
-        d.name().unwrap_or("<Unknown>".to_string())
+        d.description()
+            .as_ref()
+            .map(|v| v.name())
+            .unwrap_or("<unknown>")
     );
 
     d
@@ -64,7 +74,14 @@ pub fn get_source() -> cpal::Stream {
         .expect("error while querying configs")
         .config();
 
-    crate::data::log::info!("Using {}", device.name().unwrap_or("<unkown>".to_owned()));
+    crate::data::log::info!(
+        "Using {}",
+        device
+            .description()
+            .as_ref()
+            .map(|v| v.name())
+            .unwrap_or("<Unknown device>")
+    );
 
     device
         .build_input_stream(
