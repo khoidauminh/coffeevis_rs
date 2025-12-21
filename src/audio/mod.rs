@@ -4,6 +4,7 @@ use cpal::traits::{DeviceTrait, HostTrait};
 pub mod audio_buffer;
 pub(crate) use audio_buffer::AudioBuffer;
 
+use std::cell::Cell;
 use std::ops::*;
 use std::sync::{Mutex, MutexGuard};
 
@@ -208,37 +209,43 @@ impl<T: Default + Copy + PartialOrd, const N: usize> MovingMaximum<T, N> {
     }
 }
 
-pub fn limiter<T>(a: &mut [T], lo: f32, hi: f32, flattener: fn(T) -> f32)
+pub fn limiter<T>(a: &mut [T], lo: f32, hi: f32, flat: fn(T) -> f32)
 where
-    T: Into<f32> + Mul<f32, Output = T> + Copy,
+    T: Mul<f32, Output = T> + Copy,
 {
-    const SMOOTHING: usize = 10;
-    const DELAY: usize = SMOOTHING - 1;
+    const DEFAULT_SMOOTHING: usize = 10;
+    const DEFAULT_DELAY: usize = DEFAULT_SMOOTHING - 1;
 
-    let mut mave = MovingAverage::<_, SMOOTHING>::init(0.0);
-    let mut mmax = MovingMaximum::<_, SMOOTHING>::init();
+    let l = a.len();
+    let delay = l.min(DEFAULT_DELAY);
+    let overshoot_bound = l - delay;
 
-    for i in 0..a.len() + SMOOTHING {
-        let smp = if let Some(ele) = a.get(i) {
-            flattener(*ele).abs()
-        } else {
-            0.0
-        };
+    let mut mave = MovingAverage::<_, DEFAULT_SMOOTHING>::init(0.0);
+    let mut mmax = MovingMaximum::<_, DEFAULT_SMOOTHING>::init();
 
-        let smp2 = mave.update(mmax.update(smp));
-
-        let scale = if smp2 > hi {
-            hi / smp2
-        } else if smp2 < lo {
-            lo / smp2.max(0.001)
+    let scaled = |smp: f32| {
+        if smp > hi {
+            hi / smp
+        } else if smp < lo {
+            lo / smp.max(0.001)
         } else {
             1.0
-        };
-
-        let j = i.wrapping_sub(DELAY);
-
-        if let Some(ele) = a.get_mut(j) {
-            *ele = *ele * scale;
         }
+    };
+
+    let mut run = |s: f32| mave.update(mmax.update(s));
+
+    for s in &a[..delay] {
+        run(flat(*s));
+    }
+
+    // Allows simultaneous read and write on slice.
+    let cells = Cell::from_mut(a).as_slice_of_cells();
+    for (s1, s2) in cells[..overshoot_bound].iter().zip(cells[delay..].iter()) {
+        s1.update(|s| s * scaled(run(flat(s2.get()))));
+    }
+
+    for s in &mut a[overshoot_bound..] {
+        *s = *s * scaled(run(0.0));
     }
 }
