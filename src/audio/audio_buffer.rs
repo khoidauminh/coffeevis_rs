@@ -63,6 +63,10 @@ impl AudioBuffer {
         r
     }
 
+    pub fn close_notifier(&mut self) {
+        self.notifier = None;
+    }
+
     pub fn silent(&self) -> u8 {
         self.silent
     }

@@ -166,9 +166,7 @@ impl ApplicationHandler for WindowState {
 
                 let loopcount = milli_hz / 1000;
 
-                loop {
-                    let _ = audio_notifier_receiver.recv();
-
+                while audio_notifier_receiver.recv().is_ok() {
                     for _ in 0..loopcount {
                         if exit_receiver.try_recv().is_ok() {
                             return;
@@ -310,6 +308,7 @@ impl ApplicationHandler for WindowState {
 impl WindowState {
     fn call_exit(&mut self, event_loop: &ActiveEventLoop) {
         if let Some(t) = self.renderer.take() {
+            crate::audio::get_buf().close_notifier();
             t.exit.send(()).unwrap();
             t.thread_control_draw_id.join().unwrap()
         }
