@@ -12,39 +12,34 @@ pub fn u8_mul(a: u8, b: u8) -> u8 {
     (a as u16 * b as u16).to_be_bytes()[0]
 }
 
-pub fn argb_fade(this: Argb, other: u8) -> Argb {
-    let [aa, r, g, b] = this.decompose();
-    Argb::compose([u8_mul(aa, other), r, g, b])
+pub fn argb_fade(this: Argb, a: u8) -> Argb {
+    let [_, r, g, b] = this.decompose();
+    Argb::compose([0x0, u8_mul(r, a), u8_mul(g, a), u8_mul(b, a)])
 }
 
 #[cfg(not(feature = "fast"))]
-pub fn composite_u32(c1: Argb, c2: Argb) -> Argb {
-    let [a1, r1, g1, b1] = c1.decompose();
-    let [a2, r2, g2, b2] = c2.decompose();
-
-    let (a, a3) = {
-        let a1 = a1 as u16;
-        let a2 = a2 as u16;
-
-        let a3 = (a1 * (255 - a2)) / 256;
-
-        (a2 + a3, a3)
-    };
-
-    if a == 0 {
-        return Argb::compose([0, 0, 0, 0]);
+// Coffeevis no longer supports true compositing
+// in order to achieve more performance.
+// This color mixing blends the BG folor to FG color
+// based on FG's alpha value.
+// This explains the interpolation in the name.
+pub fn argb32_interpolate(c1: Argb, c2: Argb) -> Argb {
+    if c2 == 0 {
+        return c2;
     }
 
-    let composite_channel = |c1: u8, c2: u8| -> u8 {
-        let c1 = c1 as u16;
-        let c2 = c2 as u16;
-        let a2 = a2 as u16;
+    let [_, r1, g1, b1] = c1.decompose();
+    let [a2, r2, g2, b2] = c2.decompose();
 
-        ((c2 * a2 + c1 * a3) / a) as u8
+    let composite_channel = |c1, c2| {
+        let c1 = c1 as i16;
+        let c2 = c2 as i16;
+        let a2 = a2 as i16;
+        (c1 + (c2 - c1) * a2 / 256) as u8
     };
 
     Argb::compose([
-        a as u8,
+        0x0,
         composite_channel(r1, r2),
         composite_channel(g1, g2),
         composite_channel(b1, b2),
@@ -53,15 +48,11 @@ pub fn composite_u32(c1: Argb, c2: Argb) -> Argb {
 
 impl Pixel for Argb {
     fn black() -> Argb {
-        0xFF_00_00_00
+        0x00_00_00_00
     }
 
     fn white() -> Argb {
         0xFF_FF_FF_FF
-    }
-
-    fn trans() -> Argb {
-        0x0
     }
 
     fn set_alpha(self, alpha: u8) -> Argb {
@@ -93,7 +84,7 @@ impl Pixel for Argb {
         return self | other;
 
         #[cfg(not(feature = "fast"))]
-        composite_u32(self, other)
+        argb32_interpolate(self, other)
     }
 
     #[allow(unreachable_code)]
