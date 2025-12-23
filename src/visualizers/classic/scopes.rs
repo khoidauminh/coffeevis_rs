@@ -50,14 +50,16 @@ impl Visualizer for Vectorscope {
 
         let mut smoothed_sample = MovingAverage::<_, SMOOTH_SIZE>::init();
 
+        let get_cplx = |di| Cplx::new(stream.get(di).0, stream.get(di + PHASE_OFFSET).1) * 0.85;
+
         for _ in 0..SMOOTH_SIZE {
-            let sample = Cplx::new(stream.get(di).0, stream.get(di + PHASE_OFFSET).1);
+            let sample = get_cplx(di);
             _ = smoothed_sample.update(sample);
             di += INCREMENT;
         }
 
         while di < DEFAULT_WAV_WIN {
-            let sample = Cplx::new(stream.get(di).0, stream.get(di + PHASE_OFFSET).1) * 0.85;
+            let sample = get_cplx(di);
 
             let sample = smoothed_sample.update(sample);
 

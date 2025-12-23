@@ -80,7 +80,7 @@ impl AudioBuffer {
         let (src_l, src_r) = in_buffer.split_at(
             in_buffer
                 .len()
-                .min(2 * self.data.len().saturating_sub(self.writeend)),
+                .min(2 * BUFFER_CAPACITY.saturating_sub(self.writeend)),
         );
 
         let (dst_l, dst_r) = self.data.split_at_mut(self.writeend);
@@ -97,7 +97,7 @@ impl AudioBuffer {
 
         self.writeend = self.writeend.wrapping_add(copysize) & BUFFER_MASK;
 
-        self.autorotatesize = copysize / (self.rotatessincewrite.next_power_of_two() * 2);
+        self.autorotatesize = copysize / (self.rotatessincewrite + 2);
 
         self.rotatessincewrite = 0;
 
