@@ -185,74 +185,89 @@ impl PixelBuffer {
 
         let dst_width = width.unwrap_or(self.width * scale);
 
-        if effect == RenderEffect::None {
-            let dst_chunk_size = dst_width * scale;
+        match effect {
+            RenderEffect::None => {
+                let dst_chunk_size = dst_width * scale;
 
-            for (dst_chunk, src_line) in dest
-                .chunks_exact_mut(dst_chunk_size)
-                .zip(self.buffer.chunks_exact(self.width))
-            {
-                let (first_line, rest_line) = dst_chunk.split_at_mut(dst_width);
-
-                for (group, &src_pixel) in first_line.chunks_exact_mut(scale).zip(src_line.iter()) {
-                    group.fill(src_pixel)
-                }
-
-                for l in rest_line.chunks_exact_mut(dst_width) {
-                    l.copy_from_slice(first_line);
-                }
-            }
-            return;
-        }
-
-        let new_len = dest.len() + FIELD_START * dst_width;
-
-        if self.out_buffer.len() < new_len {
-            self.out_buffer.resize(new_len, Argb::black());
-        }
-
-        if effect == RenderEffect::Interlaced {
-            // Shift the lines of the out buffer down
-            // to create the illusion of movement.
-            //
-            // We simulate shifting by sliding the starting
-            // point of the buffer backward. When we reach the
-            // start of the buffer, we finally do the actual shift.
-
-            self.field = self.field.wrapping_sub(1);
-
-            if self.field > FIELD_START {
-                let shift_start = self.height * scale * dst_width;
-                let offset = dst_width * FIELD_START;
-
-                for (_, i) in (0..shift_start)
-                    .step_by(dst_width)
-                    .enumerate()
-                    .filter(|&(i, _)| i % scale != 0)
-                    .rev()
+                for (dst_chunk, src_line) in dest
+                    .chunks_exact_mut(dst_chunk_size)
+                    .zip(self.buffer.chunks_exact(self.width))
                 {
-                    let j = i + dst_width;
-                    let z = i + offset;
-                    self.out_buffer.copy_within(i..j, z);
+                    let (first_line, rest_line) = dst_chunk.split_at_mut(dst_width);
+
+                    for (group, &src_pixel) in
+                        first_line.chunks_exact_mut(scale).zip(src_line.iter())
+                    {
+                        group.fill(src_pixel)
+                    }
+
+                    for l in rest_line.chunks_exact_mut(dst_width) {
+                        l.copy_from_slice(first_line);
+                    }
+                }
+            }
+
+            RenderEffect::Crt => {
+                self.buffer
+                    .chunks_exact(self.width) // source lines
+                    .zip(dest.chunks_exact_mut(dst_width).step_by(scale)) // with destination lines
+                    .flat_map(|(src_row, dst_row)| {
+                        src_row.iter().zip(dst_row.chunks_exact_mut(scale))
+                    })
+                    .for_each(|(&src_pixel, dst_chunk)| dst_chunk.fill(src_pixel));
+            }
+
+            RenderEffect::Interlaced => {
+                let new_len = dest.len() + FIELD_START * dst_width;
+
+                if self.out_buffer.len() < new_len {
+                    self.out_buffer.resize(new_len, Argb::black());
                 }
 
-                self.field = FIELD_START;
+                // Shift the lines of the out buffer down
+                // to create the illusion of movement.
+                //
+                // We simulate shifting by sliding the starting
+                // point of the buffer backward. When we reach the
+                // start of the buffer, we finally do the actual shift.
+
+                self.field = self.field.wrapping_sub(1);
+
+                if self.field > FIELD_START {
+                    let shift_start = self.height * scale * dst_width;
+                    let offset = dst_width * FIELD_START;
+
+                    for (_, i) in (0..shift_start)
+                        .step_by(dst_width)
+                        .enumerate()
+                        .filter(|&(i, _)| i % scale != 0)
+                        .rev()
+                    {
+                        let j = i + dst_width;
+                        let z = i + offset;
+                        self.out_buffer.copy_within(i..j, z);
+                    }
+
+                    self.field = FIELD_START;
+                }
+
+                let index_start = self.field * dst_width;
+
+                if let Some(out_buffer) = self
+                    .out_buffer
+                    .get_mut(index_start..index_start + dest.len())
+                {
+                    self.buffer
+                        .chunks_exact(self.width) // source lines
+                        .zip(out_buffer.chunks_exact_mut(dst_width).step_by(scale)) // with destination lines
+                        .flat_map(|(src_row, dst_row)| {
+                            src_row.iter().zip(dst_row.chunks_exact_mut(scale))
+                        })
+                        .for_each(|(&src_pixel, dst_chunk)| dst_chunk.fill(src_pixel));
+
+                    dest.copy_from_slice(out_buffer);
+                }
             }
-        }
-
-        let index_start = self.field * dst_width;
-
-        if let Some(out_buffer) = self
-            .out_buffer
-            .get_mut(index_start..index_start + dest.len())
-        {
-            self.buffer
-                .chunks_exact(self.width) // source lines
-                .zip(out_buffer.chunks_exact_mut(dst_width).step_by(scale)) // with destination lines
-                .flat_map(|(src_row, dst_row)| src_row.iter().zip(dst_row.chunks_exact_mut(scale)))
-                .for_each(|(&src_pixel, dst_chunk)| dst_chunk.fill(src_pixel));
-
-            dest.copy_from_slice(out_buffer);
         }
     }
 }
