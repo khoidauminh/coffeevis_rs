@@ -1,3 +1,5 @@
+#![allow(unused_macros)]
+
 use std::sync::atomic::{AtomicBool, Ordering::Relaxed};
 
 static ENABLED: AtomicBool = AtomicBool::new(true);

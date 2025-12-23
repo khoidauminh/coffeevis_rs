@@ -17,6 +17,7 @@ pub fn argb_fade(this: Argb, other: u8) -> Argb {
     Argb::compose([u8_mul(aa, other), r, g, b])
 }
 
+#[cfg(not(feature = "fast"))]
 pub fn composite_u32(c1: Argb, c2: Argb) -> Argb {
     let [a1, r1, g1, b1] = c1.decompose();
     let [a2, r2, g2, b2] = c2.decompose();
@@ -87,16 +88,19 @@ impl Pixel for Argb {
         other
     }
 
+    #[allow(unreachable_code)]
     fn mix(self, other: Argb) -> Argb {
+        #[cfg(feature = "fast")]
+        return self | other;
+
         composite_u32(self, other)
     }
 
-    fn alpha(self) -> u8 {
-        let [a, _, _, _] = self.decompose();
-        a
-    }
-
+    #[allow(unreachable_code)]
     fn add(self, other: Argb) -> Argb {
+        #[cfg(feature = "fast")]
+        return other;
+
         let [aa, ar, ag, ab] = self.decompose();
         let [ba, br, bg, bb] = other.decompose();
         Argb::from_be_bytes([

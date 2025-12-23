@@ -211,10 +211,6 @@ impl ApplicationHandler for WindowState {
                     self.prog.get_win_render_effect(),
                 );
 
-                if !self.prog.is_display_enabled() {
-                    return;
-                }
-
                 window.pre_present_notify();
 
                 if let Err(e) = buffer.present() {

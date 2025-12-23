@@ -369,36 +369,28 @@ pub fn con_main(mut prog: Program) -> std::io::Result<()> {
     let size = size()?;
     prog.update_size(size);
 
-    if !prog.is_display_enabled() {
-        while !exit {
-            let mut buf = crate::audio::get_buf();
-            control_key_events_con(&mut prog, &mut exit)?;
-            prog.render(&mut buf);
+    let _ = queue!(
+        stdout,
+        EnterAlternateScreen,
+        Hide,
+        SetAttribute(Attribute::Bold)
+    );
+    while !exit {
+        let mut buf = crate::audio::get_buf();
+        let silent = buf.silent();
+
+        control_key_events_con(&mut prog, &mut exit)?;
+
+        if silent > STOP_RENDERING {
+            continue;
         }
-    } else {
-        let _ = queue!(
-            stdout,
-            EnterAlternateScreen,
-            Hide,
-            SetAttribute(Attribute::Bold)
-        );
-        while !exit {
-            let mut buf = crate::audio::get_buf();
-            let silent = buf.silent();
 
-            control_key_events_con(&mut prog, &mut exit)?;
+        prog.render(&mut buf);
+        prog.print_con();
 
-            if silent > STOP_RENDERING {
-                continue;
-            }
-
-            prog.render(&mut buf);
-            prog.print_con();
-
-            let _ = stdout.flush();
-        }
-        queue!(stdout, LeaveAlternateScreen, Show)?;
+        let _ = stdout.flush();
     }
+    queue!(stdout, LeaveAlternateScreen, Show)?;
 
     disable_raw_mode()?;
 

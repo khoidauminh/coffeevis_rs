@@ -15,6 +15,16 @@ pub enum RenderEffect {
     Interlaced,
 }
 
+impl Default for RenderEffect {
+    #[allow(unreachable_code)]
+    fn default() -> Self {
+        #[cfg(feature = "fast")]
+        return RenderEffect::None;
+
+        RenderEffect::Interlaced
+    }
+}
+
 pub type Argb = u32;
 
 pub(crate) trait Pixel:
@@ -40,8 +50,6 @@ pub(crate) trait Pixel:
 
     fn set_alpha(self, alpha: u8) -> Self;
 
-    fn alpha(self) -> u8;
-
     fn or(self, other: Self) -> Self;
     fn fade(self, alpha: u8) -> Self;
     fn decompose(self) -> [u8; 4];
@@ -58,7 +66,6 @@ pub struct PixelBuffer {
     mixer: Mixer,
 
     field: usize,
-    background: Argb,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -101,7 +108,6 @@ impl PixelBuffer {
             mixer: u32::over,
 
             field: FIELD_START,
-            background: 0xFF_24_24_24,
         }
     }
 
@@ -119,10 +125,6 @@ impl PixelBuffer {
 
     pub fn mixerm(&mut self) {
         self.mixer = u32::mix;
-    }
-
-    pub fn set_background(&mut self, bg: Argb) {
-        self.background = bg;
     }
 
     pub fn width(&self) -> usize {
@@ -152,7 +154,7 @@ impl PixelBuffer {
     pub fn resize(&mut self, w: usize, h: usize) {
         let len = w * h;
         if len > self.buffer.len() {
-            self.buffer.resize(len, 0);
+            self.buffer.resize(len, Argb::trans());
         }
         self.width = w;
         self.height = h;
@@ -185,23 +187,29 @@ impl PixelBuffer {
         let dst_width = width.unwrap_or(self.width * scale);
 
         if effect == RenderEffect::None {
-            self.buffer
-                .chunks_exact(self.width) // source lines
-                .zip(dest.chunks_exact_mut(dst_width * scale)) // with destination lines
-                .flat_map(|(src_row, dst_row)| {
-                    src_row.iter().cycle().zip(dst_row.chunks_exact_mut(scale))
-                })
-                .for_each(|(src_pixel, dst_chunk)| {
-                    dst_chunk.fill((self.mixer)(self.background, *src_pixel))
-                });
+            let dst_chunk_size = dst_width * scale;
 
+            for (dst_chunk, src_line) in dest
+                .chunks_exact_mut(dst_chunk_size)
+                .zip(self.buffer.chunks_exact(self.width))
+            {
+                let (first_line, rest_line) = dst_chunk.split_at_mut(dst_width);
+
+                for (group, &src_pixel) in first_line.chunks_exact_mut(scale).zip(src_line.iter()) {
+                    group.fill(src_pixel)
+                }
+
+                for l in rest_line.chunks_exact_mut(dst_width) {
+                    l.copy_from_slice(first_line);
+                }
+            }
             return;
         }
 
         let new_len = dest.len() + FIELD_START * dst_width;
 
         if self.out_buffer.len() < new_len {
-            self.out_buffer.resize(new_len, self.background);
+            self.out_buffer.resize(new_len, Argb::trans());
         }
 
         if effect == RenderEffect::Interlaced {
@@ -243,9 +251,7 @@ impl PixelBuffer {
                 .chunks_exact(self.width) // source lines
                 .zip(out_buffer.chunks_exact_mut(dst_width).step_by(scale)) // with destination lines
                 .flat_map(|(src_row, dst_row)| src_row.iter().zip(dst_row.chunks_exact_mut(scale)))
-                .for_each(|(src_pixel, dst_chunk)| {
-                    dst_chunk.fill((self.mixer)(self.background, *src_pixel))
-                });
+                .for_each(|(&src_pixel, dst_chunk)| dst_chunk.fill(src_pixel));
 
             dest.copy_from_slice(out_buffer);
         }

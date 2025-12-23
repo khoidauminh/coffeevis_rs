@@ -61,9 +61,6 @@ pub struct KeyInput {
 
 /// Main program struct
 pub(crate) struct Program {
-    /// for experimental purposes. Console mode only.
-    display: bool,
-
     quiet: bool,
 
     scale: u8,
@@ -101,7 +98,7 @@ impl Program {
 
         Self {
             quiet: false,
-            display: true,
+
             scale: DEFAULT_WIN_SCALE,
             resize: false,
 
@@ -151,10 +148,6 @@ impl Program {
 
     pub fn is_resizable(&self) -> bool {
         self.resize
-    }
-
-    pub fn is_display_enabled(&self) -> bool {
-        self.display
     }
 
     pub fn is_transparent(&self) -> bool {

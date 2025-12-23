@@ -1,4 +1,4 @@
-use crate::{data::*, graphics::Pixel, modes::Mode::*};
+use crate::{data::*, modes::Mode::*};
 
 #[cfg(target_os = "linux")]
 use desktop::create_tmp_desktop_file;
@@ -14,7 +14,7 @@ impl Program {
         while let Some(arg) = args.next() {
             let arg = arg.as_str();
             match arg {
-                #[cfg(not(target_os = "windows"))]
+                #[cfg(target_os = "linux")]
                 "--desktop-file" => {
                     alert!("Attempting to create a desktop file!! This is experimental!!");
                     create_tmp_desktop_file();
@@ -108,22 +108,6 @@ impl Program {
                     self.vislist.select_by_name(vis_name)
                 }
 
-                "--background" => {
-                    let bg = u32::from_str_radix(
-                        args.next().expect(&format_red!(
-                            "Argument error: Expected hex value for background color. E.g 0022FF"
-                        )),
-                        16,
-                    )
-                    .expect(&format_red!(
-                        "Argument error: Invalid value for background color"
-                    ));
-
-                    self.pix.set_background(bg);
-
-                    self.transparent = bg.alpha() != 255;
-                }
-
                 ":3" => {
                     error!("\n:3");
                 }
@@ -139,13 +123,6 @@ impl Program {
                         "none" => self.set_win_render_effect(RenderEffect::None),
                         _ => panic!("Invalid value for effect."),
                     }
-                }
-
-                "--no-display" => {
-                    alert!(
-                        "You have told coffeevis to not present the buffer. Expect a black window (or no window on Wayland)."
-                    );
-                    self.display = false;
                 }
 
                 &_ => error!("Argument error: Unknown option {}", arg),

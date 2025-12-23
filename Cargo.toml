@@ -11,6 +11,8 @@ repository = "https://github.com/khoidauminh/coffeevis_rs"
 readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+fast = []
 
 [dependencies]
 cpal = "0.17"
@@ -18,8 +20,8 @@ softbuffer = { version = "0.4", default-features = false, features = [ "wayland"
 winit = { version = "0.30", default-features = false, features = [ "rwh_06", "wayland", "x11", "wayland-csd-adwaita" ] }
 crossterm = { version = "0.29", default-features = false, features = ["events", "windows"] }
 xdg = "3"
-arrayvec = "0.7.6"
-qoi = "0.4.1"
+arrayvec = "0.7"
+qoi = "0.4"
 
 [profile.dev]
 overflow-checks = false
