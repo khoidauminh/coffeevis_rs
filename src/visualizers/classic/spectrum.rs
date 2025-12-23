@@ -65,7 +65,12 @@ impl Visualizer for Spectrum {
         "Spectrum"
     }
 
-    fn perform(&mut self, pix: &mut PixelBuffer, key: &crate::data::KeyInput, stream: &mut AudioBuffer) {
+    fn perform(
+        &mut self,
+        pix: &mut PixelBuffer,
+        key: &crate::data::KeyInput,
+        stream: &mut AudioBuffer,
+    ) {
         prepare(stream, &mut self.buffer);
 
         let P2(w, h) = pix.size();
@@ -104,7 +109,7 @@ impl Visualizer for Spectrum {
 
             let rect_l = P2((whf - sl) as i32, ry);
             let rect_r = P2((whf + sr) as i32, ry);
-            let middle = P2(winwh + 1, h - y);
+            let middle = P2(winwh + 1, ry);
 
             pix.color(color);
             pix.rect_xy(rect_l, middle);

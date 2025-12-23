@@ -137,6 +137,8 @@ impl ApplicationHandler for WindowState {
         if !self.prog.is_resizable() {
             window.set_min_inner_size(Some(win_size));
             window.set_max_inner_size(Some(win_size));
+        } else {
+            window.set_max_inner_size(Some(PhysicalSize::new(MAX_WIDTH, MAX_HEIGHT)));
         }
 
         let mut milli_hz = self.prog.get_milli_hz();
@@ -242,10 +244,6 @@ impl ApplicationHandler for WindowState {
 
                 let w = u16::min(MAX_WIDTH, width as u16);
                 let h = u16::min(MAX_HEIGHT, height as u16);
-
-                if w == MAX_WIDTH || h == MAX_HEIGHT {
-                    alert!("You are hitting the resolution limit of Coffeevis!");
-                }
 
                 self.prog.update_size((w / scale, h / scale));
 

@@ -77,7 +77,7 @@ impl Program {
                     self.refresh_rate_mode = RefreshRateMode::Specified;
                 }
 
-                "--resizable" => {
+                "--resize" => {
                     self.resize = true;
                 }
 

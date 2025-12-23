@@ -64,7 +64,7 @@ Coffeevis supports temporary options at launch
 | --size | 80x80 | set resolution in window mode |
 | --scale | 2 | upscale in window mode |
 | --fps | 60 | set refresh rate (by default coffeevis will try to query your monitor's refresh rate) |
-| --resizable | | allow resizing in window mode |
+| --resize | | allow resizing in window mode |
 | --max-con-size | 50x50 | set maximum resolution in terminal mode |
 | --vis | spectrum | launche coffeevis with the specified visualizer |
 | --effect | crt | blank out every other horizontal line to simulate CRT effect |

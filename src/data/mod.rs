@@ -37,7 +37,7 @@ pub const MAX_HEIGHT: u16 = 360;
 
 pub const MAX_CON_WIDTH: u16 = 256;
 
-pub const MAX_SCALE_FACTOR: u8 = 8;
+pub const MAX_SCALE_FACTOR: u8 = 4;
 
 pub const DEFAULT_VIS_SWITCH_DURATION: Duration = Duration::from_secs(8);
 

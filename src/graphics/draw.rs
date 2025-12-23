@@ -34,34 +34,29 @@ impl PixelBuffer {
         #[cfg(not(feature = "fast"))]
         {
             ps.0 = ps.0.max(0);
-            ps.1 = ps.1.min(self.width as i32);
-
-            pe.0 = pe.0.max(0);
-            pe.1 = pe.1.min(self.height as i32);
+            ps.1 = ps.1.max(0);
+            pe.0 = pe.0.min(self.width as i32);
         }
 
         let [xs, ys] = [ps.0 as usize, ps.1 as usize];
         let [xe, ye] = [pe.0 as usize, pe.1 as usize];
 
-        let xe = xe.min(self.width);
-
-        self.buffer
+        let mut iter = self
+            .buffer
             .chunks_exact_mut(self.width)
             .skip(ys)
             .take(ye.saturating_sub(ys).wrapping_add(1))
-            .flat_map(|l| l.get_mut(xs..xe))
-            .flatten()
-            .for_each(|p| {
-                #[cfg(feature = "fast")]
-                {
-                    *p = self.color;
-                }
+            .flat_map(|l| l.get_mut(xs..xe));
 
-                #[cfg(not(feature = "fast"))]
-                {
-                    *p = (self.mixer)(*p, self.color);
-                }
-            });
+        #[cfg(not(feature = "fast"))]
+        iter.flatten().for_each(|p| {
+            *p = (self.mixer)(*p, self.color);
+        });
+
+        #[cfg(feature = "fast")]
+        iter.for_each(|p| {
+            p.fill(self.color);
+        });
     }
 
     #[allow(unused_variables)]

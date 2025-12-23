@@ -22,10 +22,8 @@ struct RainDrop {
     fall_amount: f32,
 }
 
-const MAX_THUNDER_SEGMENTS: usize = 48;
-
 struct Thunder {
-    segments: [P2; MAX_THUNDER_SEGMENTS],
+    segments: Vec<P2>,
     fade: u8,
 }
 
@@ -36,28 +34,27 @@ impl Thunder {
     const DX_MAP: &[i32] = &[-1, -1, -1, -1, 0, 1, 1, 2];
     const DY_MAP: &[i32] = &[0, 1, 1, 1, 2, 5];
 
-    pub fn generate(seed: u32, canvas_width: i32) -> Self {
+    pub fn generate(seed: u32, canvas_width: i32, canvas_height: i32) -> Self {
         use crate::math::rng::FastU32;
 
-        let mut segs = [P2(0, 0); MAX_THUNDER_SEGMENTS];
         let mut rng = FastU32::new(seed);
 
         let mut location = P2(random_int(canvas_width as u32) as i32, 0);
 
-        segs[0] = location;
+        let segs = (0..canvas_height)
+            .map(|i| {
+                let ix = rng.next() as usize % Self::DX_MAP.len();
+                let iy = rng.next() as usize % Self::DY_MAP.len();
 
-        for i in 1..MAX_THUNDER_SEGMENTS {
-            let ix = rng.next() as usize % Self::DX_MAP.len();
-            let iy = rng.next() as usize % Self::DY_MAP.len();
+                let dx = Self::DX_MAP[ix];
+                let dy = Self::DY_MAP[iy];
 
-            let dx = Self::DX_MAP[ix];
-            let dy = Self::DY_MAP[iy];
+                location.0 += dx;
+                location.1 += dy;
 
-            location.0 += dx;
-            location.1 += dy;
-
-            segs[i] = location;
-        }
+                location
+            })
+            .collect();
 
         Self {
             segments: segs,
@@ -155,7 +152,7 @@ impl Default for Rain {
     fn default() -> Self {
         Self {
             listdrops: [RainDrop::new(0xFF_FF_FF_FF, 8, 0.2, DEFAULT_BOUND); NUM_OF_DROPS],
-            thunder: Thunder::generate(0, 1),
+            thunder: Thunder::generate(0, 1, 0),
             oldvolume: 0.0,
         }
     }
@@ -218,7 +215,8 @@ impl Visualizer for Rain {
         }
 
         if voldiff >= 6.7 {
-            self.thunder = Thunder::generate(random_int(1000), pix.width() as i32)
+            self.thunder =
+                Thunder::generate(random_int(1000), pix.width() as i32, pix.height() as i32)
         }
 
         self.thunder.draw(pix);
