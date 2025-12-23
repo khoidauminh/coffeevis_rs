@@ -48,7 +48,7 @@ impl Visualizer for Vectorscope {
 
         pix.clear();
 
-        let mut smoothed_sample = MovingAverage::<_, SMOOTH_SIZE>::init(Cplx::zero());
+        let mut smoothed_sample = MovingAverage::<_, SMOOTH_SIZE>::init();
 
         for _ in 0..SMOOTH_SIZE {
             let sample = Cplx::new(stream.get(di).0, stream.get(di + PHASE_OFFSET).1);

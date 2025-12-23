@@ -106,15 +106,15 @@ pub struct MovingAverage<T, const N: usize> {
 
 impl<T, const N: usize> MovingAverage<T, N>
 where
-    T: Add<Output = T> + Sub<Output = T> + Mul<f32, Output = T> + Copy,
+    T: Add<Output = T> + Sub<Output = T> + Mul<f32, Output = T> + Copy + Default,
     f32: Mul<T, Output = T>,
 {
-    pub fn init(val: T) -> Self {
+    pub fn init() -> Self {
         Self {
             index: 0,
-            data: [val; N],
+            data: [T::default(); N],
             denominator: (N as f32).recip(),
-            sum: N as f32 * val,
+            sum: T::default(),
         }
     }
 
@@ -220,7 +220,7 @@ where
     let delay = l.min(DEFAULT_DELAY);
     let overshoot_bound = l - delay;
 
-    let mut mave = MovingAverage::<_, DEFAULT_SMOOTHING>::init(0.0);
+    let mut mave = MovingAverage::<_, DEFAULT_SMOOTHING>::init();
     let mut mmax = MovingMaximum::<_, DEFAULT_SMOOTHING>::init();
 
     let scaled = |smp: f32| {
