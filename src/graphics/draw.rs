@@ -1,5 +1,6 @@
 use crate::graphics::PixelBuffer;
 
+#[allow(unused_imports)]
 use super::{P2, Pixel};
 
 pub fn get_idx_fast(cwidth: usize, p: P2) -> usize {
@@ -11,7 +12,15 @@ pub fn get_idx_fast(cwidth: usize, p: P2) -> usize {
 impl PixelBuffer {
     pub fn plot_i(&mut self, i: usize) {
         if let Some(p) = self.buffer.get_mut(i) {
-            *p = (self.mixer)(*p, self.color);
+            #[cfg(feature = "fast")]
+            {
+                *p = self.color;
+            }
+
+            #[cfg(not(feature = "fast"))]
+            {
+                *p = (self.mixer)(*p, self.color);
+            }
         }
     }
 
@@ -20,12 +29,16 @@ impl PixelBuffer {
         self.plot_i(i);
     }
 
+    #[allow(unused_mut)]
     pub fn rect_xy(&mut self, mut ps: P2, mut pe: P2) {
-        ps.0 = ps.0.max(0);
-        ps.1 = ps.1.min(self.width as i32);
+        #[cfg(not(feature = "fast"))]
+        {
+            ps.0 = ps.0.max(0);
+            ps.1 = ps.1.min(self.width as i32);
 
-        pe.0 = pe.0.max(0);
-        pe.1 = pe.1.min(self.height as i32);
+            pe.0 = pe.0.max(0);
+            pe.1 = pe.1.min(self.height as i32);
+        }
 
         let [xs, ys] = [ps.0 as usize, ps.1 as usize];
         let [xe, ye] = [pe.0 as usize, pe.1 as usize];
@@ -38,10 +51,22 @@ impl PixelBuffer {
             .take(ye.saturating_sub(ys).wrapping_add(1))
             .flat_map(|l| l.get_mut(xs..xe))
             .flatten()
-            .for_each(|p| *p = (self.mixer)(*p, self.color));
+            .for_each(|p| {
+                #[cfg(feature = "fast")]
+                {
+                    *p = self.color;
+                }
+
+                #[cfg(not(feature = "fast"))]
+                {
+                    *p = (self.mixer)(*p, self.color);
+                }
+            });
     }
 
+    #[allow(unused_variables)]
     pub fn fade(&mut self, a: u8) {
+        #[cfg(not(feature = "fast"))]
         self.buffer
             .iter_mut()
             .for_each(|smp| *smp = smp.fade(255 - a));
@@ -170,7 +195,15 @@ impl PixelBuffer {
             let src_iter = line_src.iter().skip(src_x);
 
             for (p_dest, p_src) in line_iter.zip(src_iter) {
-                *p_dest = (self.mixer)(*p_dest, *p_src);
+                #[cfg(feature = "fast")]
+                {
+                    *p_dest = *p_src;
+                }
+
+                #[cfg(not(feature = "fast"))]
+                {
+                    *p_dest = (self.mixer)(*p_dest, *p_src);
+                }
             }
         }
     }

@@ -88,11 +88,11 @@ impl Pixel for Argb {
         other
     }
 
-    #[allow(unreachable_code)]
     fn mix(self, other: Argb) -> Argb {
         #[cfg(feature = "fast")]
         return self | other;
 
+        #[cfg(not(feature = "fast"))]
         composite_u32(self, other)
     }
 

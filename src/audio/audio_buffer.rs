@@ -106,6 +106,7 @@ impl AudioBuffer {
         self.normalize();
     }
 
+    #[allow(unreachable_code)]
     fn normalize(&mut self) {
         let mut max = self.data[self.oldwriteend].max();
         for n in 1..self.lastinputsize {
