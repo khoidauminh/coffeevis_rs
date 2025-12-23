@@ -123,7 +123,7 @@ impl ColoredString {
     }
 
     fn reset(&mut self) {
-        self.replace('\0', Argb::trans());
+        self.replace('\0', Argb::black());
     }
 }
 
@@ -223,7 +223,7 @@ impl Program {
             let cy = center.1 + y_base as u16 / 2;
             let _ = queue!(stdout, cursor::MoveTo(center.0, cy));
 
-            for x_base in (0..self.pix.width()).step_by(1) {
+            for x_base in 0..self.pix.width() {
                 let idx_base = y_base * self.pix.width() + x_base;
                 let [_, mut r, mut g, mut b] = self.pix.pixel(idx_base).to_be_bytes();
 
@@ -231,7 +231,7 @@ impl Program {
                     let idx = idx_base + i * self.pix.width(); // iterate horizontally, then jump to the nex row;
                     let [_, pr, pg, pb] = self.pix.pixel(idx).to_be_bytes();
 
-                    if let 48.. = grayb(pr, pg, pb) {
+                    if grayb(pr, pg, pb) >= 48 {
                         // Values smaller than this becomes transparent.
                         r = r.max(pr);
                         g = g.max(pg);
@@ -290,7 +290,7 @@ impl Program {
 					}) as u32;
 
                 line.push_pixel(
-                    char::from_u32(bx).unwrap_or(' '),
+                    char::from_u32(bx).unwrap_or('⠀'),
                     Argb::compose([0, r, g, b]),
                 );
             }
@@ -338,7 +338,10 @@ pub fn control_key_events_con(prog: &mut Program, exit: &mut bool) -> Result<(),
 
                 KeyCode::Char('\\') => prog.toggle_auto_switch(),
 
-                KeyCode::Char('.') => prog.switch_con_mode(),
+                KeyCode::Char('.') => {
+                    prog.switch_con_mode();
+                    prog.clear_con();
+                }
 
                 KeyCode::Char('/') => prog.reset_parameters(),
 
@@ -375,11 +378,12 @@ pub fn con_main(mut prog: Program) -> std::io::Result<()> {
         Hide,
         SetAttribute(Attribute::Bold)
     );
+
     while !exit {
+        control_key_events_con(&mut prog, &mut exit)?;
+
         let mut buf = crate::audio::get_buf();
         let silent = buf.silent();
-
-        control_key_events_con(&mut prog, &mut exit)?;
 
         if silent > STOP_RENDERING {
             continue;
@@ -390,6 +394,7 @@ pub fn con_main(mut prog: Program) -> std::io::Result<()> {
 
         let _ = stdout.flush();
     }
+
     queue!(stdout, LeaveAlternateScreen, Show)?;
 
     disable_raw_mode()?;

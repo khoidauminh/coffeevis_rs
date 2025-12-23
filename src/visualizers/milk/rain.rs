@@ -70,7 +70,7 @@ impl Thunder {
             let p1 = pair[0];
             let p2 = pair[1];
 
-            canvas.color(0xFF_FF_FF_FF.fade(self.fade));
+            canvas.color(0xFF_FF_FF_FF.set_alpha(self.fade));
             canvas.mixer(u32::add);
             canvas.line(p1, p2);
         });
@@ -166,7 +166,12 @@ impl Visualizer for Rain {
         "Rain"
     }
 
-    fn perform(&mut self, pix: &mut PixelBuffer, key: &crate::data::KeyInput, stream: &mut crate::audio::AudioBuffer) {
+    fn perform(
+        &mut self,
+        pix: &mut PixelBuffer,
+        key: &crate::data::KeyInput,
+        stream: &mut crate::audio::AudioBuffer,
+    ) {
         let mut new_volume: f32 = 0.0;
         {
             let mut y: f32 = stream.get(0).into();

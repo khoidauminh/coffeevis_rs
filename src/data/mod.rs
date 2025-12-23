@@ -35,7 +35,7 @@ pub const DEFAULT_WIN_SCALE: u8 = 2;
 pub const MAX_WIDTH: u16 = 480;
 pub const MAX_HEIGHT: u16 = 360;
 
-pub const MAX_CON_WIDTH: u16 = 128;
+pub const MAX_CON_WIDTH: u16 = 256;
 
 pub const MAX_SCALE_FACTOR: u8 = 8;
 
@@ -75,8 +75,6 @@ pub(crate) struct Program {
 
     mode: Mode,
 
-    transparent: bool,
-
     milli_hz: u32,
     refresh_rate_mode: RefreshRateMode,
     refresh_rate_interval: Duration,
@@ -105,8 +103,6 @@ impl Program {
             win_render_effect: RenderEffect::Interlaced,
 
             mode: default_mode,
-
-            transparent: false,
 
             pix: PixelBuffer::new(DEFAULT_SIZE_WIN as usize, DEFAULT_SIZE_WIN as usize),
             key: KeyInput::default(),
@@ -148,10 +144,6 @@ impl Program {
 
     pub fn is_resizable(&self) -> bool {
         self.resize
-    }
-
-    pub fn is_transparent(&self) -> bool {
-        self.transparent
     }
 
     pub fn get_milli_hz(&self) -> u32 {

@@ -98,7 +98,7 @@ impl ApplicationHandler for WindowState {
             .with_title("cvis")
             .with_inner_size(win_size)
             .with_window_level(WindowLevel::AlwaysOnTop)
-            .with_transparent(self.prog.is_transparent())
+            .with_transparent(false)
             .with_resizable(self.prog.is_resizable())
             .with_visible(false)
             .with_enabled_buttons(WindowButtons::CLOSE)

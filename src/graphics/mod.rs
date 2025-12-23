@@ -42,7 +42,6 @@ pub(crate) trait Pixel:
 {
     fn black() -> Self;
     fn white() -> Self;
-    fn trans() -> Self;
 
     fn over(self, other: Self) -> Self;
     fn mix(self, other: Self) -> Self;
@@ -100,7 +99,7 @@ impl PixelBuffer {
     pub fn new(w: usize, h: usize) -> Self {
         Self {
             out_buffer: Vec::new(),
-            buffer: vec![Argb::trans(); w * h],
+            buffer: vec![Argb::black(); w * h],
             width: w,
             height: h,
 
@@ -148,13 +147,13 @@ impl PixelBuffer {
     }
 
     pub fn clear(&mut self) {
-        self.buffer.fill(Argb::trans());
+        self.buffer.fill(Argb::black());
     }
 
     pub fn resize(&mut self, w: usize, h: usize) {
         let len = w * h;
         if len > self.buffer.len() {
-            self.buffer.resize(len, Argb::trans());
+            self.buffer.resize(len, Argb::black());
         }
         self.width = w;
         self.height = h;
@@ -209,7 +208,7 @@ impl PixelBuffer {
         let new_len = dest.len() + FIELD_START * dst_width;
 
         if self.out_buffer.len() < new_len {
-            self.out_buffer.resize(new_len, Argb::trans());
+            self.out_buffer.resize(new_len, Argb::black());
         }
 
         if effect == RenderEffect::Interlaced {

@@ -163,10 +163,6 @@ impl Program {
             string_out += "Running graphically\n";
         }
 
-        if self.is_transparent() {
-            string_out += "Transparency is on";
-        }
-
         info!("{}", string_out);
 
         if self.resize {
