@@ -166,7 +166,8 @@ impl ApplicationHandler for WindowState {
                     interval = Program::construct_interval(milli_hz);
                 }
 
-                let loopcount = milli_hz / 1000;
+                // 2 seconds
+                let loopcount = milli_hz / 500;
 
                 while audio_notifier_receiver.recv().is_ok() {
                     for _ in 0..loopcount {
