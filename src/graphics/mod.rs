@@ -116,10 +116,6 @@ impl PixelBuffer {
         }
     }
 
-    pub fn background(&self) -> Argb {
-        self.background
-    }
-
     pub fn color(&mut self, c: Argb) {
         self.color = c;
     }

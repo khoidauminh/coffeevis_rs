@@ -60,12 +60,8 @@ impl PixelBuffer {
     }
 
     pub fn fade(&mut self, a: u8) {
-        let c = self.color.set_alpha(a);
-
-        self.buffer
-            .iter_mut()
-            //.filter(|p| (**p ^ c) & 0x_FF_FF_FF == 0)
-            .for_each(|p| *p = p.mix(c));
+        let c = self.background.set_alpha(a);
+        self.buffer.iter_mut().for_each(|p| *p = p.mix(c));
     }
 
     pub fn fill(&mut self) {

@@ -65,7 +65,6 @@ impl Visualizer for Shaky {
         self.jc += 0.01;
         self.i = (self.i + INCR + amplitude_scaled) % 1.0;
 
-        pix.color(pix.background());
         pix.fade(4);
 
         let (x_soft_shake, y_soft_shake) = diamond_func(8.0, 1.0, self.i);

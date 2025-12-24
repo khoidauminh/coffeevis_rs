@@ -22,7 +22,6 @@ impl Visualizer for VolSweeper {
         key: &crate::data::KeyInput,
         stream: &mut crate::audio::AudioBuffer,
     ) {
-        pix.color(pix.background());
         pix.fade(3);
 
         let w = {
@@ -43,9 +42,6 @@ impl Visualizer for VolSweeper {
 
         let width = pix.width();
 
-        pix.color(pix.background());
-        pix.mixerm();
-        pix.rect(P2(0, self.sweepi as i32), width, 1);
         pix.color(color);
         pix.rect(P2(0, self.sweepi as i32), w, 1);
 
