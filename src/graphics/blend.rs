@@ -27,6 +27,10 @@ pub fn argb32_interpolate(c1: Argb, c2: Argb) -> Argb {
     let [_, r1, g1, b1] = c1.decompose();
     let [a2, r2, g2, b2] = c2.decompose();
 
+    if a2 == 255 {
+        return c2;
+    }
+
     let composite_channel = |c1, c2| {
         let c1 = c1 as u16;
         let c2 = c2 as u16;
