@@ -24,31 +24,20 @@ pub fn u8_mul(a: u8, b: u8) -> u8 {
 // based on FG's alpha value.
 // This explains the interpolation in the name.
 pub fn argb32_interpolate(c1: Argb, c2: Argb) -> Argb {
-    if c2 == 0 {
-        return c2;
-    }
-
     let [_, r1, g1, b1] = c1.decompose();
     let [a2, r2, g2, b2] = c2.decompose();
 
     let composite_channel = |c1, c2| {
-        if c1 == c2 {
-            return c1;
-        }
+        let c1 = c1 as u16;
+        let c2 = c2 as u16;
+        let a2 = a2 as u16;
 
-        let c1 = c1 as i16;
-        let c2 = c2 as i16;
-        let a2 = a2 as i16;
+        let c3 = c1 * (256 - a2) + c2 * a2;
+        let c3 = c3 + 255 * (c1 < c2) as u16;
 
-        let c3 = (c2 - c1) * a2;
+        let [o, _] = c3.to_be_bytes();
 
-        let c3 = if c3 > -256 && c3 < 256 {
-            if c3 < 0 { -256 } else { 256 }
-        } else {
-            c3
-        };
-
-        (c1 + c3 / 256) as u8
+        o
     };
 
     Argb::compose([
