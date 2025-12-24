@@ -32,13 +32,14 @@ impl PixelBuffer {
     #[allow(unused_mut)]
     pub fn rect_xy(&mut self, mut ps: P2, mut pe: P2) {
         #[cfg(not(feature = "fast"))]
-        {
-            ps.0 = ps.0.max(0);
-            ps.1 = ps.1.max(0);
-            pe.0 = pe.0.min(self.width as i32);
-        }
+        let [xs, ys] = [
+            usize::try_from(ps.0).unwrap_or(0),
+            usize::try_from(ps.1).unwrap_or(0),
+        ];
 
+        #[cfg(feature = "fast")]
         let [xs, ys] = [ps.0 as usize, ps.1 as usize];
+
         let [xe, ye] = [pe.0 as usize, pe.1 as usize];
 
         let mut iter = self
