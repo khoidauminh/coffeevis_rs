@@ -20,9 +20,9 @@ impl FastU32 {
 
 pub fn time_seed() -> usize {
     SystemTime::now()
-    .duration_since(UNIX_EPOCH)
-    .unwrap_or(Duration::from_secs(0))
-    .as_nanos() as usize
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or(Duration::from_secs(0))
+        .as_nanos() as usize
 }
 
 pub fn random_int(bound: u32) -> u32 {

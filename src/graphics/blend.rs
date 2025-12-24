@@ -33,7 +33,7 @@ pub fn argb32_interpolate(c1: Argb, c2: Argb) -> Argb {
 
     let composite_channel = |c1, c2| {
         if c1 == c2 {
-            return c1 as u8;
+            return c1;
         }
 
         let c1 = c1 as i16;

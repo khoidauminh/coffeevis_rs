@@ -3,7 +3,6 @@ use std::collections::VecDeque;
 use crate::graphics::P2;
 use crate::math::rng::{self, FastU32};
 
-
 enum Direction {
     Left,
     Right,

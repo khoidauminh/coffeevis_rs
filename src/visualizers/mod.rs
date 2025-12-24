@@ -144,7 +144,7 @@ impl VisList {
         if let Some(i) = self
             .list
             .iter()
-            .position(|v| v.name().eq_ignore_ascii_case(&name))
+            .position(|v| v.name().eq_ignore_ascii_case(name))
         {
             self.index = i;
             self.list[self.index].focus();

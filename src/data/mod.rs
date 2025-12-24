@@ -172,10 +172,8 @@ impl Program {
     pub fn construct_interval(fps: u32) -> Duration {
         let fps_f = fps as f32 / 1000.0;
         let rate = (1_000_000_000.0 / fps_f) as u64;
-        // self.milli_hz = fps;
-        let interval = Duration::from_nanos(rate);
 
-        interval
+        Duration::from_nanos(rate)
     }
 
     pub fn change_fps_frac(&mut self, fps: u32) {
