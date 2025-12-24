@@ -68,7 +68,9 @@ impl Visualizer for Lazer {
             ((255.0 - a.0 * a.1 * 2.0).abs().min(255.0)) as u8,
         ]);
 
+        pix.color(pix.background());
         pix.fade(3);
+
         pix.color(color);
         pix.mixerd();
         pix.line(p1.to_p2(), p0.to_p2());

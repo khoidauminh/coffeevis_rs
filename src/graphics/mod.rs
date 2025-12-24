@@ -8,6 +8,8 @@ const FIELD_START: usize = 64;
 
 use std::ops;
 
+use crate::data::DEFAULT_BG_COLOR;
+
 #[derive(Clone, Copy, PartialEq)]
 pub enum RenderEffect {
     None,
@@ -50,7 +52,7 @@ pub(crate) trait Pixel:
     fn set_alpha(self, alpha: u8) -> Self;
 
     fn or(self, other: Self) -> Self;
-    fn fade(self, alpha: u8) -> Self;
+
     fn decompose(self) -> [u8; 4];
     fn compose(array: [u8; 4]) -> Self;
 }
@@ -65,6 +67,8 @@ pub struct PixelBuffer {
     mixer: Mixer,
 
     field: usize,
+
+    background: Argb,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -107,7 +111,13 @@ impl PixelBuffer {
             mixer: u32::over,
 
             field: FIELD_START,
+
+            background: DEFAULT_BG_COLOR,
         }
+    }
+
+    pub fn background(&self) -> Argb {
+        self.background
     }
 
     pub fn color(&mut self, c: Argb) {
@@ -147,7 +157,7 @@ impl PixelBuffer {
     }
 
     pub fn clear(&mut self) {
-        self.buffer.fill(Argb::black());
+        self.buffer.fill(self.background);
     }
 
     pub fn resize(&mut self, w: usize, h: usize) {

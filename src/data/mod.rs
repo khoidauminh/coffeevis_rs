@@ -39,6 +39,8 @@ pub const MAX_CON_WIDTH: u16 = 256;
 
 pub const MAX_SCALE_FACTOR: u8 = 4;
 
+pub const DEFAULT_BG_COLOR: u32 = u32::from_be_bytes([0, 0x24, 0x24, 0x24]);
+
 pub const DEFAULT_VIS_SWITCH_DURATION: Duration = Duration::from_secs(8);
 
 #[derive(PartialEq, Clone, Copy)]

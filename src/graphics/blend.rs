@@ -12,10 +12,10 @@ pub fn u8_mul(a: u8, b: u8) -> u8 {
     (a as u16 * b as u16).to_be_bytes()[0]
 }
 
-pub fn argb_fade(this: Argb, a: u8) -> Argb {
-    let [_, r, g, b] = this.decompose();
-    Argb::compose([0x0, u8_mul(r, a), u8_mul(g, a), u8_mul(b, a)])
-}
+// pub fn argb_fade(this: Argb, a: u8) -> Argb {
+//     let [_, r, g, b] = this.decompose();
+//     Argb::compose([0x0, u8_mul(r, a), u8_mul(g, a), u8_mul(b, a)])
+// }
 
 #[cfg(not(feature = "fast"))]
 // Coffeevis no longer supports true compositing
@@ -32,10 +32,23 @@ pub fn argb32_interpolate(c1: Argb, c2: Argb) -> Argb {
     let [a2, r2, g2, b2] = c2.decompose();
 
     let composite_channel = |c1, c2| {
+        if c1 == c2 {
+            return c1 as u8;
+        }
+
         let c1 = c1 as i16;
         let c2 = c2 as i16;
         let a2 = a2 as i16;
-        (c1 + (c2 - c1) * a2 / 256) as u8
+
+        let c3 = (c2 - c1) * a2;
+
+        let c3 = if c3 > -256 && c3 < 256 {
+            if c3 < 0 { -256 } else { 256 }
+        } else {
+            c3
+        };
+
+        (c1 + c3 / 256) as u8
     };
 
     Argb::compose([
@@ -61,10 +74,6 @@ impl Pixel for Argb {
 
     fn or(self, other: Argb) -> Argb {
         self | other
-    }
-
-    fn fade(self, alpha: u8) -> Argb {
-        argb_fade(self, alpha)
     }
 
     fn decompose(self) -> [u8; 4] {
