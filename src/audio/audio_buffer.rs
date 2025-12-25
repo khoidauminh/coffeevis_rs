@@ -97,7 +97,7 @@ impl AudioBuffer {
 
         self.writeend = self.writeend.wrapping_add(copysize) & BUFFER_MASK;
 
-        self.autorotatesize = copysize / (self.rotatessincewrite + 2);
+        self.autorotatesize = copysize / self.rotatessincewrite.max(3);
 
         self.rotatessincewrite = 0;
 
