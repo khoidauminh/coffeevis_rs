@@ -33,6 +33,16 @@ Windows support is being planned.
 cargo install coffeevis
 ```
 
+## Running
+
+As of Cpal 0.17, only the ALSA host is supported, 
+it is advised to install pipewire-alsa or pulseaudio-alsa in your system.
+
+Upon launch coffeevis will grab your default audio source, use an audio
+config tool to direct your desired source to coffeevis (e.g. `pavucontrol`),
+usually to your default monitor sink, or by turning your output sink into 
+a duplex and routing coffeevis to that.
+
 ## Configuration
 
 Coffeevis does not remember settings and does not generate config files
@@ -72,9 +82,6 @@ Coffeevis supports temporary options at launch
 | --effect | none | rendering is scaled and presented as is |
 
 ## Notes
-
-Upon launch coffeevis will grab your default audio source, use an audio
-config tool to direct your desired source to coffeevis (e.g. `pavucontrol`).
 
 On Wayland, coffeevis cannot set itself on top so you will have to rely on an external tool. For example, on KDE Plasma, you can use the window rules feature.
 
