@@ -19,7 +19,7 @@ use crate::{
             wave::Wave,
         },
         milk::rain::Rain,
-        misc::example::Example,
+        misc::{example::Example, snake::Snake},
     },
 };
 
@@ -74,6 +74,7 @@ impl VisList {
                 Box::new(VolSweeper::default()),
                 Box::new(Wave {}),
                 Box::new(Rain::default()),
+                Box::new(Snake::default()),
                 // your visualizers goes here.
                 // they can be placed in any order.
                 // This one is the last.

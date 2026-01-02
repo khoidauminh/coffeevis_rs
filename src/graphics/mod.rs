@@ -71,7 +71,7 @@ pub struct PixelBuffer {
     background: Argb,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct P2(pub i32, pub i32);
 
 impl P2 {
