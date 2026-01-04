@@ -75,7 +75,7 @@ impl VisList {
                 Box::new(Wave {}),
                 Box::new(Rain::default()),
                 Box::new(Snake::default()),
-                // your visualizers goes here.
+                // your visualizers go here.
                 // they can be placed in any order.
                 // This one is the last.
                 //

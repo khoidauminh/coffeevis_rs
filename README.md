@@ -3,19 +3,11 @@
 # Coffee Music Visualizer
 A personal GUI + TUI music visualizer written in Rust.
 
-## What's new in v0.6.0
+## What's new in v0.7.0
 
-Terminal mode is back and enabled by default!
+New keyboard input buttons implemented: Z, X, C and Arrow keys.
 
-Minifb support has been removed!
-
-Controls have been remapped. 
-I'm currently preparing to introduce 
-more complex visualizers that allow inputs.
-
-A little post-processing effect has been added 
-to window mode which should make the animations 
-a little more smooth looking.
+Added Example visualizer and minimal Snake game.
 
 ## Examples:
 
@@ -45,8 +37,7 @@ a duplex and routing coffeevis to that.
 
 ## Configuration
 
-Coffeevis does not remember settings and does not generate config files
-(feature won't be implemented unless requested).
+Coffeevis does not remember settings and does not generate config files.
 
 To get around this, make a user script that runs coffeevis with flags
 
