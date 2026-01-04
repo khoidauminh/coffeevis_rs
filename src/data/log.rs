@@ -1,4 +1,4 @@
-#![allow(unused_macros)]
+#![allow(unused_macros, unused_imports)]
 
 use std::sync::atomic::{AtomicBool, Ordering::Relaxed};
 

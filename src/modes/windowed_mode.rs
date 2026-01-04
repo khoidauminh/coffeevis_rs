@@ -1,26 +1,17 @@
 use softbuffer::{Context, Surface};
 
-use crate::data::log::{alert, error, info};
+use crate::data::log::{error, info};
 
 use qoi;
 
 use winit::{
     application::ApplicationHandler,
-    dpi::PhysicalSize,
-    event::{self, WindowEvent},
+    dpi::{PhysicalSize, Size},
+    event::WindowEvent,
     event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
+    icon::{Icon, RgbaIcon},
     keyboard::{Key, NamedKey},
-    window::{Icon, Window, WindowButtons, WindowId, WindowLevel},
-};
-
-#[cfg(target_os = "linux")]
-use winit::platform::{
-    modifier_supplement::KeyEventExtModifierSupplement, wayland::WindowAttributesExtWayland,
-};
-
-#[cfg(target_os = "windows")]
-use winit::platform::{
-    modifier_supplement::KeyEventExtModifierSupplement, windows::WindowAttributesExtWindows,
+    window::{Window, WindowAttributes, WindowButtons, WindowId, WindowLevel},
 };
 
 use std::{
@@ -63,8 +54,8 @@ impl WindowProps {
 }
 
 struct Renderer {
-    pub window: &'static Window,
-    pub surface: Surface<&'static Window, &'static Window>,
+    pub window: &'static dyn Window,
+    pub surface: Surface<&'static dyn Window, &'static dyn Window>,
     pub thread_control_draw_id: JoinHandle<()>,
     pub exit: SyncSender<()>,
 }
@@ -76,7 +67,7 @@ struct WindowState {
 }
 
 impl ApplicationHandler for WindowState {
-    fn resumed(&mut self, event_loop: &ActiveEventLoop) {
+    fn can_create_surfaces(&mut self, event_loop: &dyn ActiveEventLoop) {
         // Prevents re-initialization.
         assert!(self.renderer.is_none());
 
@@ -89,14 +80,19 @@ impl ApplicationHandler for WindowState {
         let de = std::env::var("XDG_CURRENT_DESKTOP").unwrap_or_default();
 
         let icon = ICON.with(|icon| {
-            Icon::from_rgba(icon.2.to_vec(), icon.0, icon.1)
+            RgbaIcon::new(icon.2.to_vec(), icon.0, icon.1)
                 .inspect_err(|_| error!("Failed to create window icon."))
                 .ok()
+                .map(|i| Icon::from(i))
         });
 
-        let window_attributes = Window::default_attributes()
+        let wm_attr_wayland = winit::platform::wayland::WindowAttributesWayland::default()
+            .with_name("Coffeevis", "cvis");
+
+        let window_attributes = WindowAttributes::default()
+            .with_platform_attributes(Box::new(wm_attr_wayland))
             .with_title("cvis")
-            .with_inner_size(win_size)
+            .with_surface_size(win_size)
             .with_window_level(WindowLevel::AlwaysOnTop)
             .with_transparent(false)
             .with_resizable(self.prog.is_resizable())
@@ -104,17 +100,13 @@ impl ApplicationHandler for WindowState {
             .with_enabled_buttons(WindowButtons::CLOSE)
             .with_window_icon(icon);
 
-        #[cfg(target_os = "linux")]
-        let window_attributes = window_attributes.with_name("coffeevis", "cvis");
+        let window = &*Box::leak(
+            event_loop
+                .create_window(window_attributes)
+                .expect("Failed to create window!"),
+        );
 
-        #[cfg(target_os = "windows")]
-        let window_attributes = window_attributes.with_class_name("coffeevis");
-
-        let window = &*Box::leak(Box::new(
-            event_loop.create_window(window_attributes).unwrap(),
-        ));
-
-        let size = window.inner_size();
+        let size = window.surface_size();
         self.final_buffer_size = size;
 
         let surface = {
@@ -133,12 +125,17 @@ impl ApplicationHandler for WindowState {
             info!("Running in the {} desktop (XDG_CURRENT_DESKTOP).", de);
         }
 
+        let limit_size = Size::Physical(size);
+
         // On XFCE this is needed to lock the size of the window.
         if !self.prog.is_resizable() {
-            window.set_min_inner_size(Some(win_size));
-            window.set_max_inner_size(Some(win_size));
+            window.set_min_surface_size(Some(limit_size));
+            window.set_max_surface_size(Some(limit_size));
         } else {
-            window.set_max_inner_size(Some(PhysicalSize::new(MAX_WIDTH, MAX_HEIGHT)));
+            window.set_max_surface_size(Some(Size::Physical(PhysicalSize::new(
+                MAX_WIDTH as u32,
+                MAX_HEIGHT as u32,
+            ))));
         }
 
         let mut milli_hz = self.prog.get_milli_hz();
@@ -178,6 +175,8 @@ impl ApplicationHandler for WindowState {
                         window.request_redraw();
                         thread::sleep(interval);
                     }
+
+                    window.set_cursor_visible(false);
                 }
             })
             .unwrap();
@@ -190,7 +189,7 @@ impl ApplicationHandler for WindowState {
         })
     }
 
-    fn window_event(&mut self, event_loop: &ActiveEventLoop, _: WindowId, event: WindowEvent) {
+    fn window_event(&mut self, event_loop: &dyn ActiveEventLoop, _: WindowId, event: WindowEvent) {
         let Some(Renderer {
             window, surface, ..
         }) = self.renderer.as_mut()
@@ -226,12 +225,12 @@ impl ApplicationHandler for WindowState {
 
             WindowEvent::CloseRequested => self.call_exit(event_loop),
 
-            WindowEvent::MouseInput { button, .. } => {
-                if button == event::MouseButton::Left
-                    && let Some(err) = window.drag_window().err()
-                {
+            WindowEvent::PointerMoved { .. } => {
+                if let Some(err) = window.drag_window().err() {
                     error!("Error dragging window: {}", err);
                 }
+
+                window.set_cursor_visible(true);
             }
 
             WindowEvent::Focused(_) => {
@@ -240,7 +239,7 @@ impl ApplicationHandler for WindowState {
                 }
             }
 
-            WindowEvent::Resized(PhysicalSize { width, height }) => {
+            WindowEvent::SurfaceResized(PhysicalSize { width, height }) => {
                 let scale = self.prog.scale() as u16;
 
                 let w = u16::min(MAX_WIDTH, width as u16);
@@ -265,7 +264,7 @@ impl ApplicationHandler for WindowState {
 
             WindowEvent::KeyboardInput { event, .. } if !event.repeat => {
                 let pressed = event.state.is_pressed();
-                let k = event.key_without_modifiers();
+                let k = event.key_without_modifiers;
                 let k = k.as_ref();
 
                 if pressed {
@@ -301,7 +300,7 @@ impl ApplicationHandler for WindowState {
 }
 
 impl WindowState {
-    fn call_exit(&mut self, event_loop: &ActiveEventLoop) {
+    fn call_exit(&mut self, event_loop: &dyn ActiveEventLoop) {
         if let Some(t) = self.renderer.take() {
             crate::audio::get_buf().close_notifier();
             t.exit.send(()).unwrap();
@@ -311,14 +310,28 @@ impl WindowState {
         event_loop.exit();
     }
 
-    fn check_refresh_rate(window: &Window, milli_hz_out: &mut u32) -> bool {
-        let Some(Some(mut milli_hz)) = window
-            .current_monitor()
-            .map(|m| m.refresh_rate_millihertz())
-        else {
-            alert!("Coffeevis is unable to query your monitor's refresh rate.");
+    fn check_refresh_rate(window: &dyn Window, milli_hz_out: &mut u32) -> bool {
+        let Some(cur_monitor) = window.current_monitor() else {
             return false;
         };
+
+        let Some(video_mode) = cur_monitor.current_video_mode() else {
+            return false;
+        };
+
+        let Some(milli_hz) = video_mode.refresh_rate_millihertz() else {
+            return false;
+        };
+
+        let mut milli_hz = milli_hz.get();
+
+        // let Some(Some(mut milli_hz)) = window
+        //     .current_monitor()
+        //     .map(|m| m.current_video_mode().map(|v| v.refresh_rate_millihertz()))
+        // else {
+        //     alert!("Coffeevis is unable to query your monitor's refresh rate.");
+        //     return false;
+        // };
 
         if *milli_hz_out == milli_hz {
             return true;
@@ -350,12 +363,12 @@ impl WindowState {
 pub fn winit_main(prog: Program) {
     let event_loop = EventLoop::new().unwrap();
 
-    let mut state = WindowState {
-        prog,
-        renderer: None,
-        final_buffer_size: PhysicalSize::<u32>::new(0, 0),
-    };
-
     event_loop.set_control_flow(ControlFlow::Wait);
-    event_loop.run_app(&mut state).unwrap();
+    event_loop
+        .run_app(WindowState {
+            prog,
+            renderer: None,
+            final_buffer_size: PhysicalSize::<u32>::new(0, 0),
+        })
+        .unwrap();
 }
