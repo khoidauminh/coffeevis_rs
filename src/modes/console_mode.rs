@@ -308,6 +308,8 @@ fn to_ascii_art(table: &[u8], x: usize) -> char {
 pub fn control_key_events_con(prog: &mut Program, exit: &mut bool) -> Result<(), Error> {
     prog.autoupdate_visualizer();
 
+    prog.key = KeyInput::default();
+
     if poll(prog.get_rr_interval())? {
         match read()? {
             Event::Key(event) => match event.code {
@@ -325,6 +327,15 @@ pub fn control_key_events_con(prog: &mut Program, exit: &mut bool) -> Result<(),
 
                 KeyCode::Char('7') => prog.change_fps(-5, false),
                 KeyCode::Char('8') => prog.change_fps(5, false),
+
+                KeyCode::Char('z') => prog.key.z = true,
+                KeyCode::Char('x') => prog.key.x = true,
+                KeyCode::Char('c') => prog.key.c = true,
+
+                KeyCode::Left => prog.key.left = true,
+                KeyCode::Right => prog.key.right = true,
+                KeyCode::Up => prog.key.up = true,
+                KeyCode::Down => prog.key.down = true,
 
                 KeyCode::Char('9') => {
                     prog.change_con_max(-1, false);

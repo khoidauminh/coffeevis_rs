@@ -60,6 +60,7 @@ impl Game {
 
     pub fn set_screen_size(&mut self, s: P2) {
         self.screen = s;
+        self.apple %= s;
     }
 
     pub fn set_direction(&mut self, newdirection: Direction) {
