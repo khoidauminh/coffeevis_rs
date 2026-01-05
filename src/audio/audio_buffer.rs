@@ -1,14 +1,14 @@
 use std::sync::mpsc::{self, Receiver, SyncSender};
 
 use crate::math::Cplx;
-use crate::math::interpolate::linear_decay;
+use crate::math::interpolate::decay;
 
 const SILENCE_LIMIT: f32 = 0.0001;
-const AMP_PERSIST_LIMIT: f32 = 0.001;
+const AMP_PERSIST_LIMIT: f32 = 0.005;
+const REACT_FACTOR: f32 = 0.98;
 
 const BUFFER_CAPACITY: usize = 1 << 16;
 const BUFFER_MASK: usize = BUFFER_CAPACITY - 1;
-const DECAY_STEP: f32 = 0.005;
 const AUDIO_NOTIFIER_PADDING: u16 = 10;
 
 pub type AudioNotifier = SyncSender<u16>;
@@ -113,7 +113,7 @@ impl AudioBuffer {
             max = max.max(self.data[i].max());
         }
 
-        self.max = linear_decay(self.max, max, DECAY_STEP);
+        self.max = decay(self.max, max, REACT_FACTOR);
 
         if self.max < SILENCE_LIMIT {
             self.silent = self.silent.saturating_add(1);
