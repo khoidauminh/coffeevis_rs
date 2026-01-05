@@ -1,14 +1,17 @@
 use std::sync::mpsc::{self, Receiver, SyncSender};
 
 use crate::math::Cplx;
-use crate::math::interpolate::decay;
+use crate::math::interpolate::linear_decay;
 
 const SILENCE_LIMIT: f32 = 0.0001;
 const AMP_PERSIST_LIMIT: f32 = 0.001;
 
 const BUFFER_CAPACITY: usize = 1 << 16;
 const BUFFER_MASK: usize = BUFFER_CAPACITY - 1;
-const REACT_SPEED: f32 = 0.99;
+const DECAY_STEP: f32 = 0.005;
+const AUDIO_NOTIFIER_PADDING: u16 = 10;
+
+pub type AudioNotifier = SyncSender<u16>;
 
 pub struct AudioBuffer {
     data: [Cplx; BUFFER_CAPACITY],
@@ -26,7 +29,7 @@ pub struct AudioBuffer {
 
     max: f32,
 
-    notifier: Option<SyncSender<()>>,
+    notifier: Option<AudioNotifier>,
 }
 
 impl AudioBuffer {
@@ -51,12 +54,12 @@ impl AudioBuffer {
         }
     }
 
-    pub fn init_notifier(&mut self) -> Receiver<()> {
+    pub fn init_notifier(&mut self) -> Receiver<u16> {
         if self.notifier.is_some() {
             panic!("Only one pair of sender/receiver is allowed!");
         }
 
-        let (s, r) = mpsc::sync_channel(1);
+        let (s, r) = mpsc::sync_channel(0);
 
         self.notifier = Some(s);
 
@@ -97,29 +100,34 @@ impl AudioBuffer {
 
         self.writeend = self.writeend.wrapping_add(copysize) & BUFFER_MASK;
 
-        self.autorotatesize = copysize / self.rotatessincewrite.max(3);
-
-        self.rotatessincewrite = 0;
-
         self.lastinputsize = copysize;
 
-        self.normalize();
+        self.post_process();
     }
 
     #[allow(unreachable_code)]
-    fn normalize(&mut self) {
+    fn post_process(&mut self) {
         let mut max = self.data[self.oldwriteend].max();
         for n in 1..self.lastinputsize {
             let i = n.wrapping_add(self.oldwriteend) & BUFFER_MASK;
             max = max.max(self.data[i].max());
         }
 
-        self.max = decay(self.max, max, REACT_SPEED);
+        self.max = linear_decay(self.max, max, DECAY_STEP);
 
-        if max < SILENCE_LIMIT {
+        if self.max < SILENCE_LIMIT {
             self.silent = self.silent.saturating_add(1);
             return;
         }
+
+        if let Some(s) = self.notifier.as_ref() {
+            let _ =
+                s.try_send((self.rotatessincewrite as u16).saturating_add(AUDIO_NOTIFIER_PADDING));
+        }
+
+        self.autorotatesize = self.lastinputsize / self.rotatessincewrite.max(3);
+
+        self.rotatessincewrite = 0;
 
         self.silent = 0;
 
@@ -128,10 +136,6 @@ impl AudioBuffer {
         for n in 0..self.lastinputsize {
             let i = n.wrapping_add(self.oldwriteend) & BUFFER_MASK;
             self.data[i] *= scale;
-        }
-
-        if let Some(s) = self.notifier.as_ref() {
-            let _ = s.try_send(());
         }
     }
 

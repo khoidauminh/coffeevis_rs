@@ -17,7 +17,7 @@ use winit::{
 use std::{
     cell::LazyCell,
     num::NonZeroU32,
-    sync::mpsc::{self, SyncSender},
+    sync::mpsc::{self, RecvTimeoutError, SyncSender},
     thread::{self, JoinHandle},
     time::Duration,
 };
@@ -57,7 +57,8 @@ struct Renderer {
     pub window: &'static dyn Window,
     pub surface: Surface<&'static dyn Window, &'static dyn Window>,
     pub thread_control_draw_id: JoinHandle<()>,
-    pub exit: SyncSender<()>,
+    pub thread_cursor_id: JoinHandle<()>,
+    pub cursor: SyncSender<()>,
 }
 
 struct WindowState {
@@ -83,7 +84,7 @@ impl ApplicationHandler for WindowState {
             RgbaIcon::new(icon.2.to_vec(), icon.0, icon.1)
                 .inspect_err(|_| error!("Failed to create window icon."))
                 .ok()
-                .map(|i| Icon::from(i))
+                .map(Icon::from)
         });
 
         let wm_attr_wayland = winit::platform::wayland::WindowAttributesWayland::default()
@@ -146,9 +147,29 @@ impl ApplicationHandler for WindowState {
         window.set_visible(true);
         window.set_window_level(WindowLevel::AlwaysOnTop);
 
-        let (exit_sender, exit_receiver) = mpsc::sync_channel(1);
+        let (cursor_sender, cursor_receiver) = mpsc::sync_channel(1);
 
         let audio_notifier_receiver = crate::audio::get_buf().init_notifier();
+
+        let thread_cursor_id = thread::Builder::new()
+            .name("coffeevis cursor control".into())
+            .spawn(move || {
+                let mut waitfor = Duration::from_secs(1);
+
+                loop {
+                    match cursor_receiver.recv_timeout(waitfor) {
+                        Ok(()) => {
+                            waitfor = Duration::from_secs(1);
+                        }
+                        Err(RecvTimeoutError::Timeout) => {
+                            waitfor = Duration::from_secs(60);
+                            window.set_cursor_visible(false);
+                        }
+                        Err(_) => break,
+                    }
+                }
+            })
+            .unwrap();
 
         // Thread to control requesting redraws.
         let thread_control_draw_id = thread::Builder::new()
@@ -163,20 +184,11 @@ impl ApplicationHandler for WindowState {
                     interval = Program::construct_interval(milli_hz);
                 }
 
-                // 2 seconds
-                let loopcount = milli_hz / 500;
-
-                while audio_notifier_receiver.recv().is_ok() {
-                    for _ in 0..loopcount {
-                        if exit_receiver.try_recv().is_ok() {
-                            return;
-                        }
-
+                while let Ok(count) = audio_notifier_receiver.recv() {
+                    for _ in 0..count {
                         window.request_redraw();
                         thread::sleep(interval);
                     }
-
-                    window.set_cursor_visible(false);
                 }
             })
             .unwrap();
@@ -184,14 +196,18 @@ impl ApplicationHandler for WindowState {
         self.renderer = Some(Renderer {
             window,
             surface,
+            thread_cursor_id,
             thread_control_draw_id,
-            exit: exit_sender,
+            cursor: cursor_sender,
         })
     }
 
     fn window_event(&mut self, event_loop: &dyn ActiveEventLoop, _: WindowId, event: WindowEvent) {
         let Some(Renderer {
-            window, surface, ..
+            window,
+            surface,
+            cursor,
+            ..
         }) = self.renderer.as_mut()
         else {
             return;
@@ -231,6 +247,8 @@ impl ApplicationHandler for WindowState {
                 }
 
                 window.set_cursor_visible(true);
+
+                let _ = cursor.try_send(());
             }
 
             WindowEvent::Focused(_) => {
@@ -264,8 +282,7 @@ impl ApplicationHandler for WindowState {
 
             WindowEvent::KeyboardInput { event, .. } if !event.repeat => {
                 let pressed = event.state.is_pressed();
-                let k = event.key_without_modifiers;
-                let k = k.as_ref();
+                let k = event.key_without_modifiers.as_ref();
 
                 if pressed {
                     match k {
@@ -303,8 +320,9 @@ impl WindowState {
     fn call_exit(&mut self, event_loop: &dyn ActiveEventLoop) {
         if let Some(t) = self.renderer.take() {
             crate::audio::get_buf().close_notifier();
-            t.exit.send(()).unwrap();
-            t.thread_control_draw_id.join().unwrap()
+            drop(t.cursor);
+            t.thread_control_draw_id.join().unwrap();
+            t.thread_cursor_id.join().unwrap();
         }
 
         event_loop.exit();
@@ -324,14 +342,6 @@ impl WindowState {
         };
 
         let mut milli_hz = milli_hz.get();
-
-        // let Some(Some(mut milli_hz)) = window
-        //     .current_monitor()
-        //     .map(|m| m.current_video_mode().map(|v| v.refresh_rate_millihertz()))
-        // else {
-        //     alert!("Coffeevis is unable to query your monitor's refresh rate.");
-        //     return false;
-        // };
 
         if *milli_hz_out == milli_hz {
             return true;
