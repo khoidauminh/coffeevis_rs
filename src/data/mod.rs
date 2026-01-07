@@ -4,7 +4,7 @@ pub mod desktop;
 #[macro_use]
 pub mod log;
 
-pub mod reader;
+pub mod config;
 
 use std::time::Duration;
 
@@ -145,10 +145,6 @@ impl Program {
 
     pub fn get_win_render_effect(&self) -> RenderEffect {
         self.win_render_effect
-    }
-
-    pub fn set_win_render_effect(&mut self, e: RenderEffect) {
-        self.win_render_effect = e;
     }
 
     pub fn is_resizable(&self) -> bool {

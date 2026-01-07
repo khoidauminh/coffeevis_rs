@@ -312,6 +312,8 @@ impl WindowState {
 pub fn winit_main(prog: Program) {
     let event_loop = EventLoop::new().unwrap();
 
+    prog.print_startup_info();
+
     event_loop.set_control_flow(ControlFlow::Wait);
     event_loop
         .run_app(WindowState {

@@ -5,8 +5,18 @@ use desktop::create_tmp_desktop_file;
 
 impl Program {
     pub fn eval_args(mut self, args: &mut dyn Iterator<Item = &String>) -> Self {
-        #[allow(unused_imports)]
+        let mut mode = Win;
+
+        let mut flusher: fn(&Program, stdout: &mut std::io::Stdout) =
+            |x, y| Program::print_ascii(x, y);
+
         let mut size = (DEFAULT_SIZE_WIN, DEFAULT_SIZE_WIN);
+        let mut scale = 2;
+        let mut milli_hz: Option<u32> = None;
+        let mut vis = String::new();
+        let mut effect = RenderEffect::Interlaced;
+        let mut resize = false;
+        let mut max_con_size = (50, 50);
 
         let mut args = args.peekable();
         args.next();
@@ -22,17 +32,11 @@ impl Program {
 
                 "--quiet" => self.quiet = true,
 
-                "--braille" => {
-                    (self.mode, self.console_props.flusher) = (ConBrail, Program::print_brail)
-                }
+                "--ascii" => mode = ConAscii,
 
-                "--ascii" => {
-                    (self.mode, self.console_props.flusher) = (ConAscii, Program::print_ascii)
-                }
+                "--braille" => (mode, flusher) = (ConBrail, Program::print_brail),
 
-                "--block" => {
-                    (self.mode, self.console_props.flusher) = (ConBlock, Program::print_block)
-                }
+                "--block" => (mode, flusher) = (ConBlock, Program::print_block),
 
                 "--no-auto-switch" => self.vislist.auto_switch = false,
 
@@ -48,17 +52,19 @@ impl Program {
                 }
 
                 "--scale" => {
-                    self.scale = args
+                    scale = args
                         .next()
                         .expect("Argument error: Expected u8 value for scale")
                         .parse::<u8>()
                         .expect("Argument error: Scale must be a positive integer");
 
-                    if self.scale > MAX_SCALE_FACTOR {
+                    if scale > MAX_SCALE_FACTOR {
                         panic!("Argument error: scale exceeds maximum allowed {MAX_SCALE_FACTOR}.");
                     }
 
-                    assert_ne!(self.scale, 0);
+                    if scale == 0 {
+                        panic!("Argument error: scale needs to be larger than 0.");
+                    }
                 }
 
                 "--fps" => {
@@ -72,13 +78,13 @@ impl Program {
                         panic!("...What?");
                     }
 
-                    self.change_fps_frac((rate * 1000.0) as u32);
+                    milli_hz = Some((rate * 1000.0) as u32);
 
                     self.refresh_rate_mode = RefreshRateMode::Specified;
                 }
 
                 "--resize" => {
-                    self.resize = true;
+                    resize = true;
                 }
 
                 "--max-con-size" => {
@@ -89,7 +95,7 @@ impl Program {
                         .map(|x| x.parse::<u16>().expect("Argument error: Invalid value"))
                         .collect::<Vec<_>>();
 
-                    self.console_props.set_max((s[0], s[1]));
+                    max_con_size = (s[0], s[1]);
                 }
 
                 "--x11" => {
@@ -105,7 +111,7 @@ impl Program {
                         .next()
                         .expect("Argument error: Expected name of visualizer");
 
-                    self.vislist.select_by_name(vis_name)
+                    vis = vis_name.clone();
                 }
 
                 ":3" => {
@@ -117,12 +123,12 @@ impl Program {
                         .next()
                         .expect("Expecting values of the following: crt, interlaced.");
 
-                    match val.as_str() {
-                        "crt" => self.set_win_render_effect(RenderEffect::Crt),
-                        "interlaced" => self.set_win_render_effect(RenderEffect::Interlaced),
-                        "none" => self.set_win_render_effect(RenderEffect::None),
+                    effect = match val.as_str() {
+                        "crt" => RenderEffect::Crt,
+                        "interlaced" => RenderEffect::Interlaced,
+                        "none" => RenderEffect::None,
                         _ => panic!("Invalid value for effect."),
-                    }
+                    };
                 }
 
                 &_ => error!("Argument error: Unknown option {}", arg),
@@ -135,8 +141,21 @@ impl Program {
             super::log::set_log_enabled(false);
         }
 
-        if !self.mode.is_con() {
-            self.mode = Win;
+        self.mode = mode;
+        self.console_props.flusher = flusher;
+        self.console_props.set_max(max_con_size);
+        self.update_size(size);
+        self.scale = scale;
+        self.resize = resize;
+        self.vislist.select_by_name(&vis);
+        self.win_render_effect = effect;
+
+        if let Some(m) = milli_hz {
+            if self.mode == Win {
+                alert!("Setting FPS on window mode is no longer supported.");
+            }
+
+            self.change_fps_frac(m);
         }
 
         self
@@ -180,16 +199,10 @@ impl Program {
                 alert!(
                     "\
                 Coffeevis is a CPU program, it is not advised \
-                to run it at large a size.\
+                to run it at a large size.\
                 "
                 );
             }
         }
-
-        if self.milli_hz / 1000 >= 300 {
-            alert!("Have fun cooking your CPU");
-        }
-
-        println!();
     }
 }
