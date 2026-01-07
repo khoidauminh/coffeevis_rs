@@ -146,8 +146,6 @@ impl ApplicationHandler for WindowState {
 
         let (cursor_sender, cursor_receiver) = mpsc::sync_channel(1);
 
-        // let audio_notifier_receiver = crate::audio::get_buf().init_notifier();
-
         let thread_cursor_id = thread::Builder::new()
             .name("coffeevis cursor control".into())
             .spawn(move || {
