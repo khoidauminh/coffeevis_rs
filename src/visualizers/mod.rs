@@ -70,7 +70,7 @@ impl VisList {
             list: vec![
                 Box::new(Spectrum::default()),
                 Box::new(Oscilloscope {}),
-                Box::new(Vectorscope {}),
+                Box::new(Vectorscope::default()),
                 Box::new(Bars::default()),
                 Box::new(BarsCircle::default()),
                 Box::new(Lazer::default()),

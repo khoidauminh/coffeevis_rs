@@ -1,29 +1,4 @@
-use crate::graphics::{P2, Pixel, PixelBuffer};
-
-pub const CROSS_COL: u32 = 0xFF_44_44_44;
-
-static CROSS: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
-
-pub fn draw_cross(pix: &mut PixelBuffer) {
-    let P2(width, height) = pix.size();
-
-    pix.color(CROSS_COL);
-    pix.mixer(u32::over);
-
-    if CROSS.fetch_xor(true, std::sync::atomic::Ordering::Relaxed) {
-        pix.rect(
-            P2(width / 2, height / 10),
-            1,
-            (height - height / 5 + 1) as usize,
-        );
-    } else {
-        pix.rect(
-            P2(width / 10, height / 2),
-            (width - width / 5 + 1) as usize,
-            1,
-        );
-    }
-}
+use crate::graphics::P2;
 
 const C: u32 = 0x00_FF_20_C0;
 

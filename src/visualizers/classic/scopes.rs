@@ -7,14 +7,13 @@ use crate::audio::MovingAverage;
 use crate::graphics::P2;
 use crate::math::interpolate::linearfc;
 use crate::visualizers::Visualizer;
-use crate::visualizers::helpers::draw_cross;
 
 use crate::math::Cplx;
 
 pub const INCREMENT: usize = 2;
 pub const DEFAULT_WAV_WIN: usize = 64 * INCREMENT;
 pub const PHASE_OFFSET: usize = crate::data::SAMPLE_RATE / 50 / 4;
-
+pub const CROSS_COL: u32 = 0xFF_44_44_44;
 const SMOOTH_SIZE: usize = 7;
 const SMOOTH_BUFFER_SIZE: usize = 512;
 
@@ -22,7 +21,10 @@ fn to_color(s: i32, size: i32) -> u8 {
     (s.abs() * 256 / size).min(255) as u8
 }
 
-pub struct Vectorscope;
+#[derive(Default)]
+pub struct Vectorscope {
+    cross: bool,
+}
 
 impl Visualizer for Vectorscope {
     fn name(&self) -> &'static str {
@@ -74,9 +76,34 @@ impl Visualizer for Vectorscope {
             di += INCREMENT;
         }
 
-        draw_cross(pix);
+        self.draw_cross(pix);
 
         stream.autoslide();
+    }
+}
+
+impl Vectorscope {
+    pub fn draw_cross(&mut self, pix: &mut crate::graphics::PixelBuffer) {
+        let P2(width, height) = pix.size();
+
+        pix.color(CROSS_COL);
+        pix.mixer(u32::over);
+
+        if self.cross {
+            pix.rect(
+                P2(width / 2, height / 10),
+                1,
+                (height - height / 5 + 1) as usize,
+            );
+        } else {
+            pix.rect(
+                P2(width / 10, height / 2),
+                (width - width / 5 + 1) as usize,
+                1,
+            );
+        }
+
+        self.cross ^= true;
     }
 }
 
