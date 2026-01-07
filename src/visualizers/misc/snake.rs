@@ -2,6 +2,7 @@ use std::collections::VecDeque;
 
 use crate::graphics::P2;
 use crate::math::rng::{self, FastU32};
+use crate::visualizers::VisualizerConfig;
 
 #[derive(Clone, Copy)]
 enum Direction {
@@ -141,6 +142,13 @@ pub struct Snake {
 impl crate::visualizers::Visualizer for Snake {
     fn name(&self) -> &'static str {
         "Snake"
+    }
+
+    fn config(&self) -> VisualizerConfig {
+        VisualizerConfig {
+            normalize: true,
+            nosleep: true,
+        }
     }
 
     fn perform(

@@ -23,13 +23,18 @@ use crate::{
     },
 };
 
+#[derive(Clone, Copy)]
 pub struct VisualizerConfig {
     pub normalize: bool,
+    pub nosleep: bool,
 }
 
 pub trait Visualizer {
     fn config(&self) -> VisualizerConfig {
-        VisualizerConfig { normalize: true }
+        VisualizerConfig {
+            normalize: true,
+            nosleep: false,
+        }
     }
 
     fn name(&self) -> &'static str {
@@ -127,14 +132,16 @@ impl VisList {
         self.log();
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self) -> Option<VisualizerConfig> {
         if self.auto_switch {
             let now = Instant::now();
             if now >= self.next_update {
                 self.next();
                 self.next_update = now + DEFAULT_VIS_SWITCH_DURATION;
+                return Some(self.get().config());
             }
         }
+        None
     }
 
     pub fn get(&mut self) -> &mut dyn Visualizer {

@@ -56,7 +56,6 @@ impl WindowProps {
 struct Renderer {
     pub window: &'static dyn Window,
     pub surface: Surface<&'static dyn Window, &'static dyn Window>,
-    pub thread_control_draw_id: JoinHandle<()>,
     pub thread_cursor_id: JoinHandle<()>,
     pub cursor: SyncSender<()>,
 }
@@ -128,6 +127,8 @@ impl ApplicationHandler for WindowState {
 
         let limit_size = Size::Physical(size);
 
+        crate::audio::get_buf().init_realtime_wakeup(window);
+
         // On XFCE this is needed to lock the size of the window.
         if !self.prog.is_resizable() {
             window.set_min_surface_size(Some(limit_size));
@@ -139,17 +140,13 @@ impl ApplicationHandler for WindowState {
             ))));
         }
 
-        let mut milli_hz = self.prog.get_milli_hz();
-        let rr_mode = self.prog.get_rr_mode();
-
-        let mut interval = self.prog.get_rr_interval();
-
         window.set_visible(true);
         window.set_window_level(WindowLevel::AlwaysOnTop);
+        window.request_redraw();
 
         let (cursor_sender, cursor_receiver) = mpsc::sync_channel(1);
 
-        let audio_notifier_receiver = crate::audio::get_buf().init_notifier();
+        // let audio_notifier_receiver = crate::audio::get_buf().init_notifier();
 
         let thread_cursor_id = thread::Builder::new()
             .name("coffeevis cursor control".into())
@@ -171,33 +168,10 @@ impl ApplicationHandler for WindowState {
             })
             .unwrap();
 
-        // Thread to control requesting redraws.
-        let thread_control_draw_id = thread::Builder::new()
-            .name("coffeevis draw control".into())
-            .spawn(move || {
-                window.request_redraw();
-
-                // Wait for a little before querying for monitor refresh rate.
-                if rr_mode == RefreshRateMode::Sync {
-                    thread::sleep(Duration::from_millis(100));
-                    Self::check_refresh_rate(window, &mut milli_hz);
-                    interval = Program::construct_interval(milli_hz);
-                }
-
-                while let Ok(count) = audio_notifier_receiver.recv() {
-                    for _ in 0..count {
-                        window.request_redraw();
-                        thread::sleep(interval);
-                    }
-                }
-            })
-            .unwrap();
-
         self.renderer = Some(Renderer {
             window,
             surface,
             thread_cursor_id,
-            thread_control_draw_id,
             cursor: cursor_sender,
         })
     }
@@ -213,14 +187,22 @@ impl ApplicationHandler for WindowState {
             return;
         };
 
+        if self.prog.nosleep() {
+            window.request_redraw();
+        }
+
         match event {
             WindowEvent::RedrawRequested => {
                 let Ok(mut buffer) = surface.buffer_mut() else {
                     return;
                 };
 
-                self.prog.autoupdate_visualizer();
-                self.prog.render(&mut crate::audio::get_buf());
+                let mut buf = crate::audio::get_buf();
+                if buf.silent() < STOP_RENDERING {
+                    window.request_redraw();
+                }
+
+                self.prog.render(&mut buf);
 
                 self.prog.pix.scale_to(
                     self.prog.scale() as usize,
@@ -247,14 +229,13 @@ impl ApplicationHandler for WindowState {
                 }
 
                 window.set_cursor_visible(true);
+                window.request_redraw();
 
                 let _ = cursor.try_send(());
             }
 
             WindowEvent::Focused(_) => {
-                if let Some(r) = self.renderer.as_ref() {
-                    r.window.request_redraw()
-                }
+                window.request_redraw();
             }
 
             WindowEvent::SurfaceResized(PhysicalSize { width, height }) => {
@@ -284,15 +265,15 @@ impl ApplicationHandler for WindowState {
                 let pressed = event.state.is_pressed();
                 let k = event.key_without_modifiers.as_ref();
 
+                window.request_redraw();
+
                 if pressed {
                     match k {
                         Key::Character("q") => self.call_exit(event_loop),
                         Key::Character("n") => self.prog.change_visualizer(true),
                         Key::Character("b") => self.prog.change_visualizer(false),
-
                         Key::Character("\\") => self.prog.toggle_auto_switch(),
                         Key::Character("/") => self.prog.reset_parameters(),
-
                         _ => {}
                     }
                 }
@@ -321,52 +302,10 @@ impl WindowState {
         if let Some(t) = self.renderer.take() {
             crate::audio::get_buf().close_notifier();
             drop(t.cursor);
-            t.thread_control_draw_id.join().unwrap();
             t.thread_cursor_id.join().unwrap();
         }
 
         event_loop.exit();
-    }
-
-    fn check_refresh_rate(window: &dyn Window, milli_hz_out: &mut u32) -> bool {
-        let Some(cur_monitor) = window.current_monitor() else {
-            return false;
-        };
-
-        let Some(video_mode) = cur_monitor.current_video_mode() else {
-            return false;
-        };
-
-        let Some(milli_hz) = video_mode.refresh_rate_millihertz() else {
-            return false;
-        };
-
-        let mut milli_hz = milli_hz.get();
-
-        if *milli_hz_out == milli_hz {
-            return true;
-        }
-
-        info!(
-            "\
-        Detected rate to be {}hz.\n\
-        Note: Coffeevis relies on Winit to detect refresh rates.\n\
-        Run with --fps flag if you want to lock fps.\n\
-        Refresh rate changed.\
-        ",
-            milli_hz as f32 / 1000.0
-        );
-
-        if milli_hz > CAP_MILLI_HZ {
-            milli_hz = CAP_MILLI_HZ;
-            info!("(Refresh rate has been capped to {}.)", CAP_MILLI_HZ);
-        }
-
-        info!("");
-
-        *milli_hz_out = milli_hz;
-
-        true
     }
 }
 

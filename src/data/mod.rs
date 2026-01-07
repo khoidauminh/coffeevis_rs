@@ -10,7 +10,7 @@ use std::time::Duration;
 
 use crate::audio::AudioBuffer;
 use crate::graphics::RenderEffect;
-use crate::visualizers::VisList;
+use crate::visualizers::{VisList, VisualizerConfig};
 use crate::{graphics::PixelBuffer, modes::Mode};
 
 use crate::modes;
@@ -22,7 +22,6 @@ pub const FFT_POWER: usize = 9;
 pub const SAMPLE_SIZE: usize = 1 << POWER;
 pub const FFT_SIZE: usize = 1 << FFT_POWER;
 
-pub const CAP_MILLI_HZ: u32 = 192 * 1000;
 pub const DEFAULT_MILLI_HZ: u32 = 60 * 1000;
 pub const DEFAULT_HZ: u64 = DEFAULT_MILLI_HZ as u64 / 1000;
 
@@ -65,6 +64,8 @@ pub struct KeyInput {
 pub(crate) struct Program {
     quiet: bool,
 
+    nosleep: bool,
+
     scale: u8,
 
     /// Allow for resizing. Windowed mode only.
@@ -99,6 +100,8 @@ impl Program {
         Self {
             quiet: false,
 
+            nosleep: false,
+
             scale: DEFAULT_WIN_SCALE,
             resize: false,
 
@@ -132,6 +135,10 @@ impl Program {
         }
     }
 
+    pub fn nosleep(&self) -> bool {
+        self.nosleep
+    }
+
     pub fn get_rr_interval(&self) -> Duration {
         self.refresh_rate_interval
     }
@@ -146,14 +153,6 @@ impl Program {
 
     pub fn is_resizable(&self) -> bool {
         self.resize
-    }
-
-    pub fn get_milli_hz(&self) -> u32 {
-        self.milli_hz
-    }
-
-    pub fn get_rr_mode(&self) -> RefreshRateMode {
-        self.refresh_rate_mode
     }
 
     pub fn change_fps(&mut self, amount: i16, replace: bool) {
@@ -181,6 +180,11 @@ impl Program {
         self.refresh_rate_interval = Self::construct_interval(fps);
     }
 
+    fn apply_vis_config(&mut self, conf: VisualizerConfig) {
+        self.nosleep = conf.nosleep;
+        crate::audio::get_buf().set_normalize(conf.normalize);
+    }
+
     pub fn change_visualizer(&mut self, forward: bool) {
         if forward {
             self.vislist.next();
@@ -188,11 +192,16 @@ impl Program {
             self.vislist.prev();
         }
 
+        let conf = self.vislist.get().config();
+        self.apply_vis_config(conf);
+
         self.pix.clear();
     }
 
     pub fn autoupdate_visualizer(&mut self) {
-        self.vislist.update()
+        if let Some(conf) = self.vislist.update() {
+            self.apply_vis_config(conf);
+        }
     }
 
     pub fn update_size(&mut self, mut s: (u16, u16)) {

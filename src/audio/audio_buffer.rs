@@ -1,4 +1,4 @@
-use std::sync::mpsc::{self, Receiver, SyncSender};
+use winit::window::Window;
 
 use crate::math::Cplx;
 use crate::math::interpolate::decay;
@@ -9,9 +9,6 @@ const REACT_FACTOR: f32 = 0.98;
 
 const BUFFER_CAPACITY: usize = 1 << 16;
 const BUFFER_MASK: usize = BUFFER_CAPACITY - 1;
-const AUDIO_NOTIFIER_PADDING: u16 = 10;
-
-pub type AudioNotifier = SyncSender<u16>;
 
 pub struct AudioBuffer {
     data: [Cplx; BUFFER_CAPACITY],
@@ -29,7 +26,9 @@ pub struct AudioBuffer {
 
     max: f32,
 
-    notifier: Option<AudioNotifier>,
+    normalize: bool,
+
+    notifier: Option<&'static dyn Window>,
 }
 
 impl AudioBuffer {
@@ -50,20 +49,18 @@ impl AudioBuffer {
 
             max: 0.0,
 
+            normalize: true,
+
             notifier: None,
         }
     }
 
-    pub fn init_notifier(&mut self) -> Receiver<u16> {
+    pub fn init_realtime_wakeup(&mut self, w: &'static dyn Window) {
         if self.notifier.is_some() {
-            panic!("Only one pair of sender/receiver is allowed!");
+            panic!("Already initialized!");
         }
 
-        let (s, r) = mpsc::sync_channel(0);
-
-        self.notifier = Some(s);
-
-        r
+        self.notifier = Some(w);
     }
 
     pub fn close_notifier(&mut self) {
@@ -105,7 +102,10 @@ impl AudioBuffer {
         self.post_process();
     }
 
-    #[allow(unreachable_code)]
+    pub fn set_normalize(&mut self, b: bool) {
+        self.normalize = b;
+    }
+
     fn post_process(&mut self) {
         let mut max = self.data[self.oldwriteend].max();
         for n in 1..self.lastinputsize {
@@ -120,22 +120,21 @@ impl AudioBuffer {
             return;
         }
 
-        if let Some(s) = self.notifier.as_ref() {
-            let _ =
-                s.try_send((self.rotatessincewrite as u16).saturating_add(AUDIO_NOTIFIER_PADDING));
+        if let Some(w) = self.notifier.as_ref() {
+            w.request_redraw();
         }
 
         self.autorotatesize = self.lastinputsize / self.rotatessincewrite.max(3);
-
         self.rotatessincewrite = 0;
-
         self.silent = 0;
 
-        let scale: f32 = 1.0 / self.max.max(AMP_PERSIST_LIMIT);
+        if self.normalize {
+            let scale: f32 = 1.0 / self.max.max(AMP_PERSIST_LIMIT);
 
-        for n in 0..self.lastinputsize {
-            let i = n.wrapping_add(self.oldwriteend) & BUFFER_MASK;
-            self.data[i] *= scale;
+            for n in 0..self.lastinputsize {
+                let i = n.wrapping_add(self.oldwriteend) & BUFFER_MASK;
+                self.data[i] *= scale;
+            }
         }
     }
 

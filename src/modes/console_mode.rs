@@ -305,69 +305,73 @@ fn to_ascii_art(table: &[u8], x: usize) -> char {
     table[(x * table.len()) >> 8] as char
 }
 
-pub fn control_key_events_con(prog: &mut Program, exit: &mut bool) -> Result<(), Error> {
+pub fn control_key_events_con(prog: &mut Program, exit: &mut bool) -> Result<bool, Error> {
     prog.autoupdate_visualizer();
 
     prog.key = KeyInput::default();
 
     if poll(prog.get_rr_interval())? {
         match read()? {
-            Event::Key(event) => match event.code {
-                KeyCode::Char('b') => prog.change_visualizer(false),
-                KeyCode::Char('n') => prog.change_visualizer(true),
+            Event::Key(event) => {
+                match event.code {
+                    KeyCode::Char('b') => prog.change_visualizer(false),
+                    KeyCode::Char('n') => prog.change_visualizer(true),
 
-                KeyCode::Char('q') => *exit = true,
+                    KeyCode::Char('q') => *exit = true,
 
-                KeyCode::Char('1') => prog.change_fps(10, true),
-                KeyCode::Char('2') => prog.change_fps(20, true),
-                KeyCode::Char('3') => prog.change_fps(30, true),
-                KeyCode::Char('4') => prog.change_fps(40, true),
-                KeyCode::Char('5') => prog.change_fps(50, true),
-                KeyCode::Char('6') => prog.change_fps(60, true),
+                    KeyCode::Char('1') => prog.change_fps(10, true),
+                    KeyCode::Char('2') => prog.change_fps(20, true),
+                    KeyCode::Char('3') => prog.change_fps(30, true),
+                    KeyCode::Char('4') => prog.change_fps(40, true),
+                    KeyCode::Char('5') => prog.change_fps(50, true),
+                    KeyCode::Char('6') => prog.change_fps(60, true),
 
-                KeyCode::Char('7') => prog.change_fps(-5, false),
-                KeyCode::Char('8') => prog.change_fps(5, false),
+                    KeyCode::Char('7') => prog.change_fps(-5, false),
+                    KeyCode::Char('8') => prog.change_fps(5, false),
 
-                KeyCode::Char('z') => prog.key.z = true,
-                KeyCode::Char('x') => prog.key.x = true,
-                KeyCode::Char('c') => prog.key.c = true,
+                    KeyCode::Char('z') => prog.key.z = true,
+                    KeyCode::Char('x') => prog.key.x = true,
+                    KeyCode::Char('c') => prog.key.c = true,
 
-                KeyCode::Left => prog.key.left = true,
-                KeyCode::Right => prog.key.right = true,
-                KeyCode::Up => prog.key.up = true,
-                KeyCode::Down => prog.key.down = true,
+                    KeyCode::Left => prog.key.left = true,
+                    KeyCode::Right => prog.key.right = true,
+                    KeyCode::Up => prog.key.up = true,
+                    KeyCode::Down => prog.key.down = true,
 
-                KeyCode::Char('9') => {
-                    prog.change_con_max(-1, false);
-                    prog.update_size(prog.console_size())
+                    KeyCode::Char('9') => {
+                        prog.change_con_max(-1, false);
+                        prog.update_size(prog.console_size())
+                    }
+
+                    KeyCode::Char('0') => {
+                        prog.change_con_max(1, false);
+                        prog.update_size(prog.console_size())
+                    }
+
+                    KeyCode::Char('\\') => prog.toggle_auto_switch(),
+
+                    KeyCode::Char('.') => {
+                        prog.switch_con_mode();
+                        prog.clear_con();
+                    }
+
+                    KeyCode::Char('/') => prog.reset_parameters(),
+
+                    _ => {}
                 }
-
-                KeyCode::Char('0') => {
-                    prog.change_con_max(1, false);
-                    prog.update_size(prog.console_size())
-                }
-
-                KeyCode::Char('\\') => prog.toggle_auto_switch(),
-
-                KeyCode::Char('.') => {
-                    prog.switch_con_mode();
-                    prog.clear_con();
-                }
-
-                KeyCode::Char('/') => prog.reset_parameters(),
-
-                _ => {}
-            },
+                return Ok(true);
+            }
 
             Event::Resize(w, h) => {
                 prog.update_size((w, h));
                 prog.clear_con();
+                return Ok(true);
             }
             _ => {}
         }
     }
 
-    Ok(())
+    Ok(false)
 }
 
 pub fn con_main(mut prog: Program) -> std::io::Result<()> {
@@ -391,12 +395,12 @@ pub fn con_main(mut prog: Program) -> std::io::Result<()> {
     );
 
     while !exit {
-        control_key_events_con(&mut prog, &mut exit)?;
+        let forcedraw = control_key_events_con(&mut prog, &mut exit)?;
 
         let mut buf = crate::audio::get_buf();
         let silent = buf.silent();
 
-        if silent > STOP_RENDERING {
+        if silent > STOP_RENDERING && !prog.nosleep() && !forcedraw {
             continue;
         }
 
