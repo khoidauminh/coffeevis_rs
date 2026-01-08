@@ -227,7 +227,6 @@ impl ApplicationHandler for WindowState {
                 }
 
                 window.set_cursor_visible(true);
-                window.request_redraw();
 
                 let _ = cursor.try_send(());
             }
