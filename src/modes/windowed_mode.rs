@@ -298,7 +298,7 @@ impl ApplicationHandler for WindowState {
 impl WindowState {
     fn call_exit(&mut self, event_loop: &dyn ActiveEventLoop) {
         if let Some(t) = self.renderer.take() {
-            crate::audio::get_buf().close_notifier();
+            crate::audio::get_buf().deinit_realtime_wakeup();
             drop(t.cursor);
             t.thread_cursor_id.join().unwrap();
         }

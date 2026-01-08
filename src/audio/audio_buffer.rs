@@ -4,7 +4,7 @@ use crate::math::Cplx;
 use crate::math::interpolate::decay;
 
 const SILENCE_LIMIT: f32 = 0.0001;
-const AMP_PERSIST_LIMIT: f32 = 0.005;
+const AMP_PERSIST_LIMIT: f32 = 0.01;
 const REACT_FACTOR: f32 = 0.98;
 
 const BUFFER_CAPACITY: usize = 1 << 16;
@@ -28,7 +28,7 @@ pub struct AudioBuffer {
 
     normalize: bool,
 
-    notifier: Option<&'static dyn Window>,
+    window: Option<&'static dyn Window>,
 }
 
 impl AudioBuffer {
@@ -51,20 +51,20 @@ impl AudioBuffer {
 
             normalize: true,
 
-            notifier: None,
+            window: None,
         }
     }
 
     pub fn init_realtime_wakeup(&mut self, w: &'static dyn Window) {
-        if self.notifier.is_some() {
+        if self.window.is_some() {
             panic!("Already initialized!");
         }
 
-        self.notifier = Some(w);
+        self.window = Some(w);
     }
 
-    pub fn close_notifier(&mut self) {
-        self.notifier = None;
+    pub fn deinit_realtime_wakeup(&mut self) {
+        self.window = None;
     }
 
     pub fn silent(&self) -> u8 {
@@ -120,7 +120,7 @@ impl AudioBuffer {
             return;
         }
 
-        if let Some(w) = self.notifier.as_ref() {
+        if let Some(w) = self.window.as_ref() {
             w.request_redraw();
         }
 
