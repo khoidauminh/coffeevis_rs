@@ -60,7 +60,6 @@ pub struct KeyInput {
     pub down: bool,
 }
 
-/// Main program struct
 pub(crate) struct Program {
     quiet: bool,
 
@@ -68,7 +67,6 @@ pub(crate) struct Program {
 
     scale: u8,
 
-    /// Allow for resizing. Windowed mode only.
     resize: bool,
 
     win_render_effect: crate::graphics::RenderEffect,

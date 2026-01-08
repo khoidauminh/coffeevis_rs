@@ -12,11 +12,6 @@ pub fn u8_mul(a: u8, b: u8) -> u8 {
     (a as u16 * b as u16).to_be_bytes()[0]
 }
 
-// pub fn argb_fade(this: Argb, a: u8) -> Argb {
-//     let [_, r, g, b] = this.decompose();
-//     Argb::compose([0x0, u8_mul(r, a), u8_mul(g, a), u8_mul(b, a)])
-// }
-
 #[cfg(not(feature = "fast"))]
 // Coffeevis no longer supports true compositing
 // in order to achieve more performance.
