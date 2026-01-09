@@ -13,7 +13,7 @@ impl Program {
         let mut size = (DEFAULT_SIZE_WIN, DEFAULT_SIZE_WIN);
         let mut scale = 2;
         let mut milli_hz: Option<u32> = None;
-        let mut vis = String::new();
+        let mut vis: Option<String> = None;
         let mut effect = RenderEffect::Interlaced;
         let mut resize = false;
         let mut max_con_size = (50, 50);
@@ -109,7 +109,7 @@ impl Program {
                         .next()
                         .expect("Argument error: Expected name of visualizer");
 
-                    vis = vis_name.clone();
+                    vis = Some(vis_name.clone());
                 }
 
                 ":3" => {
@@ -151,7 +151,11 @@ impl Program {
         self.update_size(size);
         self.scale = scale;
         self.resize = resize;
-        self.vislist.select_by_name(&vis);
+
+        if let Some(s) = vis {
+            self.vislist.select_by_name(&s);
+        }
+
         self.win_render_effect = effect;
 
         if let Some(m) = milli_hz {
