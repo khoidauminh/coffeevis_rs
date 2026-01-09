@@ -79,8 +79,6 @@ impl Program {
                     }
 
                     milli_hz = Some((rate * 1000.0) as u32);
-
-                    self.refresh_rate_mode = RefreshRateMode::Specified;
                 }
 
                 "--resize" => {
@@ -135,6 +133,12 @@ impl Program {
             }
         }
 
+        match std::env::var("WAYLAND_DISPLAY") {
+            Ok(x) if x.is_empty() => self.wayland = false,
+            Err(_) => self.wayland = false,
+            _ => {}
+        }
+
         self.update_size(size);
 
         if self.quiet || self.mode.is_con() {
@@ -151,8 +155,8 @@ impl Program {
         self.win_render_effect = effect;
 
         if let Some(m) = milli_hz {
-            if self.mode == Win {
-                alert!("Setting FPS on window mode is no longer supported.");
+            if self.mode == Win && self.wayland() {
+                alert!("Setting FPS on wayland is no longer supported.");
             }
 
             self.change_fps_frac(m);

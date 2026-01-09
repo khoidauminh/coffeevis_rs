@@ -7,7 +7,7 @@ use qoi;
 use winit::{
     application::ApplicationHandler,
     dpi::{PhysicalSize, Size},
-    event::WindowEvent,
+    event::{MouseButton, WindowEvent},
     event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
     icon::{Icon, RgbaIcon},
     keyboard::{Key, NamedKey},
@@ -217,19 +217,28 @@ impl ApplicationHandler for WindowState {
                         e
                     );
                 }
+
+                if !self.prog.wayland() {
+                    thread::sleep(self.prog.get_rr_interval());
+                }
             }
 
             WindowEvent::CloseRequested => self.call_exit(event_loop),
 
             WindowEvent::PointerMoved { .. } => {
-                if let Some(err) = window.drag_window().err() {
-                    error!("Error dragging window: {}", err);
-                }
-
                 window.set_cursor_visible(true);
-
                 let _ = cursor.try_send(());
             }
+
+            WindowEvent::PointerButton { button, .. } => match button.mouse_button() {
+                Some(MouseButton::Left) => {
+                    if let Some(err) = window.drag_window().err() {
+                        error!("Error dragging window: {}", err);
+                    }
+                }
+
+                _ => {}
+            },
 
             WindowEvent::Focused(_) => {
                 window.request_redraw();

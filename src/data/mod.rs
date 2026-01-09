@@ -42,12 +42,6 @@ pub const DEFAULT_BG_COLOR: u32 = u32::from_be_bytes([0, 0x24, 0x24, 0x24]);
 
 pub const DEFAULT_VIS_SWITCH_DURATION: Duration = Duration::from_secs(8);
 
-#[derive(PartialEq, Clone, Copy)]
-pub enum RefreshRateMode {
-    Sync,
-    Specified,
-}
-
 #[derive(Default, Debug)]
 pub struct KeyInput {
     pub z: bool,
@@ -69,6 +63,8 @@ pub(crate) struct Program {
 
     resize: bool,
 
+    wayland: bool,
+
     win_render_effect: crate::graphics::RenderEffect,
 
     pub pix: crate::graphics::PixelBuffer,
@@ -77,7 +73,6 @@ pub(crate) struct Program {
     mode: Mode,
 
     milli_hz: u32,
-    refresh_rate_mode: RefreshRateMode,
     refresh_rate_interval: Duration,
 
     pub window_props: modes::windowed_mode::WindowProps,
@@ -103,6 +98,8 @@ impl Program {
             scale: DEFAULT_WIN_SCALE,
             resize: false,
 
+            wayland: true,
+
             win_render_effect: RenderEffect::Interlaced,
 
             mode: default_mode,
@@ -111,7 +108,6 @@ impl Program {
             key: KeyInput::default(),
 
             milli_hz: DEFAULT_MILLI_HZ,
-            refresh_rate_mode: RefreshRateMode::Sync,
             refresh_rate_interval: rate,
 
             vislist: VisList::new(),
@@ -131,6 +127,10 @@ impl Program {
                 flusher: default_mode.get_flusher(),
             },
         }
+    }
+
+    pub fn wayland(&self) -> bool {
+        self.wayland
     }
 
     pub fn nosleep(&self) -> bool {
@@ -238,9 +238,5 @@ impl Program {
 
     pub fn reset_parameters(&mut self) {
         self.change_con_max(50, true);
-
-        if self.refresh_rate_mode != RefreshRateMode::Specified {
-            self.change_fps_frac(DEFAULT_MILLI_HZ);
-        }
     }
 }
