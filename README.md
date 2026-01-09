@@ -27,6 +27,8 @@ cargo install coffeevis
 
 ## Running
 
+### Audio
+
 As of Cpal 0.17, only the ALSA host is supported, 
 it is advised to install pipewire-alsa or pulseaudio-alsa in your system.
 
@@ -34,6 +36,14 @@ Upon launch coffeevis will grab your default audio source, use an audio
 config tool to direct your desired source to coffeevis (e.g. `pavucontrol`),
 usually to your default monitor sink, or by turning your output sink into 
 a duplex and routing coffeevis to that.
+
+### FPS
+
+On Wayland, Winit supports automatic vsync,
+therefore custom fps setting is not supported.
+
+On other platforms, Coffeevis relies on user specified fps.
+The default fps is 60.
 
 ## Configuration
 
