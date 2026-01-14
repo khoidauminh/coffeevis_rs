@@ -6,12 +6,12 @@ use crate::graphics::PixelBuffer;
 use crate::math::{self, Cplx, interpolate::*};
 use crate::visualizers::Visualizer;
 
-const FFT_SIZE: usize = 1 << 10;
+const FFT_SIZE: usize = 1 << 9;
 const RANGE: usize = 64;
 const RANGEF: f32 = RANGE as f32;
 const FFT_SIZEF: f32 = FFT_SIZE as f32;
 const FFT_SIZEF_RECIP: f32 = 1.0 / FFT_SIZEF;
-const SMOOTHING: f32 = 0.90;
+const SMOOTHING: f32 = 0.905;
 
 type LocalType = [Cplx; RANGE + 1];
 
@@ -30,11 +30,12 @@ fn index_scale_derivative(x: f32) -> f32 {
 fn prepare(stream: &mut crate::AudioBuffer, local: &mut LocalType) {
     let mut fft = [Cplx::zero(); FFT_SIZE];
 
-    stream.read(&mut fft[..FFT_SIZE / 2]);
-    math::fft_stereo(&mut fft, RANGE, math::Normalize::No);
+    stream.read(&mut fft);
+
+    crate::math::dct::dct(&mut fft);
 
     fft.iter_mut().take(RANGE).enumerate().for_each(|(i, smp)| {
-        let scalef = 2.5 / FFT_SIZE as f32 * math::fast::ilog2(i + 1) as f32;
+        let scalef = 13.0 / FFT_SIZE as f32 * 1.0f32.min(i as f32 * 0.25);
         *smp *= scalef;
     });
 

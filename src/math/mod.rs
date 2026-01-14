@@ -1,4 +1,7 @@
+#![allow(dead_code)]
+
 mod cplx;
+pub mod dct;
 pub mod fast;
 mod fft;
 pub mod rng;
