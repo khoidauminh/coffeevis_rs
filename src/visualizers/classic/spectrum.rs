@@ -35,7 +35,7 @@ fn prepare(stream: &mut crate::AudioBuffer, local: &mut LocalType) {
     crate::math::dct::dct(&mut fft);
 
     fft.iter_mut().take(RANGE).enumerate().for_each(|(i, smp)| {
-        let scalef = 13.0 / FFT_SIZE as f32 * 1.0f32.min(i as f32 * 0.25);
+        let scalef = 10.0 / FFT_SIZE as f32 * 1.0f32.min(i as f32 * 0.25);
         *smp *= scalef;
     });
 
