@@ -26,28 +26,8 @@ use std::ops::{Add, Sub};
 const MAX_DEPTH: usize = 13;
 const MAX_SIZE: usize = 1 << 13;
 
-thread_local! {
-    static TWIDDLE: [f32; MAX_SIZE] = {
-        let mut o = [0.0f32; MAX_SIZE];
-
-        let mut k = 2;
-        while k < MAX_SIZE {
-            let factor = std::f32::consts::PI / (k as f32);
-
-            let kh = k/2;
-
-            for i in 0..kh {
-                o[kh + i] = ((i as f32 + 0.5) * factor).cos() * 2.0;
-            }
-
-            k *= 2;
-        }
-
-        o
-    };
-}
-
 pub struct Dct<T> {
+    twiddles: Vec<f32>,
     temp: Vec<T>,
 }
 
@@ -59,16 +39,35 @@ impl<T: Add<Output = T> + Sub<Output = T> + std::ops::Div<f32, Output = T> + Cop
         assert!(n <= MAX_SIZE, "Length is greater than {MAX_SIZE}");
 
         Self {
+            twiddles: {
+                let mut o = vec![0.0f32; n];
+
+                let mut k = 2;
+                while k <= n {
+                    let factor = std::f32::consts::PI / (k as f32);
+
+                    let kh = k / 2;
+
+                    for i in 0..kh {
+                        o[kh + i] = ((i as f32 + 0.5) * factor).cos() * 2.0;
+                    }
+
+                    k *= 2;
+                }
+
+                o
+            },
+
             temp: vec![T::default(); n],
         }
     }
 
     pub fn exec(&mut self, vector: &mut [T]) {
         assert_eq!(vector.len(), self.temp.len(), "Length mismatch");
-        Self::__dct(vector, &mut self.temp);
+        Self::__dct(vector, &mut self.temp, &self.twiddles);
     }
 
-    fn __dct(vector: &mut [T], temp: &mut [T]) {
+    fn __dct(vector: &mut [T], temp: &mut [T], twiddles: &[f32]) {
         // Algorithm by Byeong Gi Lee, 1984. For details, see:
         // See: http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.118.3056&rep=rep1&type=pdf#page=34
         // Link may be dead. Visit the source article of this file for another copy.
@@ -76,24 +75,18 @@ impl<T: Add<Output = T> + Sub<Output = T> + std::ops::Div<f32, Output = T> + Cop
 
         let halflen: usize = len / 2;
 
-        TWIDDLE.with(|twiddle| {
-            let twiddle = &twiddle[halflen..];
+        let factors = &twiddles[halflen..];
 
-            for i in 0..halflen {
-                let x = vector[i];
-                let y = vector[len - 1 - i];
-
-                temp[i] = x + y;
-
-                let twiddle = twiddle[i];
-
-                temp[i + halflen] = (x - y) / twiddle;
-            }
-        });
+        for i in 0..halflen {
+            let x = vector[i];
+            let y = vector[len - 1 - i];
+            temp[i] = x + y;
+            temp[i + halflen] = (x - y) / factors[i];
+        }
 
         if len > 2 {
-            Self::__dct(&mut temp[..halflen], vector);
-            Self::__dct(&mut temp[halflen..len], vector);
+            Self::__dct(&mut temp[..halflen], vector, &twiddles);
+            Self::__dct(&mut temp[halflen..len], vector, &twiddles);
         }
 
         for i in 0..halflen - 1 {

@@ -47,7 +47,7 @@ fn prepare(stream: &mut crate::AudioBuffer, bar_num: usize, data: &mut [f32], ff
         .zip(data_c.iter())
         .enumerate()
         .for_each(|(i, (smp, cplx))| {
-            let scl = 3.0 * ((i + 2) as f32).log2();
+            let scl = 2.0 * ((i + 2) as f32).log2();
             let smp_f32: f32 = cplx.mag();
 
             *smp = smp_f32 * scl * norm;

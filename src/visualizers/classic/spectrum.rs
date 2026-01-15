@@ -4,7 +4,6 @@ use crate::audio::AudioBuffer;
 use crate::graphics::P2;
 use crate::graphics::PixelBuffer;
 use crate::math::Dct;
-use crate::math::Fft;
 use crate::math::{self, Cplx, interpolate::*};
 use crate::visualizers::Visualizer;
 
