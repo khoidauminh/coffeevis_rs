@@ -8,10 +8,10 @@ const MAX_POWER: usize = 13;
 const MAX_SIZE: usize = 1 << MAX_POWER;
 
 pub struct Fft {
-    size: usize,
-    butterfly_swap_list: Vec<(usize, usize)>,
     twiddles: Vec<Cplx>,
+    butterfly_swap_list: Vec<(usize, usize)>,
     stereo: Option<usize>,
+    size: usize,
     normalize: bool,
 }
 
