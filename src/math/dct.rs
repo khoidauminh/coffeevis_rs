@@ -68,9 +68,6 @@ impl<T: Add<Output = T> + Sub<Output = T> + std::ops::Mul<f32, Output = T> + Cop
     }
 
     fn __dct(vector: &mut [T], temp: &mut [T], twiddles: &[f32]) {
-        // Algorithm by Byeong Gi Lee, 1984. For details, see:
-        // See: http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.118.3056&rep=rep1&type=pdf#page=34
-        // Link may be dead. Visit the source article of this file for another copy.
         let len = vector.len();
 
         let halflen: usize = len / 2;
