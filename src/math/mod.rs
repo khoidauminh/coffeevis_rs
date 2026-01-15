@@ -8,6 +8,9 @@ pub mod rng;
 
 use std::ops;
 
+pub use dct::Dct;
+pub use fft::Fft;
+
 #[derive(PartialEq)]
 pub enum Normalize {
     Yes,
@@ -19,18 +22,6 @@ pub struct Cplx(pub f32, pub f32);
 
 pub const fn ideal_fft_bound(up_to: usize) -> usize {
     (up_to * 3 / 2).next_power_of_two() * 2
-}
-
-pub fn fft_stereo(a: &mut [Cplx], up_to: usize, norm: Normalize) {
-    fft::compute_fft_stereo(a, up_to, norm);
-}
-
-pub fn fft(a: &mut [Cplx]) {
-    let l = a.len();
-    let power = fast::ilog2(l);
-
-    fft::butterfly(a, power);
-    fft::compute_fft(a);
 }
 
 pub fn increment<T>(a: T, limit: T) -> T

@@ -3,6 +3,8 @@ use std::f32::consts::LN_2;
 use crate::audio::AudioBuffer;
 use crate::graphics::P2;
 use crate::graphics::PixelBuffer;
+use crate::math::Dct;
+use crate::math::Fft;
 use crate::math::{self, Cplx, interpolate::*};
 use crate::visualizers::Visualizer;
 
@@ -27,37 +29,44 @@ fn index_scale_derivative(x: f32) -> f32 {
     (math::fast::unit_exp2_0(x) + 1.0) * LN_2
 }
 
-fn prepare(stream: &mut crate::AudioBuffer, local: &mut LocalType) {
-    let mut fft = [Cplx::zero(); FFT_SIZE];
-
-    stream.read(&mut fft);
-
-    crate::math::dct::dct(&mut fft);
-
-    fft.iter_mut().take(RANGE).enumerate().for_each(|(i, smp)| {
-        let scalef = 10.0 / FFT_SIZE as f32 * 1.0f32.min(i as f32 * 0.25);
-        *smp *= scalef;
-    });
-
-    crate::audio::limiter(&mut fft[0..RANGE], 0.0, 0.90, |x| x.max());
-
-    local.iter_mut().zip(fft.iter()).for_each(|(smp, si)| {
-        smp.0 = decay(smp.0, si.0.abs(), SMOOTHING);
-        smp.1 = decay(smp.1, si.1.abs(), SMOOTHING);
-    });
-
-    stream.autoslide();
-}
-
 pub struct Spectrum {
     buffer: [Cplx; RANGE + 1],
+    dct: Dct<Cplx>,
 }
 
 impl Default for Spectrum {
     fn default() -> Self {
         Self {
             buffer: [Cplx::zero(); _],
+            dct: Dct::new(FFT_SIZE),
         }
+    }
+}
+
+impl Spectrum {
+    fn prepare(&mut self, stream: &mut crate::AudioBuffer) {
+        let mut fft = [Cplx::zero(); FFT_SIZE];
+
+        stream.read(&mut fft);
+
+        self.dct.exec(&mut fft);
+
+        fft.iter_mut().take(RANGE).enumerate().for_each(|(i, smp)| {
+            let scalef = 10.0 / FFT_SIZE as f32 * 1.0f32.min(i as f32 * 0.25);
+            *smp *= scalef;
+        });
+
+        crate::audio::limiter(&mut fft[0..RANGE], 0.0, 0.90, |x| x.max());
+
+        self.buffer
+            .iter_mut()
+            .zip(fft.iter())
+            .for_each(|(smp, si)| {
+                smp.0 = decay(smp.0, si.0.abs(), SMOOTHING);
+                smp.1 = decay(smp.1, si.1.abs(), SMOOTHING);
+            });
+
+        stream.autoslide();
     }
 }
 
@@ -72,7 +81,7 @@ impl Visualizer for Spectrum {
         key: &crate::data::KeyInput,
         stream: &mut AudioBuffer,
     ) {
-        prepare(stream, &mut self.buffer);
+        self.prepare(stream);
 
         let P2(w, h) = pix.size();
         let winwh = w >> 1;

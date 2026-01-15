@@ -1,21 +1,13 @@
-use super::Cplx;
-use std::cell::LazyCell;
+use crate::math::fast::{bit_reverse, ilog2};
 
-pub fn butterfly<T>(a: &mut [T], power: u32) {
-    // first and last element stays in place
-    for i in 1..a.len() - 1 {
-        let ni = super::fast::bit_reverse(i, power);
-        if i < ni {
-            a.swap(ni, i)
-        }
-    }
-}
+use super::Cplx;
 
 const MAX_POWER: usize = 13;
+const MAX_SIZE: usize = 1 << MAX_POWER;
 
 thread_local! {
-    static TWIDDLE_MAP: LazyCell<[Cplx; 1 << MAX_POWER]> = LazyCell::new(||{
-        let mut out = [Cplx::default(); 1 << MAX_POWER];
+    static TWIDDLE_MAP:[Cplx; MAX_SIZE] = {
+        let mut out = [Cplx::default(); MAX_SIZE];
 
         let mut k = 1;
 
@@ -30,78 +22,127 @@ thread_local! {
         }
 
         out
-    });
+    }
 }
 
-pub fn compute_fft_iterative(a: &mut [Cplx]) {
-    let mut chunk4s = a.chunks_exact_mut(4);
-    while let Some([a0, a1, a2, a3]) = chunk4s.next() {
-        let a0pa1 = *a0 + *a1;
-        let a0ma1 = *a0 - *a1;
-
-        let a2pa3 = *a2 + *a3;
-        let a2ma3 = *a2 - *a3;
-        let a2ma3j = a2ma3.times_minus_i();
-
-        *a0 = a0pa1 + a2pa3;
-        *a1 = a0ma1 + a2ma3j;
-        *a2 = a0pa1 - a2pa3;
-        *a3 = a0ma1 - a2ma3j;
-    }
-
-    let length = a.len();
-
-    let mut halfsize = 4usize;
-
-    TWIDDLE_MAP.with(|twiddlemap| {
-        while halfsize < length {
-            let root = &twiddlemap[halfsize..];
-
-            let size = halfsize * 2;
-
-            a.chunks_exact_mut(size).for_each(|chunk| {
-                let (l, r) = chunk.split_at_mut(halfsize);
-
-                for i in 0..halfsize {
-                    r[i] *= root[i];
-                }
-
-                for i in 0..halfsize {
-                    let z = r[i];
-                    r[i] = l[i] - z;
-                    l[i] += z;
-                }
-            });
-
-            halfsize *= 2;
-        }
-    });
+pub struct Fft {
+    size: usize,
+    butterfly_swap_list: Vec<(usize, usize)>,
+    stereo: Option<usize>,
+    normalize: bool,
 }
 
-// Avoids having to evaluate a 2nd FFT.
-//
-// This leverages the the linear and symmetric
-// property of the FFT.
-pub fn compute_fft_stereo(a: &mut [Cplx], up_to: usize, normalize: super::Normalize) {
-    super::fft(a);
+impl Fft {
+    pub fn new(n: usize) -> Self {
+        assert_eq!(n.count_ones(), 1, "Length must be a power of 2");
+        assert!(n <= MAX_SIZE, "Length is greater than {}", MAX_SIZE);
 
-    let l = a.len();
-    let bound = up_to.min(l / 2);
+        let power = ilog2(n);
 
-    for i in 1..bound {
-        let z1 = a[i];
-        let z2 = a[l - i].conj();
-        a[i] = Cplx((z1 + z2).l1_norm(), (z1 - z2).l1_norm())
-    }
+        Self {
+            size: n,
+            butterfly_swap_list: (1..n - 1)
+                .map(|i| (i, bit_reverse(i, power)))
+                .filter(|(i, ni)| i < ni)
+                .collect(),
 
-    if normalize == super::Normalize::Yes {
-        let norm = 1.0 / l as f32;
-        for smp in a.iter_mut().take(bound) {
-            *smp *= norm;
+            stereo: None,
+            normalize: false,
         }
     }
-}
 
-pub fn compute_fft(a: &mut [Cplx]) {
-    compute_fft_iterative(a);
+    pub fn with_stereo(self, up_to: usize) -> Self {
+        Self {
+            stereo: Some(up_to),
+            ..self
+        }
+    }
+
+    pub fn normalize(self) -> Self {
+        Self {
+            normalize: true,
+            ..self
+        }
+    }
+
+    pub fn exec(&self, vector: &mut [Cplx]) {
+        assert_eq!(self.size, vector.len(), "Length mismatch");
+
+        for (i, ni) in &self.butterfly_swap_list {
+            vector.swap(*i, *ni);
+        }
+
+        Self::compute_fft_iterative(vector);
+
+        if let Some(up_to) = self.stereo {
+            Self::decouple_stereo(vector, up_to, self.normalize);
+        }
+    }
+
+    fn compute_fft_iterative(a: &mut [Cplx]) {
+        let mut chunk4s = a.chunks_exact_mut(4);
+        while let Some([a0, a1, a2, a3]) = chunk4s.next() {
+            let a0pa1 = *a0 + *a1;
+            let a0ma1 = *a0 - *a1;
+
+            let a2pa3 = *a2 + *a3;
+            let a2ma3 = *a2 - *a3;
+            let a2ma3j = a2ma3.times_minus_i();
+
+            *a0 = a0pa1 + a2pa3;
+            *a1 = a0ma1 + a2ma3j;
+            *a2 = a0pa1 - a2pa3;
+            *a3 = a0ma1 - a2ma3j;
+        }
+
+        let length = a.len();
+
+        let mut halfsize = 4usize;
+
+        TWIDDLE_MAP.with(|twiddlemap| {
+            while halfsize < length {
+                let root = &twiddlemap[halfsize..];
+
+                let size = halfsize * 2;
+
+                a.chunks_exact_mut(size).for_each(|chunk| {
+                    let (l, r) = chunk.split_at_mut(halfsize);
+
+                    for i in 0..halfsize {
+                        r[i] *= root[i];
+                    }
+
+                    for i in 0..halfsize {
+                        let z = r[i];
+                        r[i] = l[i] - z;
+                        l[i] += z;
+                    }
+                });
+
+                halfsize *= 2;
+            }
+        });
+    }
+
+    // Avoids having to evaluate a 2nd FFT.
+    //
+    // This leverages the the linear and symmetric
+    // property of the FFT.
+    fn decouple_stereo(a: &mut [Cplx], up_to: usize, normalize: bool) {
+        let l = a.len();
+        let bound = up_to.min(l / 2);
+
+        for i in 1..bound {
+            let z1 = a[i];
+            let z2 = a[l - i].conj();
+            a[i] = Cplx((z1 + z2).l1_norm(), (z1 - z2).l1_norm())
+        }
+
+        if normalize {
+            let norm = 1.0 / l as f32;
+            for smp in a.iter_mut().take(bound) {
+                *smp *= norm;
+            }
+        }
+    }
 }

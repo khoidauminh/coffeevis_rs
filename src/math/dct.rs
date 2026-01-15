@@ -21,54 +21,87 @@
  *   Software.
  */
 
-use std::ops::{Add, Div, Sub};
+use std::ops::{Add, Sub};
 
-pub fn dct<
-    T: Add<Output = T> + Sub<Output = T> + std::ops::Div<f32, Output = T> + Copy + Default,
->(
-    vector: &mut [T],
-) {
-    let n: usize = vector.len();
-    assert_eq!(n.count_ones(), 1, "Length must be power of 2");
+const MAX_DEPTH: usize = 13;
+const MAX_SIZE: usize = 1 << 13;
 
-    __dct(vector, &mut vec![T::default(); n]);
+thread_local! {
+    static TWIDDLE: [f32; MAX_SIZE] = {
+        let mut o = [0.0f32; MAX_SIZE];
+
+        let mut k = 2;
+        while k < MAX_SIZE {
+            let factor = std::f32::consts::PI / (k as f32);
+
+            let kh = k/2;
+
+            for i in 0..kh {
+                o[kh + i] = ((i as f32 + 0.5) * factor).cos() * 2.0;
+            }
+
+            k *= 2;
+        }
+
+        o
+    };
 }
 
-fn __dct<T: Add<Output = T> + Sub<Output = T> + Div<f32, Output = T> + Copy>(
-    vector: &mut [T],
-    temp: &mut [T],
-) {
-    // Algorithm by Byeong Gi Lee, 1984. For details, see:
-    // See: http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.118.3056&rep=rep1&type=pdf#page=34
-    // Link may be dead. Visit the source article of this file for another copy.
-    let len = vector.len();
-    let lenf = len as f32;
+pub struct Dct<T> {
+    temp: Vec<T>,
+}
 
-    let halflen: usize = len / 2;
+impl<T: Add<Output = T> + Sub<Output = T> + std::ops::Div<f32, Output = T> + Copy + Default>
+    Dct<T>
+{
+    pub fn new(n: usize) -> Self {
+        assert_eq!(n.count_ones(), 1, "Length must be power of 2");
+        assert!(n <= MAX_SIZE, "Length is greater than {MAX_SIZE}");
 
-    let factor = std::f32::consts::PI / (lenf as f32);
-
-    for i in 0..halflen {
-        let x = vector[i];
-        let y = vector[len - 1 - i];
-
-        temp[i] = x + y;
-
-        let twiddle = ((i as f32 + 0.5) * factor).cos() * 2.0;
-
-        temp[i + halflen] = (x - y) / twiddle;
+        Self {
+            temp: vec![T::default(); n],
+        }
     }
 
-    if len > 2 {
-        __dct(&mut temp[..halflen], vector);
-        __dct(&mut temp[halflen..len], vector);
+    pub fn exec(&mut self, vector: &mut [T]) {
+        assert_eq!(vector.len(), self.temp.len(), "Length mismatch");
+        Self::__dct(vector, &mut self.temp);
     }
 
-    for i in 0..halflen - 1 {
-        vector[i * 2 + 0] = temp[i];
-        vector[i * 2 + 1] = temp[i + halflen] + temp[i + halflen + 1];
-    }
+    fn __dct(vector: &mut [T], temp: &mut [T]) {
+        // Algorithm by Byeong Gi Lee, 1984. For details, see:
+        // See: http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.118.3056&rep=rep1&type=pdf#page=34
+        // Link may be dead. Visit the source article of this file for another copy.
+        let len = vector.len();
 
-    vector[len - 2] = temp[halflen - 1];
-    vector[len - 1] = temp[len - 1];
+        let halflen: usize = len / 2;
+
+        TWIDDLE.with(|twiddle| {
+            let twiddle = &twiddle[halflen..];
+
+            for i in 0..halflen {
+                let x = vector[i];
+                let y = vector[len - 1 - i];
+
+                temp[i] = x + y;
+
+                let twiddle = twiddle[i];
+
+                temp[i + halflen] = (x - y) / twiddle;
+            }
+        });
+
+        if len > 2 {
+            Self::__dct(&mut temp[..halflen], vector);
+            Self::__dct(&mut temp[halflen..len], vector);
+        }
+
+        for i in 0..halflen - 1 {
+            vector[i * 2 + 0] = temp[i];
+            vector[i * 2 + 1] = temp[i + halflen] + temp[i + halflen + 1];
+        }
+
+        vector[len - 2] = temp[halflen - 1];
+        vector[len - 1] = temp[len - 1];
+    }
 }

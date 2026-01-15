@@ -1,5 +1,6 @@
 use crate::data::FFT_SIZE;
 use crate::graphics::{P2, Pixel};
+use crate::math::Fft;
 use crate::math::{self, Cplx, interpolate::linearf};
 use crate::visualizers::Visualizer;
 
@@ -16,14 +17,16 @@ const MAX_BARS1: usize = MAX_BARS + 1;
 pub struct Bars {
     pub data: [f32; MAX_BARS + 1],
     pub max: f32,
+    pub fft: crate::math::Fft,
 }
 
 pub struct BarsCircle {
     pub data: [f32; MAX_BARS + 1],
     pub max: f32,
+    pub fft: crate::math::Fft,
 }
 
-fn prepare(stream: &mut crate::AudioBuffer, bar_num: usize, data: &mut [f32]) {
+fn prepare(stream: &mut crate::AudioBuffer, bar_num: usize, data: &mut [f32], fft: &Fft) {
     let bar_num = bar_num + 1;
 
     let bnf = bar_num as f32;
@@ -33,9 +36,7 @@ fn prepare(stream: &mut crate::AudioBuffer, bar_num: usize, data: &mut [f32]) {
         *d = stream.get((FFT_SIZE - n) * 3);
     }
 
-    let bound = data_c.len().min(math::ideal_fft_bound(BARS));
-
-    math::fft(&mut data_c[0..bound]);
+    fft.exec(&mut data_c);
 
     let norm: f32 = 1.0 / FFT_SIZE as f32;
 
@@ -46,7 +47,7 @@ fn prepare(stream: &mut crate::AudioBuffer, bar_num: usize, data: &mut [f32]) {
         .zip(data_c.iter())
         .enumerate()
         .for_each(|(i, (smp, cplx))| {
-            let scl = 3.0 * ((i + 2) as f32).log2().powi(2);
+            let scl = 3.0 * ((i + 2) as f32).log2();
             let smp_f32: f32 = cplx.mag();
 
             *smp = smp_f32 * scl * norm;
@@ -86,7 +87,7 @@ impl Visualizer for Bars {
         let bnf = bar_num as f32;
         let bnf_recip = 1.0 / bnf;
 
-        prepare(stream, bar_num, &mut self.data);
+        prepare(stream, bar_num, &mut self.data, &self.fft);
 
         pix.clear();
         let size = pix.sizeu();
@@ -153,6 +154,7 @@ impl Default for Bars {
         Self {
             data: [0.0; _],
             max: 0.0,
+            fft: Fft::new(FFT_SIZE),
         }
     }
 }
@@ -162,6 +164,7 @@ impl Default for BarsCircle {
         Self {
             data: [0.0; _],
             max: 0.0,
+            fft: Fft::new(FFT_SIZE),
         }
     }
 }
@@ -187,7 +190,7 @@ impl Visualizer for BarsCircle {
         let wh = pix.width() as i32 / 2;
         let hh = pix.height() as i32 / 2;
 
-        prepare(stream, bar_num, &mut self.data);
+        prepare(stream, bar_num, &mut self.data, &self.fft);
 
         pix.clear();
 
