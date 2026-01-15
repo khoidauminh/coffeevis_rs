@@ -31,7 +31,7 @@ pub struct Dct<T> {
     temp: Vec<T>,
 }
 
-impl<T: Add<Output = T> + Sub<Output = T> + std::ops::Div<f32, Output = T> + Copy + Default>
+impl<T: Add<Output = T> + Sub<Output = T> + std::ops::Mul<f32, Output = T> + Copy + Default>
     Dct<T>
 {
     pub fn new(n: usize) -> Self {
@@ -49,7 +49,7 @@ impl<T: Add<Output = T> + Sub<Output = T> + std::ops::Div<f32, Output = T> + Cop
                     let kh = k / 2;
 
                     for i in 0..kh {
-                        o[kh + i] = ((i as f32 + 0.5) * factor).cos() * 2.0;
+                        o[kh + i] = 1.0 / (((i as f32 + 0.5) * factor).cos() * 2.0);
                     }
 
                     k *= 2;
@@ -81,7 +81,7 @@ impl<T: Add<Output = T> + Sub<Output = T> + std::ops::Div<f32, Output = T> + Cop
             let x = vector[i];
             let y = vector[len - 1 - i];
             temp[i] = x + y;
-            temp[i + halflen] = (x - y) / factors[i];
+            temp[i + halflen] = (x - y) * factors[i];
         }
 
         if len > 2 {
