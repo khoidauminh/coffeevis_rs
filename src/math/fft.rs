@@ -11,7 +11,6 @@ pub struct Fft {
     twiddles: Vec<Cplx>,
     butterfly_swap_list: Vec<(usize, usize)>,
     stereo: Option<usize>,
-    size: usize,
     normalize: bool,
 }
 
@@ -23,7 +22,6 @@ impl Fft {
         let power = ilog2(n);
 
         Self {
-            size: n,
             butterfly_swap_list: (1..n - 1)
                 .map(|i| (i, bit_reverse(i, power)))
                 .filter(|(i, ni)| i < ni)
@@ -67,7 +65,7 @@ impl Fft {
     }
 
     pub fn exec(&self, vector: &mut [Cplx]) {
-        assert_eq!(self.size, vector.len(), "Length mismatch");
+        assert_eq!(self.twiddles.len(), vector.len(), "Length mismatch");
 
         for (i, ni) in &self.butterfly_swap_list {
             vector.swap(*i, *ni);
