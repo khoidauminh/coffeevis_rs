@@ -83,7 +83,7 @@ impl<T: Add<Output = T> + Sub<Output = T> + std::ops::Mul<f32, Output = T> + Cop
 
         if len > 2 {
             Self::__dct(&mut temp[..halflen], vector, &twiddles);
-            Self::__dct(&mut temp[halflen..len], vector, &twiddles);
+            Self::__dct(&mut temp[halflen..], vector, &twiddles);
         }
 
         for i in 0..halflen - 1 {
