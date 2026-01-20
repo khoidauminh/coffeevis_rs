@@ -9,6 +9,8 @@ pub mod rng;
 use std::ops;
 
 pub use dct::Dct;
+
+#[allow(unused_imports)]
 pub use fft::Fft;
 
 #[derive(PartialEq)]

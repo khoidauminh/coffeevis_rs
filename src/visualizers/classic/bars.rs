@@ -1,15 +1,15 @@
-use crate::data::FFT_SIZE;
+use crate::data::FFT_SIZE as DCT_SIZE;
 use crate::graphics::{P2, Pixel};
-use crate::math::Fft;
+use crate::math::Dct;
 use crate::math::{self, Cplx, interpolate::linearf};
 use crate::visualizers::Visualizer;
 
 const COLOR: [u32; 3] = [0x66ff66, 0xaaffff, 0xaaaaff];
 
-const FFT_SIZE_HALF: usize = FFT_SIZE / 2;
+const DCT_SIZE_HALF: usize = DCT_SIZE / 2;
 
-const FFT_SIZE_RECIP: f32 = 1.4 / FFT_SIZE as f32;
-const NORMALIZE_FACTOR: f32 = FFT_SIZE_RECIP;
+const DCT_SIZE_RECIP: f32 = 1.4 / DCT_SIZE as f32;
+const NORMALIZE_FACTOR: f32 = DCT_SIZE_RECIP;
 const BARS: usize = 36;
 const MAX_BARS: usize = 144;
 const MAX_BARS1: usize = MAX_BARS + 1;
@@ -17,28 +17,29 @@ const MAX_BARS1: usize = MAX_BARS + 1;
 pub struct Bars {
     pub data: [f32; MAX_BARS + 1],
     pub max: f32,
-    pub fft: crate::math::Fft,
+    pub dct: Dct<f32>,
 }
 
 pub struct BarsCircle {
     pub data: [f32; MAX_BARS + 1],
     pub max: f32,
-    pub fft: crate::math::Fft,
+    pub dct: Dct<f32>,
 }
 
-fn prepare(stream: &mut crate::AudioBuffer, bar_num: usize, data: &mut [f32], fft: &Fft) {
+fn prepare(stream: &mut crate::AudioBuffer, bar_num: usize, data: &mut [f32], dct: &mut Dct<f32>) {
     let bar_num = bar_num + 1;
 
     let bnf = bar_num as f32;
 
-    let mut data_c = [Cplx::zero(); FFT_SIZE];
+    let mut data_c = [0.0; DCT_SIZE];
     for (n, d) in data_c.iter_mut().enumerate() {
-        *d = stream.get((FFT_SIZE - n) * 3);
+        let smp = stream.get((DCT_SIZE - n) * 3 / 2);
+        *d = smp.0 + smp.1;
     }
 
-    fft.exec(&mut data_c);
+    dct.exec(&mut data_c);
 
-    let norm: f32 = 1.0 / FFT_SIZE as f32;
+    let norm: f32 = 1.0 / DCT_SIZE as f32;
 
     let mut data_f = [0f32; MAX_BARS1];
     data_f
@@ -46,11 +47,10 @@ fn prepare(stream: &mut crate::AudioBuffer, bar_num: usize, data: &mut [f32], ff
         .take(bar_num)
         .zip(data_c.iter())
         .enumerate()
-        .for_each(|(i, (smp, cplx))| {
-            let scl = 2.0 * ((i + 2) as f32).log2();
-            let smp_f32: f32 = cplx.mag();
+        .for_each(|(i, (smp, _in))| {
+            let scl = ((i + 1) as f32).log2();
 
-            *smp = smp_f32 * scl * norm;
+            *smp = _in.abs() * scl * norm;
         });
 
     crate::audio::limiter(&mut data_f[..bar_num], 0.0, 0.95, |x| x);
@@ -87,7 +87,7 @@ impl Visualizer for Bars {
         let bnf = bar_num as f32;
         let bnf_recip = 1.0 / bnf;
 
-        prepare(stream, bar_num, &mut self.data, &self.fft);
+        prepare(stream, bar_num, &mut self.data, &mut self.dct);
 
         pix.clear();
         let size = pix.sizeu();
@@ -154,7 +154,7 @@ impl Default for Bars {
         Self {
             data: [0.0; _],
             max: 0.0,
-            fft: Fft::new(FFT_SIZE),
+            dct: Dct::new(DCT_SIZE),
         }
     }
 }
@@ -164,7 +164,7 @@ impl Default for BarsCircle {
         Self {
             data: [0.0; _],
             max: 0.0,
-            fft: Fft::new(FFT_SIZE),
+            dct: Dct::new(DCT_SIZE),
         }
     }
 }
@@ -190,11 +190,11 @@ impl Visualizer for BarsCircle {
         let wh = pix.width() as i32 / 2;
         let hh = pix.height() as i32 / 2;
 
-        prepare(stream, bar_num, &mut self.data, &self.fft);
+        prepare(stream, bar_num, &mut self.data, &mut self.dct);
 
         pix.clear();
 
-        const FFT_WINDOW: f32 = (FFT_SIZE >> 6) as f32 * 1.5;
+        const FFT_WINDOW: f32 = (DCT_SIZE >> 6) as f32 * 1.5;
 
         for i in 0..bar_num {
             let i_ = i as f32 * bnf_recip;
