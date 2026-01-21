@@ -33,9 +33,32 @@ As of Cpal 0.17, only the ALSA host is supported,
 it is advised to install pipewire-alsa or pulseaudio-alsa in your system.
 
 Upon launch coffeevis will grab your default audio source, use an audio
-config tool to direct your desired source to coffeevis (e.g. `pavucontrol`),
-usually to your default monitor sink, or by turning your output sink into 
-a duplex and routing coffeevis to that.
+config tool to direct your desired source to coffeevis (e.g. `pavucontrol`).
+
+Below is a simple config file for Pipewire that captures the current 
+default system audio:
+```
+# ~/.config/pipewire/pipewire.conf.d/loopback.conf
+context.modules = [
+    {   name = libpipewire-module-loopback
+        args = {
+            audio.position = [ FL FR ]
+            capture.props = {
+                stream.capture.sink = true
+                media.class = "Stream/Input/Audio"
+                node.name = "desktop_capture"
+                node.description = "Desktop Audio Capture"
+            }
+            playback.props = {
+                media.class = "Audio/Source"
+                node.name = "desktop_source"
+                node.description = "Desktop Audio Source"
+            }
+        }
+    }
+]
+
+```
 
 ### FPS
 
