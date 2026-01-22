@@ -35,8 +35,8 @@ it is advised to install pipewire-alsa or pulseaudio-alsa in your system.
 Upon launch coffeevis will grab your default audio source, use an audio
 config tool to direct your desired source to coffeevis (e.g. `pavucontrol`).
 
-Below is a simple config file for Pipewire that captures the current 
-default system audio:
+Below is a simple config file for Pipewire. This creates a source that captures 
+the current default system audio:
 ```
 # ~/.config/pipewire/pipewire.conf.d/loopback.conf
 context.modules = [
