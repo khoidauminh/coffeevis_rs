@@ -230,15 +230,13 @@ impl ApplicationHandler for WindowState {
                 let _ = cursor.try_send(());
             }
 
-            WindowEvent::PointerButton { button, .. } => match button.mouse_button() {
-                Some(MouseButton::Left) => {
-                    if let Some(err) = window.drag_window().err() {
-                        error!("Error dragging window: {}", err);
-                    }
+            WindowEvent::PointerButton { button, .. } => {
+                if let Some(MouseButton::Left) = button.mouse_button()
+                    && let Some(err) = window.drag_window().err()
+                {
+                    error!("Error dragging window: {}", err);
                 }
-
-                _ => {}
-            },
+            }
 
             WindowEvent::Focused(_) => {
                 window.request_redraw();

@@ -9,7 +9,7 @@ use crate::{
         interpolate::linearf,
         rng::{random_float, random_int},
     },
-    visualizers::Visualizer,
+    visualizers::{Visualizer, VisualizerArgs},
 };
 
 #[derive(Copy, Clone)]
@@ -163,12 +163,11 @@ impl Visualizer for Rain {
         "Rain"
     }
 
-    fn perform(
-        &mut self,
-        pix: &mut PixelBuffer,
-        key: &crate::data::KeyInput,
-        stream: &mut crate::audio::AudioBuffer,
-    ) {
+    fn perform(&mut self, args: VisualizerArgs) {
+        let VisualizerArgs {
+            pix, stream, keys, ..
+        } = args;
+
         let mut new_volume: f32 = 0.0;
         {
             let mut y: f32 = stream.get(0).into();

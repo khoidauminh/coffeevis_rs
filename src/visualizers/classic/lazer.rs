@@ -1,6 +1,6 @@
 use crate::data::SAMPLE_SIZE;
 use crate::math::{Cplx, interpolate::linearf};
-use crate::visualizers::Visualizer;
+use crate::visualizers::{Visualizer, VisualizerArgs};
 
 pub struct Lazer {
     p0: Cplx,
@@ -21,12 +21,11 @@ impl Visualizer for Lazer {
         "Lazer"
     }
 
-    fn perform(
-        &mut self,
-        pix: &mut crate::graphics::PixelBuffer,
-        key: &crate::data::KeyInput,
-        stream: &mut crate::audio::AudioBuffer,
-    ) {
+    fn perform(&mut self, args: VisualizerArgs) {
+        let VisualizerArgs {
+            pix, stream, keys, ..
+        } = args;
+
         let w = pix.width() as f32;
         let h = pix.height() as f32;
 

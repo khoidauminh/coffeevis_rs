@@ -1,5 +1,5 @@
 use crate::math::Cplx;
-use crate::visualizers::Visualizer;
+use crate::visualizers::{Visualizer, VisualizerArgs};
 
 // The idea is simple.
 // Start a ball at the center.
@@ -44,12 +44,11 @@ impl Visualizer for Example {
         "Example"
     }
 
-    fn perform(
-        &mut self,
-        pix: &mut crate::graphics::PixelBuffer,
-        key: &crate::data::KeyInput,
-        stream: &mut crate::audio::AudioBuffer,
-    ) {
+    fn perform(&mut self, args: VisualizerArgs) {
+        let VisualizerArgs {
+            pix, stream, keys, ..
+        } = args;
+
         let bound = pix.size().to_cplx();
 
         // Finally initializes the position.

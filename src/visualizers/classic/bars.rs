@@ -2,7 +2,7 @@ use crate::data::FFT_SIZE as DCT_SIZE;
 use crate::graphics::{P2, Pixel};
 use crate::math::Dct;
 use crate::math::{self, Cplx, interpolate::linearf};
-use crate::visualizers::Visualizer;
+use crate::visualizers::{Visualizer, VisualizerArgs};
 
 const COLOR: [u32; 3] = [0x66ff66, 0xaaffff, 0xaaaaff];
 
@@ -75,13 +75,12 @@ impl Visualizer for Bars {
         "Bars"
     }
 
-    fn perform(
-        &mut self,
-        pix: &mut crate::graphics::PixelBuffer,
-        key: &crate::data::KeyInput,
-        stream: &mut crate::audio::AudioBuffer,
-    ) {
+    fn perform(&mut self, args: VisualizerArgs) {
         use crate::math::{fast::cubed_sqrt, interpolate::smooth_step};
+
+        let VisualizerArgs {
+            pix, stream, keys, ..
+        } = args;
 
         let bar_num = (pix.width() / 2).min(MAX_BARS);
         let bnf = bar_num as f32;
@@ -174,12 +173,11 @@ impl Visualizer for BarsCircle {
         "Bars Cicle"
     }
 
-    fn perform(
-        &mut self,
-        pix: &mut crate::graphics::PixelBuffer,
-        key: &crate::data::KeyInput,
-        stream: &mut crate::audio::AudioBuffer,
-    ) {
+    fn perform(&mut self, args: VisualizerArgs) {
+        let VisualizerArgs {
+            pix, stream, keys, ..
+        } = args;
+
         let size = pix.height().min(pix.width()) as i32;
         let sizef = size as f32;
 

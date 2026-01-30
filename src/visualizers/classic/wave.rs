@@ -1,4 +1,7 @@
-use crate::{graphics::P2, visualizers::Visualizer};
+use crate::{
+    graphics::P2,
+    visualizers::{Visualizer, VisualizerArgs},
+};
 
 const PERBYTE: usize = 16; // like percent but ranges from 0..256
 
@@ -9,12 +12,11 @@ impl Visualizer for Wave {
         "Wave"
     }
 
-    fn perform(
-        &mut self,
-        pix: &mut crate::graphics::PixelBuffer,
-        key: &crate::data::KeyInput,
-        stream: &mut crate::audio::AudioBuffer,
-    ) {
+    fn perform(&mut self, args: VisualizerArgs) {
+        let VisualizerArgs {
+            pix, stream, keys, ..
+        } = args;
+
         let l = (stream.len() * PERBYTE) >> 8;
 
         let (width, height) = pix.sizeu();

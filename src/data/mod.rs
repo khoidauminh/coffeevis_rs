@@ -4,13 +4,16 @@ pub mod desktop;
 #[macro_use]
 pub mod log;
 
+pub mod delta;
+
 pub mod config;
 
 use std::time::Duration;
 
 use crate::audio::AudioBuffer;
+use crate::data::delta::Delta;
 use crate::graphics::RenderEffect;
-use crate::visualizers::{VisList, VisualizerConfig};
+use crate::visualizers::{VisList, VisualizerArgs, VisualizerConfig};
 use crate::{graphics::PixelBuffer, modes::Mode};
 
 use crate::modes;
@@ -82,6 +85,8 @@ pub(crate) struct Program {
     vislist: crate::visualizers::VisList,
 
     auto_switch: bool,
+
+    delta: Delta,
 }
 
 impl Program {
@@ -113,6 +118,8 @@ impl Program {
             vislist: VisList::new(),
 
             auto_switch: true,
+
+            delta: Delta::new(),
 
             window_props: modes::windowed_mode::WindowProps {
                 width: DEFAULT_SIZE_WIN,
@@ -208,7 +215,12 @@ impl Program {
     }
 
     pub fn render(&mut self, buf: &mut AudioBuffer) {
-        self.vislist.get().perform(&mut self.pix, &self.key, buf);
+        self.vislist.get().perform(VisualizerArgs {
+            pix: &mut self.pix,
+            keys: &self.key,
+            stream: buf,
+            delta: self.delta.tick(),
+        });
     }
 
     pub fn toggle_auto_switch(&mut self) {

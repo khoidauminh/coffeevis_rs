@@ -2,7 +2,7 @@ use std::f32::consts::FRAC_PI_2;
 
 use crate::graphics::Pixel;
 use crate::math::{self, Cplx, fast};
-use crate::visualizers::Visualizer;
+use crate::visualizers::{Visualizer, VisualizerArgs};
 
 // soft shaking
 const INCR: f32 = 0.0001;
@@ -34,12 +34,11 @@ impl Visualizer for Shaky {
         "Shaky"
     }
 
-    fn perform(
-        &mut self,
-        pix: &mut crate::graphics::PixelBuffer,
-        key: &crate::data::KeyInput,
-        stream: &mut crate::audio::AudioBuffer,
-    ) {
+    fn perform(&mut self, args: VisualizerArgs) {
+        let VisualizerArgs {
+            pix, stream, keys, ..
+        } = args;
+
         let mut data_f = [Cplx::zero(); 512];
         stream.read(&mut data_f);
 

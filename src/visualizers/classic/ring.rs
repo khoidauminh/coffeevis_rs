@@ -1,6 +1,6 @@
 use crate::graphics::P2;
 use crate::math::Cplx;
-use crate::visualizers::Visualizer;
+use crate::visualizers::{Visualizer, VisualizerArgs};
 
 pub struct Ring;
 
@@ -9,12 +9,11 @@ impl Visualizer for Ring {
         "Ring"
     }
 
-    fn perform(
-        &mut self,
-        pix: &mut crate::graphics::PixelBuffer,
-        key: &crate::data::KeyInput,
-        stream: &mut crate::audio::AudioBuffer,
-    ) {
+    fn perform(&mut self, args: VisualizerArgs) {
+        let VisualizerArgs {
+            pix, stream, keys, ..
+        } = args;
+
         const RANGE: usize = 128;
 
         let size = pix.height().min(pix.width()) as i32;

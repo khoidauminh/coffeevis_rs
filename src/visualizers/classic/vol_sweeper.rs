@@ -1,7 +1,7 @@
 use crate::data::SAMPLE_SIZE;
 use crate::graphics::P2;
 use crate::math::fast::sin_norm;
-use crate::visualizers::Visualizer;
+use crate::visualizers::{Visualizer, VisualizerArgs};
 
 const C: u32 = 16720064;
 
@@ -16,12 +16,11 @@ impl Visualizer for VolSweeper {
         "Volum sweeper"
     }
 
-    fn perform(
-        &mut self,
-        pix: &mut crate::graphics::PixelBuffer,
-        key: &crate::data::KeyInput,
-        stream: &mut crate::audio::AudioBuffer,
-    ) {
+    fn perform(&mut self, args: VisualizerArgs) {
+        let VisualizerArgs {
+            pix, stream, keys, ..
+        } = args;
+
         pix.fade(3);
 
         let w = {

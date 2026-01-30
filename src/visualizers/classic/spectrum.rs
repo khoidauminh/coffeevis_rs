@@ -1,11 +1,10 @@
 use std::f32::consts::LN_2;
 
-use crate::audio::AudioBuffer;
 use crate::graphics::P2;
-use crate::graphics::PixelBuffer;
 use crate::math::Dct;
 use crate::math::{self, Cplx, interpolate::*};
 use crate::visualizers::Visualizer;
+use crate::visualizers::VisualizerArgs;
 
 const DCT_SIZE: usize = 1 << 9;
 const RANGE: usize = 64;
@@ -74,12 +73,11 @@ impl Visualizer for Spectrum {
         "Spectrum"
     }
 
-    fn perform(
-        &mut self,
-        pix: &mut PixelBuffer,
-        key: &crate::data::KeyInput,
-        stream: &mut AudioBuffer,
-    ) {
+    fn perform(&mut self, args: VisualizerArgs) {
+        let VisualizerArgs {
+            pix, stream, keys, ..
+        } = args;
+
         self.prepare(stream);
 
         let P2(w, h) = pix.size();

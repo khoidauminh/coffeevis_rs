@@ -1,6 +1,6 @@
 use crate::graphics::{P2, Pixel};
 use crate::math::{Cplx, cos_sin, interpolate::linearf};
-use crate::visualizers::Visualizer;
+use crate::visualizers::{Visualizer, VisualizerArgs};
 use std::f32::consts::{PI, TAU};
 
 #[derive(Default)]
@@ -19,12 +19,11 @@ impl Visualizer for Slice {
         "Slice"
     }
 
-    fn perform(
-        &mut self,
-        pix: &mut crate::graphics::PixelBuffer,
-        key: &crate::data::KeyInput,
-        stream: &mut crate::audio::AudioBuffer,
-    ) {
+    fn perform(&mut self, args: VisualizerArgs) {
+        let VisualizerArgs {
+            pix, stream, keys, ..
+        } = args;
+
         let center = pix.size().center();
         let radius = pix.width().min(pix.height());
         let small_radius = radius as i32 / 16;

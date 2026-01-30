@@ -6,7 +6,9 @@ mod helpers;
 mod misc;
 
 use crate::{
-    data::{DEFAULT_VIS_SWITCH_DURATION, log},
+    audio::AudioBuffer,
+    data::{DEFAULT_VIS_SWITCH_DURATION, KeyInput, log},
+    graphics::PixelBuffer,
     visualizers::{
         classic::{
             bars::{Bars, BarsCircle},
@@ -22,6 +24,13 @@ use crate::{
         misc::{example::Example, snake::Snake},
     },
 };
+
+pub struct VisualizerArgs<'a> {
+    pub pix: &'a mut PixelBuffer,
+    pub stream: &'a mut AudioBuffer,
+    pub keys: &'a KeyInput,
+    pub delta: f32,
+}
 
 #[derive(Clone, Copy)]
 pub struct VisualizerConfig {
@@ -43,12 +52,7 @@ pub trait Visualizer {
 
     fn focus(&mut self) {}
     fn defocus(&mut self) {}
-    fn perform(
-        &mut self,
-        pix: &mut crate::graphics::PixelBuffer,
-        key: &crate::data::KeyInput,
-        stream: &mut crate::audio::AudioBuffer,
-    );
+    fn perform(&mut self, args: VisualizerArgs);
 }
 
 pub mod classic;

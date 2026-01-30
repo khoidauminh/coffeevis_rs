@@ -106,12 +106,11 @@ impl AudioBuffer {
         self.normalize = b;
     }
 
+    /// The scaling factor formula is as follows:
+    /// {   1 / x                   x >= L
+    /// {   A / x + (1 - A) / L     x < L
     fn get_scaling_factor(max: f32) -> f32 {
         let max = max.max(AMP_PERSIST_LIMIT);
-
-        /// The scaling factor formula is as follows:
-        /// {   1 / x                   x >= L
-        /// {   A / x + (1 - A) / L     x < L
 
         const L: f32 = 0.6;
         const A: f32 = 0.33;
@@ -120,7 +119,7 @@ impl AudioBuffer {
             return max.recip();
         }
 
-        return A / max + (1.0 - A) / L;
+        A / max + (1.0 - A) / L
     }
 
     fn post_process(&mut self) {

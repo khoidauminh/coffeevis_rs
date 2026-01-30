@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use crate::graphics::P2;
 use crate::math::rng::{self, FastU32};
-use crate::visualizers::VisualizerConfig;
+use crate::visualizers::{VisualizerArgs, VisualizerConfig};
 
 #[derive(Clone, Copy)]
 enum Direction {
@@ -151,12 +151,11 @@ impl crate::visualizers::Visualizer for Snake {
         }
     }
 
-    fn perform(
-        &mut self,
-        pix: &mut crate::graphics::PixelBuffer,
-        keys: &crate::data::KeyInput,
-        stream: &mut crate::audio::AudioBuffer,
-    ) {
+    fn perform(&mut self, args: VisualizerArgs) {
+        let VisualizerArgs {
+            pix, stream, keys, ..
+        } = args;
+
         let game = self.game.get_or_insert(Game::new(pix.size()));
 
         game.set_screen_size(pix.size());

@@ -6,7 +6,7 @@ use crate::audio::MovingAverage;
 
 use crate::graphics::P2;
 use crate::math::interpolate::linearfc;
-use crate::visualizers::Visualizer;
+use crate::visualizers::{Visualizer, VisualizerArgs};
 
 use crate::math::Cplx;
 
@@ -31,12 +31,11 @@ impl Visualizer for Vectorscope {
         "Vectorscope"
     }
 
-    fn perform(
-        &mut self,
-        pix: &mut crate::graphics::PixelBuffer,
-        key: &crate::data::KeyInput,
-        stream: &mut crate::audio::AudioBuffer,
-    ) {
+    fn perform(&mut self, args: VisualizerArgs) {
+        let VisualizerArgs {
+            pix, stream, keys, ..
+        } = args;
+
         let size = pix.height().min(pix.width()) as i32;
         let sizei = size;
         let scale = size as f32 * 0.5;
@@ -122,12 +121,11 @@ impl Visualizer for Oscilloscope {
         "Oscilloscope"
     }
 
-    fn perform(
-        &mut self,
-        pix: &mut crate::graphics::PixelBuffer,
-        key: &crate::data::KeyInput,
-        stream: &mut crate::audio::AudioBuffer,
-    ) {
+    fn perform(&mut self, args: VisualizerArgs) {
+        let VisualizerArgs {
+            pix, stream, keys, ..
+        } = args;
+
         let mut buffer = [Cplx::zero(); BUFFER_SIZE + PADDING];
         stream.read(&mut buffer);
 
