@@ -4,25 +4,16 @@ use crate::math::Dct;
 use crate::math::{self, Cplx, interpolate::linearf};
 use crate::visualizers::{Visualizer, VisualizerArgs};
 
-const COLOR: [u32; 3] = [0x66ff66, 0xaaffff, 0xaaaaff];
-
-const DCT_SIZE_HALF: usize = DCT_SIZE / 2;
-
-const DCT_SIZE_RECIP: f32 = 1.4 / DCT_SIZE as f32;
-const NORMALIZE_FACTOR: f32 = DCT_SIZE_RECIP;
-const BARS: usize = 36;
 const MAX_BARS: usize = 144;
 const MAX_BARS1: usize = MAX_BARS + 1;
 
 pub struct Bars {
     pub data: [f32; MAX_BARS + 1],
-    pub max: f32,
     pub dct: Dct<f32>,
 }
 
 pub struct BarsCircle {
     pub data: [f32; MAX_BARS + 1],
-    pub max: f32,
     pub dct: Dct<f32>,
 }
 
@@ -150,7 +141,6 @@ impl Default for Bars {
     fn default() -> Self {
         Self {
             data: [0.0; _],
-            max: 0.0,
             dct: Dct::new(DCT_SIZE),
         }
     }
@@ -160,7 +150,6 @@ impl Default for BarsCircle {
     fn default() -> Self {
         Self {
             data: [0.0; _],
-            max: 0.0,
             dct: Dct::new(DCT_SIZE),
         }
     }

@@ -26,7 +26,6 @@ struct Game {
 }
 
 impl Game {
-    const LOSE_TIME_OUT: u16 = 1024;
     const UNIT: i32 = 2;
     const FRAME_LENGTH: u8 = 5;
 

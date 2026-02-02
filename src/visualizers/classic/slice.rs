@@ -12,8 +12,6 @@ fn blend(c1: u32, c2: u32) -> u32 {
     c1.add(c2).wrapping_shl(4)
 }
 
-const GREEN: u32 = 0xFF_00_FF_00;
-
 impl Visualizer for Slice {
     fn name(&self) -> &'static str {
         "Slice"

@@ -15,7 +15,6 @@ pub const DEFAULT_WAV_WIN: usize = 64 * INCREMENT;
 pub const PHASE_OFFSET: usize = crate::data::SAMPLE_RATE / 50 / 4;
 pub const CROSS_COL: u32 = 0xFF_44_44_44;
 const SMOOTH_SIZE: usize = 7;
-const SMOOTH_BUFFER_SIZE: usize = 512;
 
 fn to_color(s: i32, size: i32) -> u8 {
     (s.abs() * 256 / size).min(255) as u8

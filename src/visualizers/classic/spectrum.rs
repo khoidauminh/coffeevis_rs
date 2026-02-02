@@ -1,31 +1,13 @@
-use std::f32::consts::LN_2;
-
 use crate::graphics::P2;
 use crate::math::Dct;
-use crate::math::{self, Cplx, interpolate::*};
+use crate::math::{Cplx, interpolate::*};
 use crate::visualizers::Visualizer;
 use crate::visualizers::VisualizerArgs;
 
 const DCT_SIZE: usize = 1 << 9;
 const RANGE: usize = 64;
 const RANGEF: f32 = RANGE as f32;
-const DCT_SIZEF: f32 = DCT_SIZE as f32;
-const DCT_SIZEF_RECIP: f32 = 1.0 / DCT_SIZEF;
 const SMOOTHING: f32 = 0.905;
-
-type LocalType = [Cplx; RANGE + 1];
-
-fn l1_norm_slide(a: Cplx, t: f32) -> f32 {
-    a.0.abs() * t + a.1.abs() * (1.0 - t)
-}
-
-fn index_scale(x: f32) -> f32 {
-    math::fast::unit_exp2_0(x)
-}
-
-fn index_scale_derivative(x: f32) -> f32 {
-    (math::fast::unit_exp2_0(x) + 1.0) * LN_2
-}
 
 pub struct Spectrum {
     buffer: [Cplx; RANGE + 1],

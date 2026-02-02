@@ -1,8 +1,5 @@
-#![allow(dead_code)]
-
 use std::time::Instant;
 
-mod helpers;
 mod misc;
 
 use crate::{
@@ -13,6 +10,7 @@ use crate::{
         classic::{
             bars::{Bars, BarsCircle},
             lazer::Lazer,
+            ring::Ring,
             scopes::{Oscilloscope, Vectorscope},
             shaky::Shaky,
             slice::Slice,
@@ -25,6 +23,7 @@ use crate::{
     },
 };
 
+#[allow(dead_code)]
 pub struct VisualizerArgs<'a> {
     pub pix: &'a mut PixelBuffer,
     pub stream: &'a mut AudioBuffer,
@@ -75,6 +74,7 @@ impl VisList {
                 Box::new(Spectrum::default()),
                 Box::new(Oscilloscope {}),
                 Box::new(Vectorscope::default()),
+                Box::new(Ring {}),
                 Box::new(Bars::default()),
                 Box::new(BarsCircle::default()),
                 Box::new(Lazer::default()),

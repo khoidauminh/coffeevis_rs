@@ -85,5 +85,3 @@ impl Visualizer for Shaky {
         );
     }
 }
-
-const WRAPPER: f32 = 725.0;

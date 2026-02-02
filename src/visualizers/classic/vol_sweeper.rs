@@ -3,8 +3,6 @@ use crate::graphics::P2;
 use crate::math::fast::sin_norm;
 use crate::visualizers::{Visualizer, VisualizerArgs};
 
-const C: u32 = 16720064;
-
 #[derive(Default)]
 pub struct VolSweeper {
     sweepi: usize,
