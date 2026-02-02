@@ -17,9 +17,7 @@ impl Visualizer for VolSweeper {
     }
 
     fn perform(&mut self, args: VisualizerArgs) {
-        let VisualizerArgs {
-            pix, stream, keys, ..
-        } = args;
+        let VisualizerArgs { pix, stream, .. } = args;
 
         pix.fade(3);
 
@@ -38,8 +36,6 @@ impl Visualizer for VolSweeper {
             (sin_norm(color as f32 / 512.0) * 255.0) as u8,
             color,
         ]);
-
-        let width = pix.width();
 
         pix.color(color);
         pix.rect(P2(0, self.sweepi as i32), w, 1);

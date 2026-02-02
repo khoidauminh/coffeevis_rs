@@ -35,9 +35,7 @@ impl Visualizer for Shaky {
     }
 
     fn perform(&mut self, args: VisualizerArgs) {
-        let VisualizerArgs {
-            pix, stream, keys, ..
-        } = args;
+        let VisualizerArgs { pix, stream, .. } = args;
 
         let mut data_f = [Cplx::zero(); 512];
         stream.read(&mut data_f);

@@ -74,9 +74,7 @@ impl Visualizer for Spectrum {
     }
 
     fn perform(&mut self, args: VisualizerArgs) {
-        let VisualizerArgs {
-            pix, stream, keys, ..
-        } = args;
+        let VisualizerArgs { pix, stream, .. } = args;
 
         self.prepare(stream);
 

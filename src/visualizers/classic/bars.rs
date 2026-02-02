@@ -78,9 +78,7 @@ impl Visualizer for Bars {
     fn perform(&mut self, args: VisualizerArgs) {
         use crate::math::{fast::cubed_sqrt, interpolate::smooth_step};
 
-        let VisualizerArgs {
-            pix, stream, keys, ..
-        } = args;
+        let VisualizerArgs { pix, stream, .. } = args;
 
         let bar_num = (pix.width() / 2).min(MAX_BARS);
         let bnf = bar_num as f32;
@@ -174,9 +172,7 @@ impl Visualizer for BarsCircle {
     }
 
     fn perform(&mut self, args: VisualizerArgs) {
-        let VisualizerArgs {
-            pix, stream, keys, ..
-        } = args;
+        let VisualizerArgs { pix, stream, .. } = args;
 
         let size = pix.height().min(pix.width()) as i32;
         let sizef = size as f32;

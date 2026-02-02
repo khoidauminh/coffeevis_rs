@@ -22,9 +22,7 @@ impl Visualizer for Lazer {
     }
 
     fn perform(&mut self, args: VisualizerArgs) {
-        let VisualizerArgs {
-            pix, stream, keys, ..
-        } = args;
+        let VisualizerArgs { pix, stream, .. } = args;
 
         let w = pix.width() as f32;
         let h = pix.height() as f32;

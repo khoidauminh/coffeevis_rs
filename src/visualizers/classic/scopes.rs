@@ -32,9 +32,7 @@ impl Visualizer for Vectorscope {
     }
 
     fn perform(&mut self, args: VisualizerArgs) {
-        let VisualizerArgs {
-            pix, stream, keys, ..
-        } = args;
+        let VisualizerArgs { pix, stream, .. } = args;
 
         let size = pix.height().min(pix.width()) as i32;
         let sizei = size;
@@ -122,9 +120,7 @@ impl Visualizer for Oscilloscope {
     }
 
     fn perform(&mut self, args: VisualizerArgs) {
-        let VisualizerArgs {
-            pix, stream, keys, ..
-        } = args;
+        let VisualizerArgs { pix, stream, .. } = args;
 
         let mut buffer = [Cplx::zero(); BUFFER_SIZE + PADDING];
         stream.read(&mut buffer);

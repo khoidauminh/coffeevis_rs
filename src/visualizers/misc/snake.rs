@@ -152,9 +152,7 @@ impl crate::visualizers::Visualizer for Snake {
     }
 
     fn perform(&mut self, args: VisualizerArgs) {
-        let VisualizerArgs {
-            pix, stream, keys, ..
-        } = args;
+        let VisualizerArgs { pix, keys, .. } = args;
 
         let game = self.game.get_or_insert(Game::new(pix.size()));
 

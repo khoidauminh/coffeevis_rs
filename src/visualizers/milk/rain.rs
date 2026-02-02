@@ -164,9 +164,7 @@ impl Visualizer for Rain {
     }
 
     fn perform(&mut self, args: VisualizerArgs) {
-        let VisualizerArgs {
-            pix, stream, keys, ..
-        } = args;
+        let VisualizerArgs { pix, stream, .. } = args;
 
         let mut new_volume: f32 = 0.0;
         {

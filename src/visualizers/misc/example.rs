@@ -45,9 +45,7 @@ impl Visualizer for Example {
     }
 
     fn perform(&mut self, args: VisualizerArgs) {
-        let VisualizerArgs {
-            pix, stream, keys, ..
-        } = args;
+        let VisualizerArgs { pix, stream, .. } = args;
 
         let bound = pix.size().to_cplx();
 

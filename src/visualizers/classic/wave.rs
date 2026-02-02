@@ -13,9 +13,7 @@ impl Visualizer for Wave {
     }
 
     fn perform(&mut self, args: VisualizerArgs) {
-        let VisualizerArgs {
-            pix, stream, keys, ..
-        } = args;
+        let VisualizerArgs { pix, stream, .. } = args;
 
         let l = (stream.len() * PERBYTE) >> 8;
 
