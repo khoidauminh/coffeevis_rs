@@ -77,22 +77,17 @@ impl AudioBuffer {
         self.oldwriteend = self.writeend;
         self.readend = self.writeend;
 
-        let (src_l, src_r) = in_buffer.split_at(
-            in_buffer
-                .len()
-                .min(2 * BUFFER_CAPACITY.saturating_sub(self.writeend)),
-        );
-
+        let mut src_iter = in_buffer.chunks_exact(2);
         let (dst_l, dst_r) = self.data.split_at_mut(self.writeend);
 
         dst_r
             .iter_mut()
-            .zip(src_l.chunks_exact(2))
+            .zip(&mut src_iter)
             .for_each(|(d, s)| *d = Cplx::from_slice(s));
 
         dst_l
             .iter_mut()
-            .zip(src_r.chunks_exact(2))
+            .zip(&mut src_iter)
             .for_each(|(d, s)| *d = Cplx::from_slice(s));
 
         self.writeend = self.writeend.wrapping_add(copysize) & BUFFER_MASK;
@@ -123,11 +118,12 @@ impl AudioBuffer {
     }
 
     fn post_process(&mut self) {
-        let mut max = self.data[self.oldwriteend].max();
-        for n in 1..self.lastinputsize {
-            let i = n.wrapping_add(self.oldwriteend) & BUFFER_MASK;
-            max = max.max(self.data[i].max());
-        }
+        let (left, right) = self.data.split_at_mut(self.oldwriteend);
+        let max = right
+            .iter()
+            .chain(left.iter())
+            .take(self.lastinputsize)
+            .fold(0.0f32, |a, c| a.max(c.max()));
 
         self.max = decay(self.max, max, REACT_FACTOR);
 
@@ -147,10 +143,11 @@ impl AudioBuffer {
         if self.normalize {
             let scale: f32 = Self::get_scaling_factor(self.max);
 
-            for n in 0..self.lastinputsize {
-                let i = n.wrapping_add(self.oldwriteend) & BUFFER_MASK;
-                self.data[i] *= scale;
-            }
+            right
+                .iter_mut()
+                .chain(left.iter_mut())
+                .take(self.lastinputsize)
+                .for_each(|s| *s *= scale);
         }
     }
 
