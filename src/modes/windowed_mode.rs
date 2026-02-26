@@ -19,7 +19,7 @@ use std::{
     num::NonZeroU32,
     sync::mpsc::{self, RecvTimeoutError, SyncSender},
     thread::{self, JoinHandle},
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use crate::data::*;
@@ -64,6 +64,7 @@ struct WindowState {
     pub prog: Program,
     pub renderer: Option<Renderer>,
     pub final_buffer_size: PhysicalSize<u32>,
+    pub last_draw: Instant,
 }
 
 impl ApplicationHandler for WindowState {
@@ -219,7 +220,11 @@ impl ApplicationHandler for WindowState {
                 }
 
                 if !self.prog.wayland() {
-                    thread::sleep(self.prog.get_rr_interval());
+                    let now = Instant::now();
+                    let next = self.last_draw + self.prog.get_rr_interval();
+                    let waitfor = next.duration_since(now);
+                    self.last_draw = now + waitfor;
+                    thread::sleep(waitfor);
                 }
             }
 
@@ -324,6 +329,7 @@ pub fn winit_main(prog: Program) {
             prog,
             renderer: None,
             final_buffer_size: PhysicalSize::<u32>::new(0, 0),
+            last_draw: Instant::now(),
         })
         .unwrap();
 }
