@@ -82,11 +82,7 @@ impl AudioBuffer {
 
         dst_r
             .iter_mut()
-            .zip(&mut src_iter)
-            .for_each(|(d, s)| *d = Cplx::from_slice(s));
-
-        dst_l
-            .iter_mut()
+            .chain(dst_l.iter_mut())
             .zip(&mut src_iter)
             .for_each(|(d, s)| *d = Cplx::from_slice(s));
 
@@ -99,22 +95,6 @@ impl AudioBuffer {
 
     pub fn set_normalize(&mut self, b: bool) {
         self.normalize = b;
-    }
-
-    /// The scaling factor formula is as follows:
-    /// {   1 / x                   x >= L
-    /// {   A / x + (1 - A) / L     x < L
-    fn get_scaling_factor(max: f32) -> f32 {
-        let max = max.max(AMP_PERSIST_LIMIT);
-
-        const L: f32 = 0.6;
-        const A: f32 = 0.33;
-
-        if max >= 0.5 {
-            return max.recip();
-        }
-
-        A / max + (1.0 - A) / L
     }
 
     fn post_process(&mut self) {
@@ -141,7 +121,7 @@ impl AudioBuffer {
         self.silent = 0;
 
         if self.normalize {
-            let scale: f32 = Self::get_scaling_factor(self.max);
+            let scale: f32 = 1.0 / max.max(AMP_PERSIST_LIMIT);
 
             right
                 .iter_mut()
@@ -157,11 +137,9 @@ impl AudioBuffer {
         let start = self.readend.wrapping_sub(len) & BUFFER_MASK;
         let (sleft, sright) = self.data.split_at(start);
 
-        let outsplit = len.min(sright.len());
-        let outremaining = len - outsplit;
-
-        out[..outsplit].copy_from_slice(&sright[..outsplit]);
-        out[outsplit..].copy_from_slice(&sleft[..outremaining]);
+        out.iter_mut()
+            .zip(sright.iter().chain(sleft.iter()))
+            .for_each(|(o, i)| *o = *i);
     }
 
     pub fn input_size(&self) -> usize {
