@@ -121,7 +121,7 @@ impl AudioBuffer {
         self.silent = 0;
 
         if self.normalize {
-            let scale: f32 = 1.0 / max.max(AMP_PERSIST_LIMIT);
+            let scale: f32 = 1.0 / self.max.max(AMP_PERSIST_LIMIT);
 
             right
                 .iter_mut()
