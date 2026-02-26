@@ -7,7 +7,7 @@ use crate::visualizers::VisualizerArgs;
 const DCT_SIZE: usize = 1 << 9;
 const RANGE: usize = 64;
 const RANGEF: f32 = RANGE as f32;
-const SMOOTHING: f32 = 0.905;
+const SMOOTHING: f32 = 0.9075;
 
 pub struct Spectrum {
     buffer: [Cplx; RANGE + 1],
