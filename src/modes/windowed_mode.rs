@@ -58,6 +58,8 @@ struct Renderer {
     pub surface: Surface<&'static dyn Window, &'static dyn Window>,
     pub thread_cursor_id: JoinHandle<()>,
     pub cursor: SyncSender<()>,
+    pub refresh_rate: Duration,
+    pub refresh_rate_query_tries: u8,
 }
 
 struct WindowState {
@@ -172,6 +174,8 @@ impl ApplicationHandler for WindowState {
             surface,
             thread_cursor_id,
             cursor: cursor_sender,
+            refresh_rate: self.prog.get_rr_interval(),
+            refresh_rate_query_tries: 5,
         })
     }
 
@@ -180,6 +184,8 @@ impl ApplicationHandler for WindowState {
             window,
             surface,
             cursor,
+            refresh_rate,
+            refresh_rate_query_tries,
             ..
         }) = self.renderer.as_mut()
         else {
@@ -220,8 +226,22 @@ impl ApplicationHandler for WindowState {
                 }
 
                 if !self.prog.wayland() {
+                    *refresh_rate_query_tries = refresh_rate_query_tries.saturating_sub(1);
+
+                    if *refresh_rate_query_tries > 0 && !self.prog.is_refresh_rate_locked() {
+                        if let Some(m) = window.current_monitor() {
+                            if let Some(v) = m.current_video_mode() {
+                                if let Some(r) = v.refresh_rate_millihertz() {
+                                    self.prog.change_fps_frac(r.get());
+                                    *refresh_rate = self.prog.get_rr_interval();
+                                    *refresh_rate_query_tries = 0;
+                                }
+                            }
+                        }
+                    }
+
                     let now = Instant::now();
-                    let next = self.last_draw + self.prog.get_rr_interval();
+                    let next = self.last_draw + *refresh_rate;
                     let waitfor = next.duration_since(now);
                     self.last_draw = now + waitfor;
                     thread::sleep(waitfor);

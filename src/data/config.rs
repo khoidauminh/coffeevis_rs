@@ -79,6 +79,8 @@ impl Program {
                     }
 
                     milli_hz = Some((rate * 1000.0) as u32);
+
+
                 }
 
                 "--resize" => {
@@ -164,9 +166,14 @@ impl Program {
             }
 
             self.change_fps_frac(m);
+            self.lock_refresh_rate = true;
         }
 
         self
+    }
+
+    pub fn is_refresh_rate_locked(&self) -> bool {
+        self.lock_refresh_rate
     }
 
     pub fn print_startup_info(&self) {

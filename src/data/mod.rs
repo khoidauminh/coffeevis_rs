@@ -77,6 +77,7 @@ pub(crate) struct Program {
 
     milli_hz: u32,
     refresh_rate_interval: Duration,
+    lock_refresh_rate: bool,
 
     pub window_props: modes::windowed_mode::WindowProps,
 
@@ -114,6 +115,7 @@ impl Program {
 
             milli_hz: DEFAULT_MILLI_HZ,
             refresh_rate_interval: rate,
+            lock_refresh_rate: false,
 
             vislist: VisList::new(),
 
@@ -170,10 +172,7 @@ impl Program {
     }
 
     pub fn construct_interval(fps: u32) -> Duration {
-        let fps_f = fps as f32 / 1000.0;
-        let rate = (1_000_000_000.0 / fps_f) as u64;
-
-        Duration::from_nanos(rate)
+        Duration::from_nanos(1000_000_000_000u64 / fps as u64)
     }
 
     pub fn change_fps_frac(&mut self, fps: u32) {
