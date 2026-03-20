@@ -14,7 +14,6 @@ pub struct AudioBuffer {
     data: [Cplx; BUFFER_CAPACITY],
 
     writeend: usize,
-    oldwriteend: usize,
     readend: usize,
 
     autorotatesize: usize,
@@ -37,7 +36,6 @@ impl AudioBuffer {
             data: [Cplx::zero(); _],
 
             writeend: 0,
-            oldwriteend: 0,
             readend: 0,
 
             autorotatesize: 0,
@@ -74,11 +72,8 @@ impl AudioBuffer {
     pub fn read_from_input(&mut self, in_buffer: &[f32]) {
         let copysize = in_buffer.len() / 2;
 
-        self.oldwriteend = self.writeend;
-        self.readend = self.writeend;
-
         let mut src_iter = in_buffer.chunks_exact(2);
-        let (dst_l, dst_r) = self.data.split_at_mut(self.writeend);
+        let (dst_l, dst_r) = self.data.split_at_mut(self.writeend & BUFFER_MASK);
 
         dst_r
             .iter_mut()
@@ -86,9 +81,11 @@ impl AudioBuffer {
             .zip(&mut src_iter)
             .for_each(|(d, s)| *d = Cplx::from_slice(s));
 
-        self.writeend = self.writeend.wrapping_add(copysize) & BUFFER_MASK;
+        self.writeend = self.writeend + copysize;
 
+        self.autorotatesize = copysize / self.rotatessincewrite.max(3);
         self.lastinputsize = copysize;
+        self.rotatessincewrite = 0;
 
         self.post_process();
     }
@@ -98,7 +95,8 @@ impl AudioBuffer {
     }
 
     fn post_process(&mut self) {
-        let (left, right) = self.data.split_at_mut(self.oldwriteend);
+        let oldwriteend = (self.writeend - self.lastinputsize) & BUFFER_MASK;
+        let (left, right) = self.data.split_at_mut(oldwriteend);
         let max = right
             .iter()
             .chain(left.iter())
@@ -107,18 +105,17 @@ impl AudioBuffer {
 
         self.max = decay(self.max, max, REACT_FACTOR);
 
+
         if self.max < SILENCE_LIMIT {
             self.silent = self.silent.saturating_add(1);
             return;
         }
 
+        self.silent = 0;
+
         if let Some(w) = self.window.as_ref() {
             w.request_redraw();
         }
-
-        self.autorotatesize = self.lastinputsize / self.rotatessincewrite.max(3);
-        self.rotatessincewrite = 0;
-        self.silent = 0;
 
         if self.normalize {
             let scale: f32 = 1.0 / self.max.max(AMP_PERSIST_LIMIT);
@@ -132,9 +129,7 @@ impl AudioBuffer {
     }
 
     pub fn read(&self, out: &mut [Cplx]) {
-        let len = out.len();
-
-        let start = self.readend.wrapping_sub(len) & BUFFER_MASK;
+        let start = (self.readend - out.len()) & BUFFER_MASK;
         let (sleft, sright) = self.data.split_at(start);
 
         out.iter_mut()
@@ -151,7 +146,11 @@ impl AudioBuffer {
     }
 
     pub fn autoslide(&mut self) {
-        self.readend = self.readend.wrapping_add(self.autorotatesize) & BUFFER_MASK;
+        let max_delay = self.writeend.saturating_sub(1000);
+        let min_delay = self.writeend.saturating_sub(200);
+
+        self.readend = (self.readend + self.autorotatesize).clamp(max_delay, min_delay);
+
         self.rotatessincewrite += 1;
     }
 
