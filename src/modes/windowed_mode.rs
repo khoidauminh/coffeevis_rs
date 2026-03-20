@@ -232,8 +232,10 @@ impl ApplicationHandler for WindowState {
                         if let Some(m) = window.current_monitor() {
                             if let Some(v) = m.current_video_mode() {
                                 if let Some(r) = v.refresh_rate_millihertz() {
-                                    self.prog.change_fps_frac(r.get());
+                                    let r = r.get().min(300_000);
+                                    self.prog.change_fps_frac(r);
                                     *refresh_rate = self.prog.get_rr_interval();
+                                    println!("New refresh rate updated: {}hz", r as f64 / 1000.0);
                                     *refresh_rate_query_tries = 0;
                                 }
                             }
