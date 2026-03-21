@@ -1,5 +1,6 @@
 use winit::window::Window;
 
+use crate::data::SAMPLE_RATE;
 use crate::math::Cplx;
 use crate::math::interpolate::decay;
 
@@ -145,20 +146,17 @@ impl AudioBuffer {
     }
 
     pub fn autoslide(&mut self) {
-        let max_delay = self.writeend.saturating_sub(self.lastinputsize * 3);
-        let run_delay = self.writeend.saturating_sub(self.lastinputsize * 2);
-        let min_delay = self.writeend.saturating_sub(self.lastinputsize / 3);
+        const INCREMENT: usize = SAMPLE_RATE * 25 / 1000;
+        let jump = self.writeend.saturating_sub(INCREMENT*2).next_multiple_of(INCREMENT);
 
-        if self.readend < max_delay {
-            self.readend = max_delay;
-        } else {
-            if self.readend < min_delay {
-                self.readend += self.autorotatesize;
+        if self.readend < jump {
+            self.readend = jump;
+        }
 
-                if self.readend < run_delay {
-                    self.readend += self.autorotatesize;
-                }
-            }
+        self.readend += self.autorotatesize;
+
+        if self.readend >= self.writeend {
+            self.readend = self.writeend;
         }
 
         self.rotatessincewrite += 1;
