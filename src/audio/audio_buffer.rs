@@ -83,7 +83,7 @@ impl AudioBuffer {
 
         self.writeend = self.writeend + copysize;
 
-        self.autorotatesize = copysize / self.rotatessincewrite.max(3);
+        self.autorotatesize = copysize / self.rotatessincewrite.max(4);
         self.lastinputsize = copysize;
         self.rotatessincewrite = 0;
 
@@ -147,7 +147,7 @@ impl AudioBuffer {
     pub fn autoslide(&mut self) {
         let max_delay = self.writeend.saturating_sub(self.lastinputsize * 3);
         let run_delay = self.writeend.saturating_sub(self.lastinputsize * 2);
-        let min_delay = self.writeend.saturating_sub(self.lastinputsize / 2);
+        let min_delay = self.writeend.saturating_sub(self.lastinputsize / 3);
 
         if self.readend < max_delay {
             self.readend = max_delay;
