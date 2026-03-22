@@ -4,6 +4,8 @@ use crate::data::SAMPLE_RATE;
 use crate::math::Cplx;
 use crate::math::interpolate::decay;
 
+const CHUNK: usize = SAMPLE_RATE * 25 / 1000;
+
 const SILENCE_LIMIT: f32 = 0.0001;
 const AMP_PERSIST_LIMIT: f32 = 0.01;
 const REACT_FACTOR: f32 = 0.98;
@@ -84,7 +86,7 @@ impl AudioBuffer {
 
         self.writeend = self.writeend + copysize;
 
-        self.autorotatesize = copysize / self.rotatessincewrite.max(4);
+        self.autorotatesize = CHUNK / (self.rotatessincewrite + 1);
         self.lastinputsize = copysize;
         self.rotatessincewrite = 0;
 
@@ -146,8 +148,7 @@ impl AudioBuffer {
     }
 
     pub fn autoslide(&mut self) {
-        const INCREMENT: usize = SAMPLE_RATE * 25 / 1000;
-        let jump = self.writeend.saturating_sub(INCREMENT*2).next_multiple_of(INCREMENT);
+        let jump = self.writeend.saturating_sub(CHUNK*2).next_multiple_of(CHUNK);
 
         if self.readend < jump {
             self.readend = jump;
