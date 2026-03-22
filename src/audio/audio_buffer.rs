@@ -1,10 +1,11 @@
 use winit::window::Window;
 
+use crate::audio::MovingMaximum;
 use crate::data::SAMPLE_RATE;
 use crate::math::Cplx;
 use crate::math::interpolate::decay;
 
-const CHUNK: usize = SAMPLE_RATE * 25 / 1000;
+const CHUNK: usize = SAMPLE_RATE * 30 / 1000;
 
 const SILENCE_LIMIT: f32 = 0.0001;
 const AMP_PERSIST_LIMIT: f32 = 0.01;
@@ -21,6 +22,7 @@ pub struct AudioBuffer {
 
     autorotatesize: usize,
     rotatessincewrite: usize,
+    averagerotatess: Option<MovingMaximum<usize, 5>>,
 
     lastinputsize: usize,
 
@@ -43,7 +45,7 @@ impl AudioBuffer {
 
             autorotatesize: 0,
             rotatessincewrite: 0,
-
+            averagerotatess: None,
             lastinputsize: 0,
 
             silent: 0,
@@ -86,8 +88,12 @@ impl AudioBuffer {
 
         self.writeend = self.writeend + copysize;
 
-        self.autorotatesize = CHUNK / (self.rotatessincewrite + 1);
         self.lastinputsize = copysize;
+
+        let rotates = self.averagerotatess.get_or_insert(MovingMaximum::init());
+        let rotates = rotates.update(self.rotatessincewrite);
+        self.autorotatesize = copysize / rotates.max(2);
+
         self.rotatessincewrite = 0;
 
         self.post_process();
@@ -148,7 +154,11 @@ impl AudioBuffer {
     }
 
     pub fn autoslide(&mut self) {
-        let jump = self.writeend.saturating_sub(CHUNK*2).next_multiple_of(CHUNK);
+        let jump = self
+            .writeend
+            .wrapping_div(CHUNK)
+            .saturating_sub(2)
+            .wrapping_mul(CHUNK);
 
         if self.readend < jump {
             self.readend = jump;

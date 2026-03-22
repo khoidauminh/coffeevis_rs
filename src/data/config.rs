@@ -79,8 +79,6 @@ impl Program {
                     }
 
                     milli_hz = Some((rate * 1000.0) as u32);
-
-
                 }
 
                 "--resize" => {
