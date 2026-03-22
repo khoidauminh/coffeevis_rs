@@ -15,7 +15,7 @@ readme = "README.md"
 fast = []
 
 [dependencies]
-cpal = "0.17"
+cpal = { git = "https://github.com/RustAudio/cpal" }
 softbuffer = { version = "0.4", default-features = false, features = ["x11", "x11-dlopen", "wayland", "wayland-dlopen"]}
 winit = { git = "https://github.com/rust-windowing/winit" }
 crossterm = { version = "0.29", default-features = false, features = ["events", "windows"] }

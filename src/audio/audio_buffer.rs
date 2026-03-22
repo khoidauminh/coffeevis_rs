@@ -1,11 +1,7 @@
 use winit::window::Window;
 
-use crate::audio::MovingMaximum;
-use crate::data::SAMPLE_RATE;
 use crate::math::Cplx;
 use crate::math::interpolate::decay;
-
-const CHUNK: usize = SAMPLE_RATE * 30 / 1000;
 
 const SILENCE_LIMIT: f32 = 0.0001;
 const AMP_PERSIST_LIMIT: f32 = 0.01;
@@ -20,9 +16,8 @@ pub struct AudioBuffer {
     writeend: usize,
     readend: usize,
 
-    autorotatesize: usize,
     rotatessincewrite: usize,
-    averagerotatess: Option<MovingMaximum<usize, 5>>,
+    rotatessincelastwrite: usize,
 
     lastinputsize: usize,
 
@@ -43,9 +38,8 @@ impl AudioBuffer {
             writeend: 0,
             readend: 0,
 
-            autorotatesize: 0,
-            rotatessincewrite: 0,
-            averagerotatess: None,
+            rotatessincewrite: 1,
+            rotatessincelastwrite: 1,
             lastinputsize: 0,
 
             silent: 0,
@@ -86,15 +80,12 @@ impl AudioBuffer {
             .zip(&mut src_iter)
             .for_each(|(d, s)| *d = Cplx::from_slice(s));
 
-        self.writeend = self.writeend + copysize;
+        self.writeend += copysize;
+
+        self.rotatessincewrite = self.rotatessincelastwrite;
+        self.rotatessincelastwrite = 0;
 
         self.lastinputsize = copysize;
-
-        let rotates = self.averagerotatess.get_or_insert(MovingMaximum::init());
-        let rotates = rotates.update(self.rotatessincewrite);
-        self.autorotatesize = copysize / rotates.max(2);
-
-        self.rotatessincewrite = 0;
 
         self.post_process();
     }
@@ -154,23 +145,14 @@ impl AudioBuffer {
     }
 
     pub fn autoslide(&mut self) {
-        let jump = self
-            .writeend
-            .wrapping_div(CHUNK)
-            .saturating_sub(2)
-            .wrapping_mul(CHUNK);
+        // const CHUNK: usize = SAMPLE_RATE * 25 / 1000;
 
-        if self.readend < jump {
-            self.readend = jump;
-        }
+        let diff = self.writeend.saturating_sub(self.readend);
+        let diff = diff / self.rotatessincewrite.max(2);
 
-        self.readend += self.autorotatesize;
+        self.readend += diff;
 
-        if self.readend >= self.writeend {
-            self.readend = self.writeend;
-        }
-
-        self.rotatessincewrite += 1;
+        self.rotatessincelastwrite += 1;
     }
 
     pub fn get(&self, i: usize) -> Cplx {
