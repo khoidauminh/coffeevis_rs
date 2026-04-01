@@ -145,13 +145,9 @@ impl AudioBuffer {
     }
 
     pub fn autoslide(&mut self) {
-        // const CHUNK: usize = SAMPLE_RATE * 25 / 1000;
-
         let diff = self.writeend.saturating_sub(self.readend);
-        let diff = diff / self.rotatessincewrite.max(2);
-
+        let diff = diff / (self.rotatessincewrite + 3);
         self.readend += diff;
-
         self.rotatessincelastwrite += 1;
     }
 
