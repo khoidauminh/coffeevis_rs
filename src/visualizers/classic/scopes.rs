@@ -6,6 +6,7 @@ use crate::audio::MovingAverage;
 
 use crate::graphics::P2;
 use crate::math::interpolate::linearfc;
+use crate::visualizers::misc::crt_patch::CrtPatch;
 use crate::visualizers::{Visualizer, VisualizerArgs};
 
 use crate::math::Cplx;
@@ -111,15 +112,25 @@ const LOWPASS_FACTOR: f32 = 0.01;
 const SHIFTBACK: usize = 50;
 const STORESIZE: usize = 6;
 
-pub struct Oscilloscope;
+pub struct Oscilloscope {
+    crt: CrtPatch,
+}
+
+impl Oscilloscope {
+    pub fn new() -> Self {
+        Self {
+            crt: CrtPatch::default(),
+        }
+    }
+}
 
 impl Visualizer for Oscilloscope {
     fn name(&self) -> &'static str {
         "Oscilloscope"
     }
 
-    fn perform(&mut self, args: VisualizerArgs) {
-        let VisualizerArgs { pix, stream, .. } = args;
+    fn perform(&mut self, mut args: VisualizerArgs) {
+        let VisualizerArgs { pix, stream, .. } = &mut args;
 
         let mut buffer = [Cplx::zero(); BUFFER_SIZE + PADDING];
         stream.read(&mut buffer);
@@ -208,5 +219,7 @@ impl Visualizer for Oscilloscope {
             pix.color(u32::compose([255, 0, 255, 55]));
             pix.rect(P2(x as i32, rmin as i32), 1, (rmax - rmin) as usize);
         }
+
+        self.crt.perform(args);
     }
 }

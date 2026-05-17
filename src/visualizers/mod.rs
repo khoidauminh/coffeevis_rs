@@ -72,7 +72,7 @@ impl VisList {
             // their unknown sizes.
             list: vec![
                 Box::new(Spectrum::default()),
-                Box::new(Oscilloscope {}),
+                Box::new(Oscilloscope::new()),
                 Box::new(Vectorscope::default()),
                 Box::new(Ring {}),
                 Box::new(Bars::default()),
