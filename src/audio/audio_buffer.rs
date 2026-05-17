@@ -80,6 +80,7 @@ impl AudioBuffer {
             .zip(&mut src_iter)
             .for_each(|(d, s)| *d = Cplx::from_slice(s));
 
+        self.readend = self.writeend;
         self.writeend += copysize;
 
         self.rotatessincewrite = self.rotatessincelastwrite;
