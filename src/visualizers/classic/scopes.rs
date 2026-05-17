@@ -169,26 +169,29 @@ impl Visualizer for Oscilloscope {
             smp2 = smp3;
         }
 
-        let indexstart = indices.last().unwrap() - START - SHIFTBACK;
-
-        stream.autoslide();
-
-        pix.clear();
-
         let size = pix.size();
 
         let center = size.1 as f32 * 0.5;
         let scale = center * 0.7;
         let w = size.0.max(1) as usize;
 
-        let buffer_size_smaller = BUFFER_SIZE as f32 * 0.8;
-        let index_scale = buffer_size_smaller / w as f32;
-        let base = (BUFFER_SIZE as f32 * 0.1) as usize;
+        let index_scale = BUFFER_SIZE as f32 / w as f32;
 
         let samplexperpixel = (BUFFER_SIZE + w) / w;
+        let samplewindow = samplexperpixel * size.0 as usize;
+        let samplewindowmiddle = samplewindow / 2;
+
+        let indexstart = indices
+            .last()
+            .unwrap()
+            .saturating_sub(samplewindowmiddle + SHIFTBACK);
+
+        stream.autoslide();
+
+        pix.clear();
 
         for x in 0..size.0 as usize {
-            let istart = (x as f32 * index_scale) as usize + indexstart + base;
+            let istart = (x as f32 * index_scale) as usize + indexstart;
             let iend = istart + samplexperpixel;
 
             let mut lmin = 100.0f32;
