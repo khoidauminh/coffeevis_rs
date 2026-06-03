@@ -7,7 +7,7 @@ use crate::visualizers::VisualizerArgs;
 const DCT_SIZE: usize = 1 << 9;
 const RANGE: usize = 64;
 const RANGEF: f32 = RANGE as f32;
-const SMOOTHING: f32 = 0.8;
+const SMOOTHING: f32 = 0.95;
 
 pub struct Spectrum {
     buffer: [Cplx; RANGE + 1],
@@ -24,7 +24,7 @@ impl Default for Spectrum {
 }
 
 impl Spectrum {
-    fn prepare(&mut self, stream: &mut crate::AudioBuffer) {
+    fn prepare(&mut self, stream: &mut crate::AudioBuffer, delta: f32) {
         let mut dct = [Cplx::zero(); DCT_SIZE];
 
         stream.read(&mut dct);
@@ -42,8 +42,8 @@ impl Spectrum {
             .iter_mut()
             .zip(dct.iter())
             .for_each(|(smp, si)| {
-                smp.0 = decay(smp.0, si.0.abs(), SMOOTHING);
-                smp.1 = decay(smp.1, si.1.abs(), SMOOTHING);
+                smp.0 = decay(smp.0, si.0.abs(), delta);
+                smp.1 = decay(smp.1, si.1.abs(), delta);
             });
 
         stream.autoslide();
@@ -56,9 +56,11 @@ impl Visualizer for Spectrum {
     }
 
     fn perform(&mut self, args: VisualizerArgs) {
-        let VisualizerArgs { pix, stream, .. } = args;
+        let VisualizerArgs {
+            pix, stream, delta, ..
+        } = args;
 
-        self.prepare(stream);
+        self.prepare(stream, (0.0f32).max(SMOOTHING - delta * 10.0));
 
         let P2(w, h) = pix.size();
         let winwh = w >> 1;
