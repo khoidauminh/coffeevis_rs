@@ -22,45 +22,7 @@ pub fn get_device_linux() -> Device {
 
 #[cfg(target_os = "windows")]
 pub fn get_device_windows() -> Device {
-    let default_device = cpal::default_host().default_input_device();
-
-    let input_devices = cpal::default_host()
-        .input_devices()
-        .expect("Failed to probe all input devices.")
-        .collect::<Vec<_>>();
-
-    for d in &input_devices {
-        println!(
-            "I see {}",
-            d.description()
-                .as_ref()
-                .map(|v| v.name())
-                .unwrap_or("<unknown>")
-        );
-    }
-
-    let query = input_devices.iter().find(|d| {
-        d.description()
-            .as_ref()
-            .map(|name| name.name().contains("Stereo Mix"))
-            .unwrap_or(false)
-    });
-
-    if let Some(q) = query {
-        crate::data::log::info!("Found Stereo Mix.");
-        return q.clone();
-    }
-
-    let d = default_device.expect("Failed to get default device.");
-    crate::data::log::alert!(
-        "No Stereo Mix found. Going with default input device: {}",
-        d.description()
-            .as_ref()
-            .map(|v| v.name())
-            .unwrap_or("<unknown>")
-    );
-
-    d
+    return cpal::default_host().default_output_device().unwrap();
 }
 
 pub fn get_source() -> cpal::Stream {
@@ -71,7 +33,7 @@ pub fn get_source() -> cpal::Stream {
     let device = get_device_windows();
 
     let config: cpal::StreamConfig = device
-        .default_input_config()
+        .default_output_config()
         .expect("error while querying configs")
         .config();
 
