@@ -89,11 +89,16 @@ impl ApplicationHandler for WindowState {
                 .map(Icon::from)
         });
 
-        let wm_attr_wayland = winit::platform::wayland::WindowAttributesWayland::default()
+        #[cfg(target_os = "windows")]
+        let wm_attr = winit::platform::windows::WindowAttributesWindows::default()
+            .with_class_name("cvis");
+
+        #[cfg(target_os = "linux")]
+        let wm_attr = winit::platform::wayland::WindowAttributesWayland::default()
             .with_name("Coffeevis", "cvis");
 
         let window_attributes = WindowAttributes::default()
-            .with_platform_attributes(Box::new(wm_attr_wayland))
+            .with_platform_attributes(Box::new(wm_attr))
             .with_title("cvis")
             .with_surface_size(win_size)
             .with_window_level(WindowLevel::AlwaysOnTop)
