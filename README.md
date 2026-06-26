@@ -1,33 +1,36 @@
 ![Logo of Coffeevis](./assets/coffeevis_icon.svg)
 
-# Coffee Music Visualizer
+# COFFEE MUSIC VISUALIZER
 A personal GUI + TUI music visualizer written in Rust.
 
-## What's new in v0.7.0
+## WHAT'S NEW ON v0.7.0
 
 New keyboard input buttons implemented: Z, X, C and Arrow keys.
 
 Added Example visualizer and minimal Snake game.
 
-## Examples:
+## GALLERY:
 
 ![Console](https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExMWwydzQydHVhdG9nbTZwZnZyNHEyazduNmp0aGFib21xYjFtc2F3YSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/flPyMMxHiSpo73kpEg/giphy.gif)
 ![Terminal](https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExeThkNGxieWVxcGhhM3RibXZ5aGNzczN1YzF5aGRuNmVyYzBlYjc4NiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/5FZtC9GbiOrXrhnMON/giphy.gif)
 
-## Platform support
+## PLATFORM SUPPORT
 
 Coffeevis works on Linux.
-Windows support is being planned.
 
-## Installation
+Windows is officially supported by coffeevis.
+
+## INSTALLATION
+
+For both Linux and Windows (requires 0.7.0+), run this command: 
 
 ```
 cargo install coffeevis
 ```
 
-## Running
+## RUNNING
 
-### Audio
+### LINUX
 
 As of Cpal 0.17, only the ALSA host is supported, 
 it is advised to install pipewire-alsa or pulseaudio-alsa in your system.
@@ -57,8 +60,18 @@ context.modules = [
         }
     }
 ]
-
 ```
+
+### WINDOWS
+
+Cpal supports Windows WASAPI loopback feature, configuration depends
+on whether you are using an equalizer or not.
+
+- If your default output device is untouched, no further configuration is required.
+
+- If you use FxSound or Equalizer APO, Coffeevis will use the processed audio. One
+way to fix this is to install VB-Cable and set Cable Input as your default 
+output device, then enable listening on Cable Output. See [VB-Cable](https://vb-audio.com/Cable/).
 
 ### FPS
 
@@ -68,7 +81,7 @@ therefore custom fps setting is not supported.
 On other platforms, Coffeevis relies on user specified fps.
 The default fps is 60.
 
-## Configuration
+## RUNTIME OPTIONS
 
 Coffeevis does not remember settings and does not generate config files.
 
@@ -88,7 +101,6 @@ To force Coffeevis to run in Xwayland, unset `WAYLAND_DISPLAY`
 WAYLAND_DISPLAY= coffeevis
 ```
 
-## Flags
 Coffeevis supports temporary options at launch
 
 | Option | Value(s) | Description |
@@ -105,7 +117,7 @@ Coffeevis supports temporary options at launch
 | --effect | interlaced | (default) interlace fields together to make the visualizer appear smoother (the number of fields is the scale value) |
 | --effect | none | rendering is scaled and presented as is |
 
-## Notes
+## NOTES
 
 On Wayland, coffeevis cannot set itself on top so you will have to rely on an external tool. For example, on KDE Plasma, you can use the window rules feature.
 
@@ -119,7 +131,7 @@ A maximum resolution is built into the console mode (default: 50x50). Coffeevis 
 
 It looks the smoothest when you're in a dark room with low monitor brightness. But don't do that lol
 
-## Experimental features
+## EXPERIMENTAL FEAURES
 
 "fast" is an aggressive feature that:
 - disables most color blendings.
@@ -129,7 +141,7 @@ It looks the smoothest when you're in a dark room with low monitor brightness. B
 
 May break visualizers.
 
-## Keyboard shortcuts
+## KEYBOARD SHORTCUTS
 
 ### Global
 |  Key | Description |
@@ -147,7 +159,7 @@ May break visualizers.
 | <kbd>7</kbd> / <kbd>8</kbd> | decrease/increase fps by 5 (default: 60) |
 | <kbd>1</kbd> .. <kbd>6</kbd> | change fps to 10 ... 60 respectively |
 
-## Writing a visualizer (DRAFT)
+## WRITING A VISUALIZER
 
 See visualizers/misc/example.rs for an example.
 
