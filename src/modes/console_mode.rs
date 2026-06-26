@@ -14,12 +14,10 @@ use arrayvec::ArrayString;
 use std::io::{Error, Stdout, Write, stdout};
 
 use crate::{
-    data::*,
-    graphics::{Argb, Pixel, blend::grayb},
-    modes::Mode,
+    data::*, graphics::{Argb, Pixel, PixelBuffer, blend::grayb}, modes::Mode,
 };
 
-pub type Flusher = fn(&Program, &mut Stdout);
+pub type Flusher = fn(&Program, &PixelBuffer, &mut Stdout);
 
 const ERROR: u8 = 6;
 
@@ -29,16 +27,24 @@ const CHARSET_OPAC_EXP: &[u8] = b" `.-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neo
 pub struct ConsoleProps {
     pub width: u16,
     pub height: u16,
+
+    pub physical_width: u16, 
+    pub physical_height: u16, 
+
     pub max_width: u16,
     pub max_height: u16,
     pub flusher: Flusher,
 }
 
 impl ConsoleProps {
-    pub fn set_size(&mut self, s: (u16, u16), m: Mode) -> (u16, u16) {
+    pub fn set_size(&mut self, s: (u16, u16), m: Mode) {
+        self.physical_width = s.0;
+        self.physical_height = s.1;
+
+        let s = self.rescale(s, m);
+        
         self.width = s.0;
         self.height = s.1;
-        self.rescale(s, m)
     }
 
     pub fn set_max(&mut self, s: (u16, u16)) {
@@ -140,10 +146,6 @@ impl Mode {
 }
 
 impl Program {
-    pub fn print_con(&mut self) {
-        (self.console_props.flusher)(self, &mut std::io::stdout());
-    }
-
     pub fn clear_con(&mut self) {
         let _ = queue!(std::io::stdout(), Clear(ClearType::All));
     }
@@ -151,7 +153,9 @@ impl Program {
     pub fn switch_con_mode(&mut self) {
         self.set_mode(self.mode().next());
         self.console_props.flusher = self.mode().get_flusher();
-        self.refresh_con();
+        if let Ok(size) = size() {
+            self.update_size(size);
+        }
     }
 
     pub fn change_con_max(&mut self, amount: i16, replace: bool) {
@@ -167,14 +171,10 @@ impl Program {
         self.clear_con();
     }
 
-    pub fn refresh_con(&mut self) {
-        self.update_size((self.console_props.width, self.console_props.height));
-    }
-
-    pub fn get_center(&self, divider_x: u16, divider_y: u16) -> (u16, u16) {
+    pub fn get_center(&self, width: u16, height: u16, divider_x: u16, divider_y: u16) -> (u16, u16) {
         (
-            (self.console_props.width / 2).saturating_sub(self.pix.width() as u16 / divider_x),
-            (self.console_props.height / 2).saturating_sub(self.pix.height() as u16 / divider_y),
+            (self.console_props.physical_width / 2).saturating_sub(width / divider_x),
+            (self.console_props.physical_height / 2).saturating_sub(height / divider_y),
         )
     }
 
@@ -182,21 +182,21 @@ impl Program {
         (self.console_props.width, self.console_props.height)
     }
 
-    pub fn print_ascii(&self, stdout: &mut Stdout) {
-        let center = self.get_center(2, 4);
+    pub fn print_ascii(&self, pix: &PixelBuffer, stdout: &mut Stdout) {
+        let center = self.get_center(pix.logical_width() as u16, pix.logical_height() as u16, 2, 4);
 
         let mut line = ColoredString::default();
 
-        for y in (0..self.pix.height()).step_by(2) {
+        for y in (0..pix.logical_height()).step_by(2) {
             let cy = center.1 + y as u16 / 2;
             let _ = queue!(stdout, cursor::MoveTo(center.0, cy));
 
-            for x in 0..self.pix.width() {
-                let base = self.pix.width() * y + x;
+            for x in 0..pix.logical_width() {
+                let base = pix.logical_width() * y + x;
 
-                let [_, mut r, mut g, mut b] = self.pix.pixel(base).to_be_bytes();
+                let [_, mut r, mut g, mut b] = pix.pixel(base).to_be_bytes();
 
-                let [_, nr, ng, nb] = self.pix.pixel(base + self.pix.width()).to_be_bytes();
+                let [_, nr, ng, nb] = pix.pixel(base + pix.logical_width()).to_be_bytes();
 
                 r = r.max(nr);
                 g = g.max(ng);
@@ -214,22 +214,22 @@ impl Program {
         }
     }
 
-    pub fn print_block(&self, stdout: &mut Stdout) {
-        let center = self.get_center(2, 4);
+    pub fn print_block(&self, pix: &PixelBuffer, stdout: &mut Stdout) {
+        let center = self.get_center(pix.logical_width() as u16, pix.logical_height() as u16,  2, 4);
 
         let mut line = ColoredString::default();
 
-        for y_base in (0..self.pix.height()).step_by(2) {
+        for y_base in (0..pix.logical_height()).step_by(2) {
             let cy = center.1 + y_base as u16 / 2;
             let _ = queue!(stdout, cursor::MoveTo(center.0, cy));
 
-            for x_base in 0..self.pix.width() {
-                let idx_base = y_base * self.pix.width() + x_base;
-                let [_, mut r, mut g, mut b] = self.pix.pixel(idx_base).to_be_bytes();
+            for x_base in 0..pix.logical_width() {
+                let idx_base = y_base * pix.logical_width() + x_base;
+                let [_, mut r, mut g, mut b] = pix.pixel(idx_base).to_be_bytes();
 
                 let bx = (0..2).fold(0, |acc, i| {
-                    let idx = idx_base + i * self.pix.width(); // iterate horizontally, then jump to the nex row;
-                    let [_, pr, pg, pb] = self.pix.pixel(idx).to_be_bytes();
+                    let idx = idx_base + i * pix.logical_width(); // iterate horizontally, then jump to the nex row;
+                    let [_, pr, pg, pb] = pix.pixel(idx).to_be_bytes();
 
                     if grayb(pr, pg, pb) >= 48 {
                         // Values smaller than this becomes transparent.
@@ -253,32 +253,32 @@ impl Program {
         }
     }
 
-    pub fn print_brail(&self, stdout: &mut Stdout) {
-        let center = self.get_center(4, 8);
+    pub fn print_brail(&self, pix: &PixelBuffer, stdout: &mut Stdout) {
+        let center = self.get_center(pix.logical_width() as u16, pix.logical_height() as u16,  4, 8);
 
         let mut line = ColoredString::default();
 
-        for y_base in (0..self.pix.height()).step_by(4) {
+        for y_base in (0..pix.logical_height()).step_by(4) {
             let cy = center.1 + y_base as u16 / 4;
 
             let _ = queue!(stdout, cursor::MoveTo(center.0, cy));
 
-            for x_base in (0..self.pix.width()).step_by(2) {
-                let idx_base = y_base * self.pix.width() + x_base;
+            for x_base in (0..pix.logical_width()).step_by(2) {
+                let idx_base = y_base * pix.logical_width() + x_base;
 
-                let [_, mut r, mut g, mut b] = self.pix.pixel(idx_base).to_be_bytes();
+                let [_, mut r, mut g, mut b] = pix.pixel(idx_base).to_be_bytes();
 
                 let bx = '⠀' as u32 + // first char of braille
 					(0..8).fold(0u8, |acc, i| {
 						let idx = idx_base +
 							if i < 6 {
-								(i / 3) + (i % 3)*self.pix.width()
+								(i / 3) + (i % 3)*pix.logical_width()
 							} else {
-								(i & 1) + 3*self.pix.width()
+								(i & 1) + 3*pix.logical_width()
 							}
 						;
 
-						let [_pa, pr, pg, pb] = self.pix.pixel(idx).to_be_bytes();
+						let [_pa, pr, pg, pb] = pix.pixel(idx).to_be_bytes();
 
 						r = r.max(pr);
 						g = g.max(pg);
@@ -384,15 +384,16 @@ pub fn con_main(mut prog: Program) -> std::io::Result<()> {
 
     let mut exit: bool = false;
 
-    let size = size()?;
-    prog.update_size(size);
-
     let _ = queue!(
         stdout,
         EnterAlternateScreen,
         Hide,
         SetAttribute(Attribute::Bold)
     );
+
+    let size = size()?;
+    prog.update_size(size);
+    let mut raw_buffer = vec![0x0; (prog.console_props.width * prog.console_props.height) as usize];
 
     while !exit {
         let forcedraw = control_key_events_con(&mut prog, &mut exit)?;
@@ -404,8 +405,11 @@ pub fn con_main(mut prog: Program) -> std::io::Result<()> {
             continue;
         }
 
-        prog.render(&mut buf);
-        prog.print_con();
+        raw_buffer.resize((prog.console_props.width * prog.console_props.height) as usize, 0);
+
+        let mut pix = PixelBuffer::from(&mut raw_buffer, prog.console_props.width as usize, prog.console_props.height as usize, 1, 0,false);
+        (prog.console_props.flusher)(&prog, &pix, &mut std::io::stdout());
+        prog.render(&mut pix, &mut buf);
 
         let _ = stdout.flush();
     }

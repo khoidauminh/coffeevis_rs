@@ -70,7 +70,6 @@ pub(crate) struct Program {
 
     win_render_effect: crate::graphics::RenderEffect,
 
-    pub pix: crate::graphics::PixelBuffer,
     pub key: KeyInput,
 
     mode: Mode,
@@ -110,7 +109,6 @@ impl Program {
 
             mode: default_mode,
 
-            pix: PixelBuffer::new(DEFAULT_SIZE_WIN as usize, DEFAULT_SIZE_WIN as usize),
             key: KeyInput::default(),
 
             milli_hz: DEFAULT_MILLI_HZ,
@@ -131,6 +129,10 @@ impl Program {
             console_props: modes::console_mode::ConsoleProps {
                 width: 50,
                 height: 25,
+
+                physical_width: 50,
+                physical_height: 25,
+
                 max_width: 50,
                 max_height: 25,
                 flusher: default_mode.get_flusher(),
@@ -194,8 +196,6 @@ impl Program {
 
         let conf = self.vislist.get().config();
         self.apply_vis_config(conf);
-
-        self.pix.clear();
     }
 
     pub fn autoupdate_visualizer(&mut self) {
@@ -204,18 +204,16 @@ impl Program {
         }
     }
 
-    pub fn update_size(&mut self, mut s: (u16, u16)) {
+    pub fn update_size(&mut self, s: (u16, u16)) {
         match &self.mode {
             Mode::Win => self.window_props.set_size(s),
-            _ => s = self.console_props.set_size(s, self.mode()),
+            _ => self.console_props.set_size(s, self.mode())
         }
-
-        self.pix.resize(s.0 as usize, s.1 as usize);
     }
 
-    pub fn render(&mut self, buf: &mut AudioBuffer) {
+    pub fn render<'a>(&'a mut self, pix: &'a mut PixelBuffer<'a>, buf: &'a mut AudioBuffer) {
         self.vislist.get().perform(VisualizerArgs {
-            pix: &mut self.pix,
+            pix,
             keys: &self.key,
             stream: buf,
             delta: self.delta.tick(),
@@ -248,6 +246,6 @@ impl Program {
     }
 
     pub fn reset_parameters(&mut self) {
-        self.change_con_max(50, true);
+        // self.change_con_max(50, true);
     }
 }

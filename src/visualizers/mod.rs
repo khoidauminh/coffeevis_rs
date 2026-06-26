@@ -25,7 +25,7 @@ use crate::{
 
 #[allow(dead_code)]
 pub struct VisualizerArgs<'a> {
-    pub pix: &'a mut PixelBuffer,
+    pub pix: &'a mut PixelBuffer<'a>,
     pub stream: &'a mut AudioBuffer,
     pub keys: &'a KeyInput,
     pub delta: f32,

@@ -14,10 +14,10 @@ impl Visualizer for Ring {
 
         const RANGE: usize = 128;
 
-        let size = pix.height().min(pix.width()) as i32;
+        let size = pix.logical_height().min(pix.logical_width()) as i32;
 
-        let width = pix.width() as i32;
-        let height = pix.height() as i32;
+        let width = pix.logical_width() as i32;
+        let height = pix.logical_height() as i32;
 
         let width_top_h = width >> 1;
         let height_top_h = height >> 1;

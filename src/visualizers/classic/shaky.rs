@@ -40,7 +40,7 @@ impl Visualizer for Shaky {
         let mut data_f = [Cplx::zero(); 512];
         stream.read(&mut data_f);
 
-        let sizef = pix.width().min(pix.height()) as f32;
+        let sizef = pix.logical_width().min(pix.logical_height()) as f32;
 
         math::integrate_inplace(&mut data_f, 128, math::Normalize::No);
 
@@ -69,8 +69,8 @@ impl Visualizer for Shaky {
         let final_x = x_soft_shake + self.x;
         let final_y = y_soft_shake + self.y;
 
-        let width = pix.width() as i32;
-        let height = pix.height() as i32;
+        let width = pix.logical_width() as i32;
+        let height = pix.logical_height() as i32;
 
         let red = 255i32.saturating_sub(final_x.abs() * 5) as u8;
         let blue = 255i32.saturating_sub(final_y.abs() * 5) as u8;

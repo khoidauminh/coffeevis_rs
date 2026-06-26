@@ -115,8 +115,8 @@ impl RainDrop {
     }
 
     pub fn draw(&mut self, canvas: &mut PixelBuffer) {
-        let _w = canvas.width();
-        let _h = canvas.height();
+        let _w = canvas.logical_width();
+        let _h = canvas.logical_height();
 
         let mut current_length = self.length;
 
@@ -193,10 +193,10 @@ impl Visualizer for Rain {
         ]));
         pix.fill();
 
-        let size = pix.size();
+        let size = pix.logical_size();
 
         for drop in self.listdrops.iter_mut() {
-            let size = pix.size();
+            let size = pix.logical_size();
 
             if !drop.is_bounds_match(size) {
                 drop.set_bound(size);
@@ -213,7 +213,7 @@ impl Visualizer for Rain {
 
         if voldiff >= 6.7 {
             self.thunder =
-                Thunder::generate(random_int(1000), pix.width() as i32, pix.height() as i32)
+                Thunder::generate(random_int(1000), pix.logical_width() as i32, pix.logical_width() as i32)
         }
 
         self.thunder.draw(pix);

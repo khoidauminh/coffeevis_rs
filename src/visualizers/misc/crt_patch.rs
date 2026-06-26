@@ -29,14 +29,14 @@ impl Visualizer for CrtPatch {
     fn perform(&mut self, args: crate::visualizers::VisualizerArgs) {
         args.pix.mixerm();
         args.pix.color(self.color);
-        self.size = args.pix.height() / 3;
-        self.sweep_amount = args.pix.height() / 3;
+        self.size = args.pix.logical_height() / 3;
+        self.sweep_amount = args.pix.logical_height() / 3;
 
         for row in (0..self.size).step_by(1) {
-            let row = (self.row_idx + row) % args.pix.height();
-            args.pix.rect(P2(0, row as i32), args.pix.width(), 1);
+            let row = (self.row_idx + row) % args.pix.logical_height();
+            args.pix.rect(P2(0, row as i32), args.pix.logical_width(), 1);
         }
 
-        self.row_idx = (self.row_idx + self.sweep_amount) % args.pix.height()
+        self.row_idx = (self.row_idx + self.sweep_amount) % args.pix.logical_height()
     }
 }

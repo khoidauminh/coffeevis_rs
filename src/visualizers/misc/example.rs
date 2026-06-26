@@ -47,7 +47,7 @@ impl Visualizer for Example {
     fn perform(&mut self, args: VisualizerArgs) {
         let VisualizerArgs { pix, stream, .. } = args;
 
-        let bound = pix.size().to_cplx();
+        let bound = pix.logical_size().to_cplx();
 
         // Finally initializes the position.
         let pos = self.position.get_or_insert(bound.center());

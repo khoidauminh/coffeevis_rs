@@ -9,8 +9,9 @@ pub fn get_idx_fast(cwidth: usize, p: P2) -> usize {
     y.wrapping_mul(cwidth as u32).wrapping_add(x) as usize
 }
 
-impl PixelBuffer {
-    pub fn plot_i(&mut self, i: usize) {
+// Raw draws
+impl<'a> PixelBuffer<'a> {
+    fn __plot_i(&mut self, i: usize) {
         if let Some(p) = self.buffer.get_mut(i) {
             #[cfg(feature = "fast")]
             {
@@ -24,49 +25,82 @@ impl PixelBuffer {
         }
     }
 
-    pub fn plot(&mut self, p: P2) {
+    fn __plot(&mut self, p: P2) {
         let i = get_idx_fast(self.width, p);
-        self.plot_i(i);
+        self.__plot_i(i);
     }
 
-    #[allow(unused_mut)]
-    pub fn rect_xy(&mut self, mut ps: P2, mut pe: P2) {
-        #[cfg(not(feature = "fast"))]
+    // #[allow(dead_code)]
+    // pub fn paste(&mut self, pix_pos: P2, pix_width: usize, pix_vec: &[u32]) {
+    //     let canvas_iter = self
+    //         .buffer
+    //         .chunks_exact_mut(self.width)
+    //         .skip(pix_pos.1.max(0) as usize);
+
+    //     let pix_iter = pix_vec
+    //         .chunks_exact(pix_width)
+    //         .skip((-pix_pos.1.min(0)) as usize);
+
+    //     let dest_x = pix_pos.0.max(0) as usize;
+    //     let src_x = (-pix_pos.0.min(0)) as usize;
+
+    //     for (line_dest, line_src) in canvas_iter.zip(pix_iter) {
+    //         let line_iter = line_dest.iter_mut().skip(dest_x).take(pix_width);
+    //         let src_iter = line_src.iter().skip(src_x);
+
+    //         for (p_dest, p_src) in line_iter.zip(src_iter) {
+    //             #[cfg(feature = "fast")]
+    //             {
+    //                 *p_dest = *p_src;
+    //             }
+
+    //             #[cfg(not(feature = "fast"))]
+    //             {
+    //                 *p_dest = (self.mixer)(*p_dest, *p_src);
+    //             }
+    //         }
+    //     }
+    // }
+}
+
+impl<'a> PixelBuffer<'a> {
+    pub fn plot(&mut self, p: P2) {
+        let p = p.scale(self.scale);
+
+        let ylimit = if self.fill { self.scale as i32 } else { 1 };
+
+        for y in 0..ylimit {
+            for x in 0..self.scale as i32 {
+                self.__plot(P2(p.0 + x, p.1 + y));
+            }
+        }
+    }
+
+    pub fn rect_xy(&mut self, ps: P2, pe: P2) {
+        let ps = ps.scale(self.scale).field(self.field);
+        let pe = pe.scale(self.scale).field(self.field);
+
         let [xs, ys] = [
             usize::try_from(ps.0).unwrap_or(0),
             usize::try_from(ps.1).unwrap_or(0),
         ];
 
-        #[cfg(feature = "fast")]
-        let [xs, ys] = [ps.0 as usize, ps.1 as usize];
-
         let [xe, ye] = [pe.0 as usize, pe.1 as usize];
 
-        let mut iter = self
+        let row_height = if self.fill { self.scale as usize } else { 1 };
+        let step = if !self.fill { self.scale as usize } else { 1 };
+
+        let iter = self
             .buffer
             .chunks_exact_mut(self.width)
             .skip(ys)
-            .take(ye.saturating_sub(ys).wrapping_add(1))
+            .take(ye.saturating_sub(ys).wrapping_add(row_height))
+            .step_by(step)
             .flat_map(|l| l.get_mut(xs..xe));
 
-        #[cfg(not(feature = "fast"))]
         iter.flatten().for_each(|p| {
             *p = (self.mixer)(*p, self.color);
         });
-
-        #[cfg(feature = "fast")]
-        iter.for_each(|p| {
-            p.fill(self.color);
-        });
-    }
-
-    pub fn fade(&mut self, a: u8) {
-        let c = self.background.set_alpha(a);
-        self.buffer.iter_mut().for_each(|p| *p = p.mix(c));
-    }
-
-    pub fn fill(&mut self) {
-        self.buffer.fill(self.color);
     }
 
     pub fn rect(&mut self, ps: P2, w: usize, h: usize) {
@@ -78,7 +112,15 @@ impl PixelBuffer {
         self.rect_xy(ps, pe);
     }
 
-    // Using Bresenham's line algorithm.
+    pub fn fade(&mut self, a: u8) {
+        let c = self.background.set_alpha(a);
+        self.buffer.iter_mut().for_each(|p| *p = p.mix(c));
+    }
+
+    pub fn fill(&mut self) {
+        self.buffer.fill(self.color);
+    }
+
     pub fn line(&mut self, ps: P2, pe: P2) {
         let dx = (pe.0 - ps.0).abs();
         let sx = if ps.0 < pe.0 { 1 } else { -1 };
@@ -165,38 +207,6 @@ impl PixelBuffer {
 
             if x < y {
                 break;
-            }
-        }
-    }
-
-    #[allow(dead_code)]
-    pub fn paste(&mut self, pix_pos: P2, pix_width: usize, pix_vec: &[u32]) {
-        let canvas_iter = self
-            .buffer
-            .chunks_exact_mut(self.width)
-            .skip(pix_pos.1.max(0) as usize);
-
-        let pix_iter = pix_vec
-            .chunks_exact(pix_width)
-            .skip((-pix_pos.1.min(0)) as usize);
-
-        let dest_x = pix_pos.0.max(0) as usize;
-        let src_x = (-pix_pos.0.min(0)) as usize;
-
-        for (line_dest, line_src) in canvas_iter.zip(pix_iter) {
-            let line_iter = line_dest.iter_mut().skip(dest_x).take(pix_width);
-            let src_iter = line_src.iter().skip(src_x);
-
-            for (p_dest, p_src) in line_iter.zip(src_iter) {
-                #[cfg(feature = "fast")]
-                {
-                    *p_dest = *p_src;
-                }
-
-                #[cfg(not(feature = "fast"))]
-                {
-                    *p_dest = (self.mixer)(*p_dest, *p_src);
-                }
             }
         }
     }

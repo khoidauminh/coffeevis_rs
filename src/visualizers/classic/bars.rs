@@ -71,15 +71,15 @@ impl Visualizer for Bars {
 
         let VisualizerArgs { pix, stream, .. } = args;
 
-        let bar_num = (pix.width() / 2).min(MAX_BARS);
+        let bar_num = (pix.logical_width() / 2).min(MAX_BARS);
         let bnf = bar_num as f32;
         let bnf_recip = 1.0 / bnf;
 
         prepare(stream, bar_num, &mut self.data, &mut self.dct);
 
         pix.clear();
-        let size = pix.sizeu();
-        let sizef = Cplx(pix.width() as f32, pix.height() as f32);
+        let size = pix.logical_sizeu();
+        let sizef = Cplx(pix.logical_width() as f32, pix.logical_height() as f32);
 
         let mut iter: f32 = 0.4;
 
@@ -112,10 +112,10 @@ impl Visualizer for Bars {
 
             let bar = smoothed_smp * sizef.1;
 
-            let bar = (bar as usize).clamp(1, pix.height());
+            let bar = (bar as usize).clamp(1, pix.logical_height());
 
             let fade = (128.0 + stream.get(idx * 3 / 2).0 * 256.0) as u8;
-            let peak = (bar * 255 / pix.height()) as u8;
+            let peak = (bar * 255 / pix.logical_height()) as u8;
             let _red = (fade.wrapping_mul(2) / 3).saturating_add(128).max(peak);
 
             pix.color(u32::from_be_bytes([0xFF, 0xFF, (fade).max(peak), 0]));
@@ -163,15 +163,15 @@ impl Visualizer for BarsCircle {
     fn perform(&mut self, args: VisualizerArgs) {
         let VisualizerArgs { pix, stream, .. } = args;
 
-        let size = pix.height().min(pix.width()) as i32;
+        let size = pix.logical_height().min(pix.logical_width()) as i32;
         let sizef = size as f32;
 
         let bar_num = pix.sizel().isqrt().min(MAX_BARS);
         let bnf = bar_num as f32;
         let bnf_recip = 1.0 / bnf;
 
-        let wh = pix.width() as i32 / 2;
-        let hh = pix.height() as i32 / 2;
+        let wh = pix.logical_width() as i32 / 2;
+        let hh = pix.logical_height() as i32 / 2;
 
         prepare(stream, bar_num, &mut self.data, &mut self.dct);
 

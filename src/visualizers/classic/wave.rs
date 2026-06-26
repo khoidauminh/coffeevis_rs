@@ -17,7 +17,7 @@ impl Visualizer for Wave {
 
         let l = (stream.len() * PERBYTE) >> 8;
 
-        let (width, height) = pix.sizeu();
+        let (width, height) = pix.logical_sizeu();
 
         for x in 0..width {
             let i = l * x / width;

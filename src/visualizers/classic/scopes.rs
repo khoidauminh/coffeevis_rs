@@ -34,11 +34,11 @@ impl Visualizer for Vectorscope {
     fn perform(&mut self, args: VisualizerArgs) {
         let VisualizerArgs { pix, stream, .. } = args;
 
-        let size = pix.height().min(pix.width()) as i32;
+        let size = pix.logical_height().min(pix.logical_width()) as i32;
         let sizei = size;
         let scale = size as f32 * 0.5;
 
-        let P2(width, height) = pix.size();
+        let P2(width, height) = pix.logical_size();
 
         let width_top_h = width >> 1;
         let height_top_h = height >> 1;
@@ -81,7 +81,7 @@ impl Visualizer for Vectorscope {
 
 impl Vectorscope {
     pub fn draw_cross(&mut self, pix: &mut crate::graphics::PixelBuffer) {
-        let P2(width, height) = pix.size();
+        let P2(width, height) = pix.logical_size();
 
         pix.color(CROSS_COL);
         pix.mixer(u32::over);
@@ -169,7 +169,7 @@ impl Visualizer for Oscilloscope {
             smp2 = smp3;
         }
 
-        let size = pix.size();
+        let size = pix.logical_size();
 
         let center = size.1 as f32 * 0.5;
         let scale = center * 0.7;

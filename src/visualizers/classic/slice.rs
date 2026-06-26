@@ -20,8 +20,8 @@ impl Visualizer for Slice {
     fn perform(&mut self, args: VisualizerArgs) {
         let VisualizerArgs { pix, stream, .. } = args;
 
-        let center = pix.size().center();
-        let radius = pix.width().min(pix.height());
+        let center = pix.logical_size().center();
+        let radius = pix.logical_width().min(pix.logical_height());
         let small_radius = radius as i32 / 16;
         let big_radius = (radius as i32 / 2) * 9 / 10;
         let big_radius_f = big_radius as f32;

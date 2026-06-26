@@ -1,6 +1,6 @@
 use softbuffer::{Context, Surface};
 
-use crate::data::log::{error, info};
+use crate::{data::log::{error, info}, graphics::{PixelBuffer, RenderEffect}};
 
 use qoi;
 
@@ -60,6 +60,7 @@ struct Renderer {
     pub cursor: SyncSender<()>,
     pub refresh_rate: Duration,
     pub refresh_rate_query_tries: u8,
+    pub field: u8,
 }
 
 struct WindowState {
@@ -76,8 +77,8 @@ impl ApplicationHandler for WindowState {
 
         let scale = self.prog.scale() as u32;
         let win_size = PhysicalSize::<u32>::new(
-            self.prog.pix.width() as u32 * scale,
-            self.prog.pix.height() as u32 * scale,
+            DEFAULT_SIZE_WIN as u32 * scale,
+            DEFAULT_SIZE_WIN as u32 * scale,
         );
 
         let de = std::env::var("XDG_CURRENT_DESKTOP").unwrap_or_default();
@@ -181,6 +182,7 @@ impl ApplicationHandler for WindowState {
             cursor: cursor_sender,
             refresh_rate: self.prog.get_rr_interval(),
             refresh_rate_query_tries: 5,
+            field: 0,
         })
     }
 
@@ -191,6 +193,7 @@ impl ApplicationHandler for WindowState {
             cursor,
             refresh_rate,
             refresh_rate_query_tries,
+            field,
             ..
         }) = self.renderer.as_mut()
         else {
@@ -207,19 +210,21 @@ impl ApplicationHandler for WindowState {
                     return;
                 };
 
-                let mut buf = crate::audio::get_buf();
-                if buf.silent() < STOP_RENDERING {
+                let mut audiobuf = crate::audio::get_buf();
+                if audiobuf.silent() < STOP_RENDERING {
                     window.request_redraw();
                 }
 
-                self.prog.render(&mut buf);
+                let mut fill = false;
 
-                self.prog.pix.scale_to(
-                    self.prog.scale() as usize,
-                    &mut buffer,
-                    Some(self.final_buffer_size.width as usize),
-                    self.prog.get_win_render_effect(),
-                );
+                match self.prog.get_win_render_effect() {
+                    RenderEffect::Interlaced => *field = (*field + 1) % self.prog.scale(),
+                    RenderEffect::None => fill = true,
+                    _ => {},
+                }
+
+                let mut pix = PixelBuffer::from(&mut buffer, self.final_buffer_size.width as usize, self.final_buffer_size.height as usize, 2, *field, fill);
+                self.prog.render(&mut pix, &mut audiobuf);
 
                 window.pre_present_notify();
 
@@ -293,8 +298,6 @@ impl ApplicationHandler for WindowState {
                         NonZeroU32::new(h).expect("Surface height is zero"),
                     )
                     .expect("Failed to resize surface buffer");
-
-                self.prog.pix.clear_out_buffer();
             }
 
             WindowEvent::KeyboardInput { event, .. } if !event.repeat => {

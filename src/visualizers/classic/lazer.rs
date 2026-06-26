@@ -24,8 +24,8 @@ impl Visualizer for Lazer {
     fn perform(&mut self, args: VisualizerArgs) {
         let VisualizerArgs { pix, stream, .. } = args;
 
-        let w = pix.width() as f32;
-        let h = pix.height() as f32;
+        let w = pix.logical_width() as f32;
+        let h = pix.logical_height() as f32;
 
         let mut a = {
             let mut sum = Cplx::zero();

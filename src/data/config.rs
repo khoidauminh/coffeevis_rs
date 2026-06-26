@@ -1,4 +1,4 @@
-use crate::{data::*, modes::Mode::*};
+use crate::{data::*, modes::{Mode::*, console_mode::Flusher}};
 
 #[cfg(target_os = "linux")]
 use desktop::create_tmp_desktop_file;
@@ -7,8 +7,7 @@ impl Program {
     pub fn eval_args(mut self, args: &mut dyn Iterator<Item = &String>) -> Self {
         let mut mode = Win;
 
-        let mut flusher: fn(&Program, stdout: &mut std::io::Stdout) =
-            |x, y| Program::print_ascii(x, y);
+        let mut flusher: Flusher = Program::print_ascii;
 
         let mut size = (DEFAULT_SIZE_WIN, DEFAULT_SIZE_WIN);
         let mut scale = 2;

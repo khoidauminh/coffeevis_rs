@@ -62,7 +62,7 @@ impl Visualizer for Spectrum {
 
         self.prepare(stream, (0.0f32).max(SMOOTHING - delta * 10.0));
 
-        let P2(w, h) = pix.size();
+        let P2(w, h) = pix.logical_size();
         let winwh = w >> 1;
 
         let wf = w as f32;

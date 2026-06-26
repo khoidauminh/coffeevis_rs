@@ -4,8 +4,6 @@ pub mod draw;
 
 use blend::Mixer;
 
-const FIELD_START: usize = 64;
-
 use std::ops;
 
 use crate::data::DEFAULT_BG_COLOR;
@@ -57,20 +55,6 @@ pub(crate) trait Pixel:
     fn compose(array: [u8; 4]) -> Self;
 }
 
-pub struct PixelBuffer {
-    out_buffer: Vec<Argb>,
-    buffer: Vec<Argb>,
-    width: usize,
-    height: usize,
-
-    color: Argb,
-    mixer: Mixer,
-
-    field: usize,
-
-    background: Argb,
-}
-
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct P2(pub i32, pub i32);
 
@@ -81,6 +65,14 @@ impl P2 {
 
     pub fn to_cplx(self) -> crate::math::Cplx {
         crate::math::Cplx(self.0 as f32, self.1 as f32)
+    }
+
+    pub fn scale(self, scale: u8) -> P2 {
+        P2(self.0 * scale as i32, self.1 * scale as i32)
+    }
+
+    pub fn field(self, field: u8) -> P2 {
+        P2(self.0, self.1 + field as i32)
     }
 }
 
@@ -99,18 +91,38 @@ impl std::ops::RemAssign for P2 {
     }
 }
 
-impl PixelBuffer {
-    pub fn new(w: usize, h: usize) -> Self {
+pub struct PixelBuffer<'a> {
+    buffer: &'a mut [Argb],
+
+    width: usize,
+    height: usize,
+
+    color: Argb,
+    mixer: Mixer,
+
+    scale: u8,
+
+    field: u8,
+    fill: bool,
+
+    background: Argb,
+}
+
+impl<'a> PixelBuffer<'a> {
+    pub fn from(buffer: &'a mut [Argb], width: usize, height: usize, scale: u8, field: u8, fill: bool) -> Self {
         Self {
-            out_buffer: Vec::new(),
-            buffer: vec![Argb::black(); w * h],
-            width: w,
-            height: h,
+            buffer,
+
+            width,
+            height,
 
             color: Argb::white(),
             mixer: u32::over,
 
-            field: FIELD_START,
+            scale,
+
+            field,
+            fill,
 
             background: DEFAULT_BG_COLOR,
         }
@@ -132,20 +144,20 @@ impl PixelBuffer {
         self.mixer = u32::mix;
     }
 
-    pub fn width(&self) -> usize {
-        self.width
+    pub fn logical_width(&self) -> usize {
+        self.width / self.scale as usize
     }
 
-    pub fn height(&self) -> usize {
-        self.height
+    pub fn logical_height(&self) -> usize {
+        self.height / self.scale as usize
     }
 
-    pub fn size(&self) -> P2 {
-        P2(self.width as i32, self.height as i32)
+    pub fn logical_size(&self) -> P2 {
+        P2(self.logical_width() as i32, self.logical_height() as i32)
     }
 
-    pub fn sizeu(&self) -> (usize, usize) {
-        (self.width, self.height)
+    pub fn logical_sizeu(&self) -> (usize, usize) {
+        (self.logical_width(), self.logical_height())
     }
 
     pub fn sizel(&self) -> usize {
@@ -154,126 +166,9 @@ impl PixelBuffer {
 
     pub fn clear(&mut self) {
         self.buffer.fill(self.background);
-    }
-
-    pub fn resize(&mut self, w: usize, h: usize) {
-        let len = w * h;
-        if len > self.buffer.len() {
-            self.buffer.resize(len, Argb::black());
-        }
-        self.width = w;
-        self.height = h;
-    }
-
-    pub fn pixel(&self, i: usize) -> Argb {
+    }   
+    
+    pub fn pixel(&self, i: usize) -> Argb {        
         self.buffer[i]
-    }
-
-    pub fn clear_out_buffer(&mut self) {
-        self.out_buffer.clear();
-    }
-
-    // On Winit Wayland, resize increments hasn't been implemented,
-    // So the width parameter is there to ensure that the horizontal
-    // lines are aligned.
-    pub fn scale_to(
-        &mut self,
-        scale: usize,
-        dest: &mut [Argb],
-        width: Option<usize>,
-        effect: RenderEffect,
-    ) {
-        if self.width == 0 {
-            return;
-        }
-
-        self.mixerm();
-
-        let dst_width = width.unwrap_or(self.width * scale);
-
-        match effect {
-            RenderEffect::None => {
-                let dst_chunk_size = dst_width * scale;
-
-                for (dst_chunk, src_line) in dest
-                    .chunks_exact_mut(dst_chunk_size)
-                    .zip(self.buffer.chunks_exact(self.width))
-                {
-                    let (first_line, rest_line) = dst_chunk.split_at_mut(dst_width);
-
-                    for (group, &src_pixel) in
-                        first_line.chunks_exact_mut(scale).zip(src_line.iter())
-                    {
-                        group.fill(src_pixel)
-                    }
-
-                    for l in rest_line.chunks_exact_mut(dst_width) {
-                        l.copy_from_slice(first_line);
-                    }
-                }
-            }
-
-            RenderEffect::Crt => {
-                self.buffer
-                    .chunks_exact(self.width) // source lines
-                    .zip(dest.chunks_exact_mut(dst_width).step_by(scale)) // with destination lines
-                    .flat_map(|(src_row, dst_row)| {
-                        src_row.iter().zip(dst_row.chunks_exact_mut(scale))
-                    })
-                    .for_each(|(&src_pixel, dst_chunk)| dst_chunk.fill(src_pixel));
-            }
-
-            RenderEffect::Interlaced => {
-                let new_len = dest.len() + FIELD_START * dst_width;
-
-                if self.out_buffer.len() < new_len {
-                    self.out_buffer.resize(new_len, Argb::black());
-                }
-
-                // Shift the lines of the out buffer down
-                // to create the illusion of movement.
-                //
-                // We simulate shifting by sliding the starting
-                // point of the buffer backward. When we reach the
-                // start of the buffer, we finally do the actual shift.
-
-                self.field = self.field.wrapping_sub(1);
-
-                if self.field > FIELD_START {
-                    let shift_start = self.height * scale * dst_width;
-                    let offset = dst_width * FIELD_START;
-
-                    for (_, i) in (0..shift_start)
-                        .step_by(dst_width)
-                        .enumerate()
-                        .filter(|&(i, _)| i % scale != 0)
-                        .rev()
-                    {
-                        let j = i + dst_width;
-                        let z = i + offset;
-                        self.out_buffer.copy_within(i..j, z);
-                    }
-
-                    self.field = FIELD_START;
-                }
-
-                let index_start = self.field * dst_width;
-
-                if let Some(out_buffer) = self
-                    .out_buffer
-                    .get_mut(index_start..index_start + dest.len())
-                {
-                    self.buffer
-                        .chunks_exact(self.width) // source lines
-                        .zip(out_buffer.chunks_exact_mut(dst_width).step_by(scale)) // with destination lines
-                        .flat_map(|(src_row, dst_row)| {
-                            src_row.iter().zip(dst_row.chunks_exact_mut(scale))
-                        })
-                        .for_each(|(&src_pixel, dst_chunk)| dst_chunk.fill(src_pixel));
-
-                    dest.copy_from_slice(out_buffer);
-                }
-            }
-        }
     }
 }
