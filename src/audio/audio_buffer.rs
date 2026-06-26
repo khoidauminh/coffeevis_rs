@@ -147,7 +147,7 @@ impl AudioBuffer {
 
     pub fn autoslide(&mut self) {
         let diff = self.writeend.saturating_sub(self.readend);
-        let diff = diff / (self.rotatessincewrite + 3);
+        let diff = diff / (self.rotatessincewrite + 4);
         self.readend += diff;
         self.rotatessincelastwrite += 1;
     }
