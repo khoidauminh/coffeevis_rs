@@ -80,8 +80,8 @@ output device, then enable listening on Cable Output. See [VB-Cable](https://vb-
 On Wayland, Winit supports automatic vsync,
 therefore custom fps setting is not supported.
 
-On other platforms, Coffeevis relies on user specified fps.
-The default fps is 60.
+On other platforms, Coffeevis will try to query your monitor's 
+refresh rate if the user does not specify the number of FPS.
 
 ## RUNTIME OPTIONS
 
