@@ -20,8 +20,7 @@ use winit::{
 use std::{
     cell::LazyCell,
     num::NonZeroU32,
-    sync::mpsc::{self, RecvTimeoutError, SyncSender},
-    thread::{self, JoinHandle},
+    thread,
     time::{Duration, Instant},
 };
 
@@ -59,8 +58,6 @@ impl WindowProps {
 struct Renderer {
     pub window: &'static dyn Window,
     pub surface: Surface<&'static dyn Window, &'static dyn Window>,
-    pub thread_cursor_id: JoinHandle<()>,
-    pub cursor: SyncSender<()>,
     pub refresh_rate: Duration,
     pub refresh_rate_query_tries: u8,
     pub field: u8,
@@ -156,33 +153,9 @@ impl ApplicationHandler for WindowState {
         window.set_window_level(WindowLevel::AlwaysOnTop);
         window.request_redraw();
 
-        let (cursor_sender, cursor_receiver) = mpsc::sync_channel(1);
-
-        let thread_cursor_id = thread::Builder::new()
-            .name("coffeevis cursor control".into())
-            .spawn(move || {
-                let mut waitfor = Duration::from_secs(1);
-
-                loop {
-                    match cursor_receiver.recv_timeout(waitfor) {
-                        Ok(()) => {
-                            waitfor = Duration::from_secs(1);
-                        }
-                        Err(RecvTimeoutError::Timeout) => {
-                            waitfor = Duration::from_secs(60);
-                            window.set_cursor_visible(false);
-                        }
-                        Err(_) => break,
-                    }
-                }
-            })
-            .unwrap();
-
         self.renderer = Some(Renderer {
             window,
             surface,
-            thread_cursor_id,
-            cursor: cursor_sender,
             refresh_rate: self.prog.get_rr_interval(),
             refresh_rate_query_tries: 5,
             field: 0,
@@ -193,7 +166,6 @@ impl ApplicationHandler for WindowState {
         let Some(Renderer {
             window,
             surface,
-            cursor,
             refresh_rate,
             refresh_rate_query_tries,
             field,
@@ -273,11 +245,6 @@ impl ApplicationHandler for WindowState {
 
             WindowEvent::CloseRequested => self.call_exit(event_loop),
 
-            WindowEvent::PointerMoved { .. } => {
-                window.set_cursor_visible(true);
-                let _ = cursor.try_send(());
-            }
-
             WindowEvent::PointerButton { button, .. } => {
                 if let Some(MouseButton::Left) = button.mouse_button()
                     && let Some(err) = window.drag_window().err()
@@ -349,12 +316,8 @@ impl ApplicationHandler for WindowState {
 
 impl WindowState {
     fn call_exit(&mut self, event_loop: &dyn ActiveEventLoop) {
-        if let Some(t) = self.renderer.take() {
-            crate::audio::get_buf().deinit_realtime_wakeup();
-            drop(t.cursor);
-            t.thread_cursor_id.join().unwrap();
-        }
-
+        self.renderer.take();
+        crate::audio::get_buf().deinit_realtime_wakeup();
         event_loop.exit();
     }
 }
