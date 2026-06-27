@@ -11,6 +11,14 @@ pub fn get_idx_fast(cwidth: usize, p: P2) -> usize {
 
 // Raw draws
 impl<'a> Painter<'a> {
+    fn step(&self) -> u8 {
+        if self.fill { 1 } else { self.scale }
+    }
+
+    fn row_height(&self) -> u8 {
+        if self.fill { self.scale } else { 1 }
+    }
+
     fn __plot_i(&mut self, i: usize) {
         if let Some(p) = self.buffer.get_mut(i) {
             #[cfg(feature = "fast")]
@@ -29,15 +37,11 @@ impl<'a> Painter<'a> {
         let i = get_idx_fast(self.width, p);
         self.__plot_i(i);
     }
-}
 
-impl<'a> Painter<'a> {
     pub fn plot(&mut self, p: P2) {
         let p = p.scale(self.scale).field(self.field);
 
-        let ylimit = if self.fill { self.scale as i32 } else { 1 };
-
-        for y in 0..ylimit {
+        for y in 0..self.row_height() as i32 {
             for x in 0..self.scale as i32 {
                 self.__plot(P2(p.0 + x, p.1 + y));
             }
@@ -55,8 +59,8 @@ impl<'a> Painter<'a> {
 
         let [xe, ye] = [pe.0 as usize, pe.1 as usize];
 
-        let row_height = if self.fill { self.scale as usize } else { 1 };
-        let step = if !self.fill { self.scale as usize } else { 1 };
+        let row_height = self.row_height() as usize;
+        let step = self.step() as usize;
 
         let iter = self
             .buffer
@@ -82,18 +86,15 @@ impl<'a> Painter<'a> {
 
     pub fn fade(&mut self, a: u8) {
         let c = self.background.set_alpha(a);
-        let step = if self.fill { 1 } else { self.scale };
 
-        for y in (self.field as usize..self.height).step_by(step as usize) {
+        for y in (self.field as usize..self.height).step_by(self.step() as usize) {
             let start = y * self.width;
             self.buffer[start..start+self.width].iter_mut().for_each(|p| *p = p.mix(c));
         }
     }
 
     pub fn fill(&mut self) {
-        let step = if self.fill { 1 } else { self.scale };
-
-        for y in (self.field as usize..self.height).step_by(step as usize) {
+        for y in (self.field as usize..self.height).step_by(self.step() as usize) {
             let start = y * self.width;
             self.buffer[start..start+self.width].fill(self.color);
         }
