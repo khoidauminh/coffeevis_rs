@@ -1,6 +1,6 @@
 use softbuffer::{Context, Surface};
 
-use crate::{data::log::{error, info}, graphics::{PixelBuffer, RenderEffect}};
+use crate::{data::log::{error, info}, graphics::{Painter, RenderEffect}};
 
 use qoi;
 
@@ -223,7 +223,7 @@ impl ApplicationHandler for WindowState {
                     _ => {},
                 }
 
-                let mut pix = PixelBuffer::from(&mut buffer, self.final_buffer_size.width as usize, self.final_buffer_size.height as usize, 2, *field, fill);
+                let mut pix = Painter::from(&mut buffer, self.final_buffer_size.width as usize, self.final_buffer_size.height as usize, 2, *field, fill);
                 self.prog.render(&mut pix, &mut audiobuf);
 
                 window.pre_present_notify();

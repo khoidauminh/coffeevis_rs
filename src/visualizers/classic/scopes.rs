@@ -80,7 +80,7 @@ impl Visualizer for Vectorscope {
 }
 
 impl Vectorscope {
-    pub fn draw_cross(&mut self, pix: &mut crate::graphics::PixelBuffer) {
+    pub fn draw_cross(&mut self, pix: &mut crate::graphics::Painter) {
         let P2(width, height) = pix.logical_size();
 
         pix.color(CROSS_COL);

@@ -113,7 +113,7 @@ impl Game {
         }
     }
 
-    pub fn draw(&self, pix: &mut crate::graphics::PixelBuffer) {
+    pub fn draw(&self, pix: &mut crate::graphics::Painter) {
         pix.clear();
         pix.mixerd();
 

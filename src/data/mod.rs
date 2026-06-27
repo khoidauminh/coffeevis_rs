@@ -14,7 +14,7 @@ use crate::audio::AudioBuffer;
 use crate::data::delta::Delta;
 use crate::graphics::RenderEffect;
 use crate::visualizers::{VisList, VisualizerArgs, VisualizerConfig};
-use crate::{graphics::PixelBuffer, modes::Mode};
+use crate::{graphics::Painter, modes::Mode};
 
 use crate::modes;
 
@@ -211,7 +211,7 @@ impl Program {
         }
     }
 
-    pub fn render<'a>(&'a mut self, pix: &'a mut PixelBuffer<'a>, buf: &'a mut AudioBuffer) {
+    pub fn render<'a>(&'a mut self, pix: &'a mut Painter<'a>, buf: &'a mut AudioBuffer) {
         self.vislist.get().perform(VisualizerArgs {
             pix,
             keys: &self.key,

@@ -3,7 +3,7 @@ use std::cell::RefCell;
 use crate::{
     audio::AudioBuffer,
     data::{DEFAULT_SIZE_WIN, Program},
-    graphics::{Argb, P2, Pixel, PixelBuffer},
+    graphics::{Argb, P2, Pixel, Painter},
     math::{
         Cplx,
         interpolate::linearf,
@@ -62,7 +62,7 @@ impl Thunder {
         }
     }
 
-    pub fn draw(&self, canvas: &mut PixelBuffer) {
+    pub fn draw(&self, canvas: &mut Painter) {
         self.segments.windows(2).for_each(|pair| {
             let p1 = pair[0];
             let p2 = pair[1];
@@ -114,7 +114,7 @@ impl RainDrop {
         (self.position.1 as u16) < self.bound_height
     }
 
-    pub fn draw(&mut self, canvas: &mut PixelBuffer) {
+    pub fn draw(&mut self, canvas: &mut Painter) {
         let _w = canvas.logical_width();
         let _h = canvas.logical_height();
 

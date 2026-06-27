@@ -5,7 +5,7 @@ mod misc;
 use crate::{
     audio::AudioBuffer,
     data::{DEFAULT_VIS_SWITCH_DURATION, KeyInput, log},
-    graphics::PixelBuffer,
+    graphics::Painter,
     visualizers::{
         classic::{
             bars::{Bars, BarsCircle},
@@ -25,7 +25,7 @@ use crate::{
 
 #[allow(dead_code)]
 pub struct VisualizerArgs<'a> {
-    pub pix: &'a mut PixelBuffer<'a>,
+    pub pix: &'a mut Painter<'a>,
     pub stream: &'a mut AudioBuffer,
     pub keys: &'a KeyInput,
     pub delta: f32,

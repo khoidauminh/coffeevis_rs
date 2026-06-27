@@ -91,7 +91,7 @@ impl std::ops::RemAssign for P2 {
     }
 }
 
-pub struct PixelBuffer<'a> {
+pub struct Painter<'a> {
     buffer: &'a mut [Argb],
 
     width: usize,
@@ -108,7 +108,7 @@ pub struct PixelBuffer<'a> {
     background: Argb,
 }
 
-impl<'a> PixelBuffer<'a> {
+impl<'a> Painter<'a> {
     pub fn from(buffer: &'a mut [Argb], width: usize, height: usize, scale: u8, field: u8, fill: bool) -> Self {
         Self {
             buffer,

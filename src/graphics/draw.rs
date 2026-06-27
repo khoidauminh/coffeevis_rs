@@ -1,4 +1,4 @@
-use crate::graphics::PixelBuffer;
+use crate::graphics::Painter;
 
 #[allow(unused_imports)]
 use super::{P2, Pixel};
@@ -10,7 +10,7 @@ pub fn get_idx_fast(cwidth: usize, p: P2) -> usize {
 }
 
 // Raw draws
-impl<'a> PixelBuffer<'a> {
+impl<'a> Painter<'a> {
     fn __plot_i(&mut self, i: usize) {
         if let Some(p) = self.buffer.get_mut(i) {
             #[cfg(feature = "fast")]
@@ -63,7 +63,7 @@ impl<'a> PixelBuffer<'a> {
     // }
 }
 
-impl<'a> PixelBuffer<'a> {
+impl<'a> Painter<'a> {
     pub fn plot(&mut self, p: P2) {
         let p = p.scale(self.scale);
 

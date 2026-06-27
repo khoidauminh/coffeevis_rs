@@ -14,10 +14,10 @@ use arrayvec::ArrayString;
 use std::io::{Error, Stdout, Write, stdout};
 
 use crate::{
-    data::*, graphics::{Argb, Pixel, PixelBuffer, blend::grayb}, modes::Mode,
+    data::*, graphics::{Argb, Pixel, Painter, blend::grayb}, modes::Mode,
 };
 
-pub type Flusher = fn(&Program, &PixelBuffer, &mut Stdout);
+pub type Flusher = fn(&Program, &Painter, &mut Stdout);
 
 const ERROR: u8 = 6;
 
@@ -182,7 +182,7 @@ impl Program {
         (self.console_props.width, self.console_props.height)
     }
 
-    pub fn print_ascii(&self, pix: &PixelBuffer, stdout: &mut Stdout) {
+    pub fn print_ascii(&self, pix: &Painter, stdout: &mut Stdout) {
         let center = self.get_center(pix.logical_width() as u16, pix.logical_height() as u16, 2, 4);
 
         let mut line = ColoredString::default();
@@ -214,7 +214,7 @@ impl Program {
         }
     }
 
-    pub fn print_block(&self, pix: &PixelBuffer, stdout: &mut Stdout) {
+    pub fn print_block(&self, pix: &Painter, stdout: &mut Stdout) {
         let center = self.get_center(pix.logical_width() as u16, pix.logical_height() as u16,  2, 4);
 
         let mut line = ColoredString::default();
@@ -253,7 +253,7 @@ impl Program {
         }
     }
 
-    pub fn print_brail(&self, pix: &PixelBuffer, stdout: &mut Stdout) {
+    pub fn print_brail(&self, pix: &Painter, stdout: &mut Stdout) {
         let center = self.get_center(pix.logical_width() as u16, pix.logical_height() as u16,  4, 8);
 
         let mut line = ColoredString::default();
@@ -407,7 +407,7 @@ pub fn con_main(mut prog: Program) -> std::io::Result<()> {
 
         raw_buffer.resize((prog.console_props.width * prog.console_props.height) as usize, 0);
 
-        let mut pix = PixelBuffer::from(&mut raw_buffer, prog.console_props.width as usize, prog.console_props.height as usize, 1, 0,false);
+        let mut pix = Painter::from(&mut raw_buffer, prog.console_props.width as usize, prog.console_props.height as usize, 1, 0,false);
         (prog.console_props.flusher)(&prog, &pix, &mut std::io::stdout());
         prog.render(&mut pix, &mut buf);
 
