@@ -207,7 +207,7 @@ impl Program {
     pub fn update_size(&mut self, s: (u16, u16)) {
         match &self.mode {
             Mode::Win => self.window_props.set_size(s),
-            _ => self.console_props.set_size(s, self.mode())
+            _ => self.console_props.set_size(s, self.mode()),
         }
     }
 

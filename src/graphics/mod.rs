@@ -109,7 +109,14 @@ pub struct Painter<'a> {
 }
 
 impl<'a> Painter<'a> {
-    pub fn from(buffer: &'a mut [Argb], width: usize, height: usize, scale: u8, field: u8, fill: bool) -> Self {
+    pub fn from(
+        buffer: &'a mut [Argb],
+        width: usize,
+        height: usize,
+        scale: u8,
+        field: u8,
+        fill: bool,
+    ) -> Self {
         Self {
             buffer,
 
@@ -166,9 +173,9 @@ impl<'a> Painter<'a> {
 
     pub fn clear(&mut self) {
         self.buffer.fill(self.background);
-    }   
-    
-    pub fn pixel(&self, i: usize) -> Argb {        
+    }
+
+    pub fn pixel(&self, i: usize) -> Argb {
         self.buffer[i]
     }
 }

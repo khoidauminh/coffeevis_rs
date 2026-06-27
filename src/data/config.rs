@@ -1,4 +1,7 @@
-use crate::{data::*, modes::{Mode::*, console_mode::Flusher}};
+use crate::{
+    data::*,
+    modes::{Mode::*, console_mode::Flusher},
+};
 
 #[cfg(target_os = "linux")]
 use desktop::create_tmp_desktop_file;

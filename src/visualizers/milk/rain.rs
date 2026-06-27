@@ -3,7 +3,7 @@ use std::cell::RefCell;
 use crate::{
     audio::AudioBuffer,
     data::{DEFAULT_SIZE_WIN, Program},
-    graphics::{Argb, P2, Pixel, Painter},
+    graphics::{Argb, P2, Painter, Pixel},
     math::{
         Cplx,
         interpolate::linearf,
@@ -212,8 +212,11 @@ impl Visualizer for Rain {
         }
 
         if voldiff >= 6.7 {
-            self.thunder =
-                Thunder::generate(random_int(1000), pix.logical_width() as i32, pix.logical_width() as i32)
+            self.thunder = Thunder::generate(
+                random_int(1000),
+                pix.logical_width() as i32,
+                pix.logical_width() as i32,
+            )
         }
 
         self.thunder.draw(pix);

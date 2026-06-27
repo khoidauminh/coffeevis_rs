@@ -14,7 +14,9 @@ use arrayvec::ArrayString;
 use std::io::{Error, Stdout, Write, stdout};
 
 use crate::{
-    data::*, graphics::{Argb, Pixel, Painter, blend::grayb}, modes::Mode,
+    data::*,
+    graphics::{Argb, Painter, Pixel, blend::grayb},
+    modes::Mode,
 };
 
 pub type Flusher = fn(&Program, &Painter, &mut Stdout);
@@ -28,8 +30,8 @@ pub struct ConsoleProps {
     pub width: u16,
     pub height: u16,
 
-    pub physical_width: u16, 
-    pub physical_height: u16, 
+    pub physical_width: u16,
+    pub physical_height: u16,
 
     pub max_width: u16,
     pub max_height: u16,
@@ -42,7 +44,7 @@ impl ConsoleProps {
         self.physical_height = s.1;
 
         let s = self.rescale(s, m);
-        
+
         self.width = s.0;
         self.height = s.1;
     }
@@ -171,7 +173,13 @@ impl Program {
         self.clear_con();
     }
 
-    pub fn get_center(&self, width: u16, height: u16, divider_x: u16, divider_y: u16) -> (u16, u16) {
+    pub fn get_center(
+        &self,
+        width: u16,
+        height: u16,
+        divider_x: u16,
+        divider_y: u16,
+    ) -> (u16, u16) {
         (
             (self.console_props.physical_width / 2).saturating_sub(width / divider_x),
             (self.console_props.physical_height / 2).saturating_sub(height / divider_y),
@@ -183,7 +191,12 @@ impl Program {
     }
 
     pub fn print_ascii(&self, pix: &Painter, stdout: &mut Stdout) {
-        let center = self.get_center(pix.logical_width() as u16, pix.logical_height() as u16, 2, 4);
+        let center = self.get_center(
+            pix.logical_width() as u16,
+            pix.logical_height() as u16,
+            2,
+            4,
+        );
 
         let mut line = ColoredString::default();
 
@@ -215,7 +228,12 @@ impl Program {
     }
 
     pub fn print_block(&self, pix: &Painter, stdout: &mut Stdout) {
-        let center = self.get_center(pix.logical_width() as u16, pix.logical_height() as u16,  2, 4);
+        let center = self.get_center(
+            pix.logical_width() as u16,
+            pix.logical_height() as u16,
+            2,
+            4,
+        );
 
         let mut line = ColoredString::default();
 
@@ -254,7 +272,12 @@ impl Program {
     }
 
     pub fn print_brail(&self, pix: &Painter, stdout: &mut Stdout) {
-        let center = self.get_center(pix.logical_width() as u16, pix.logical_height() as u16,  4, 8);
+        let center = self.get_center(
+            pix.logical_width() as u16,
+            pix.logical_height() as u16,
+            4,
+            8,
+        );
 
         let mut line = ColoredString::default();
 
@@ -405,9 +428,19 @@ pub fn con_main(mut prog: Program) -> std::io::Result<()> {
             continue;
         }
 
-        raw_buffer.resize((prog.console_props.width * prog.console_props.height) as usize, 0);
+        raw_buffer.resize(
+            (prog.console_props.width * prog.console_props.height) as usize,
+            0,
+        );
 
-        let mut pix = Painter::from(&mut raw_buffer, prog.console_props.width as usize, prog.console_props.height as usize, 1, 0,false);
+        let mut pix = Painter::from(
+            &mut raw_buffer,
+            prog.console_props.width as usize,
+            prog.console_props.height as usize,
+            1,
+            0,
+            false,
+        );
         (prog.console_props.flusher)(&prog, &pix, &mut std::io::stdout());
         prog.render(&mut pix, &mut buf);
 

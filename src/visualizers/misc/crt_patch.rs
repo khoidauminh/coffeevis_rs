@@ -33,8 +33,9 @@ impl Visualizer for CrtPatch {
         self.sweep_amount = args.pix.logical_height() / 3;
 
         for row in (0..self.size).step_by(1) {
-            let row = (self.row_idx + row) % args.pix.logical_height();
-            args.pix.rect(P2(0, row as i32), args.pix.logical_width(), 1);
+            let row = (self.row_idx + row) % args.pix.logical_height().max(1);
+            args.pix
+                .rect(P2(0, row as i32), args.pix.logical_width(), 1);
         }
 
         self.row_idx = (self.row_idx + self.sweep_amount) % args.pix.logical_height()

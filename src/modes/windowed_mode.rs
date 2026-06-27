@@ -1,6 +1,9 @@
 use softbuffer::{Context, Surface};
 
-use crate::{data::log::{error, info}, graphics::{Painter, RenderEffect}};
+use crate::{
+    data::log::{error, info},
+    graphics::{Painter, RenderEffect},
+};
 
 use qoi;
 
@@ -91,8 +94,8 @@ impl ApplicationHandler for WindowState {
         });
 
         #[cfg(target_os = "windows")]
-        let wm_attr = winit::platform::windows::WindowAttributesWindows::default()
-            .with_class_name("cvis");
+        let wm_attr =
+            winit::platform::windows::WindowAttributesWindows::default().with_class_name("cvis");
 
         #[cfg(target_os = "linux")]
         let wm_attr = winit::platform::wayland::WindowAttributesWayland::default()
@@ -220,10 +223,18 @@ impl ApplicationHandler for WindowState {
                 match self.prog.get_win_render_effect() {
                     RenderEffect::Interlaced => *field = (*field + 1) % self.prog.scale(),
                     RenderEffect::None => fill = true,
-                    _ => {},
+                    _ => {}
                 }
 
-                let mut pix = Painter::from(&mut buffer, self.final_buffer_size.width as usize, self.final_buffer_size.height as usize, 2, *field, fill);
+                let mut pix = Painter::from(
+                    &mut buffer,
+                    self.final_buffer_size.width as usize,
+                    self.final_buffer_size.height as usize,
+                    2,
+                    *field,
+                    fill,
+                );
+
                 self.prog.render(&mut pix, &mut audiobuf);
 
                 window.pre_present_notify();
