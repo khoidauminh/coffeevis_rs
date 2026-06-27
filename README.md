@@ -5,6 +5,8 @@ A personal GUI + TUI music visualizer written in Rust.
 
 ## WHAT'S NEW ON v0.7.0
 
+Added Windows support (tested on Windows 11).
+
 New keyboard input buttons implemented: Z, X, C and Arrow keys.
 
 Added Example visualizer and minimal Snake game.
