@@ -29,43 +29,11 @@ impl<'a> Painter<'a> {
         let i = get_idx_fast(self.width, p);
         self.__plot_i(i);
     }
-
-    // #[allow(dead_code)]
-    // pub fn paste(&mut self, pix_pos: P2, pix_width: usize, pix_vec: &[u32]) {
-    //     let canvas_iter = self
-    //         .buffer
-    //         .chunks_exact_mut(self.width)
-    //         .skip(pix_pos.1.max(0) as usize);
-
-    //     let pix_iter = pix_vec
-    //         .chunks_exact(pix_width)
-    //         .skip((-pix_pos.1.min(0)) as usize);
-
-    //     let dest_x = pix_pos.0.max(0) as usize;
-    //     let src_x = (-pix_pos.0.min(0)) as usize;
-
-    //     for (line_dest, line_src) in canvas_iter.zip(pix_iter) {
-    //         let line_iter = line_dest.iter_mut().skip(dest_x).take(pix_width);
-    //         let src_iter = line_src.iter().skip(src_x);
-
-    //         for (p_dest, p_src) in line_iter.zip(src_iter) {
-    //             #[cfg(feature = "fast")]
-    //             {
-    //                 *p_dest = *p_src;
-    //             }
-
-    //             #[cfg(not(feature = "fast"))]
-    //             {
-    //                 *p_dest = (self.mixer)(*p_dest, *p_src);
-    //             }
-    //         }
-    //     }
-    // }
 }
 
 impl<'a> Painter<'a> {
     pub fn plot(&mut self, p: P2) {
-        let p = p.scale(self.scale);
+        let p = p.scale(self.scale).field(self.field);
 
         let ylimit = if self.fill { self.scale as i32 } else { 1 };
 
@@ -114,11 +82,21 @@ impl<'a> Painter<'a> {
 
     pub fn fade(&mut self, a: u8) {
         let c = self.background.set_alpha(a);
-        self.buffer.iter_mut().for_each(|p| *p = p.mix(c));
+        let step = if self.fill { 1 } else { self.scale };
+
+        for y in (self.field as usize..self.height).step_by(step as usize) {
+            let start = y * self.width;
+            self.buffer[start..start+self.width].iter_mut().for_each(|p| *p = p.mix(c));
+        }
     }
 
     pub fn fill(&mut self) {
-        self.buffer.fill(self.color);
+        let step = if self.fill { 1 } else { self.scale };
+
+        for y in (self.field as usize..self.height).step_by(step as usize) {
+            let start = y * self.width;
+            self.buffer[start..start+self.width].fill(self.color);
+        }
     }
 
     pub fn line(&mut self, ps: P2, pe: P2) {

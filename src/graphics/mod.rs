@@ -172,7 +172,8 @@ impl<'a> Painter<'a> {
     }
 
     pub fn clear(&mut self) {
-        self.buffer.fill(self.background);
+        self.color(self.background);
+        self.fill();
     }
 
     pub fn pixel(&self, i: usize) -> Argb {

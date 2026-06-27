@@ -209,6 +209,8 @@ impl ApplicationHandler for WindowState {
 
         match event {
             WindowEvent::RedrawRequested => {
+                // let old_buffer = surface.fetch();
+
                 let Ok(mut buffer) = surface.buffer_mut() else {
                     return;
                 };
@@ -225,6 +227,10 @@ impl ApplicationHandler for WindowState {
                     RenderEffect::None => fill = true,
                     _ => {}
                 }
+
+                // if let Ok(old_buffer) = old_buffer  && old_buffer.len() == buffer.len() {
+                //     buffer.copy_from_slice(&old_buffer);
+                // }
 
                 let mut pix = Painter::from(
                     &mut buffer,
