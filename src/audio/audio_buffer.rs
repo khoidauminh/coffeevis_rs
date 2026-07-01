@@ -80,7 +80,6 @@ impl AudioBuffer {
             .zip(&mut src_iter)
             .for_each(|(d, s)| *d = Cplx::from_slice(s));
 
-        self.readend = self.writeend;
         self.writeend += copysize;
 
         self.rotatessincewrite = self.rotatessincelastwrite;
@@ -147,7 +146,7 @@ impl AudioBuffer {
 
     pub fn autoslide(&mut self) {
         let diff = self.writeend.saturating_sub(self.readend);
-        let diff = diff / (self.rotatessincewrite + 4);
+        let diff = diff / (self.rotatessincewrite + 3);
         self.readend += diff;
         self.rotatessincelastwrite += 1;
     }
