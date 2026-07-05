@@ -118,6 +118,7 @@ Coffeevis supports temporary options at launch
 | --effect | crt | blank out every other horizontal line to simulate CRT effect |
 | --effect | interlaced | (default) interlace fields together to make the visualizer appear smoother (the number of fields is the scale value) |
 | --effect | none | rendering is scaled and presented as is |
+| --latency | 100 | in milliseconds, make coffeevis delay the visualizer by the specified value (this does not change your headwear's actual latency). | 
 
 ## NOTES
 

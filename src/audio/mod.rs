@@ -46,6 +46,8 @@ pub fn get_source() -> cpal::Stream {
             .unwrap_or("<Unknown device>")
     );
 
+    get_buf().set_sample_rate(config.sample_rate as usize);
+
     device
         .build_input_stream(
             config,

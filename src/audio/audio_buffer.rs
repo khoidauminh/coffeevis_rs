@@ -7,21 +7,25 @@ const SILENCE_LIMIT: f32 = 0.0001;
 const AMP_PERSIST_LIMIT: f32 = 0.01;
 const REACT_FACTOR: f32 = 0.98;
 
-const BUFFER_CAPACITY: usize = 1 << 16;
+const BUFFER_CAPACITY: usize = 1 << 18;
 const BUFFER_MASK: usize = BUFFER_CAPACITY - 1;
 
 pub struct AudioBuffer {
     data: [Cplx; BUFFER_CAPACITY],
-
+    
     writeend: usize,
     readend: usize,
-
+    
     rotatessincewrite: usize,
     rotatessincelastwrite: usize,
+    
+    sample_rate: usize,
 
     lastinputsize: usize,
 
     silent: u8,
+
+    latency_ms: usize,
 
     max: f32,
 
@@ -42,9 +46,13 @@ impl AudioBuffer {
             rotatessincelastwrite: 1,
             lastinputsize: 0,
 
+            sample_rate: 44100,
+
             silent: 0,
 
             max: 0.0,
+
+            latency_ms: 0,
 
             normalize: true,
 
@@ -58,6 +66,14 @@ impl AudioBuffer {
         }
 
         self.window = Some(w);
+    }
+
+    pub fn set_sample_rate(&mut self, rate: usize) {
+        self.sample_rate = rate;
+    }
+
+    pub fn set_latency(&mut self, latency: usize) {
+        self.latency_ms = latency;
     }
 
     pub fn deinit_realtime_wakeup(&mut self) {
@@ -145,7 +161,7 @@ impl AudioBuffer {
     }
 
     pub fn autoslide(&mut self) {
-        let diff = self.writeend.saturating_sub(self.readend);
+        let diff = self.writeend.saturating_sub(self.latency_ms * self.sample_rate / 1000).saturating_sub(self.readend);
         let diff = diff / (self.rotatessincewrite + 3);
         self.readend += diff;
         self.rotatessincelastwrite += 1;

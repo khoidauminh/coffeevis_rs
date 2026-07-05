@@ -32,6 +32,20 @@ impl Program {
                     create_tmp_desktop_file();
                 }
 
+                "--latency" => {
+                    let latency = args
+                        .next()
+                        .expect("Argument error: Expected value for latency.")
+                        .parse::<usize>()
+                        .expect("Argument error: Invalid value for latency.");
+
+                    if latency > 1000 {
+                        panic!("Argument error: Latency cannot be larger than 1000ms.");
+                    }
+
+                    crate::audio::get_buf().set_latency(latency);
+                }
+
                 "--quiet" => self.quiet = true,
 
                 "--ascii" => mode = ConAscii,
