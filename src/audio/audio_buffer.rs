@@ -8,12 +8,14 @@ const AMP_PERSIST_LIMIT: f32 = 0.01;
 const REACT_FACTOR: f32 = 0.98;
 
 const BUFFER_CAPACITY: usize = 1 << 18;
+const CHUNK_SIZE: usize = 1024;
 const BUFFER_MASK: usize = BUFFER_CAPACITY - 1;
 
 pub struct AudioBuffer {
     data: [Cplx; BUFFER_CAPACITY],
     
     writeend: usize,
+    delayend: usize,
     readend: usize,
     
     rotatessincewrite: usize,
@@ -40,6 +42,7 @@ impl AudioBuffer {
             data: [Cplx::zero(); _],
 
             writeend: 0,
+            delayend: 0,
             readend: 0,
 
             rotatessincewrite: 1,
@@ -97,6 +100,10 @@ impl AudioBuffer {
             .for_each(|(d, s)| *d = Cplx::from_slice(s));
 
         self.writeend += copysize;
+
+        if self.delayend + CHUNK_SIZE < self.writeend {
+            self.delayend += CHUNK_SIZE;
+        }
 
         self.rotatessincewrite = self.rotatessincelastwrite;
         self.rotatessincelastwrite = 0;
@@ -161,7 +168,7 @@ impl AudioBuffer {
     }
 
     pub fn autoslide(&mut self) {
-        let diff = self.writeend.saturating_sub(self.latency_ms * self.sample_rate / 1000).saturating_sub(self.readend);
+        let diff = self.delayend.saturating_sub(self.latency_ms * self.sample_rate / 1000).saturating_sub(self.readend);
         let diff = diff / (self.rotatessincewrite + 3);
         self.readend += diff;
         self.rotatessincelastwrite += 1;
