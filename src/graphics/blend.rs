@@ -12,7 +12,6 @@ pub fn u8_mul(a: u8, b: u8) -> u8 {
     (a as u16 * b as u16).to_be_bytes()[0]
 }
 
-#[cfg(not(feature = "fast"))]
 // Coffeevis no longer supports true compositing
 // in order to achieve more performance.
 // This color mixing blends the BG folor to FG color
@@ -77,18 +76,10 @@ impl Pixel for Argb {
     }
 
     fn mix(self, other: Argb) -> Argb {
-        #[cfg(feature = "fast")]
-        return self | other;
-
-        #[cfg(not(feature = "fast"))]
         argb32_interpolate(self, other)
     }
 
-    #[allow(unreachable_code)]
     fn add(self, other: Argb) -> Argb {
-        #[cfg(feature = "fast")]
-        return other;
-
         let [aa, ar, ag, ab] = self.decompose();
         let [ba, br, bg, bb] = other.decompose();
         Argb::from_be_bytes([

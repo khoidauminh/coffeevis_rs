@@ -117,15 +117,9 @@ pub mod interpolate {
     }
 
     pub fn smooth_step(a: f32, b: f32, t: f32) -> f32 {
-        #[cfg(not(feature = "fast"))]
-        {
-            let t = t - 0.5;
-            let t = t * (2.0 - 2.0 * t.abs()) + 0.5;
-            a + (b - a) * t
-        }
-
-        #[cfg(feature = "fast")]
-        linearf(a, b, t)
+        let t = t - 0.5;
+        let t = t * (2.0 - 2.0 * t.abs()) + 0.5;
+        a + (b - a) * t
     }
 
     #[allow(dead_code)]

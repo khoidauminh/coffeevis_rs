@@ -11,8 +11,6 @@ repository = "https://github.com/khoidauminh/coffeevis_rs"
 readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-[features]
-fast = []
 
 [dependencies]
 cpal = { git = "https://github.com/RustAudio/cpal" }

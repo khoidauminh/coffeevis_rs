@@ -134,16 +134,6 @@ A maximum resolution is built into the console mode (default: 50x50). Coffeevis 
 
 It looks the smoothest when you're in a dark room with low monitor brightness. But don't do that lol
 
-## EXPERIMENTAL FEAURES
-
-"fast" is an aggressive feature that:
-- disables most color blendings.
-- sets the default rendering effect to none.
-- disables some checks in drawing code.
-- changes some util code.
-
-May break visualizers.
-
 ## KEYBOARD SHORTCUTS
 
 ### Global

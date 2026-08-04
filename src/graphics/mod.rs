@@ -16,11 +16,7 @@ pub enum RenderEffect {
 }
 
 impl Default for RenderEffect {
-    #[allow(unreachable_code)]
     fn default() -> Self {
-        #[cfg(feature = "fast")]
-        return RenderEffect::None;
-
         RenderEffect::Interlaced
     }
 }

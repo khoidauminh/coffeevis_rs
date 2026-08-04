@@ -21,15 +21,7 @@ impl<'a> Painter<'a> {
 
     fn __plot_i(&mut self, i: usize) {
         if let Some(p) = self.buffer.get_mut(i) {
-            #[cfg(feature = "fast")]
-            {
-                *p = self.color;
-            }
-
-            #[cfg(not(feature = "fast"))]
-            {
-                *p = (self.mixer)(*p, self.color);
-            }
+            *p = (self.mixer)(*p, self.color);
         }
     }
 

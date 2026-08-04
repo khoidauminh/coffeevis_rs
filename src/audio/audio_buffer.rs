@@ -90,16 +90,10 @@ impl AudioBuffer {
     pub fn read_from_input(&mut self, in_buffer: &[f32]) {
         let copysize = in_buffer.len() / 2;
 
-        let mut src_iter = in_buffer.chunks_exact(2);
-        let (dst_l, dst_r) = self.data.split_at_mut(self.writeend & BUFFER_MASK);
-
-        dst_r
-            .iter_mut()
-            .chain(dst_l.iter_mut())
-            .zip(&mut src_iter)
-            .for_each(|(d, s)| *d = Cplx::from_slice(s));
-
-        self.writeend += copysize;
+        for s in in_buffer.chunks_exact(2) {
+            self.data[self.writeend & BUFFER_MASK] = Cplx::from_slice(s);
+            self.writeend += 1;
+        }
 
         if self.delayend + CHUNK_SIZE < self.writeend {
             self.delayend += CHUNK_SIZE;
@@ -118,13 +112,17 @@ impl AudioBuffer {
     }
 
     fn post_process(&mut self) {
-        let oldwriteend = (self.writeend - self.lastinputsize) & BUFFER_MASK;
-        let (left, right) = self.data.split_at_mut(oldwriteend);
-        let max = right
-            .iter()
-            .chain(left.iter())
-            .take(self.lastinputsize)
-            .fold(0.0f32, |a, c| a.max(c.max()));
+        let range = self.writeend - self.lastinputsize..self.writeend;
+
+        let max = {
+            let mut max = 0.0f32;
+
+            for i in range.clone() {
+                max = max.max(self.data[i & BUFFER_MASK].max());
+            }
+
+            max
+        };
 
         self.max = decay(self.max, max, REACT_FACTOR);
 
@@ -142,21 +140,20 @@ impl AudioBuffer {
         if self.normalize {
             let scale: f32 = 1.0 / self.max.max(AMP_PERSIST_LIMIT);
 
-            right
-                .iter_mut()
-                .chain(left.iter_mut())
-                .take(self.lastinputsize)
-                .for_each(|s| *s *= scale);
+            for i in range.clone() {
+                self.data[i & BUFFER_MASK] *= scale;
+            }
+
         }
     }
 
     pub fn read(&self, out: &mut [Cplx]) {
-        let start = (self.readend - out.len()) & BUFFER_MASK;
-        let (sleft, sright) = self.data.split_at(start);
+        let start = self.readend.saturating_sub(out.len());
+        let end = self.readend;
 
-        out.iter_mut()
-            .zip(sright.iter().chain(sleft.iter()))
-            .for_each(|(o, i)| *o = *i);
+        for i in start..end {
+            out[i - start] = self.data[i & BUFFER_MASK];
+        }
     }
 
     pub fn input_size(&self) -> usize {
