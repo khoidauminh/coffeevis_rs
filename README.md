@@ -18,9 +18,7 @@ Added Example visualizer and minimal Snake game.
 
 ## PLATFORM SUPPORT
 
-Coffeevis works on Linux.
-
-Windows is officially supported by coffeevis.
+Windows and Linux is supported by coffeevis.
 
 ## INSTALLATION
 
@@ -74,6 +72,7 @@ on whether you are using an equalizer or not.
 - If you use FxSound or Equalizer APO, Coffeevis will use the processed audio. One
 way to fix this is to install VB-Cable and set Cable Input as your default 
 output device, then enable listening on Cable Output. See [VB-Cable](https://vb-audio.com/Cable/).
+This way, the processed audio still reaches your end device while Coffeevis listens to the virtal mic.
 
 ### FPS
 
