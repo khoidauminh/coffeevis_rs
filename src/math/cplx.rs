@@ -19,14 +19,14 @@ impl Neg for Cplx {
 impl Add for Cplx {
     type Output = Cplx;
     fn add(self, other: Cplx) -> Cplx {
-        Cplx(self.0 + other.0, self.1 + other.1)
+        Cplx(self.0.algebraic_add(other.0), self.1.algebraic_add(other.1))
     }
 }
 
 impl AddAssign for Cplx {
     fn add_assign(&mut self, other: Cplx) {
-        self.0 = self.0 + other.0;
-        self.1 = self.1 + other.1;
+        self.0 += other.0;
+        self.1 += other.1;
     }
 }
 
@@ -138,16 +138,6 @@ impl Cplx {
 
     pub const fn zero() -> Cplx {
         Cplx(0.0, 0.0)
-    }
-
-    pub fn times_twiddle_8th(self) -> Cplx {
-        let scale = 0.707_106_77;
-        Cplx((self.0 + self.1) * scale, (-self.1 + self.1) * scale)
-    }
-
-    pub fn times_twiddle_3_8th(self) -> Cplx {
-        let scale = -0.707_106_77;
-        Cplx((self.0 - self.1) * scale, (self.0 + self.1) * scale)
     }
 
     pub fn mag(self) -> f32 {

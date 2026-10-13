@@ -6,12 +6,7 @@ pub mod fast;
 mod fft;
 pub mod rng;
 
-use std::ops;
-
 pub use dct::Dct;
-
-#[allow(unused_imports)]
-pub use fft::Fft;
 
 #[derive(PartialEq)]
 pub enum Normalize {
@@ -21,21 +16,6 @@ pub enum Normalize {
 
 #[derive(Copy, Clone, Debug)]
 pub struct Cplx(pub f32, pub f32);
-
-pub const fn ideal_fft_bound(up_to: usize) -> usize {
-    (up_to * 3 / 2).next_power_of_two() * 2
-}
-
-pub fn increment<T>(a: T, limit: T) -> T
-where
-    T: ops::Add<Output = T> + std::cmp::PartialEq + From<u8>,
-{
-    let b = a + 1.into();
-    if b == limit {
-        return 0.into();
-    }
-    b
-}
 
 pub fn integrate_inplace(a: &mut [Cplx], factor: usize, norm: Normalize) {
     if factor < 2 {
@@ -70,7 +50,7 @@ pub fn integrate_inplace(a: &mut [Cplx], factor: usize, norm: Normalize) {
 
         a[si] = sum;
 
-        fi = increment(fi, factor);
+        fi = (fi + 1) % factor;
         si += 1;
     }
 
@@ -79,7 +59,7 @@ pub fn integrate_inplace(a: &mut [Cplx], factor: usize, norm: Normalize) {
         a[si] = sum;
 
         si += 1;
-        fi = increment(fi, factor);
+        fi = (fi + 1) % factor;
     }
 
     if norm == Normalize::Yes {
@@ -113,13 +93,13 @@ pub mod interpolate {
     }
 
     pub fn linearf(a: f32, b: f32, t: f32) -> f32 {
-        a + (b - a) * t
+        a.algebraic_add(b.algebraic_sub(a).algebraic_mul(t))
     }
 
     pub fn smooth_step(a: f32, b: f32, t: f32) -> f32 {
         let t = t - 0.5;
-        let t = t * (2.0 - 2.0 * t.abs()) + 0.5;
-        a + (b - a) * t
+        let t = t.algebraic_mul(2.0f32.algebraic_sub(2.0f32.algebraic_mul(t.abs()))).algebraic_add(0.5);
+        a.algebraic_add(b.algebraic_sub(a).algebraic_mul(t))
     }
 
     #[allow(dead_code)]
