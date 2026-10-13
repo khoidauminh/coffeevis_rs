@@ -52,7 +52,7 @@ pub fn get_source() -> cpal::Stream {
         .build_input_stream(
             config,
             |data: &[f32], _| get_buf().read_from_input(data),
-            |err| eprintln!("an error occurred on the input audio stream: {}", err),
+            |_| {},
             None,
         )
         .unwrap()
