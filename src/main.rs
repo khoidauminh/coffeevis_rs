@@ -21,7 +21,7 @@ fn main() {
     let prog = data::Program::new().eval_args(&mut args.iter());
 
     let stream = get_source();
-    stream.start().unwrap();
+    stream.play().unwrap();
 
     match prog.mode() {
         modes::Mode::Win => modes::windowed_mode::winit_main(prog),
